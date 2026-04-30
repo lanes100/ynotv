@@ -12,21 +12,27 @@ export function LoadingSkeleton({ variant = 'card', count = 1 }: SkeletonProps) 
     return (
       <>
         {items.map(i => (
-          <div key={i} className="skeleton-card">
+          <div key={i} className="skeleton-card skeleton-card-game">
             <div className="skeleton-card-header">
-              <div className="skeleton skeleton-text skeleton-text-sm" />
-              <div className="skeleton skeleton-badge" />
+              <div className="skeleton skeleton-text skeleton-text-sm skeleton-shimmer" />
+              <div className="skeleton skeleton-badge skeleton-shimmer" />
             </div>
             <div className="skeleton-card-body">
               <div className="skeleton-team-row">
-                <div className="skeleton skeleton-avatar" />
-                <div className="skeleton skeleton-text" />
-                <div className="skeleton skeleton-score" />
+                <div className="skeleton skeleton-avatar skeleton-shimmer" />
+                <div className="skeleton-team-info">
+                  <div className="skeleton skeleton-text skeleton-text-xs skeleton-shimmer" />
+                  <div className="skeleton skeleton-text skeleton-shimmer" />
+                </div>
+                <div className="skeleton skeleton-score skeleton-shimmer" />
               </div>
               <div className="skeleton-team-row">
-                <div className="skeleton skeleton-avatar" />
-                <div className="skeleton skeleton-text" />
-                <div className="skeleton skeleton-score" />
+                <div className="skeleton skeleton-avatar skeleton-shimmer" />
+                <div className="skeleton-team-info">
+                  <div className="skeleton skeleton-text skeleton-text-xs skeleton-shimmer" />
+                  <div className="skeleton skeleton-text skeleton-shimmer" />
+                </div>
+                <div className="skeleton skeleton-score skeleton-shimmer" />
               </div>
             </div>
           </div>
@@ -91,28 +97,27 @@ export function LoadingSkeleton({ variant = 'card', count = 1 }: SkeletonProps) 
 
 export function GameCardSkeleton() {
   return (
-    <div className="skeleton-card skeleton-card-game">
-      <div className="skeleton-card-header">
-        <div className="skeleton skeleton-text skeleton-text-sm skeleton-shimmer" />
+    <div className="skeleton-card skeleton-card-game modern">
+      <div className="skeleton-card-top">
+        <div className="skeleton skeleton-text skeleton-text-sm skeleton-shimmer" style={{ width: '40%' }} />
         <div className="skeleton skeleton-badge skeleton-shimmer" />
       </div>
-      <div className="skeleton-card-body">
-        <div className="skeleton-team-row">
-          <div className="skeleton skeleton-avatar skeleton-shimmer" />
-          <div className="skeleton-team-info">
-            <div className="skeleton skeleton-text skeleton-text-xs skeleton-shimmer" />
-            <div className="skeleton skeleton-text skeleton-shimmer" />
-          </div>
-          <div className="skeleton skeleton-score skeleton-shimmer" />
+      <div className="skeleton-card-main">
+        <div className="skeleton-team-col">
+          <div className="skeleton skeleton-avatar skeleton-avatar-lg skeleton-shimmer" />
+          <div className="skeleton skeleton-text skeleton-text-sm skeleton-shimmer" style={{ width: '60%' }} />
         </div>
-        <div className="skeleton-team-row">
-          <div className="skeleton skeleton-avatar skeleton-shimmer" />
-          <div className="skeleton-team-info">
-            <div className="skeleton skeleton-text skeleton-text-xs skeleton-shimmer" />
-            <div className="skeleton skeleton-text skeleton-shimmer" />
-          </div>
-          <div className="skeleton skeleton-score skeleton-shimmer" />
+        <div className="skeleton-score-col">
+          <div className="skeleton skeleton-text skeleton-text-lg skeleton-shimmer" style={{ width: '70%' }} />
+          <div className="skeleton skeleton-text skeleton-text-xs skeleton-shimmer" style={{ width: '50%' }} />
         </div>
+        <div className="skeleton-team-col">
+          <div className="skeleton skeleton-avatar skeleton-avatar-lg skeleton-shimmer" />
+          <div className="skeleton skeleton-text skeleton-text-sm skeleton-shimmer" style={{ width: '60%' }} />
+        </div>
+      </div>
+      <div className="skeleton-card-footer">
+        <div className="skeleton skeleton-text skeleton-text-sm skeleton-shimmer" style={{ width: '30%' }} />
       </div>
     </div>
   );

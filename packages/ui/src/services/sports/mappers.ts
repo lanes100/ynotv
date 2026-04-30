@@ -15,6 +15,45 @@ import type {
 } from './types';
 import { SPORT_CONFIG } from './config';
 
+/**
+ * Build a reliable ESPN CDN logo URL from a team ID and sport key.
+ * The scoreboard API often omits logos, but the CDN serves them predictably.
+ */
+function buildESPNLogoUrl(teamId: string, sportKey: string): string | undefined {
+  if (!teamId || teamId === 'TBD' || teamId === 'field' || teamId === 'session' || teamId === 'session2') {
+    return undefined;
+  }
+
+  // Soccer leagues all share the same logo path
+  if (sportKey.startsWith('soccer-')) {
+    return `https://a.espncdn.com/i/teamlogos/soccer/500/${teamId}.png`;
+  }
+
+  const sportPathMap: Record<string, string> = {
+    'nfl': 'nfl',
+    'college-football': 'ncaa',
+    'nba': 'nba',
+    'mens-college-basketball': 'ncaa',
+    'womens-college-basketball': 'ncaa',
+    'wnba': 'wnba',
+    'mlb': 'mlb',
+    'nhl': 'nhl',
+    'ufc': 'mma',
+    'pga': 'golf',
+    'lpga': 'golf',
+    'atp': 'tennis',
+    'wta': 'tennis',
+    'f1': 'racing',
+    'nascar': 'racing',
+    'indycar': 'racing',
+  };
+
+  const sportPath = sportPathMap[sportKey];
+  if (!sportPath) return undefined;
+
+  return `https://a.espncdn.com/i/teamlogos/${sportPath}/500/${teamId}.png`;
+}
+
 export function mapESPNEvent(event: ESPNEvent, sportKey: string): SportsEvent {
   const competition = event.competitions?.[0];
   const competitors = competition?.competitors || [];
@@ -111,11 +150,13 @@ export function mapESPNEvent(event: ESPNEvent, sportKey: string): SportsEvent {
         logo: competitor.athlete.headshot?.href || competitor.athlete.flag?.href,
       };
     } else if (competitor.team) {
+      const apiLogo = competitor.team.logos?.[0]?.href;
+      const fallbackLogo = buildESPNLogoUrl(competitor.team.id, sportKey);
       return {
         id: competitor.team.id,
         name: competitor.team.displayName || 'Unknown',
         shortName: competitor.team.abbreviation,
-        logo: competitor.team.logos?.[0]?.href,
+        logo: apiLogo || fallbackLogo,
       };
     }
 
