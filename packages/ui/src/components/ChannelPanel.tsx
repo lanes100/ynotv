@@ -92,6 +92,7 @@ interface ChannelPanelProps {
   searchQuery?: string;
   searchChannels?: StoredChannel[];
   searchPrograms?: StoredProgram[];
+  searchScope?: 'channels' | 'epg' | 'both';
   isWatchlistMode?: boolean;
   watchlistItems?: WatchlistItem[];
   onWatchlistRefresh?: () => void;
@@ -161,6 +162,7 @@ export function ChannelPanel({
   searchQuery,
   searchChannels,
   searchPrograms,
+  searchScope = 'both',
   isWatchlistMode,
   watchlistItems,
   onWatchlistRefresh,
@@ -1360,7 +1362,11 @@ export function ChannelPanel({
                 <span className="guide-search-title">🔍 Search Results</span>
                 <span className="guide-search-query">"{searchQuery}"</span>
                 <span className="guide-channel-count">
-                  {(searchChannels?.length || 0) + activePrograms.length} results
+                  {(() => {
+                    const channelCount = searchScope !== 'epg' ? (searchChannels?.length || 0) : 0;
+                    const programCount = searchScope !== 'channels' ? activePrograms.length : 0;
+                    return `${channelCount + programCount} results`;
+                  })()}
                 </span>
               </>
             ) : (
@@ -1549,7 +1555,7 @@ export function ChannelPanel({
             /* Search Results View - Like Regular Guide */
             <div className="guide-search-results guide-channels">
               {/* Channel Results */}
-              {searchChannels && searchChannels.length > 0 && (
+              {searchScope !== 'epg' && searchChannels && searchChannels.length > 0 && (
                 <div className="search-section">
                   <h3 className="search-section-title">📺 Channels ({searchChannels.length})</h3>
                   {searchChannels.map((channel) => (
@@ -1574,7 +1580,7 @@ export function ChannelPanel({
               )}
 
               {/* Program Results - Grouped by Channel */}
-              {(() => {
+              {searchScope !== 'channels' && (() => {
                 const now = new Date();
 
                 if (activePrograms.length === 0) return null;
@@ -1682,12 +1688,21 @@ export function ChannelPanel({
               })()}
 
               {/* No Results */}
-              {(!searchChannels || searchChannels.length === 0) && activePrograms.length === 0 && (
-                <div className="guide-empty">
-                  <h3>No results found</h3>
-                  <p>Try a different search term</p>
-                </div>
-              )}
+              {(() => {
+                const showChannels = searchScope !== 'epg';
+                const showPrograms = searchScope !== 'channels';
+                const hasChannels = showChannels && searchChannels && searchChannels.length > 0;
+                const hasPrograms = showPrograms && activePrograms.length > 0;
+                if (!hasChannels && !hasPrograms) {
+                  return (
+                    <div className="guide-empty">
+                      <h3>No results found</h3>
+                      <p>Try a different search term</p>
+                    </div>
+                  );
+                }
+                return null;
+              })()}
             </div>
           ) : (
             /* Normal EPG Grid View */

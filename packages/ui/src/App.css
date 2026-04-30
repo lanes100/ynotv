@@ -215,6 +215,29 @@
   color: white;
 }
 
+/* Advanced Search Button in Title Bar */
+.title-bar-advanced-search-btn {
+  background: transparent;
+  border: none;
+  border-radius: 3px;
+  color: rgba(255, 255, 255, 0.4);
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  padding: 0;
+  flex-shrink: 0;
+  margin-left: 2px;
+}
+
+.title-bar-advanced-search-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: rgba(255, 255, 255, 0.8);
+}
+
 /* Title Bar Recording Indicator */
 .title-bar-recording-indicator {
   position: absolute;

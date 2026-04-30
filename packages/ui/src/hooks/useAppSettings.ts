@@ -20,6 +20,12 @@ export interface AppSettings {
   maxSearchResults: number;
   searchResultsOrder: 'default' | 'alphabetical';
 
+  // Advanced Search
+  advancedSearchScope: 'channels' | 'epg' | 'both';
+  advancedSearchSourceIds: string[];
+  advancedSearchCategoryIds: string[];
+  useAdvancedSearchForRegular: boolean;
+
   // LiveTV
   miniMediaBarForEpgPreview: boolean;
   epgView: 'traditional' | 'alternate';
@@ -39,6 +45,10 @@ export interface AppSettings {
   setShortcuts: (shortcuts: ShortcutsMap) => void;
   setShowSidebar: (show: boolean) => void;
   setCategoriesHidden: (hidden: boolean) => void;
+  setAdvancedSearchScope: (scope: 'channels' | 'epg' | 'both') => void;
+  setAdvancedSearchSourceIds: (ids: string[]) => void;
+  setAdvancedSearchCategoryIds: (ids: string[]) => void;
+  setUseAdvancedSearchForRegular: (use: boolean) => void;
 }
 
 /**
@@ -61,6 +71,12 @@ export function useAppSettings(): AppSettings {
   const [includeSourceInSearch, setIncludeSourceInSearch] = useState(false);
   const [maxSearchResults, setMaxSearchResults] = useState(200);
   const [searchResultsOrder, setSearchResultsOrder] = useState<'default' | 'alphabetical'>('default');
+
+  // Advanced search settings
+  const [advancedSearchScope, setAdvancedSearchScope] = useState<'channels' | 'epg' | 'both'>('both');
+  const [advancedSearchSourceIds, setAdvancedSearchSourceIds] = useState<string[]>([]);
+  const [advancedSearchCategoryIds, setAdvancedSearchCategoryIds] = useState<string[]>([]);
+  const [useAdvancedSearchForRegular, setUseAdvancedSearchForRegular] = useState(false);
 
   // LiveTV settings
   const [miniMediaBarForEpgPreview, setMiniMediaBarForEpgPreview] = useState(true);
@@ -117,6 +133,10 @@ export function useAppSettings(): AppSettings {
           setIncludeSourceInSearch(result.data.includeSourceInSearch ?? false);
           setMaxSearchResults(result.data.maxSearchResults ?? 200);
           setSearchResultsOrder(result.data.searchResultsOrder ?? 'default');
+          setAdvancedSearchScope(result.data.advancedSearchScope ?? 'both');
+          setAdvancedSearchSourceIds(result.data.advancedSearchSourceIds ?? []);
+          setAdvancedSearchCategoryIds(result.data.advancedSearchCategoryIds ?? []);
+          setUseAdvancedSearchForRegular(result.data.useAdvancedSearchForRegular ?? false);
           setMiniMediaBarForEpgPreview(result.data.miniMediaBarForEpgPreview ?? true);
           setEpgView(result.data.epgView ?? 'traditional');
           setCategoriesHiddenState(result.data.categoriesHidden ?? false);
@@ -199,6 +219,10 @@ export function useAppSettings(): AppSettings {
     includeSourceInSearch,
     maxSearchResults,
     searchResultsOrder,
+    advancedSearchScope,
+    advancedSearchSourceIds,
+    advancedSearchCategoryIds,
+    useAdvancedSearchForRegular,
     miniMediaBarForEpgPreview,
     epgView,
     theme,
@@ -209,5 +233,9 @@ export function useAppSettings(): AppSettings {
     setShortcuts,
     setShowSidebar,
     setCategoriesHidden,
+    setAdvancedSearchScope,
+    setAdvancedSearchSourceIds,
+    setAdvancedSearchCategoryIds,
+    setUseAdvancedSearchForRegular,
   };
 }

@@ -469,13 +469,26 @@ function parseCategoryIds(categoryIdsJson: string | string[] | number[] | undefi
 }
 
 // Hook to search channels by name - only searches enabled categories
-export function useChannelSearch(query: string, limit = 50, includeSourceInSearch = false, order: 'default' | 'alphabetical' = 'default') {
+// Optionally filter by specific sourceIds and categoryIds
+export function useChannelSearch(
+  query: string,
+  limit = 50,
+  includeSourceInSearch = false,
+  order: 'default' | 'alphabetical' = 'default',
+  filterSourceIds?: string[],
+  filterCategoryIds?: string[]
+) {
   const enabledSourceIds = useEnabledSources();
   const sourceNameMap = useSourceNameMap();
 
   const enabledSourceKey = useMemo(
     () => (enabledSourceIds ? Array.from(enabledSourceIds).sort().join(',') : 'loading'),
     [enabledSourceIds]
+  );
+
+  const filterKey = useMemo(
+    () => `${filterSourceIds?.sort().join(',') || 'all'}_${filterCategoryIds?.sort().join(',') || 'all'}`,
+    [filterSourceIds, filterCategoryIds]
   );
 
   const channels = useLiveQuery(
@@ -493,19 +506,40 @@ export function useChannelSearch(query: string, limit = 50, includeSourceInSearc
       }
 
       const dbInstance = await (db as any).dbPromise;
-      const sourceIdsList = Array.from(enabledSourceIds);
-      const sourcePlaceholders = sourceIdsList.map(() => '?').join(',');
 
-      // Get enabled category IDs via SQL (avoids full table scan to JS)
-      const enabledCategoryRows = await dbInstance.select(
-        `SELECT category_id FROM categories
-         WHERE source_id IN (${sourcePlaceholders})
-         AND (enabled IS NULL OR enabled != 0)`,
-        sourceIdsList
-      );
-      const enabledCategoryIds = new Set<string>(enabledCategoryRows.map((r: any) => r.category_id));
+      // Determine which source IDs to use: intersection of enabled and filtered
+      const effectiveSourceIds = filterSourceIds && filterSourceIds.length > 0
+        ? filterSourceIds.filter(id => enabledSourceIds.has(id))
+        : Array.from(enabledSourceIds);
 
-      if (enabledCategoryIds.size === 0) return [];
+      if (effectiveSourceIds.length === 0) return [];
+
+      const sourcePlaceholders = effectiveSourceIds.map(() => '?').join(',');
+
+      // Determine which category IDs to use
+      let effectiveCategoryIds: string[];
+      if (filterCategoryIds && filterCategoryIds.length > 0) {
+        // Verify categories belong to enabled sources
+        const categoryRows = await dbInstance.select(
+          `SELECT category_id FROM categories
+           WHERE category_id IN (${filterCategoryIds.map(() => '?').join(',')})
+           AND source_id IN (${sourcePlaceholders})
+           AND (enabled IS NULL OR enabled != 0)`,
+          [...filterCategoryIds, ...effectiveSourceIds]
+        );
+        effectiveCategoryIds = categoryRows.map((r: any) => r.category_id);
+      } else {
+        // Get enabled category IDs via SQL (avoids full table scan to JS)
+        const enabledCategoryRows = await dbInstance.select(
+          `SELECT category_id FROM categories
+           WHERE source_id IN (${sourcePlaceholders})
+           AND (enabled IS NULL OR enabled != 0)`,
+          effectiveSourceIds
+        );
+        effectiveCategoryIds = enabledCategoryRows.map((r: any) => r.category_id);
+      }
+
+      if (effectiveCategoryIds.length === 0) return [];
 
       // Get source name matches for search (using cached map)
       let sourceNameMatches: string[] = [];
@@ -522,7 +556,7 @@ export function useChannelSearch(query: string, limit = 50, includeSourceInSearc
       const queryWords = query.trim().toLowerCase().split(/\s+/).filter(w => w.length > 0);
       const wordLikeClauses = queryWords.map(() => `c.name LIKE ?`).join(' AND ');
       const wordLikeParams = queryWords.map(w => `%${w}%`);
-      const categoryPlaceholders = Array.from(enabledCategoryIds).map(() => '?').join(',');
+      const categoryPlaceholders = effectiveCategoryIds.map(() => '?').join(',');
 
       let filteredChannels: any[];
 
@@ -543,7 +577,7 @@ export function useChannelSearch(query: string, limit = 50, includeSourceInSearc
         console.log('[useChannelSearch] Full query:', queryStr);
         filteredChannels = await dbInstance.select(
           queryStr,
-          [...wordLikeParams, ...sourceNameMatches, ...sourceIdsList, ...Array.from(enabledCategoryIds), limit]
+          [...wordLikeParams, ...sourceNameMatches, ...effectiveSourceIds, ...effectiveCategoryIds, limit]
         );
       } else {
         // Multi-word AND search — each word must appear somewhere in the channel name
@@ -561,7 +595,7 @@ export function useChannelSearch(query: string, limit = 50, includeSourceInSearc
         console.log('[useChannelSearch] Full query:', queryStr);
         filteredChannels = await dbInstance.select(
           queryStr,
-          [...wordLikeParams, ...sourceIdsList, ...Array.from(enabledCategoryIds), limit]
+          [...wordLikeParams, ...effectiveSourceIds, ...effectiveCategoryIds, limit]
         );
       }
 
@@ -577,19 +611,31 @@ export function useChannelSearch(query: string, limit = 50, includeSourceInSearc
 
       return filteredChannels as StoredChannel[];
     },
-    [query, limit, includeSourceInSearch, order, sourceNameMap, enabledSourceKey]
+    [query, limit, includeSourceInSearch, order, sourceNameMap, enabledSourceKey, filterKey]
   );
   return channels ?? [];
 }
 
 
 // Hook to search programs (EPG) by title - only searches enabled categories
-export function useProgramSearch(query: string, limit = 50, order: 'default' | 'alphabetical' = 'default') {
+// Optionally filter by specific sourceIds and categoryIds
+export function useProgramSearch(
+  query: string,
+  limit = 50,
+  order: 'default' | 'alphabetical' = 'default',
+  filterSourceIds?: string[],
+  filterCategoryIds?: string[]
+) {
   const enabledSourceIds = useEnabledSources();
 
   const enabledSourceKey = useMemo(
     () => (enabledSourceIds ? Array.from(enabledSourceIds).sort().join(',') : 'loading'),
     [enabledSourceIds]
+  );
+
+  const filterKey = useMemo(
+    () => `${filterSourceIds?.sort().join(',') || 'all'}_${filterCategoryIds?.sort().join(',') || 'all'}`,
+    [filterSourceIds, filterCategoryIds]
   );
 
   const programs = useLiveQuery(
@@ -605,25 +651,45 @@ export function useProgramSearch(query: string, limit = 50, order: 'default' | '
       }
 
       const dbInstance = await (db as any).dbPromise;
-      const sourceIdsList = Array.from(enabledSourceIds);
-      const sourcePlaceholders = sourceIdsList.map(() => '?').join(',');
+
+      // Determine which source IDs to use: intersection of enabled and filtered
+      const effectiveSourceIds = filterSourceIds && filterSourceIds.length > 0
+        ? filterSourceIds.filter(id => enabledSourceIds.has(id))
+        : Array.from(enabledSourceIds);
+
+      if (effectiveSourceIds.length === 0) return [];
+
+      const sourcePlaceholders = effectiveSourceIds.map(() => '?').join(',');
 
       // Step 1: Get enabled category IDs (single query)
-      const enabledCategoriesQuery = `
-        SELECT category_id FROM categories 
-        WHERE source_id IN (${sourcePlaceholders})
-        AND (enabled IS NULL OR enabled != 0)
-      `;
-      const enabledCategoryRows = await dbInstance.select(enabledCategoriesQuery, sourceIdsList);
-      const enabledCategoryIds = enabledCategoryRows.map((row: any) => row.category_id);
+      let effectiveCategoryIds: string[];
+      if (filterCategoryIds && filterCategoryIds.length > 0) {
+        // Verify categories belong to enabled sources
+        const categoryRows = await dbInstance.select(
+          `SELECT category_id FROM categories
+           WHERE category_id IN (${filterCategoryIds.map(() => '?').join(',')})
+           AND source_id IN (${sourcePlaceholders})
+           AND (enabled IS NULL OR enabled != 0)`,
+          [...filterCategoryIds, ...effectiveSourceIds]
+        );
+        effectiveCategoryIds = categoryRows.map((r: any) => r.category_id);
+      } else {
+        const enabledCategoriesQuery = `
+          SELECT category_id FROM categories 
+          WHERE source_id IN (${sourcePlaceholders})
+          AND (enabled IS NULL OR enabled != 0)
+        `;
+        const enabledCategoryRows = await dbInstance.select(enabledCategoriesQuery, effectiveSourceIds);
+        effectiveCategoryIds = enabledCategoryRows.map((row: any) => row.category_id);
+      }
 
-      if (enabledCategoryIds.length === 0) {
+      if (effectiveCategoryIds.length === 0) {
         return [];
       }
 
       // Step 2: Get enabled channel IDs using json_each for efficient category matching
       // This filters channels that belong to at least one enabled category
-      const categoryPlaceholders = enabledCategoryIds.map(() => '?').join(',');
+      const categoryPlaceholders = effectiveCategoryIds.map(() => '?').join(',');
       const enabledChannelsQuery = `
         SELECT DISTINCT c.stream_id 
         FROM channels c, json_each(c.category_ids) AS cat
@@ -633,7 +699,7 @@ export function useProgramSearch(query: string, limit = 50, order: 'default' | '
       `;
       const enabledChannelRows = await dbInstance.select(
         enabledChannelsQuery,
-        [...sourceIdsList, ...enabledCategoryIds]
+        [...effectiveSourceIds, ...effectiveCategoryIds]
       );
       const enabledChannelIds = new Set(enabledChannelRows.map((row: any) => row.stream_id));
 
@@ -668,7 +734,7 @@ export function useProgramSearch(query: string, limit = 50, order: 'default' | '
              WHERE (${wordLikeClauses}) AND p.end > ?
              ${orderByClause}
              LIMIT ?`,
-            [...sourceIdsList, ...enabledCategoryIds, ...wordLikeParams, nowIso, limit * 2]
+            [...effectiveSourceIds, ...effectiveCategoryIds, ...wordLikeParams, nowIso, limit * 2]
           )
         : await dbInstance.select(
             `SELECT p.* 
@@ -682,7 +748,7 @@ export function useProgramSearch(query: string, limit = 50, order: 'default' | '
              ) ec ON p.stream_id = ec.stream_id
              WHERE (${wordLikeClauses}) AND p.end > ?
              LIMIT ?`,
-            [...sourceIdsList, ...enabledCategoryIds, ...wordLikeParams, nowIso, limit * 2]
+            [...effectiveSourceIds, ...effectiveCategoryIds, ...wordLikeParams, nowIso, limit * 2]
           );
       console.log('[useProgramSearch] Query returned', programResults.length, 'results');
 
@@ -700,7 +766,7 @@ export function useProgramSearch(query: string, limit = 50, order: 'default' | '
 
       return filteredPrograms;
     },
-    [query, limit, order, enabledSourceKey],
+    [query, limit, order, enabledSourceKey, filterKey],
     undefined, // defaultResult
     0, // staleTime: 0 - always refresh on search
     'programs' // tableName: only re-run when programs table changes

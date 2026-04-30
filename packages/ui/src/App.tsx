@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 
 // Auto-sync check interval: 10 minutes
 const AUTO_SYNC_CHECK_INTERVAL_MS = 10 * 60 * 1000;
@@ -57,6 +57,7 @@ import { UpdateModal } from './components/UpdateModal';
 import { registerUpdateModal } from './services/updater';
 import { useLayoutPersistence, type LayoutMode } from './hooks/useLayoutPersistence';
 import { useMpvListeners } from './hooks/useMpvListeners';
+import { AdvancedSearchModal, type AdvancedSearchConfig } from './components/AdvancedSearchModal';
 
 // NEW: Extracted hooks
 import { useAppSettings } from './hooks/useAppSettings';
@@ -84,6 +85,10 @@ function App() {
     includeSourceInSearch,
     maxSearchResults,
     searchResultsOrder,
+    advancedSearchScope,
+    advancedSearchSourceIds,
+    advancedSearchCategoryIds,
+    useAdvancedSearchForRegular,
     miniMediaBarForEpgPreview,
     theme,
     shortcuts,
@@ -93,6 +98,10 @@ function App() {
     setShortcuts,
     setShowSidebar: setShowSidebarFromSettings,
     setCategoriesHidden,
+    setAdvancedSearchScope,
+    setAdvancedSearchSourceIds,
+    setAdvancedSearchCategoryIds,
+    setUseAdvancedSearchForRegular,
   } = useAppSettings();
 
   // ==========================================================================
@@ -374,10 +383,50 @@ function App() {
   const { recordings: activeRecordings, isRecording: hasActiveRecording } = useActiveRecordings(5000);
 
   // ==========================================================================
+  // Advanced Search State
+  // ==========================================================================
+  const [showAdvancedSearch, setShowAdvancedSearch] = useState(false);
+  const [advancedSearchConfig, setAdvancedSearchConfig] = useState<AdvancedSearchConfig>({
+    query: '',
+    scope: advancedSearchScope,
+    sourceIds: advancedSearchSourceIds,
+    categoryIds: advancedSearchCategoryIds,
+    useForRegular: useAdvancedSearchForRegular,
+  });
+
+  // Force advanced filters for the current search when triggered from the modal,
+  // even if "use for regular" is disabled. Cleared when user manually edits the title bar query.
+  const [forceAdvancedFilters, setForceAdvancedFilters] = useState(false);
+
+  // Determine active filters for search
+  const activeSearchSourceIds = useMemo(() => {
+    if (!useAdvancedSearchForRegular && !forceAdvancedFilters) return undefined;
+    return advancedSearchConfig.sourceIds.length > 0 ? advancedSearchConfig.sourceIds : undefined;
+  }, [useAdvancedSearchForRegular, forceAdvancedFilters, advancedSearchConfig.sourceIds]);
+
+  const activeSearchCategoryIds = useMemo(() => {
+    if (!useAdvancedSearchForRegular && !forceAdvancedFilters) return undefined;
+    return advancedSearchConfig.categoryIds.length > 0 ? advancedSearchConfig.categoryIds : undefined;
+  }, [useAdvancedSearchForRegular, forceAdvancedFilters, advancedSearchConfig.categoryIds]);
+
+  // ==========================================================================
   // Search Results
   // ==========================================================================
-  const searchChannels = useChannelSearch(debouncedSearchQuery, maxSearchResults, includeSourceInSearch, searchResultsOrder);
-  const searchPrograms = useProgramSearch(debouncedSearchQuery, maxSearchResults, searchResultsOrder);
+  const searchChannels = useChannelSearch(
+    debouncedSearchQuery,
+    maxSearchResults,
+    includeSourceInSearch,
+    searchResultsOrder,
+    activeSearchSourceIds,
+    activeSearchCategoryIds
+  );
+  const searchPrograms = useProgramSearch(
+    debouncedSearchQuery,
+    maxSearchResults,
+    searchResultsOrder,
+    activeSearchSourceIds,
+    activeSearchCategoryIds
+  );
 
   // ==========================================================================
   // Track Selection Modal State
@@ -917,8 +966,13 @@ function App() {
                 placeholder="Search..."
                 value={searchQuery}
                 onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  if (e.target.value.length >= 1) {
+                  const value = e.target.value;
+                  setSearchQuery(value);
+                  // If user manually changes the query (not from the modal), clear forced filters
+                  if (value !== advancedSearchConfig.query) {
+                    setForceAdvancedFilters(false);
+                  }
+                  if (value.length >= 1) {
                     setCategoriesOpen(true);
                     if (activeView !== 'guide') {
                       setActiveView('guide');
@@ -935,12 +989,27 @@ function App() {
               {searchQuery && (
                 <button
                   className="title-bar-search-clear"
-                  onClick={() => setSearchQuery('')}
+                  onClick={() => {
+                    setSearchQuery('');
+                    setForceAdvancedFilters(false);
+                  }}
                   title="Clear search"
                 >
                   ✕
                 </button>
               )}
+              <button
+                className="title-bar-advanced-search-btn"
+                onClick={() => setShowAdvancedSearch(true)}
+                title="Advanced Search"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="11" cy="11" r="8"></circle>
+                  <path d="m21 21-4.3-4.3"></path>
+                  <line x1="21" y1="3" x2="21" y2="7"></line>
+                  <line x1="19" y1="5" x2="23" y2="5"></line>
+                </svg>
+              </button>
             </div>
           </div>
         </div>
@@ -1112,6 +1181,45 @@ function App() {
         onClose={() => setShowAudioModal(false)}
       />
 
+      {/* Advanced Search Modal */}
+      <AdvancedSearchModal
+        isOpen={showAdvancedSearch}
+        initialConfig={advancedSearchConfig}
+        onSearch={(config) => {
+          setAdvancedSearchConfig(config);
+          // Persist settings
+          if (window.storage) {
+            window.storage.updateSettings({
+              advancedSearchScope: config.scope,
+              advancedSearchSourceIds: config.sourceIds,
+              advancedSearchCategoryIds: config.categoryIds,
+              useAdvancedSearchForRegular: config.useForRegular,
+            }).catch((err: any) => console.error('Failed to save advanced search settings:', err));
+          }
+          // Update local state setters
+          setAdvancedSearchScope(config.scope);
+          setAdvancedSearchSourceIds(config.sourceIds);
+          setAdvancedSearchCategoryIds(config.categoryIds);
+          setUseAdvancedSearchForRegular(config.useForRegular);
+          // Force advanced filters for this search (even if useForRegular is off)
+          setForceAdvancedFilters(true);
+          // Set the search query and activate search
+          setSearchQuery(config.query);
+          setCategoriesOpen(true);
+          if (activeView !== 'guide') {
+            setActiveView('guide');
+          }
+          setShowAdvancedSearch(false);
+          // Focus the search input
+          setTimeout(() => {
+            if (titleBarSearchRef.current) {
+              titleBarSearchRef.current.focus();
+            }
+          }, 50);
+        }}
+        onClose={() => setShowAdvancedSearch(false)}
+      />
+
       {/* Sidebar Navigation */}
       <Sidebar
         activeView={activeView}
@@ -1177,6 +1285,7 @@ function App() {
         searchQuery={debouncedSearchQuery}
         searchChannels={searchChannels}
         searchPrograms={searchPrograms}
+        searchScope={advancedSearchConfig.scope}
         isWatchlistMode={isWatchlistMode}
         watchlistItems={watchlistItems}
         onWatchlistRefresh={refreshWatchlist}

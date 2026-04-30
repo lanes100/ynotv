@@ -70,6 +70,11 @@ export interface AppSettings {
     rememberLastChannels?: boolean;
     savedLayoutState?: SavedLayoutState;
     searchResultsOrder?: 'default' | 'alphabetical';
+    // Advanced search settings
+    advancedSearchScope?: 'channels' | 'epg' | 'both';
+    advancedSearchSourceIds?: string[];
+    advancedSearchCategoryIds?: string[];
+    useAdvancedSearchForRegular?: boolean;
     [key: string]: any;
 }
 
