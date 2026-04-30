@@ -7,7 +7,16 @@ interface ThemeTabProps {
 
 const THEMES: { id: ThemeId; name: string; description: string; preview: string; gradient?: string }[] = [
   { id: 'dark', name: 'Dark', description: 'Classic dark theme', preview: '#1a1a1a' },
-  { id: 'p5', name: 'P5', description: 'Phantom Thieves — crimson on black', preview: '#080808' },
+  { id: 'dark-crimson', name: 'Dark Crimson', description: 'Crimson red on black', preview: '#ff0033' },
+  { id: 'dark-cyan', name: 'Dark Cyan', description: 'Neon cyan on black', preview: '#00d4ff' },
+  { id: 'dark-purple', name: 'Dark Purple', description: 'Violet on black', preview: '#b266ff' },
+  { id: 'dark-emerald', name: 'Dark Emerald', description: 'Emerald green on black', preview: '#00e676' },
+  { id: 'dark-orange', name: 'Dark Orange', description: 'Amber orange on black', preview: '#ff9100' },
+  { id: 'dark-pink', name: 'Dark Pink', description: 'Hot pink on black', preview: '#ff4081' },
+  { id: 'dark-blue', name: 'Dark Blue', description: 'Royal blue on black', preview: '#448aff' },
+  { id: 'dark-gold', name: 'Dark Gold', description: 'Golden yellow on black', preview: '#ffd700' },
+  { id: 'dark-lime', name: 'Dark Lime', description: 'Acid lime on black', preview: '#76ff03' },
+  { id: 'dark-indigo', name: 'Dark Indigo', description: 'Indigo on black', preview: '#536dfe' },
   { id: 'glass-ocean', name: 'Ocean Glass', description: 'Deep blues and teals with glass effect', preview: '#0a1628' },
   { id: 'glass-neon', name: 'Neon Glass', description: 'Cyberpunk vibes with neon accents', preview: '#0d0d1a' },
   { id: 'glass-galaxy', name: 'Galaxy Glass', description: 'Purple and pink nebula effect', preview: '#1a0b2e' },
