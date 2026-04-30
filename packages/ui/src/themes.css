@@ -2575,3 +2575,242 @@
 [data-theme*="solid-"] .npb-progress-fill {
   background: linear-gradient(90deg, var(--accent-secondary), var(--accent-primary));
 }
+
+/* P5 - Persona 5 Phantom Thieves theme */
+[data-theme="p5"] {
+  --bg-primary: #080808;
+  --bg-secondary: rgba(12, 12, 12, 0.98);
+  --bg-tertiary: rgba(20, 20, 20, 0.95);
+  --bg-overlay: rgba(0, 0, 0, 0.92);
+
+  --surface-color: rgba(15, 15, 15, 0.95);
+  --surface-hover: rgba(30, 30, 30, 0.98);
+  --surface-active: rgba(45, 45, 45, 0.98);
+  --surface-border: rgba(255, 0, 50, 0.35);
+  --surface-glow: rgba(255, 0, 50, 0.25);
+
+  --text-primary: #ffffff;
+  --text-secondary: rgba(255, 255, 255, 0.75);
+  --text-muted: rgba(255, 255, 255, 0.5);
+  --text-accent: #ff0033;
+
+  --accent-primary: #ff0033;
+  --accent-secondary: #cc0029;
+  --accent-glow: rgba(255, 0, 50, 0.5);
+
+  --glass-blur: 0px;
+  --glass-saturation: 100%;
+  --glass-border: 1px solid rgba(255, 0, 50, 0.3);
+  --glass-shadow: 0 0 24px rgba(255, 0, 50, 0.25);
+
+  --status-live: #ff0033;
+  --status-recording: #ff0033;
+  --status-new: #ff0033;
+
+  --bg-gradient-1: #080808;
+  --bg-gradient-2: #111111;
+  --bg-gradient-3: #050505;
+}
+
+/* ============================================
+   P5 THEME APPLICATION STYLES
+   Persona 5 phantom thieves aesthetic
+   ============================================ */
+
+[data-theme="p5"] .title-bar {
+  background: var(--surface-color);
+  border-bottom-color: var(--surface-border);
+}
+
+[data-theme="p5"] .sidebar-nav {
+  background: var(--surface-color);
+}
+
+[data-theme="p5"] .nav-item.active {
+  background: rgba(255, 0, 50, 0.2);
+  color: var(--accent-primary);
+}
+
+[data-theme="p5"] .now-playing-bar {
+  background: var(--surface-color);
+  border-top-color: var(--surface-border);
+}
+
+[data-theme="p5"] .npb-progress-fill {
+  background: linear-gradient(90deg, var(--accent-secondary), var(--accent-primary));
+}
+
+[data-theme="p5"] .npb-btn:hover:not(:disabled) {
+  background: rgba(255, 0, 50, 0.2);
+  border-color: var(--accent-primary);
+}
+
+[data-theme="p5"] .player-control-btn:hover {
+  background: rgba(255, 0, 50, 0.2);
+  border-color: var(--accent-primary);
+}
+
+[data-theme="p5"] .settings-panel {
+  background: var(--bg-secondary);
+  border-color: var(--surface-border);
+}
+
+[data-theme="p5"] .settings-tab.active {
+  color: var(--accent-primary);
+  border-bottom-color: var(--accent-primary);
+}
+
+[data-theme="p5"] .settings-content select option {
+  background: var(--bg-secondary);
+}
+
+[data-theme="p5"] .source-type {
+  background: rgba(255, 0, 50, 0.15) !important;
+  color: var(--accent-primary) !important;
+}
+
+[data-theme="p5"] .tier-badge {
+  background: rgba(255, 0, 50, 0.15);
+  color: var(--accent-primary);
+}
+
+[data-theme="p5"] .add-btn {
+  background: rgba(255, 0, 50, 0.15);
+  color: var(--accent-primary);
+  border-color: rgba(255, 0, 50, 0.4);
+}
+
+[data-theme="p5"] .add-btn:hover {
+  background: rgba(255, 0, 50, 0.25);
+  border-color: rgba(255, 0, 50, 0.6);
+}
+
+[data-theme="p5"] .sync-source-btn {
+  background: rgba(255, 0, 50, 0.1) !important;
+  border-color: rgba(255, 0, 50, 0.3) !important;
+  color: var(--accent-primary) !important;
+}
+
+[data-theme="p5"] .sync-source-btn:hover:not(:disabled) {
+  background: rgba(255, 0, 50, 0.2) !important;
+  border-color: rgba(255, 0, 50, 0.6) !important;
+  color: #ff1a4d !important;
+}
+
+[data-theme="p5"] .shortcut-btn.listening {
+  border-color: var(--accent-primary);
+  background: rgba(255, 0, 50, 0.1);
+  color: var(--accent-primary);
+  box-shadow: 0 0 0 2px rgba(255, 0, 50, 0.1);
+}
+
+[data-theme="p5"] .genre-checkbox input[type='checkbox'] {
+  accent-color: var(--accent-primary);
+}
+
+[data-theme="p5"] .refresh-settings select:focus,
+[data-theme="p5"] .settings-content select:focus {
+  border-color: rgba(255, 0, 50, 0.5);
+}
+
+[data-theme="p5"] .form-group input:focus {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 1px var(--accent-primary), 0 0 10px var(--accent-glow);
+}
+
+[data-theme="p5"] .import-btn:hover {
+  border-color: var(--accent-primary);
+  background: rgba(255, 0, 50, 0.05);
+  color: var(--accent-primary);
+}
+
+[data-theme="p5"] .type-selector button.active {
+  border-color: var(--accent-primary);
+  background: rgba(255, 0, 50, 0.1);
+  color: var(--accent-primary);
+}
+
+[data-theme="p5"] .placeholder {
+  background: var(--surface-color);
+  color: var(--text-primary);
+}
+
+[data-theme="p5"] .sync-status__spinner {
+  border-top-color: var(--accent-primary);
+}
+
+[data-theme="p5"] .stats-panel h3 {
+  color: var(--accent-primary);
+}
+
+[data-theme="p5"] .channel-info {
+  background: var(--surface-color);
+  border-left-color: var(--accent-primary);
+}
+
+[data-theme="p5"] .channel-number {
+  color: var(--accent-primary);
+}
+
+[data-theme="p5"] .vod-home,
+[data-theme="p5"] .vod-browse,
+[data-theme="p5"] .movie-detail,
+[data-theme="p5"] .series-detail {
+  background: var(--bg-primary);
+}
+
+[data-theme="p5"] .sports-hub {
+  background: var(--bg-primary);
+}
+
+[data-theme="p5"] .dvr-dashboard {
+  background: var(--bg-primary);
+}
+
+[data-theme="p5"] .tv-calendar,
+[data-theme="p5"] .tv-calendar-page {
+  background: var(--bg-primary);
+}
+
+[data-theme="p5"] .guide-panel {
+  color: var(--text-primary);
+}
+
+[data-theme="p5"] .modal-btn-primary {
+  background: var(--accent-primary);
+  color: white;
+}
+
+[data-theme="p5"] .modal-btn-primary:hover {
+  box-shadow: 0 0 20px var(--accent-glow);
+}
+
+[data-theme="p5"] .context-menu-item:hover {
+  background: rgba(255, 0, 50, 0.1);
+  color: var(--accent-primary);
+}
+
+[data-theme="p5"] .duration-option:hover {
+  background: rgba(255, 0, 50, 0.1);
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+}
+
+[data-theme="p5"] .duration-option.selected {
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
+  color: white;
+}
+
+[data-theme="p5"] button:focus-visible,
+[data-theme="p5"] input:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--accent-primary), 0 0 10px var(--accent-glow);
+}
+
+[data-theme="p5"] .sidebar-item.active,
+[data-theme="p5"] .category-item.active,
+[data-theme="p5"] .track-item.selected {
+  background: rgba(255, 0, 50, 0.2);
+  border-color: var(--accent-primary);
+}
