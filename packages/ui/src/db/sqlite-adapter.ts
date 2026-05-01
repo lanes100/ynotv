@@ -314,7 +314,7 @@ export class SqliteTable<T, TKey> {
             const tableJsonFields = JSON_FIELDS[this.tableName] || [];
             const tableBooleanFields = BOOLEAN_FIELDS[this.tableName] || [];
             
-            const processedItem: Record<string, any> = { ...item };
+            const processedItem: Record<string, any> = { ...(item as any) };
 
             // Convert JSON fields
             for (const field of tableJsonFields) {
@@ -362,7 +362,7 @@ export class SqliteTable<T, TKey> {
             const tableJsonFields = JSON_FIELDS[this.tableName] || [];
             const tableBooleanFields = BOOLEAN_FIELDS[this.tableName] || [];
             
-            const processedItem: Record<string, any> = { ...item };
+            const processedItem: Record<string, any> = { ...(item as any) };
 
             // Convert JSON fields
             for (const field of tableJsonFields) {
