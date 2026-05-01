@@ -562,6 +562,12 @@ async fn parse_download_stream<R: tauri::Runtime>(
 
     let combine_ms = combine_start.elapsed().as_millis() as u64;
 
+    // Extract and persist EPG channel metadata (id, display_name, icon) for the editor
+    let epg_channels = extract_epg_channels(&xml_data);
+    if let Err(e) = insert_epg_channels(&db, &source_id, &epg_channels) {
+        warn!("[EPG] Failed to insert epg_channels for source {}: {}", source_id, e);
+    }
+
     // Parse and stream batches
     let parse_result = parse_and_stream_batches(
         &xml_data,
@@ -667,6 +673,175 @@ fn build_display_name_mapping(xml_data: &[u8]) -> HashMap<String, String> {
 
     info!("[EPG] Built display name mapping with {} entries", mapping.len());
     mapping
+}
+
+/// Info about an EPG channel extracted from XMLTV <channel> elements
+#[derive(Debug, Clone)]
+struct EpgChannelInfo {
+    id: String,
+    display_name: String,
+    icon_url: Option<String>,
+}
+
+/// Extract all <channel> elements from XMLTV data.
+/// Collects id, first <display-name>, and first <icon src="..."> for each channel.
+fn extract_epg_channels(xml_data: &[u8]) -> Vec<EpgChannelInfo> {
+    let mut channels: Vec<EpgChannelInfo> = Vec::new();
+    let mut reader = Reader::from_reader(xml_data);
+    reader.config_mut().trim_text(true);
+
+    let mut buf = Vec::with_capacity(4096);
+    let mut current_channel_id: Option<String> = None;
+    let mut current_display_name: Option<String> = None;
+    let mut current_icon_url: Option<String> = None;
+    let mut current_element: Option<String> = None;
+    let mut current_text = String::new();
+
+    loop {
+        match reader.read_event_into(&mut buf) {
+            Ok(Event::Start(e)) => {
+                let name = std::str::from_utf8(e.name().as_ref()).unwrap_or("").to_string();
+                match name.as_str() {
+                    "channel" => {
+                        current_channel_id = None;
+                        current_display_name = None;
+                        current_icon_url = None;
+                        for attr in e.attributes() {
+                            if let Ok(attr) = attr {
+                                let key = std::str::from_utf8(attr.key.as_ref()).unwrap_or("");
+                                if key == "id" {
+                                    let value = attr
+                                        .decode_and_unescape_value(reader.decoder())
+                                        .unwrap_or_default();
+                                    current_channel_id = Some(value.to_string());
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    "display-name" | "icon" => {
+                        current_element = Some(name.clone());
+                        current_text.clear();
+
+                        // For <icon>, also try to read src attribute immediately
+                        if name == "icon" {
+                            for attr in e.attributes() {
+                                if let Ok(attr) = attr {
+                                    let key = std::str::from_utf8(attr.key.as_ref()).unwrap_or("");
+                                    if key == "src" {
+                                        let value = attr
+                                            .decode_and_unescape_value(reader.decoder())
+                                            .unwrap_or_default();
+                                        current_icon_url = Some(value.to_string());
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    _ => {}
+                }
+            }
+            Ok(Event::Text(e)) => {
+                if current_element.as_deref() == Some("display-name") {
+                    if let Ok(text) = e.unescape() {
+                        current_text.push_str(&text);
+                    }
+                }
+            }
+            Ok(Event::End(e)) => {
+                let name = std::str::from_utf8(e.name().as_ref()).unwrap_or("").to_string();
+                match name.as_str() {
+                    "channel" => {
+                        if let (Some(id), Some(display_name)) = (current_channel_id.take(), current_display_name.take()) {
+                            channels.push(EpgChannelInfo {
+                                id,
+                                display_name,
+                                icon_url: current_icon_url.take(),
+                            });
+                        }
+                    }
+                    "display-name" => {
+                        let text = current_text.trim().to_string();
+                        if !text.is_empty() && current_display_name.is_none() {
+                            // Keep only the first display-name per channel
+                            current_display_name = Some(text);
+                        }
+                        current_element = None;
+                    }
+                    "icon" => {
+                        current_element = None;
+                    }
+                    _ => {}
+                }
+            }
+            Ok(Event::Empty(e)) => {
+                // Handle self-closing <icon src="..."/>
+                let name = std::str::from_utf8(e.name().as_ref()).unwrap_or("").to_string();
+                if name == "icon" && current_channel_id.is_some() && current_icon_url.is_none() {
+                    for attr in e.attributes() {
+                        if let Ok(attr) = attr {
+                            let key = std::str::from_utf8(attr.key.as_ref()).unwrap_or("");
+                            if key == "src" {
+                                let value = attr
+                                    .decode_and_unescape_value(reader.decoder())
+                                    .unwrap_or_default();
+                                current_icon_url = Some(value.to_string());
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+            Ok(Event::Eof) => break,
+            Err(e) => {
+                warn!("XML parse error during EPG channel extraction: {}", e);
+                break;
+            }
+            _ => {}
+        }
+        buf.clear();
+    }
+
+    info!("[EPG] Extracted {} channels from XMLTV", channels.len());
+    channels
+}
+
+/// Bulk insert/replace EPG channels into the epg_channels table
+fn insert_epg_channels(db: &DvrDatabase, source_id: &str, channels: &[EpgChannelInfo]) -> Result<usize> {
+    with_sync_db_retry(|| {
+        let mut conn = db.get_conn()?;
+        let tx = conn.transaction()?;
+
+        // First, clear old channels for this source so we don't accumulate stale entries
+        tx.execute("DELETE FROM epg_channels WHERE source_id = ?1", rusqlite::params![source_id])?;
+
+        let mut stmt = tx.prepare(
+            "INSERT OR REPLACE INTO epg_channels (id, display_name, icon_url, source_id)
+             VALUES (?1, ?2, ?3, ?4)"
+        )?;
+
+        let mut inserted = 0;
+        for ch in channels {
+            match stmt.execute(rusqlite::params![
+                ch.id,
+                ch.display_name,
+                ch.icon_url.as_deref().unwrap_or(""),
+                source_id,
+            ]) {
+                Ok(_) => inserted += 1,
+                Err(e) => {
+                    warn!("Failed to insert epg_channel {}: {}", ch.id, e);
+                }
+            }
+        }
+
+        stmt.finalize()?;
+        tx.commit()?;
+
+        info!("[EPG] Inserted {} epg_channels for source {}", inserted, source_id);
+        Ok(inserted)
+    })
 }
 
 /// Convert ISO 8601 datetime string to UTC format for storage.
@@ -1143,6 +1318,12 @@ pub async fn parse_epg_file<R: tauri::Runtime>(
     // Delete old programs first
     let deleted_count = delete_programs_for_source(db, &source_id)?;
     info!("[EPG] Deleted {} old programs for source {}", deleted_count, source_id);
+
+    // Extract and persist EPG channel metadata (id, display_name, icon) for the editor
+    let epg_channels = extract_epg_channels(&xml_data);
+    if let Err(e) = insert_epg_channels(db, &source_id, &epg_channels) {
+        warn!("[EPG] Failed to insert epg_channels for source {}: {}", source_id, e);
+    }
 
     // Create channel for parse->insert pipeline
     let (batch_tx, batch_rx) = mpsc::channel::<Vec<EpgProgram>>(CHANNEL_BUFFER);
