@@ -17,6 +17,7 @@ import {
   resetChannelToDefault,
   type EditorProgram,
   type ScoredEpgChannel,
+  type EpgSearchMode,
 } from '../services/epg-overrides';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -207,6 +208,7 @@ export function EpgEditorModal({ channel: initialChannel, sourceId, sourceName, 
   // ── Search tab state ──
   const [searchQuery, setSearchQuery] = useState('');
   const [searchScope, setSearchScope] = useState<SearchScope>('source');
+  const [searchMode, setSearchMode] = useState<EpgSearchMode>('m3u');
   const [searchResults, setSearchResults] = useState<ScoredEpgChannel[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
   const [autoSearching, setAutoSearching] = useState(false);
@@ -295,14 +297,16 @@ export function EpgEditorModal({ channel: initialChannel, sourceId, sourceName, 
       setSearchLoading(true);
       const results = await searchEpgChannels(
         searchQuery,
-        searchScope === 'source' ? resolvedSourceId : undefined
+        searchScope === 'source' ? resolvedSourceId : undefined,
+        50,
+        searchMode
       );
       setSearchResults(results);
       setSearchLoading(false);
     }, 300);
 
     return () => clearTimeout(tid);
-  }, [searchQuery, searchScope, activeTab, resolvedSourceId]);
+  }, [searchQuery, searchScope, searchMode, activeTab, resolvedSourceId]);
 
   // ── Close on Escape ──
   useEffect(() => {
@@ -414,12 +418,14 @@ export function EpgEditorModal({ channel: initialChannel, sourceId, sourceName, 
     setAutoSearching(true);
     const results = await autoMatchChannelName(
       channel.name,
-      searchScope === 'source' ? resolvedSourceId : undefined
+      searchScope === 'source' ? resolvedSourceId : undefined,
+      10,
+      searchMode
     );
     setSearchResults(results);
     if (results.length > 0) setSearchQuery(results[0].display_name);
     setAutoSearching(false);
-  }, [channel, searchScope, resolvedSourceId]);
+  }, [channel, searchScope, searchMode, resolvedSourceId]);
 
   // ── Search tab: apply match ──
   async function handleApplyMatch(epgChan: ScoredEpgChannel) {
@@ -677,8 +683,16 @@ export function EpgEditorModal({ channel: initialChannel, sourceId, sourceName, 
           {activeTab === 'search' && (
             <div>
               <div style={{ marginBottom: 10, fontSize: '0.82rem', color: 'var(--text-secondary, #888)' }}>
-                Search your synced EPG channel list to find the right TVG-ID, then click <strong>Apply</strong> to link it to{' '}
+                {searchMode === 'epg'
+                  ? <>Search raw EPG channel names from the XMLTV data to find the right TVG-ID, then click <strong>Apply</strong> to link it to{' '}</>
+                  : <>Search your synced channel list to find the right TVG-ID, then click <strong>Apply</strong> to link it to{' '}</>
+                }
                 <strong>{channel?.name ?? 'the selected channel'}</strong>.
+                {searchMode === 'epg' && (
+                  <span style={{ display: 'block', marginTop: 4, fontSize: '0.78rem', color: 'var(--text-secondary, #888)', opacity: 0.8 }}>
+                    Use this when your EPG provider doesn't include tvg-ids and only provides channel names.
+                  </span>
+                )}
               </div>
               <div className="epg-search-toolbar">
                 <div className="epg-search-input-wrap">
@@ -700,6 +714,18 @@ export function EpgEditorModal({ channel: initialChannel, sourceId, sourceName, 
                     className={`epg-search-scope-btn${searchScope === 'all' ? ' active' : ''}`}
                     onClick={() => setSearchScope('all')}
                   >All Sources</button>
+                </div>
+                <div className="epg-search-scope-toggle">
+                  <button
+                    className={`epg-search-scope-btn${searchMode === 'm3u' ? ' active' : ''}`}
+                    onClick={() => setSearchMode('m3u')}
+                    title="Search M3U channel names"
+                  >M3U Names</button>
+                  <button
+                    className={`epg-search-scope-btn${searchMode === 'epg' ? ' active' : ''}`}
+                    onClick={() => setSearchMode('epg')}
+                    title="Search raw EPG channel names from XMLTV"
+                  >EPG Names</button>
                 </div>
                 {channel && (
                   <button

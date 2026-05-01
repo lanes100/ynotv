@@ -378,11 +378,14 @@ export function scoreChannelMatch(channelName: string, epgDisplayName: string): 
   return Math.min(1.2, score + bonus);
 }
 
+export type EpgSearchMode = 'm3u' | 'epg';
+
 /**
  * Search for channels by name to find the right TVG-ID to apply.
- * Queries the channels table (populated during M3U sync) and returns
- * distinct epg_channel_id entries with match scores.
+ * Queries either the channels table (M3U) or the epg_channels table (raw XMLTV).
  *
+ * searchMode: 'm3u' = channels table (populated during M3U sync)
+ *             'epg' = epg_channels table (raw EPG display names from XMLTV)
  * scope: 'source' = only channels from the given source_id
  *        'all'    = across all sources
  */
@@ -390,32 +393,45 @@ export async function searchEpgChannels(
   query: string,
   sourceId?: string,
   /** Max results to return */
-  limit = 50
+  limit = 50,
+  searchMode: EpgSearchMode = 'm3u'
 ): Promise<ScoredEpgChannel[]> {
   const dbInstance = await (db as any).dbPromise;
 
   const likePattern = `%${query.replace(/[%_]/g, '\\$&')}%`;
 
-  // Query channels table — it's always populated after M3U sync.
-  // We want distinct epg_channel_id values (the TVG-ID to apply).
-  // Falls back to channel name when epg_channel_id is empty.
   let rows: { id: string; display_name: string; icon_url: string | null; source_id: string }[];
 
-  const sql = `
-    SELECT
-      COALESCE(epg_channel_id, name)   AS id,
-      name                             AS display_name,
-      stream_icon                      AS icon_url,
-      source_id
-    FROM channels
-    WHERE (name LIKE $1 ESCAPE '\\' OR epg_channel_id LIKE $1 ESCAPE '\\')
-      ${sourceId ? 'AND source_id = $2' : ''}
-    GROUP BY COALESCE(epg_channel_id, name)
-    ORDER BY name COLLATE NOCASE
-    LIMIT 300
-  `;
-
-  rows = await dbInstance.select(sql, sourceId ? [likePattern, sourceId] : [likePattern]);
+  if (searchMode === 'epg') {
+    const sql = `
+      SELECT
+        id,
+        display_name,
+        icon_url,
+        source_id
+      FROM epg_channels
+      WHERE (display_name LIKE $1 ESCAPE '\\' OR id LIKE $1 ESCAPE '\\')
+        ${sourceId ? 'AND source_id = $2' : ''}
+      ORDER BY display_name COLLATE NOCASE
+      LIMIT 300
+    `;
+    rows = await dbInstance.select(sql, sourceId ? [likePattern, sourceId] : [likePattern]);
+  } else {
+    const sql = `
+      SELECT
+        COALESCE(epg_channel_id, name)   AS id,
+        name                             AS display_name,
+        stream_icon                      AS icon_url,
+        source_id
+      FROM channels
+      WHERE (name LIKE $1 ESCAPE '\\' OR epg_channel_id LIKE $1 ESCAPE '\\')
+        ${sourceId ? 'AND source_id = $2' : ''}
+      GROUP BY COALESCE(epg_channel_id, name)
+      ORDER BY name COLLATE NOCASE
+      LIMIT 300
+    `;
+    rows = await dbInstance.select(sql, sourceId ? [likePattern, sourceId] : [likePattern]);
+  }
 
   const scored: ScoredEpgChannel[] = rows.map(r => ({
     id: r.id,
@@ -438,23 +454,37 @@ const SCORE_THRESHOLD = 0.4;
 export async function autoMatchChannelName(
   channelName: string,
   sourceId?: string,
-  limit = 10
+  limit = 10,
+  searchMode: EpgSearchMode = 'm3u'
 ): Promise<ScoredEpgChannel[]> {
   const dbInstance = await (db as any).dbPromise;
 
-  const sql = `
-    SELECT
-      COALESCE(epg_channel_id, name)   AS id,
-      name                             AS display_name,
-      stream_icon                      AS icon_url,
-      source_id
-    FROM channels
-    ${sourceId ? 'WHERE source_id = $1' : ''}
-    GROUP BY COALESCE(epg_channel_id, name)
-  `;
+  let rows: { id: string; display_name: string; icon_url: string | null; source_id: string }[];
 
-  const rows: { id: string; display_name: string; icon_url: string | null; source_id: string }[] =
-    await dbInstance.select(sql, sourceId ? [sourceId] : []);
+  if (searchMode === 'epg') {
+    const sql = `
+      SELECT
+        id,
+        display_name,
+        icon_url,
+        source_id
+      FROM epg_channels
+      ${sourceId ? 'WHERE source_id = $1' : ''}
+    `;
+    rows = await dbInstance.select(sql, sourceId ? [sourceId] : []);
+  } else {
+    const sql = `
+      SELECT
+        COALESCE(epg_channel_id, name)   AS id,
+        name                             AS display_name,
+        stream_icon                      AS icon_url,
+        source_id
+      FROM channels
+      ${sourceId ? 'WHERE source_id = $1' : ''}
+      GROUP BY COALESCE(epg_channel_id, name)
+    `;
+    rows = await dbInstance.select(sql, sourceId ? [sourceId] : []);
+  }
 
   const scored: ScoredEpgChannel[] = rows
     .map(r => ({

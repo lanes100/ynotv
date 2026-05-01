@@ -950,12 +950,10 @@ class YnotvDatabase extends SqliteDatabase {
         c.is_favorite,
         c.enabled,
         c.category_ids,
-        c.category_id,
         c.tv_archive,
-        c.tv_archive_duration,
         c.direct_source,
-        c.added,
-        c.custom_url
+        c.direct_url,
+        c.added
       FROM channels c
       LEFT JOIN epg_channel_overrides o ON o.stream_id = c.stream_id
     `);
