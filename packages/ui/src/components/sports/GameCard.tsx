@@ -60,6 +60,27 @@ function stripCityPrefix(name: string): string {
   return trimmed;
 }
 
+function splitTeamName(name: string): { city: string; nickname: string } {
+  const trimmed = name.trim();
+  // 1. Try known city prefixes first
+  for (const city of TEAM_CITY_PREFIXES) {
+    if (trimmed.toLowerCase().startsWith(city.toLowerCase() + ' ')) {
+      const nickname = trimmed.slice(city.length).trim();
+      if (nickname.length > 0) return { city, nickname };
+    }
+  }
+  // 2. Fall back: split on last space
+  const lastSpace = trimmed.lastIndexOf(' ');
+  if (lastSpace > 0) {
+    return {
+      city: trimmed.slice(0, lastSpace),
+      nickname: trimmed.slice(lastSpace + 1),
+    };
+  }
+  // 3. Single word — treat as nickname with no city
+  return { city: '', nickname: trimmed };
+}
+
 const NCAA_LEAGUE_IDS = new Set([
   'mens-college-basketball',
   'womens-college-basketball',
@@ -98,6 +119,16 @@ function stringToColor(str: string): string {
   }
   const h = Math.abs(hash) % 360;
   return `hsl(${h} 60% 45%)`;
+}
+
+function TeamNameLabel({ name }: { name: string }) {
+  const { city, nickname } = splitTeamName(name);
+  return (
+    <div className="gc-team-name-wrap">
+      {city && <span className="gc-team-city">{city}</span>}
+      <span className="gc-team-nickname">{nickname}</span>
+    </div>
+  );
 }
 
 function TeamLogo({ name, logo, size = 'md' }: { name: string; logo?: string; size?: 'sm' | 'md' | 'lg' }) {
@@ -254,8 +285,6 @@ export function GameCard({ event, onClick, onChannelClick, onSearchTeams, onPlay
     }
   };
 
-  const awayName = event.awayTeam.shortName || event.awayTeam.name;
-  const homeName = event.homeTeam.shortName || event.homeTeam.name;
   const statusBelow = getStatusBelow();
 
   const compactView = (
@@ -270,7 +299,7 @@ export function GameCard({ event, onClick, onChannelClick, onSearchTeams, onPlay
       <div className="gc-compact-grid">
         <div className="gc-compact-team away">
           <TeamLogo name={event.awayTeam.name} logo={event.awayTeam.logo} size="sm" />
-          <span className="gc-compact-team-name" title={event.awayTeam.name}>{awayName}</span>
+          <TeamNameLabel name={event.awayTeam.name} />
         </div>
         <div className="gc-compact-center">
           {isScheduled ? (
@@ -291,7 +320,7 @@ export function GameCard({ event, onClick, onChannelClick, onSearchTeams, onPlay
         </div>
         <div className="gc-compact-team home">
           <TeamLogo name={event.homeTeam.name} logo={event.homeTeam.logo} size="sm" />
-          <span className="gc-compact-team-name" title={event.homeTeam.name}>{homeName}</span>
+          <TeamNameLabel name={event.homeTeam.name} />
         </div>
       </div>
       {isLive && <span className="gc-live-pulse" />}
@@ -327,7 +356,7 @@ export function GameCard({ event, onClick, onChannelClick, onSearchTeams, onPlay
         {/* Away Team */}
         <div className="gc-team-col away">
           <TeamLogo name={event.awayTeam.name} logo={event.awayTeam.logo} size="lg" />
-          <span className="gc-team-col-name" title={event.awayTeam.name}>{awayName}</span>
+          <TeamNameLabel name={event.awayTeam.name} />
         </div>
 
         {/* Center Scores */}
@@ -352,7 +381,7 @@ export function GameCard({ event, onClick, onChannelClick, onSearchTeams, onPlay
         {/* Home Team */}
         <div className="gc-team-col home">
           <TeamLogo name={event.homeTeam.name} logo={event.homeTeam.logo} size="lg" />
-          <span className="gc-team-col-name" title={event.homeTeam.name}>{homeName}</span>
+          <TeamNameLabel name={event.homeTeam.name} />
         </div>
       </div>
 

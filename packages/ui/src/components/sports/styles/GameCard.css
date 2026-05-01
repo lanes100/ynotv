@@ -140,8 +140,29 @@
   min-width: 0;
 }
 
-.gc-team-col-name {
-  font-size: 13px;
+.gc-team-name-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.gc-team-city {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-secondary, #8899aa);
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  line-height: 1.2;
+}
+
+.gc-team-nickname {
+  font-size: 14px;
   font-weight: 700;
   color: var(--text-primary, #fff);
   text-align: center;
@@ -414,16 +435,16 @@
   min-width: 0;
 }
 
-.gc-compact-team-name {
+.gc-compact-team .gc-team-name-wrap {
+  gap: 0px;
+}
+
+.gc-compact-team .gc-team-city {
+  font-size: 9px;
+}
+
+.gc-compact-team .gc-team-nickname {
   font-size: 11px;
-  font-weight: 600;
-  color: var(--text-primary, #fff);
-  text-align: center;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 100%;
-  line-height: 1.2;
 }
 
 .gc-compact-center {
