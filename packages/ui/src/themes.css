@@ -3061,11 +3061,6 @@
   background: var(--bg-primary);
 }
 
-[data-theme="dark-crimson"] .sports-hub,
-[data-theme^="dark-"] .sports-hub {
-  background: var(--bg-primary);
-}
-
 [data-theme="dark-crimson"] .dvr-dashboard,
 [data-theme^="dark-"] .dvr-dashboard {
   background: var(--bg-primary);
