@@ -524,7 +524,7 @@ export function useChannelSearch(
           `SELECT category_id FROM categories
            WHERE category_id IN (${filterCategoryIds.map(() => '?').join(',')})
            AND source_id IN (${sourcePlaceholders})
-           AND (enabled IS NULL OR enabled != 0)`,
+           AND (enabled IS NULL OR enabled NOT IN (0, '0', 'false'))`,
           [...filterCategoryIds, ...effectiveSourceIds]
         );
         effectiveCategoryIds = categoryRows.map((r: any) => r.category_id);
@@ -533,7 +533,7 @@ export function useChannelSearch(
         const enabledCategoryRows = await dbInstance.select(
           `SELECT category_id FROM categories
            WHERE source_id IN (${sourcePlaceholders})
-           AND (enabled IS NULL OR enabled != 0)`,
+           AND (enabled IS NULL OR enabled NOT IN (0, '0', 'false'))`,
           effectiveSourceIds
         );
         effectiveCategoryIds = enabledCategoryRows.map((r: any) => r.category_id);
@@ -570,7 +570,7 @@ export function useChannelSearch(
            CROSS JOIN json_each(c.category_ids) AS cat
            WHERE ((${wordLikeClauses}) OR c.source_id IN (${sourceMatchPlaceholders}))
            AND c.source_id IN (${sourcePlaceholders})
-           AND (c.enabled IS NULL OR c.enabled != 0)
+           AND (c.enabled IS NULL OR c.enabled NOT IN (0, '0', 'false'))
            AND cat.value IN (${categoryPlaceholders})
            ${orderByClause}
            LIMIT ?`;
@@ -588,7 +588,7 @@ export function useChannelSearch(
            CROSS JOIN json_each(c.category_ids) AS cat
            WHERE (${wordLikeClauses})
            AND c.source_id IN (${sourcePlaceholders})
-           AND (c.enabled IS NULL OR c.enabled != 0)
+           AND (c.enabled IS NULL OR c.enabled NOT IN (0, '0', 'false'))
            AND cat.value IN (${categoryPlaceholders})
            ${orderByClause}
            LIMIT ?`;
@@ -669,7 +669,7 @@ export function useProgramSearch(
           `SELECT category_id FROM categories
            WHERE category_id IN (${filterCategoryIds.map(() => '?').join(',')})
            AND source_id IN (${sourcePlaceholders})
-           AND (enabled IS NULL OR enabled != 0)`,
+           AND (enabled IS NULL OR enabled NOT IN (0, '0', 'false'))`,
           [...filterCategoryIds, ...effectiveSourceIds]
         );
         effectiveCategoryIds = categoryRows.map((r: any) => r.category_id);
@@ -677,7 +677,7 @@ export function useProgramSearch(
         const enabledCategoriesQuery = `
           SELECT category_id FROM categories 
           WHERE source_id IN (${sourcePlaceholders})
-          AND (enabled IS NULL OR enabled != 0)
+          AND (enabled IS NULL OR enabled NOT IN (0, '0', 'false'))
         `;
         const enabledCategoryRows = await dbInstance.select(enabledCategoriesQuery, effectiveSourceIds);
         effectiveCategoryIds = enabledCategoryRows.map((row: any) => row.category_id);
@@ -694,7 +694,7 @@ export function useProgramSearch(
         SELECT DISTINCT c.stream_id 
         FROM channels c, json_each(c.category_ids) AS cat
         WHERE c.source_id IN (${sourcePlaceholders})
-        AND (c.enabled IS NULL OR c.enabled != 0)
+        AND (c.enabled IS NULL OR c.enabled NOT IN (0, '0', 'false'))
         AND cat.value IN (${categoryPlaceholders})
       `;
       const enabledChannelRows = await dbInstance.select(
@@ -728,7 +728,7 @@ export function useProgramSearch(
                SELECT DISTINCT c.stream_id, c.name
                FROM channels c, json_each(c.category_ids) AS cat
                WHERE c.source_id IN (${sourcePlaceholders})
-               AND (c.enabled IS NULL OR c.enabled != 0)
+               AND (c.enabled IS NULL OR c.enabled NOT IN (0, '0', 'false'))
                AND cat.value IN (${categoryPlaceholders})
              ) c ON p.stream_id = c.stream_id
              WHERE (${wordLikeClauses}) AND p.end > ?
@@ -743,7 +743,7 @@ export function useProgramSearch(
                SELECT DISTINCT c.stream_id 
                FROM channels c, json_each(c.category_ids) AS cat
                WHERE c.source_id IN (${sourcePlaceholders})
-               AND (c.enabled IS NULL OR c.enabled != 0)
+               AND (c.enabled IS NULL OR c.enabled NOT IN (0, '0', 'false'))
                AND cat.value IN (${categoryPlaceholders})
              ) ec ON p.stream_id = ec.stream_id
              WHERE (${wordLikeClauses}) AND p.end > ?

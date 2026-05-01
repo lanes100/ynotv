@@ -311,9 +311,34 @@ export class SqliteTable<T, TKey> {
     async add(item: T): Promise<TKey> {
         return writeLock.run(async () => {
             const db = await this.getDb();
-            const keys = Object.keys(item as any);
+            const tableJsonFields = JSON_FIELDS[this.tableName] || [];
+            const tableBooleanFields = BOOLEAN_FIELDS[this.tableName] || [];
+            
+            const processedItem: Record<string, any> = { ...item };
+
+            // Convert JSON fields
+            for (const field of tableJsonFields) {
+                if (field in processedItem && processedItem[field] !== null && processedItem[field] !== undefined) {
+                    const val = processedItem[field];
+                    if (Array.isArray(val) || typeof val === 'object') {
+                        processedItem[field] = JSON.stringify(val);
+                    }
+                }
+            }
+
+            // Convert boolean fields to 0/1
+            for (const field of tableBooleanFields) {
+                if (field in processedItem && processedItem[field] !== null && processedItem[field] !== undefined) {
+                    const val = processedItem[field];
+                    if (typeof val === 'boolean') {
+                        processedItem[field] = val ? 1 : 0;
+                    }
+                }
+            }
+
+            const keys = Object.keys(processedItem);
             const placeholders = keys.map((_, i) => `$${i + 1}`).join(',');
-            const values = Object.values(item as any);
+            const values = Object.values(processedItem);
             const columns = keys.join(',');
 
             await db.execute(
@@ -334,9 +359,34 @@ export class SqliteTable<T, TKey> {
         return writeLock.run(async () => {
             // Upsert is dialect specific. SQLite supports INSERT OR REPLACE
             const db = await this.getDb();
-            const keys = Object.keys(item as any);
+            const tableJsonFields = JSON_FIELDS[this.tableName] || [];
+            const tableBooleanFields = BOOLEAN_FIELDS[this.tableName] || [];
+            
+            const processedItem: Record<string, any> = { ...item };
+
+            // Convert JSON fields
+            for (const field of tableJsonFields) {
+                if (field in processedItem && processedItem[field] !== null && processedItem[field] !== undefined) {
+                    const val = processedItem[field];
+                    if (Array.isArray(val) || typeof val === 'object') {
+                        processedItem[field] = JSON.stringify(val);
+                    }
+                }
+            }
+
+            // Convert boolean fields to 0/1
+            for (const field of tableBooleanFields) {
+                if (field in processedItem && processedItem[field] !== null && processedItem[field] !== undefined) {
+                    const val = processedItem[field];
+                    if (typeof val === 'boolean') {
+                        processedItem[field] = val ? 1 : 0;
+                    }
+                }
+            }
+
+            const keys = Object.keys(processedItem);
             const placeholders = keys.map((_, i) => `$${i + 1}`).join(',');
-            const values = Object.values(item as any);
+            const values = Object.values(processedItem);
             const columns = keys.join(',');
 
             await db.execute(
@@ -510,6 +560,7 @@ export class SqliteTable<T, TKey> {
         const BATCH_SIZE = Math.floor(MAX_PARAMS / keys.length);
 
         const tableJsonFields = JSON_FIELDS[this.tableName] || [];
+        const tableBooleanFields = BOOLEAN_FIELDS[this.tableName] || [];
 
         for (let i = 0; i < items.length; i += BATCH_SIZE) {
             const chunk = items.slice(i, i + BATCH_SIZE);
@@ -527,6 +578,10 @@ export class SqliteTable<T, TKey> {
                     // Stringify JSON fields
                     if (tableJsonFields.includes(key) && (Array.isArray(val) || typeof val === 'object') && val !== null) {
                         val = JSON.stringify(val);
+                    }
+                    // Convert boolean fields to 0/1
+                    if (tableBooleanFields.includes(key) && typeof val === 'boolean') {
+                        val = val ? 1 : 0;
                     }
                     allValues.push(val);
                 }
