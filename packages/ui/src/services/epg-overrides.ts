@@ -410,7 +410,7 @@ export async function searchEpgChannels(
         icon_url,
         source_id
       FROM epg_channels
-      WHERE (display_name LIKE $1 ESCAPE '\\' OR id LIKE $1 ESCAPE '\\')
+      WHERE (LOWER(display_name) LIKE LOWER($1) ESCAPE '\\' OR LOWER(id) LIKE LOWER($1) ESCAPE '\\')
         ${sourceId ? 'AND source_id = $2' : ''}
       ORDER BY display_name COLLATE NOCASE
       LIMIT 300
@@ -424,7 +424,7 @@ export async function searchEpgChannels(
         stream_icon                      AS icon_url,
         source_id
       FROM channels
-      WHERE (name LIKE $1 ESCAPE '\\' OR epg_channel_id LIKE $1 ESCAPE '\\')
+      WHERE (LOWER(name) LIKE LOWER($1) ESCAPE '\\' OR LOWER(epg_channel_id) LIKE LOWER($1) ESCAPE '\\')
         ${sourceId ? 'AND source_id = $2' : ''}
       GROUP BY COALESCE(epg_channel_id, name)
       ORDER BY name COLLATE NOCASE
