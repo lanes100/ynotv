@@ -25,8 +25,13 @@ async function applySubtitleSettings() {
     if (ss.subColor) {
       await Bridge.setSubtitleColor(ss.subColor).catch(() => {});
     }
-    if (ss.subBackgroundColor) {
-      await Bridge.setSubtitleBackColor(ss.subBackgroundColor).catch(() => {});
+    if (ss.subBackgroundEnabled && ss.subBackgroundColor) {
+      const opacityPercent = ss.subBackgroundOpacity ?? 80;
+      await Bridge.setSubtitleBackColor(ss.subBackgroundColor, opacityPercent).catch(() => {});
+      await Bridge.setSubtitleBorderStyle('background-box').catch(() => {});
+    } else if (ss.subBackgroundEnabled === false) {
+      await Bridge.setSubtitleBackColor(ss.subBackgroundColor ?? '#000000', 0).catch(() => {});
+      await Bridge.setSubtitleBorderStyle('outline-and-shadow').catch(() => {});
     }
     if (ss.subOutlineColor) {
       await Bridge.setSubtitleBorderColor(ss.subOutlineColor).catch(() => {});

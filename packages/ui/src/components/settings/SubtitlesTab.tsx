@@ -8,6 +8,8 @@ export interface SubtitleSettings {
   defaultSize: number;
   subColor: string;
   subBackgroundColor: string;
+  subBackgroundEnabled: boolean;
+  subBackgroundOpacity: number;
   subOutlineColor: string;
   subDelay: number;
   subVerticalOffset: number;
@@ -19,6 +21,8 @@ const DEFAULT_SETTINGS: SubtitleSettings = {
   defaultSize: 35,
   subColor: '#FFFFFF',
   subBackgroundColor: '#000000',
+  subBackgroundEnabled: false,
+  subBackgroundOpacity: 80,
   subOutlineColor: '#000000',
   subDelay: 0,
   subVerticalOffset: 0,
@@ -221,21 +225,61 @@ export function SubtitlesTab({ settings, onSettingsChange }: SubtitlesTabProps) 
           {/* Background Color */}
           <div className="timeshift-toggle-row">
             <div className="timeshift-toggle-info">
-              <span className="timeshift-toggle-label">Background Color</span>
-              <span className="timeshift-toggle-sub">Background box color behind subtitles.</span>
+              <span className="timeshift-toggle-label">Background</span>
+              <span className="timeshift-toggle-sub">Show a colored box behind subtitle text.</span>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <input
-                type="color"
-                value={merged.subBackgroundColor}
-                onChange={(e) => update({ subBackgroundColor: e.target.value })}
-                style={{ width: '40px', height: '32px', border: 'none', borderRadius: '4px', cursor: 'pointer', background: 'transparent' }}
-              />
-              <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontFamily: 'monospace' }}>
-                {merged.subBackgroundColor}
-              </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <label className="toggle-switch">
+                <input
+                  type="checkbox"
+                  checked={merged.subBackgroundEnabled}
+                  onChange={(e) => update({ subBackgroundEnabled: e.target.checked })}
+                />
+                <span className="toggle-slider" />
+              </label>
             </div>
           </div>
+
+          {merged.subBackgroundEnabled && (
+            <>
+              <div className="timeshift-toggle-row">
+                <div className="timeshift-toggle-info">
+                  <span className="timeshift-toggle-label">Background Color</span>
+                  <span className="timeshift-toggle-sub">Color of the background box behind subtitles.</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <input
+                    type="color"
+                    value={merged.subBackgroundColor}
+                    onChange={(e) => update({ subBackgroundColor: e.target.value })}
+                    style={{ width: '40px', height: '32px', border: 'none', borderRadius: '4px', cursor: 'pointer', background: 'transparent' }}
+                  />
+                  <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontFamily: 'monospace' }}>
+                    {merged.subBackgroundColor}
+                  </span>
+                </div>
+              </div>
+              <div className="timeshift-toggle-row">
+                <div className="timeshift-toggle-info">
+                  <span className="timeshift-toggle-label">Background Opacity</span>
+                  <span className="timeshift-toggle-sub">Transparency of the background box.</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: '200px', justifyContent: 'flex-end' }}>
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={merged.subBackgroundOpacity ?? 80}
+                    onChange={(e) => update({ subBackgroundOpacity: parseInt(e.target.value) })}
+                    style={{ width: '140px' }}
+                  />
+                  <span style={{ minWidth: '32px', textAlign: 'right', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                    {merged.subBackgroundOpacity ?? 80}%
+                  </span>
+                </div>
+              </div>
+            </>
+          )}
 
           {/* Outline Color */}
           <div className="timeshift-toggle-row">
@@ -302,7 +346,9 @@ export function SubtitlesTab({ settings, onSettingsChange }: SubtitlesTabProps) 
               style={{
                 fontSize: `${merged.defaultSize}px`,
                 color: merged.subColor,
-                backgroundColor: merged.subBackgroundColor + 'CC',
+                backgroundColor: merged.subBackgroundEnabled 
+                  ? merged.subBackgroundColor + Math.round((merged.subBackgroundOpacity ?? 80) / 100 * 255).toString(16).padStart(2, '0').toUpperCase()
+                  : 'transparent',
                 padding: '4px 12px',
                 borderRadius: '4px',
                 fontFamily: "'Arial', sans-serif",

@@ -107,6 +107,9 @@ export function SubtitleControlModal({
   const [delay, setDelay] = useState(0);
   const [size, setSize] = useState(35);
   const [verticalOffset, setVerticalOffset] = useState(100);
+  const [subBackgroundEnabled, setSubBackgroundEnabled] = useState(false);
+  const [subBackgroundColor, setSubBackgroundColor] = useState('#000000');
+  const [subBackgroundOpacity, setSubBackgroundOpacity] = useState(80);
 
   // SubSource flow state
   const [apiKey, setApiKey] = useState('');
@@ -179,6 +182,9 @@ export function SubtitleControlModal({
         setApiKey(key);
         setSearchLang(ss.defaultLanguage || 'en');
         setSize(ss.defaultSize || 35);
+        setSubBackgroundEnabled(ss.subBackgroundEnabled ?? false);
+        setSubBackgroundColor(ss.subBackgroundColor || '#000000');
+        setSubBackgroundOpacity(ss.subBackgroundOpacity ?? 80);
         if (!loadedRef.current) {
           setVerticalOffset(100 - (ss.subVerticalOffset || 0));
           setDelay(ss.subDelay || 0);
@@ -355,6 +361,58 @@ export function SubtitleControlModal({
     setVerticalOffset(value);
     try { await Bridge.setSubtitlePos(value); } catch (e) { console.error(e); }
   }, []);
+
+  const applyBackgroundSettings = useCallback(async (enabled: boolean, color: string, opacity: number) => {
+    try {
+      if (enabled) {
+        await Bridge.setSubtitleBackColor(color, opacity);
+        await Bridge.setSubtitleBorderStyle('background-box');
+      } else {
+        await Bridge.setSubtitleBackColor(color, 0);
+        await Bridge.setSubtitleBorderStyle('outline-and-shadow');
+      }
+    } catch (e) { console.error('[SubtitleModal] applyBackgroundSettings error:', e); }
+  }, []);
+
+  const handleBackgroundToggle = useCallback(async (enabled: boolean) => {
+    setSubBackgroundEnabled(enabled);
+    await applyBackgroundSettings(enabled, subBackgroundColor, subBackgroundOpacity);
+
+    // Persist setting
+    try {
+      if (window.storage) {
+        const result = await window.storage.getSettings();
+        const settings: any = result.data || {};
+        const ss = settings.subtitleSettings || {};
+        await window.storage.updateSettings({
+          subtitleSettings: { ...ss, subBackgroundEnabled: enabled },
+        });
+      }
+    } catch (e) {
+      console.error('Failed to save subBackgroundEnabled:', e);
+    }
+  }, [subBackgroundColor, subBackgroundOpacity, applyBackgroundSettings]);
+
+  const handleBackgroundOpacityChange = useCallback(async (opacity: number) => {
+    setSubBackgroundOpacity(opacity);
+    if (subBackgroundEnabled) {
+      await applyBackgroundSettings(true, subBackgroundColor, opacity);
+    }
+    
+    // Persist setting
+    try {
+      if (window.storage) {
+        const result = await window.storage.getSettings();
+        const settings: any = result.data || {};
+        const ss = settings.subtitleSettings || {};
+        await window.storage.updateSettings({
+          subtitleSettings: { ...ss, subBackgroundOpacity: opacity },
+        });
+      }
+    } catch (e) {
+      console.error('Failed to save subBackgroundOpacity:', e);
+    }
+  }, [subBackgroundColor, subBackgroundEnabled, applyBackgroundSettings]);
 
   /* -------------------------------------------------------------- */
   /*  SubSource movie search (manual)                                 */
@@ -864,6 +922,39 @@ export function SubtitleControlModal({
                   >↓</button>
                 </div>
               </div>
+
+              <div className="subtitle-control-item">
+                <label>Background</label>
+                <div className="subtitle-control-inputs">
+                  <label className="subtitle-toggle-switch">
+                    <input
+                      type="checkbox"
+                      checked={subBackgroundEnabled}
+                      onChange={(e) => handleBackgroundToggle(e.target.checked)}
+                    />
+                    <span className="subtitle-toggle-slider" />
+                  </label>
+                </div>
+              </div>
+
+              {subBackgroundEnabled && (
+                <div className="subtitle-control-item">
+                  <label>Opacity</label>
+                  <div className="subtitle-control-inputs" style={{ flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      value={subBackgroundOpacity}
+                      onChange={(e) => handleBackgroundOpacityChange(parseInt(e.target.value))}
+                      style={{ width: '80px', margin: 0 }}
+                    />
+                    <span className="subtitle-control-display" style={{ fontSize: '0.8rem', padding: 0 }}>
+                      {subBackgroundOpacity}%
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

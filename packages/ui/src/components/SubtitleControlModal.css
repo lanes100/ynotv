@@ -435,6 +435,50 @@
   font-weight: 600;
 }
 
+/* Toggle switch in controls */
+.subtitle-toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 40px;
+  height: 22px;
+  cursor: pointer;
+}
+
+.subtitle-toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.subtitle-toggle-slider {
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 22px;
+  transition: 0.2s;
+}
+
+.subtitle-toggle-slider::before {
+  content: '';
+  position: absolute;
+  height: 16px;
+  width: 16px;
+  left: 3px;
+  bottom: 3px;
+  background: #fff;
+  border-radius: 50%;
+  transition: 0.2s;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.subtitle-toggle-switch input:checked + .subtitle-toggle-slider {
+  background: rgba(59, 130, 246, 0.6);
+}
+
+.subtitle-toggle-switch input:checked + .subtitle-toggle-slider::before {
+  transform: translateX(18px);
+}
+
 /* Scrollbar */
 .subtitle-col::-webkit-scrollbar,
 .subtitle-search-results::-webkit-scrollbar {

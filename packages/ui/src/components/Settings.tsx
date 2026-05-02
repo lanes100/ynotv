@@ -108,6 +108,8 @@ export function Settings({ onClose, onShortcutsChange, theme, onThemeChange, ini
     defaultSize: 35,
     subColor: '#FFFFFF',
     subBackgroundColor: '#000000',
+    subBackgroundEnabled: false,
+    subBackgroundOpacity: 80,
     subOutlineColor: '#000000',
     subDelay: 0,
     subVerticalOffset: 0,

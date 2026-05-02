@@ -261,29 +261,30 @@ export const Bridge = {
     },
 
     async setSubtitleColor(color: string) {
-        // Convert hex to ASS format for MPV
-        const hex = color.replace('#', '');
-        const r = parseInt(hex.substring(0, 2), 16) / 255;
-        const g = parseInt(hex.substring(2, 4), 16) / 255;
-        const b = parseInt(hex.substring(4, 6), 16) / 255;
-        const assColor = `{\\c&H${hex.substring(4, 6)}${hex.substring(2, 4)}${hex.substring(0, 2)}&}`;
-        return invoke('mpv_set_property', { name: 'sub-color', value: `${r}/${g}/${b}` });
+        return invoke('mpv_set_property', { name: 'sub-color', value: color });
     },
 
-    async setSubtitleBackColor(color: string) {
-        const hex = color.replace('#', '');
+    async setSubtitleBackColor(color: string, opacity: number = 100) {
+        // MPV IPC accepts colors as r/g/b/a floats (alpha: 0.0=transparent, 1.0=opaque)
+        const hex = color.replace('#', '').substring(0, 6);
         const r = parseInt(hex.substring(0, 2), 16) / 255;
         const g = parseInt(hex.substring(2, 4), 16) / 255;
         const b = parseInt(hex.substring(4, 6), 16) / 255;
-        return invoke('mpv_set_property', { name: 'sub-back-color', value: `${r}/${g}/${b}` });
+        const a = opacity / 100;
+        return invoke('mpv_set_property', { name: 'sub-back-color', value: `${r}/${g}/${b}/${a}` });
+    },
+
+    async setSubtitleBackOpacity(opacity: number) {
+        // MPV does not have a sub-back-opacity property, alpha should be passed via setSubtitleBackColor
+        return Promise.resolve();
     },
 
     async setSubtitleBorderColor(color: string) {
-        const hex = color.replace('#', '');
-        const r = parseInt(hex.substring(0, 2), 16) / 255;
-        const g = parseInt(hex.substring(2, 4), 16) / 255;
-        const b = parseInt(hex.substring(4, 6), 16) / 255;
-        return invoke('mpv_set_property', { name: 'sub-border-color', value: `${r}/${g}/${b}` });
+        return invoke('mpv_set_property', { name: 'sub-border-color', value: color });
+    },
+
+    async setSubtitleBorderStyle(style: string | number) {
+        return invoke('mpv_set_property', { name: 'sub-border-style', value: style });
     },
 
     async setSubtitlePos(pos: number) {
@@ -540,7 +541,9 @@ export async function initPolyfills() {
         setSubtitleSize: Bridge.setSubtitleSize,
         setSubtitleColor: Bridge.setSubtitleColor,
         setSubtitleBackColor: Bridge.setSubtitleBackColor,
+        setSubtitleBackOpacity: Bridge.setSubtitleBackOpacity,
         setSubtitleBorderColor: Bridge.setSubtitleBorderColor,
+        setSubtitleBorderStyle: Bridge.setSubtitleBorderStyle,
         setSubtitlePos: Bridge.setSubtitlePos,
         destroy: () => { },
         setProperty: Bridge.setProperty,
