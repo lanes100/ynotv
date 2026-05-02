@@ -18,7 +18,7 @@ declare global {
         };
         fetchProxy: {
             fetch: (url: string, options?: any) => Promise<{ data?: { ok: boolean; status: number; statusText: string; text: string; json: () => Promise<any> }; error?: string; success: boolean }>;
-            fetchBinary: (url: string) => Promise<{ data?: Uint8Array; success: boolean; error?: string }>;
+            fetchBinary: (url: string, options?: any) => Promise<{ data?: Uint8Array; success: boolean; error?: string }>;
         };
         debug: {
             logFromRenderer: (msg: string) => Promise<void>;

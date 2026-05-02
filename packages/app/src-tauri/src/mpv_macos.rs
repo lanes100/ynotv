@@ -349,6 +349,33 @@ pub async fn set_subtitle_track<R: Runtime>(app: &AppHandle<R>, id: i64) -> Resu
     Ok(())
 }
 
+pub async fn add_subtitle_file<R: Runtime>(app: &AppHandle<R>, file_path: String) -> Result<(), String> {
+    send_command(app, json!({ "command": ["sub-add", file_path, "select"] })).await?;
+    Ok(())
+}
+
+pub async fn remove_subtitle_file<R: Runtime>(app: &AppHandle<R>, file_path: String) -> Result<(), String> {
+    // Get track list to find the subtitle with matching external filename
+    let track_list = send_command(app, json!({ "command": ["get_property", "track-list"] })).await?;
+    if let Some(tracks) = track_list.as_array() {
+        for track in tracks {
+            if let Some(t) = track.as_object() {
+                let is_sub = t.get("type").and_then(|v| v.as_str()) == Some("sub");
+                let external = t.get("external").and_then(|v| v.as_bool()).unwrap_or(false);
+                let external_filename = t.get("external-filename").and_then(|v| v.as_str()).unwrap_or("");
+                if is_sub && external && external_filename == file_path {
+                    let id = t.get("id").and_then(|v| v.as_i64()).unwrap_or(0);
+                    if id > 0 {
+                        send_command(app, json!({ "command": ["sub-remove", id] })).await?;
+                        return Ok(());
+                    }
+                }
+            }
+        }
+    }
+    Ok(())
+}
+
 pub async fn set_property<R: Runtime>(
     app: &AppHandle<R>,
     name: String,

@@ -110,7 +110,6 @@ export function NowPlayingBar({
   // scrubMode: 'timeshift' | 'epgcatchup' — local toggle when channel supports both
   const [scrubMode, setScrubMode] = useState<'timeshift' | 'epgcatchup'>('timeshift');
   // Modal state
-  const [showSubtitleModal, setShowSubtitleModal] = useState(false);
   const [showAudioModal, setShowAudioModal] = useState(false);
   const [recording, setRecording] = useState(false);
   const [showRecordModal, setShowRecordModal] = useState(false);
@@ -694,7 +693,7 @@ export function NowPlayingBar({
             <div className="npb-controls npb-extra-controls">
               <button
                 className="npb-btn"
-                onClick={() => setShowSubtitleModal(true)}
+                onClick={onShowSubtitleModal}
                 disabled={!canControl}
                 title="Select Subtitle (J)"
               >
@@ -766,12 +765,7 @@ export function NowPlayingBar({
             </button>
           </div>
 
-          {/* Track Selection Modals */}
-          <TrackSelectionModal
-            isOpen={showSubtitleModal}
-            type="subtitle"
-            onClose={() => setShowSubtitleModal(false)}
-          />
+          {/* Audio Track Selection Modal */}
           <TrackSelectionModal
             isOpen={showAudioModal}
             type="audio"

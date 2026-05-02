@@ -20,6 +20,7 @@ import { PlaybackTab } from './settings/PlaybackTab';
 import { CacheTab } from './settings/CacheTab';
 import { AboutTab } from './settings/AboutTab';
 import { LiveTVTab } from './settings/LiveTVTab';
+import { SubtitlesTab, type SubtitleSettings } from './settings/SubtitlesTab';
 import type { ShortcutsMap, ThemeId } from '../types/app';
 import './Settings.css';
 
@@ -99,6 +100,18 @@ export function Settings({ onClose, onShortcutsChange, theme, onThemeChange, ini
   const [modernUiEnabled, setModernUiEnabled] = useState(true);
   const epgView = useEpgView();
   const setEpgView = useSetEpgView();
+
+  // Subtitle settings state
+  const [subtitleSettings, setSubtitleSettings] = useState<SubtitleSettings>({
+    subsourceApiKey: '',
+    defaultLanguage: 'en',
+    defaultSize: 35,
+    subColor: '#FFFFFF',
+    subBackgroundColor: '#000000',
+    subOutlineColor: '#000000',
+    subDelay: 0,
+    subVerticalOffset: 0,
+  });
 
   // Loading state for settings
   const [settingsLoaded, setSettingsLoaded] = useState(false);
@@ -180,6 +193,7 @@ export function Settings({ onClose, onShortcutsChange, theme, onThemeChange, ini
         epgView?: 'traditional' | 'alternate';
         collapseSourceCategoriesOnStartup?: boolean;
         modernUiEnabled?: boolean;
+        subtitleSettings?: SubtitleSettings;
       };
 
       // Load TMDB API key
@@ -272,6 +286,11 @@ export function Settings({ onClose, onShortcutsChange, theme, onThemeChange, ini
       
       // Load modern UI setting
       setModernUiEnabled(settings.modernUiEnabled ?? true);
+
+      // Load subtitle settings
+      if (settings.subtitleSettings) {
+        setSubtitleSettings(settings.subtitleSettings);
+      }
     }
     setSettingsLoaded(true);
   }
@@ -355,6 +374,14 @@ export function Settings({ onClose, onShortcutsChange, theme, onThemeChange, ini
     }
     if (window.storage) {
       await window.storage.updateSettings({ modernUiEnabled: enabled });
+    }
+  };
+
+  const handleSubtitleSettingsChange = async (partial: Partial<SubtitleSettings>) => {
+    const updated = { ...subtitleSettings, ...partial };
+    setSubtitleSettings(updated);
+    if (window.storage) {
+      await window.storage.updateSettings({ subtitleSettings: updated });
     }
   };
 
@@ -472,6 +499,13 @@ export function Settings({ onClose, onShortcutsChange, theme, onThemeChange, ini
             onVodRefreshChange={setVodRefreshHours}
             onEpgRefreshChange={setEpgRefreshHours}
             onEpgSyncConcurrencyChange={setEpgSyncConcurrency}
+          />
+        );
+      case 'subtitles':
+        return (
+          <SubtitlesTab
+            settings={subtitleSettings}
+            onSettingsChange={handleSubtitleSettingsChange}
           />
         );
       case 'channels':

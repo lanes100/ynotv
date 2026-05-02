@@ -4,6 +4,7 @@ export type SettingsTabId =
   | 'sources'
   | 'tmdb'
   | 'refresh'
+  | 'subtitles'
   | 'channels'
   | 'security'
   | 'debug'
@@ -36,6 +37,7 @@ const SETTINGS_CATEGORIES: SettingsCategory[] = [
       { id: 'sources', label: 'Sources' },
       { id: 'refresh', label: 'Data Refresh' },
       { id: 'tmdb', label: 'TMDB/RPDB' },
+      { id: 'subtitles', label: 'Subtitles' },
     ],
   },
   {

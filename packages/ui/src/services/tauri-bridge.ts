@@ -244,6 +244,52 @@ export const Bridge = {
         return invoke('mpv_set_subtitle', { id });
     },
 
+    async addSubtitleFile(filePath: string) {
+        return invoke('mpv_add_subtitle', { filePath });
+    },
+
+    async removeSubtitleFile(filePath: string) {
+        return invoke('mpv_remove_subtitle', { filePath });
+    },
+
+    async setSubtitleDelay(delay: number) {
+        return invoke('mpv_set_property', { name: 'sub-delay', value: delay });
+    },
+
+    async setSubtitleSize(size: number) {
+        return invoke('mpv_set_property', { name: 'sub-font-size', value: size });
+    },
+
+    async setSubtitleColor(color: string) {
+        // Convert hex to ASS format for MPV
+        const hex = color.replace('#', '');
+        const r = parseInt(hex.substring(0, 2), 16) / 255;
+        const g = parseInt(hex.substring(2, 4), 16) / 255;
+        const b = parseInt(hex.substring(4, 6), 16) / 255;
+        const assColor = `{\\c&H${hex.substring(4, 6)}${hex.substring(2, 4)}${hex.substring(0, 2)}&}`;
+        return invoke('mpv_set_property', { name: 'sub-color', value: `${r}/${g}/${b}` });
+    },
+
+    async setSubtitleBackColor(color: string) {
+        const hex = color.replace('#', '');
+        const r = parseInt(hex.substring(0, 2), 16) / 255;
+        const g = parseInt(hex.substring(2, 4), 16) / 255;
+        const b = parseInt(hex.substring(4, 6), 16) / 255;
+        return invoke('mpv_set_property', { name: 'sub-back-color', value: `${r}/${g}/${b}` });
+    },
+
+    async setSubtitleBorderColor(color: string) {
+        const hex = color.replace('#', '');
+        const r = parseInt(hex.substring(0, 2), 16) / 255;
+        const g = parseInt(hex.substring(2, 4), 16) / 255;
+        const b = parseInt(hex.substring(4, 6), 16) / 255;
+        return invoke('mpv_set_property', { name: 'sub-border-color', value: `${r}/${g}/${b}` });
+    },
+
+    async setSubtitlePos(pos: number) {
+        return invoke('mpv_set_property', { name: 'sub-pos', value: pos });
+    },
+
     async setProperty(name: string, value: any) {
         return invoke('mpv_set_property', { name, value });
     },
@@ -488,6 +534,14 @@ export async function initPolyfills() {
         getTrackList: Bridge.getTrackList,
         setAudioTrack: Bridge.setAudioTrack,
         setSubtitleTrack: Bridge.setSubtitleTrack,
+        addSubtitleFile: Bridge.addSubtitleFile,
+        removeSubtitleFile: Bridge.removeSubtitleFile,
+        setSubtitleDelay: Bridge.setSubtitleDelay,
+        setSubtitleSize: Bridge.setSubtitleSize,
+        setSubtitleColor: Bridge.setSubtitleColor,
+        setSubtitleBackColor: Bridge.setSubtitleBackColor,
+        setSubtitleBorderColor: Bridge.setSubtitleBorderColor,
+        setSubtitlePos: Bridge.setSubtitlePos,
         destroy: () => { },
         setProperty: Bridge.setProperty,
         setProperties: Bridge.setProperties,
@@ -532,9 +586,9 @@ console.log('[TauriBridge] Initializing fetchProxy Polyfill');
             return { error: e.message };
         }
     },
-    fetchBinary: async (url: string) => {
+    fetchBinary: async (url: string, options?: any) => {
         try {
-            const response = await fetch(url);
+            const response = await fetch(url, options);
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
             const buffer = await response.arrayBuffer();
             return {

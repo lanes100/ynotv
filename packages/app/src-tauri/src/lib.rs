@@ -584,6 +584,30 @@ async fn mpv_set_subtitle<R: Runtime>(app: AppHandle<R>, id: i64) -> Result<(), 
 }
 
 #[tauri::command]
+async fn mpv_add_subtitle<R: Runtime>(app: AppHandle<R>, file_path: String) -> Result<(), String> {
+    #[cfg(target_os = "macos")]
+    {
+        mpv_macos::add_subtitle_file(&app, file_path).await
+    }
+    #[cfg(target_os = "windows")]
+    {
+        mpv_windows::add_subtitle_file(&app, file_path).await
+    }
+}
+
+#[tauri::command]
+async fn mpv_remove_subtitle<R: Runtime>(app: AppHandle<R>, file_path: String) -> Result<(), String> {
+    #[cfg(target_os = "macos")]
+    {
+        mpv_macos::remove_subtitle_file(&app, file_path).await
+    }
+    #[cfg(target_os = "windows")]
+    {
+        mpv_windows::remove_subtitle_file(&app, file_path).await
+    }
+}
+
+#[tauri::command]
 async fn mpv_set_properties<R: Runtime>(
     app: AppHandle<R>,
     properties: Vec<(String, serde_json::Value)>,
@@ -2255,6 +2279,8 @@ pub fn run() {
             mpv_get_track_list,
             mpv_set_audio,
             mpv_set_subtitle,
+            mpv_add_subtitle,
+            mpv_remove_subtitle,
             mpv_set_property,
             mpv_set_properties,
             mpv_get_property,

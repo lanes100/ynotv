@@ -10,6 +10,40 @@ import type { useMpvListeners } from './useMpvListeners';
 import { logInfo, logWarn, logError } from '../utils/logger';
 
 /**
+ * Apply saved subtitle settings to MPV.
+ */
+async function applySubtitleSettings() {
+  try {
+    if (!window.storage) return;
+    const result = await window.storage.getSettings();
+    const ss = result.data?.subtitleSettings;
+    if (!ss) return;
+
+    if (ss.defaultSize) {
+      await Bridge.setSubtitleSize(ss.defaultSize).catch(() => {});
+    }
+    if (ss.subColor) {
+      await Bridge.setSubtitleColor(ss.subColor).catch(() => {});
+    }
+    if (ss.subBackgroundColor) {
+      await Bridge.setSubtitleBackColor(ss.subBackgroundColor).catch(() => {});
+    }
+    if (ss.subOutlineColor) {
+      await Bridge.setSubtitleBorderColor(ss.subOutlineColor).catch(() => {});
+    }
+    if (ss.subDelay) {
+      await Bridge.setSubtitleDelay(ss.subDelay).catch(() => {});
+    }
+    if (ss.subVerticalOffset !== undefined) {
+      const pos = Math.max(0, Math.min(100, 100 - ss.subVerticalOffset));
+      await Bridge.setSubtitlePos(pos).catch(() => {});
+    }
+  } catch (e) {
+    console.warn('[Playback] Failed to apply subtitle settings:', e);
+  }
+}
+
+/**
  * Checks if a URL points to localhost or a private local network IP.
  */
 function isLocalUrl(urlString: string): boolean {
@@ -414,6 +448,7 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
       // If a previous stream ended/was interrupted, MPV may hold pause=true,
       // causing the new stream to load but not start playing.
       Bridge.play().catch(e => console.warn('[usePlayback] play() after load failed:', e));
+      applySubtitleSettings();
       notifyMainLoaded?.(channel.name, result.url, resolved.sourceName ?? null);
 
       import('../services/video-metadata').then(({ captureAndSaveMetadata }) => {
@@ -664,6 +699,7 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
       });
       setVodInfo({ ...info, url: workingUrl });
       setPlaying(true);
+      applySubtitleSettings();
       
       // Resume from saved position if available
       if (resumePosition > 0) {
@@ -711,6 +747,7 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
         });
         setCatchupInfo(null);
         setPlaying(true);
+        applySubtitleSettings();
         // Close DVR dashboard when playing
         onCloseView?.();
       } else {

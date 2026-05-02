@@ -10,6 +10,7 @@ import type { SettingsTabId } from './components/settings/SettingsSidebar';
 import { Sidebar, type View } from './components/Sidebar';
 import { NowPlayingBar } from './components/NowPlayingBar';
 import { TrackSelectionModal } from './components/TrackSelectionModal';
+import { SubtitleControlModal } from './components/SubtitleControlModal';
 import { CategoryStrip } from './components/CategoryStrip';
 import { ChannelPanel } from './components/ChannelPanel';
 import { MoviesPage } from './components/MoviesPage';
@@ -1170,10 +1171,11 @@ function App() {
       )}
 
       {/* Track Selection Modals */}
-      <TrackSelectionModal
+      <SubtitleControlModal
         isOpen={showSubtitleModal}
-        type="subtitle"
         onClose={() => setShowSubtitleModal(false)}
+        vodTitle={vodInfo?.title}
+        vodYear={vodInfo?.year}
       />
       <TrackSelectionModal
         isOpen={showAudioModal}
