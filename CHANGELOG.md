@@ -1,5 +1,16 @@
   # Changelog
   
+  ## v1.6.7
+  Added:
+  - Advanced search feature, select the search icon at the end of the searchbar to use
+  - SubSource support for subtitles for Vod, set key in Settings -> subtitles
+  - More Dark themes with different accented colors
+  - Channel search for EPG editor for EPGs that doesn't use tvgid (similar to Advanced EPG matching)
+  - New look for Match cards in sports
+  
+  Fixes:
+  - Fixed channels from disabled categories showing in search
+  
   ## v1.6.6
   Added:
   - Bundled ytdlp for better YouTube playback for playlists with youtube links

@@ -146,7 +146,7 @@ export function SubtitleControlModal({
             setSubtitles(searchCache.subtitles);
             setViewState(searchCache.viewState);
           } else {
-            doAutoSearch(vodTitle, vodYear, seasonNum);
+            doAutoSearch(vodTitle, vodYear, seasonNum, key);
           }
         }
       });
@@ -196,8 +196,8 @@ export function SubtitleControlModal({
     }
   };
 
-  const doAutoSearch = async (title: string, year?: string, season?: number) => {
-    const key = apiKey;
+  const doAutoSearch = async (title: string, year?: string, season?: number, providedKey?: string) => {
+    const key = providedKey || apiKey;
     if (!key || !title.trim()) return;
 
     const cleanTitle = cleanTitleForSearch(title);
