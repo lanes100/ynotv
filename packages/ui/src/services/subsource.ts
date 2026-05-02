@@ -189,13 +189,14 @@ export async function searchSubSourceMovies(
   apiKey: string,
   query: string,
   year?: string,
-  type?: 'movie' | 'series' | 'all'
+  type?: 'movie' | 'series' | 'all',
+  season?: number
 ): Promise<SubSourceMovieResult> {
   if (!apiKey) {
     return { success: false, error: 'No API key configured' };
   }
 
-  log('SEARCH_MOVIES', { query, year, type });
+  log('SEARCH_MOVIES', { query, year, type, season });
 
   try {
     const response = await apiFetch('/movies/search', apiKey, {
@@ -203,6 +204,7 @@ export async function searchSubSourceMovies(
       q: query,
       year: year ? parseInt(year, 10) || undefined : undefined,
       type: type || 'all',
+      season: season !== undefined && season > 0 ? season : undefined,
     });
 
     if (!response.ok) {

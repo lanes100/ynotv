@@ -28,9 +28,36 @@ interface SubtitleControlModalProps {
   onClose: () => void;
   vodTitle?: string;
   vodYear?: string;
+  seasonNum?: number;
+  episodeNum?: number;
 }
 
 type ViewState = 'tracks' | 'movies' | 'subtitles';
+
+/** Strip quality tags like 4K, UHD, HDR from titles before searching. */
+function cleanTitleForSearch(title: string): string {
+  return title
+    .replace(/\b4K\b/gi, '')
+    .replace(/\bUHD\b/gi, '')
+    .replace(/\bHDR\b/gi, '')
+    .replace(/\bHD\b/gi, '')
+    .replace(/\bSD\b/gi, '')
+    .replace(/\b2160p\b/gi, '')
+    .replace(/\b1080p\b/gi, '')
+    .replace(/\b720p\b/gi, '')
+    .replace(/\b480p\b/gi, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/** Try to extract an episode number (1-99) from releaseInfo strings like ["S01E04","WEB-DL"]. */
+function extractEpisodeFromReleaseInfo(releaseInfo: string[]): number | null {
+  for (const info of releaseInfo) {
+    const m = info.match(/[Ss]\d{1,2}[Ee](\d{1,2})/);
+    if (m) return parseInt(m[1], 10);
+  }
+  return null;
+}
 
 /* Module-level cache so auto-search results persist across modal open/close */
 interface SearchCache {
@@ -64,7 +91,14 @@ const LANG_LABELS: Record<string, string> = {
   ga: 'Irish', eu: 'Basque', gl: 'Galician', is: 'Icelandic', mt: 'Maltese',
 };
 
-export function SubtitleControlModal({ isOpen, onClose, vodTitle, vodYear }: SubtitleControlModalProps) {
+export function SubtitleControlModal({
+  isOpen,
+  onClose,
+  vodTitle,
+  vodYear,
+  seasonNum,
+  episodeNum,
+}: SubtitleControlModalProps) {
   const [tracks, setTracks] = useState<Track[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
@@ -88,6 +122,10 @@ export function SubtitleControlModal({ isOpen, onClose, vodTitle, vodYear }: Sub
   const [subtitles, setSubtitles] = useState<SubSourceSubtitle[]>([]);
   const [downloadingSubId, setDownloadingSubId] = useState<number | null>(null);
 
+  // Episode filter
+  const [episodeFilter, setEpisodeFilter] = useState<number | null>(null);
+  const [availableEpisodes, setAvailableEpisodes] = useState<number[]>([]);
+
   const loadedRef = useRef(false);
   const autoSearchRef = useRef(false);
 
@@ -95,33 +133,30 @@ export function SubtitleControlModal({ isOpen, onClose, vodTitle, vodYear }: Sub
     if (isOpen) {
       loadTracks();
       loadSettings().then((key) => {
-        // After settings load, trigger auto-search if we have a title + key
         if (!autoSearchRef.current && vodTitle && key) {
           autoSearchRef.current = true;
-          const cacheKey = `${vodTitle}|${vodYear || ''}|${searchLang}`;
+          const cacheKey = `${vodTitle}|${vodYear || ''}|${seasonNum || ''}|${searchLang}`;
           if (
             searchCache &&
             searchCache.query === cacheKey &&
             Date.now() - searchCache.timestamp < CACHE_TTL_MS
           ) {
-            // Use cached results
             setMovies(searchCache.movies);
             setSelectedMovie(searchCache.selectedMovie);
             setSubtitles(searchCache.subtitles);
             setViewState(searchCache.viewState);
           } else {
-            // Run fresh auto-search
-            doAutoSearch(vodTitle, vodYear);
+            doAutoSearch(vodTitle, vodYear, seasonNum);
           }
         }
       });
     }
   }, [isOpen]);
 
-  // Reset auto-search flag when title changes
+  // Reset auto-search flag when title/season changes
   useEffect(() => {
     autoSearchRef.current = false;
-  }, [vodTitle, vodYear]);
+  }, [vodTitle, vodYear, seasonNum]);
 
   // Close on Escape key
   useEffect(() => {
@@ -150,7 +185,8 @@ export function SubtitleControlModal({ isOpen, onClose, vodTitle, vodYear }: Sub
         }
       }
       if (vodTitle) {
-        setSearchQuery(vodTitle + (vodYear ? ` ${vodYear}` : ''));
+        const clean = cleanTitleForSearch(vodTitle);
+        setSearchQuery(clean + (vodYear ? ` ${vodYear}` : ''));
       }
       loadedRef.current = true;
       return key;
@@ -160,16 +196,19 @@ export function SubtitleControlModal({ isOpen, onClose, vodTitle, vodYear }: Sub
     }
   };
 
-  const doAutoSearch = async (title: string, year?: string) => {
+  const doAutoSearch = async (title: string, year?: string, season?: number) => {
     const key = apiKey;
     if (!key || !title.trim()) return;
 
-    console.log('[SubtitleModal] Auto-searching:', { title, year });
+    const cleanTitle = cleanTitleForSearch(title);
+    console.log('[SubtitleModal] Auto-searching:', { original: title, clean: cleanTitle, year, season });
     setSearching(true);
     setSearchError('');
+    setEpisodeFilter(null);
+    setAvailableEpisodes([]);
 
     try {
-      const result = await searchSubSourceMovies(key, title.trim(), year);
+      const result = await searchSubSourceMovies(key, cleanTitle, year, 'all', season);
       console.log('[SubtitleModal] Auto-search result:', result);
 
       if (!result.success) {
@@ -183,37 +222,68 @@ export function SubtitleControlModal({ isOpen, onClose, vodTitle, vodYear }: Sub
       }
 
       setMovies(result.movies);
-      searchCache = {
-        query: `${title}|${year || ''}|${searchLang}`,
-        year,
-        lang: searchLang,
-        movies: result.movies,
-        selectedMovie: null,
-        subtitles: [],
-        viewState: 'movies',
-        timestamp: Date.now(),
-      };
 
-      // If there's only one movie result, auto-fetch its subtitles too
-      if (result.movies.length === 1) {
-        const movie = result.movies[0];
-        setSelectedMovie(movie);
-        const subResult = await searchSubSourceSubtitles(key, movie.movieId, searchLang);
-        if (subResult.success && subResult.subtitles && subResult.subtitles.length > 0) {
-          setSubtitles(subResult.subtitles);
-          setViewState('subtitles');
-          searchCache = {
-            ...searchCache,
-            selectedMovie: movie,
-            subtitles: subResult.subtitles,
-            viewState: 'subtitles',
-            timestamp: Date.now(),
-          };
-        } else {
-          setViewState('movies');
+      // For series with season info, try to match the exact season
+      let targetMovie: SubSourceMovie | null = null;
+      if (season !== undefined && season > 0) {
+        const seasonMatch = result.movies.find(
+          (m) => m.type === 'tvseries' && m.season === season
+        );
+        if (seasonMatch) {
+          targetMovie = seasonMatch;
+          console.log('[SubtitleModal] Matched season:', season, '→', seasonMatch.title);
         }
+      }
+
+      // Fallback to first result if no season match
+      if (!targetMovie) {
+        targetMovie = result.movies[0];
+      }
+
+      setSelectedMovie(targetMovie);
+      const subResult = await searchSubSourceSubtitles(key, targetMovie.movieId, searchLang);
+
+      if (subResult.success && subResult.subtitles && subResult.subtitles.length > 0) {
+        setSubtitles(subResult.subtitles);
+
+        // Extract available episode numbers from releaseInfo
+        const eps = new Set<number>();
+        subResult.subtitles.forEach((sub) => {
+          const ep = extractEpisodeFromReleaseInfo(sub.releaseInfo);
+          if (ep !== null) eps.add(ep);
+        });
+        const sortedEps = Array.from(eps).sort((a, b) => a - b);
+        setAvailableEpisodes(sortedEps);
+
+        // If we know the current episode, auto-filter to it
+        if (episodeNum !== undefined && episodeNum > 0 && sortedEps.includes(episodeNum)) {
+          setEpisodeFilter(episodeNum);
+        }
+
+        setViewState('subtitles');
+        searchCache = {
+          query: `${cleanTitle}|${year || ''}|${season || ''}|${searchLang}`,
+          year,
+          lang: searchLang,
+          movies: result.movies,
+          selectedMovie: targetMovie,
+          subtitles: subResult.subtitles,
+          viewState: 'subtitles',
+          timestamp: Date.now(),
+        };
       } else {
+        // No subtitles for target movie, show movie list so user can pick another
         setViewState('movies');
+        searchCache = {
+          query: `${cleanTitle}|${year || ''}|${season || ''}|${searchLang}`,
+          year,
+          lang: searchLang,
+          movies: result.movies,
+          selectedMovie: null,
+          subtitles: [],
+          viewState: 'movies',
+          timestamp: Date.now(),
+        };
       }
     } catch (e: any) {
       console.error('[SubtitleModal] Auto-search exception:', e);
@@ -287,7 +357,7 @@ export function SubtitleControlModal({ isOpen, onClose, vodTitle, vodYear }: Sub
   }, []);
 
   /* -------------------------------------------------------------- */
-  /*  SubSource movie search                                          */
+  /*  SubSource movie search (manual)                                 */
   /* -------------------------------------------------------------- */
 
   const handleSearch = async () => {
@@ -302,11 +372,14 @@ export function SubtitleControlModal({ isOpen, onClose, vodTitle, vodYear }: Sub
     setMovies([]);
     setSubtitles([]);
     setSelectedMovie(null);
+    setEpisodeFilter(null);
+    setAvailableEpisodes([]);
 
     console.log('[SubtitleModal] Starting movie search:', { query: searchQuery.trim(), year: vodYear, apiKey: apiKey ? '***' : 'missing' });
 
     try {
-      const result = await searchSubSourceMovies(apiKey, searchQuery.trim(), vodYear);
+      const cleanQuery = cleanTitleForSearch(searchQuery.trim());
+      const result = await searchSubSourceMovies(apiKey, cleanQuery, vodYear, 'all', seasonNum);
       console.log('[SubtitleModal] Movie search result:', result);
 
       if (!result.success) {
@@ -322,7 +395,7 @@ export function SubtitleControlModal({ isOpen, onClose, vodTitle, vodYear }: Sub
       setMovies(result.movies);
       setViewState('movies');
       searchCache = {
-        query: `${searchQuery.trim()}|${vodYear || ''}|${searchLang}`,
+        query: `${cleanQuery}|${vodYear || ''}|${seasonNum || ''}|${searchLang}`,
         year: vodYear,
         lang: searchLang,
         movies: result.movies,
@@ -347,6 +420,8 @@ export function SubtitleControlModal({ isOpen, onClose, vodTitle, vodYear }: Sub
     setSelectedMovie(movie);
     setSubtitles([]);
     setSearchError('');
+    setEpisodeFilter(null);
+    setAvailableEpisodes([]);
     setSearching(true);
 
     console.log('[SubtitleModal] Fetching subtitles for movie:', { movieId: movie.movieId, title: movie.title, lang: searchLang });
@@ -368,6 +443,21 @@ export function SubtitleControlModal({ isOpen, onClose, vodTitle, vodYear }: Sub
       }
 
       setSubtitles(result.subtitles);
+
+      // Extract available episode numbers
+      const eps = new Set<number>();
+      result.subtitles.forEach((sub) => {
+        const ep = extractEpisodeFromReleaseInfo(sub.releaseInfo);
+        if (ep !== null) eps.add(ep);
+      });
+      const sortedEps = Array.from(eps).sort((a, b) => a - b);
+      setAvailableEpisodes(sortedEps);
+
+      // Auto-filter to current episode if known
+      if (episodeNum !== undefined && episodeNum > 0 && sortedEps.includes(episodeNum)) {
+        setEpisodeFilter(episodeNum);
+      }
+
       setViewState('subtitles');
       if (searchCache) {
         searchCache = {
@@ -459,6 +549,8 @@ export function SubtitleControlModal({ isOpen, onClose, vodTitle, vodYear }: Sub
     setMovies([]);
     setSubtitles([]);
     setSelectedMovie(null);
+    setEpisodeFilter(null);
+    setAvailableEpisodes([]);
     setSearchError('');
   };
 
@@ -485,12 +577,42 @@ export function SubtitleControlModal({ isOpen, onClose, vodTitle, vodYear }: Sub
     return a.label.localeCompare(b.label);
   });
 
+  // Filter subtitles by episode if filter is active
+  const filteredSubtitles = episodeFilter !== null
+    ? subtitles.filter((sub) => {
+        const ep = extractEpisodeFromReleaseInfo(sub.releaseInfo);
+        return ep === episodeFilter;
+      })
+    : subtitles;
+
   return (
     <div className="subtitle-modal-overlay">
       <div className="subtitle-modal">
         <div className="subtitle-modal-header">
-          <h3>Subtitles</h3>
-          <button className="subtitle-modal-close" onClick={onClose}>×</button>
+          <div className="subtitle-modal-header-top">
+            <h3>Subtitles</h3>
+            <button className="subtitle-modal-close" onClick={onClose}>×</button>
+          </div>
+          <div className="subtitle-header-search">
+            <input
+              type="text"
+              placeholder="Search…"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+              className="subtitle-header-search-input"
+            />
+            <button
+              className="subtitle-header-search-btn"
+              onClick={handleSearch}
+              disabled={searching}
+            >
+              {searching ? '…' : 'Search'}
+            </button>
+          </div>
+          {searchError && (
+            <div className="subtitle-header-search-error">{searchError}</div>
+          )}
         </div>
 
         <div className="subtitle-modal-body">
@@ -514,29 +636,6 @@ export function SubtitleControlModal({ isOpen, onClose, vodTitle, vodYear }: Sub
                 <div className="subtitle-empty">No languages</div>
               )}
             </div>
-
-            {/* Search box */}
-            <div className="subtitle-search-box">
-              <input
-                type="text"
-                placeholder="Search…"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                className="subtitle-search-input"
-              />
-              <button
-                className="subtitle-search-btn"
-                onClick={handleSearch}
-                disabled={searching}
-              >
-                {searching ? '…' : 'Search'}
-              </button>
-            </div>
-
-            {searchError && (
-              <div className="subtitle-search-error">{searchError}</div>
-            )}
           </div>
 
           {/* ── Column 2: Tracks / Movies / Subtitles ── */}
@@ -555,6 +654,8 @@ export function SubtitleControlModal({ isOpen, onClose, vodTitle, vodYear }: Sub
                   onClick={() => {
                     setViewState('movies');
                     setSubtitles([]);
+                    setEpisodeFilter(null);
+                    setAvailableEpisodes([]);
                   }}
                 >
                   ← Back
@@ -635,6 +736,7 @@ export function SubtitleControlModal({ isOpen, onClose, vodTitle, vodYear }: Sub
                     </span>
                     <span className="subtitle-movie-meta">
                       {movie.releaseYear && movie.releaseYear > 0 && movie.releaseYear}
+                      {movie.type === 'tvseries' && movie.season !== undefined && movie.season !== null && ` · S${movie.season}`}
                       {movie.type === 'tvseries' && ' · TV'}
                       {movie.type === 'movie' && ' · Movie'}
                       {movie.subtitleCount > 0 && ` · ${movie.subtitleCount} subs`}
@@ -648,9 +750,34 @@ export function SubtitleControlModal({ isOpen, onClose, vodTitle, vodYear }: Sub
             {viewState === 'subtitles' && selectedMovie && (
               <div className="subtitle-result-list">
                 <div className="subtitle-result-header">
-                  {selectedMovie.title} ({selectedMovie.releaseYear || '?'}) — {LANG_LABELS[searchLang] || searchLang}
+                  {selectedMovie.title}
+                  {selectedMovie.season !== undefined && selectedMovie.season !== null && ` S${selectedMovie.season}`}
+                  {' '}
+                  ({selectedMovie.releaseYear || '?'}) — {LANG_LABELS[searchLang] || searchLang}
                 </div>
-                {subtitles.map((sub) => (
+
+                {/* Episode filter bar */}
+                {availableEpisodes.length > 0 && (
+                  <div className="subtitle-episode-filters">
+                    <button
+                      className={`subtitle-episode-filter ${episodeFilter === null ? 'active' : ''}`}
+                      onClick={() => setEpisodeFilter(null)}
+                    >
+                      All
+                    </button>
+                    {availableEpisodes.map((ep) => (
+                      <button
+                        key={ep}
+                        className={`subtitle-episode-filter ${episodeFilter === ep ? 'active' : ''}`}
+                        onClick={() => setEpisodeFilter(ep)}
+                      >
+                        E{ep.toString().padStart(2, '0')}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {filteredSubtitles.map((sub) => (
                   <button
                     key={sub.subtitleId}
                     className="subtitle-result-btn"
@@ -658,12 +785,13 @@ export function SubtitleControlModal({ isOpen, onClose, vodTitle, vodYear }: Sub
                     disabled={downloadingSubId === sub.subtitleId}
                   >
                     <span className="subtitle-result-info">
-                      <span className="subtitle-result-release">
-                        {sub.releaseInfo?.join(' ') || 'Unknown release'}
+                      <span className="subtitle-result-release" title={sub.releaseInfo?.join(' ') || 'Unknown release'}>
+                        <span className="subtitle-result-release-inner">
+                          {sub.releaseInfo?.join(' ') || 'Unknown release'}
+                        </span>
                       </span>
                       <span className="subtitle-result-detail">
                         {sub.productionType}
-                        {sub.framerate && ` · ${sub.framerate}fps`}
                         {sub.hearingImpaired && ' · CC'}
                         {sub.downloads > 0 && ` · ${sub.downloads}↓`}
                         {sub.rating && sub.rating.total > 0 && (
@@ -678,6 +806,12 @@ export function SubtitleControlModal({ isOpen, onClose, vodTitle, vodYear }: Sub
                     </span>
                   </button>
                 ))}
+
+                {episodeFilter !== null && filteredSubtitles.length === 0 && (
+                  <div className="subtitle-empty">
+                    No subtitles found for E{episodeFilter.toString().padStart(2, '0')}.
+                  </div>
+                )}
               </div>
             )}
           </div>
