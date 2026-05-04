@@ -217,11 +217,12 @@ fn sanitize_mpv_args(args: Vec<String>, allow_all: bool) -> Vec<String> {
         let without_dashes = &arg[2..];
         let mut parts = without_dashes.splitn(2, '=');
         let key = parts.next().unwrap_or("");
+        let value = parts.next();
         
         // Special handling for script-opts and its variants (append, add, etc): allow only stats-* options
         if key == "script-opts" || key.starts_with("script-opts-") || key == "script-opt" {
-            if let Some(value) = parts.next() {
-                let opts: Vec<&str> = value.split(',').collect();
+            if let Some(val) = value {
+                let opts: Vec<&str> = val.split(',').collect();
                 let all_stats = opts.iter().all(|opt| {
                     let opt_key = opt.splitn(2, '=').next().unwrap_or("").trim();
                     !opt_key.is_empty() && opt_key.starts_with("stats-")
@@ -243,6 +244,10 @@ fn sanitize_mpv_args(args: Vec<String>, allow_all: bool) -> Vec<String> {
         }
         
         if ALLOWED_MPV_KEYS.contains(&key) {
+            if key == "vo" && value == Some("direct3d") {
+                log::warn!("SECURITY ALERT: Blocked incompatible MPV argument: vo=direct3d (causes embedding failure)");
+                continue;
+            }
             safe_args.push(arg);
         } else {
             log::warn!("SECURITY ALERT: Dropped unrecognized/untrusted MPV argument: {}", key);
