@@ -245,6 +245,18 @@ export function ChannelContextMenu({
         }
     }
 
+    async function handleHideChannel() {
+        try {
+            await db.channels.update(channel.stream_id, { enabled: false });
+            showSuccess('Channel Hidden', `${channel.name} has been hidden`);
+        } catch (e: any) {
+            console.error('Failed to hide channel:', e);
+            showError('Failed', e?.message || 'Could not hide channel');
+        } finally {
+            onClose();
+        }
+    }
+
     const durationOptions = [5, 15, 30, 60, 90, 120, 180, 240];
 
     // ── ADD TO GROUP VIEW ──
@@ -451,6 +463,10 @@ export function ChannelContextMenu({
             <div className="context-menu-separator" />
             <div className="context-menu-item" onClick={() => { setShowEpgEditor(true); }}>
                 ✏️ Edit EPG
+            </div>
+            <div className="context-menu-separator" />
+            <div className="context-menu-item" onClick={handleHideChannel}>
+                👁‍🗨 Hide Channel
             </div>
             <div className="context-menu-separator" />
             <div className="context-menu-item context-menu-item-secondary" onClick={onClose}>
