@@ -6,7 +6,7 @@
 use anyhow::Result;
 use rusqlite::params;
 use serde::{Deserialize, Serialize};
-use tracing::info;
+use log::info;
 
 use crate::dvr::database::DvrDatabase;
 

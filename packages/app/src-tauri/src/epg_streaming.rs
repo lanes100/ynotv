@@ -17,7 +17,7 @@ use quick_xml::events::Event;
 use quick_xml::reader::Reader;
 use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc;
-use tracing::{error, info, warn};
+use log::{error, info, warn};
 use futures_util::StreamExt;
 
 use crate::dvr::database::DvrDatabase;
@@ -350,6 +350,15 @@ pub async fn stream_parse_epg<R: tauri::Runtime>(
                 "Failed to download EPG from {}: {} (source: {}, kind: {})", 
                 epg_url, e, err_source, err_kind
             );
+            error!("[EPG] {}", err_msg);
+            return Err(anyhow::anyhow!(err_msg));
+        }
+    };
+
+    let response = match response.error_for_status() {
+        Ok(resp) => resp,
+        Err(e) => {
+            let err_msg = format!("HTTP error from EPG URL {}: {}", epg_url, e);
             error!("[EPG] {}", err_msg);
             return Err(anyhow::anyhow!(err_msg));
         }

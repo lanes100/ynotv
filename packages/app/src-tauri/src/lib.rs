@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Emitter, Runtime, Manager};
-use tracing::{debug, info, warn, error};
+use log::{debug, info, warn, error};
 
 
 // macOS-specific imports for window configuration

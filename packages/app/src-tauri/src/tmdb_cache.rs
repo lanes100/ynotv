@@ -19,7 +19,7 @@ use std::time::{Duration, SystemTime};
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use tokio::fs;
-use tracing::{debug, info};
+use log::{debug, info};
 
 /// Cache configuration
 const DEFAULT_CACHE_TTL_HOURS: u64 = 168; // 7 days

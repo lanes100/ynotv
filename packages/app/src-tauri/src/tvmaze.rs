@@ -230,11 +230,11 @@ pub async fn fetch_show_details_with_episodes(tvmaze_id: i64) -> Result<(TvMazeS
 pub async fn run_background_sync(db: Arc<DvrDatabase>) {
     loop {
         tokio::time::sleep(std::time::Duration::from_secs(24 * 3600)).await;
-        println!("[TVMaze Sync] Starting 24h episode refresh...");
+        log::info!("[TVMaze Sync] Starting 24h episode refresh...");
 
         let shows = match db.tvmaze_get_running_shows() {
             Ok(s) => s,
-            Err(e) => { eprintln!("[TVMaze Sync] Failed to get shows: {}", e); continue; }
+            Err(e) => { log::error!("[TVMaze Sync] Failed to get shows: {}", e); continue; }
         };
 
         let mut refreshed = 0u32;
@@ -244,13 +244,13 @@ pub async fn run_background_sync(db: Arc<DvrDatabase>) {
                     let _ = db.tvmaze_upsert_episodes(tvmaze_id, &episodes);
                     let _ = db.tvmaze_update_last_synced(tvmaze_id);
                     refreshed += 1;
-                    println!("[TVMaze Sync] Refreshed: {}", show_name);
+                    log::info!("[TVMaze Sync] Refreshed: {}", show_name);
                 }
-                Err(e) => eprintln!("[TVMaze Sync] Error for {}: {}", show_name, e),
+                Err(e) => log::error!("[TVMaze Sync] Error for {}: {}", show_name, e),
             }
             // Be polite to the public API
             tokio::time::sleep(std::time::Duration::from_millis(500)).await;
         }
-        println!("[TVMaze Sync] Done. Refreshed {} shows.", refreshed);
+        log::info!("[TVMaze Sync] Done. Refreshed {} shows.", refreshed);
     }
 }

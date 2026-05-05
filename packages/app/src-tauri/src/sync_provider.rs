@@ -3,7 +3,7 @@ use crate::dvr::DvrState;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
-use tracing::{error, info};
+use log::{error, info};
 
 // ============================================================================
 // Xtream Types
@@ -61,7 +61,18 @@ pub async fn sync_xtream_source(
         base_url, username, password
     );
     
-    let cat_res = client.get(&cat_url).send().await.map_err(|e| e.to_string())?;
+    let cat_res = client.get(&cat_url).send().await.map_err(|e| {
+        let msg = format!("Failed to connect to Xtream categories: {}", e);
+        error!("[Xtream Sync] {}", msg);
+        msg
+    })?;
+    
+    let cat_res = cat_res.error_for_status().map_err(|e| {
+        let msg = format!("HTTP error from Xtream categories: {}", e);
+        error!("[Xtream Sync] {}", msg);
+        msg
+    })?;
+
     let xtream_categories: Vec<XtreamCategory> = cat_res.json().await.map_err(|e| {
         error!("[Xtream Sync] Failed to parse categories: {}", e);
         e.to_string()
@@ -88,7 +99,18 @@ pub async fn sync_xtream_source(
         base_url, username, password
     );
 
-    let stream_res = client.get(&stream_url).send().await.map_err(|e| e.to_string())?;
+    let stream_res = client.get(&stream_url).send().await.map_err(|e| {
+        let msg = format!("Failed to connect to Xtream streams: {}", e);
+        error!("[Xtream Sync] {}", msg);
+        msg
+    })?;
+    
+    let stream_res = stream_res.error_for_status().map_err(|e| {
+        let msg = format!("HTTP error from Xtream streams: {}", e);
+        error!("[Xtream Sync] {}", msg);
+        msg
+    })?;
+
     let xtream_streams: Vec<XtreamStream> = stream_res.json().await.map_err(|e| {
         error!("[Xtream Sync] Failed to parse streams: {}", e);
         e.to_string()
@@ -316,8 +338,23 @@ pub async fn sync_m3u_source(
         client_builder.build().map_err(|e| e.to_string())?
     };
 
-    let content = client.get(&url).send().await.map_err(|e| e.to_string())?
-        .text().await.map_err(|e| e.to_string())?;
+    let response = client.get(&url).send().await.map_err(|e| {
+        let msg = format!("Failed to connect to M3U URL: {}", e);
+        error!("[M3U Sync] {}", msg);
+        msg
+    })?;
+
+    let response = response.error_for_status().map_err(|e| {
+        let msg = format!("HTTP error from M3U URL: {}", e);
+        error!("[M3U Sync] {}", msg);
+        msg
+    })?;
+
+    let content = response.text().await.map_err(|e| {
+        let msg = format!("Failed to read M3U content: {}", e);
+        error!("[M3U Sync] {}", msg);
+        msg
+    })?;
 
     let mut bulk_channels = Vec::new();
     let mut bulk_categories = Vec::new();
@@ -489,7 +526,18 @@ pub async fn sync_xtream_vod_movies(
         base_url, username, password
     );
     
-    let cat_res = client.get(&cat_url).send().await.map_err(|e| e.to_string())?;
+    let cat_res = client.get(&cat_url).send().await.map_err(|e| {
+        let msg = format!("Failed to connect to Xtream VOD categories: {}", e);
+        error!("[Xtream VOD] {}", msg);
+        msg
+    })?;
+    
+    let cat_res = cat_res.error_for_status().map_err(|e| {
+        let msg = format!("HTTP error from Xtream VOD categories: {}", e);
+        error!("[Xtream VOD] {}", msg);
+        msg
+    })?;
+
     let xtream_categories: Vec<XtreamCategory> = cat_res.json().await.unwrap_or_else(|e| {
         error!("[Xtream VOD] Failed to parse categories: {}", e);
         Vec::new() // Fallback to empty if fails
@@ -515,9 +563,23 @@ pub async fn sync_xtream_vod_movies(
     );
 
     let start_dl = std::time::Instant::now();
-    let stream_res = client.get(&stream_url).send().await.map_err(|e| e.to_string())?;
+    let stream_res = client.get(&stream_url).send().await.map_err(|e| {
+        let msg = format!("Failed to connect to Xtream VOD streams: {}", e);
+        error!("[Xtream VOD] {}", msg);
+        msg
+    })?;
     
-    let bytes = stream_res.bytes().await.map_err(|e| e.to_string())?;
+    let stream_res = stream_res.error_for_status().map_err(|e| {
+        let msg = format!("HTTP error from Xtream VOD streams: {}", e);
+        error!("[Xtream VOD] {}", msg);
+        msg
+    })?;
+    
+    let bytes = stream_res.bytes().await.map_err(|e| {
+        let msg = format!("Failed to read Xtream VOD streams: {}", e);
+        error!("[Xtream VOD] {}", msg);
+        msg
+    })?;
     info!("[Xtream VOD] Downloaded {} bytes in {}ms", bytes.len(), start_dl.elapsed().as_millis());
     
     let start_parse = std::time::Instant::now();
@@ -648,7 +710,18 @@ pub async fn sync_xtream_vod_series(
         base_url, username, password
     );
     
-    let cat_res = client.get(&cat_url).send().await.map_err(|e| e.to_string())?;
+    let cat_res = client.get(&cat_url).send().await.map_err(|e| {
+        let msg = format!("Failed to connect to Xtream Series categories: {}", e);
+        error!("[Xtream Series] {}", msg);
+        msg
+    })?;
+    
+    let cat_res = cat_res.error_for_status().map_err(|e| {
+        let msg = format!("HTTP error from Xtream Series categories: {}", e);
+        error!("[Xtream Series] {}", msg);
+        msg
+    })?;
+
     let xtream_categories: Vec<XtreamCategory> = cat_res.json().await.unwrap_or_else(|e| {
         error!("[Xtream Series] Failed to parse categories: {}", e);
         Vec::new()
@@ -673,9 +746,23 @@ pub async fn sync_xtream_vod_series(
     );
 
     let start_dl = std::time::Instant::now();
-    let stream_res = client.get(&stream_url).send().await.map_err(|e| e.to_string())?;
+    let stream_res = client.get(&stream_url).send().await.map_err(|e| {
+        let msg = format!("Failed to connect to Xtream Series streams: {}", e);
+        error!("[Xtream Series] {}", msg);
+        msg
+    })?;
+    
+    let stream_res = stream_res.error_for_status().map_err(|e| {
+        let msg = format!("HTTP error from Xtream Series streams: {}", e);
+        error!("[Xtream Series] {}", msg);
+        msg
+    })?;
 
-    let bytes = stream_res.bytes().await.map_err(|e| e.to_string())?;
+    let bytes = stream_res.bytes().await.map_err(|e| {
+        let msg = format!("Failed to read Xtream Series streams: {}", e);
+        error!("[Xtream Series] {}", msg);
+        msg
+    })?;
     info!("[Xtream Series] Downloaded {} bytes in {}ms", bytes.len(), start_dl.elapsed().as_millis());
     
     let start_parse = std::time::Instant::now();
