@@ -11,6 +11,8 @@ interface LiveViewTabProps {
   onChannelInfoOverlayBoxWidthChange: (width: number) => void;
   channelInfoOverlayOpacity: number;
   onChannelInfoOverlayOpacityChange: (opacity: number) => void;
+  channelInfoOverlayHideDescription: boolean;
+  onChannelInfoOverlayHideDescriptionChange: (hide: boolean) => void;
 }
 
 export function LiveViewTab({
@@ -24,6 +26,8 @@ export function LiveViewTab({
   onChannelInfoOverlayBoxWidthChange,
   channelInfoOverlayOpacity,
   onChannelInfoOverlayOpacityChange,
+  channelInfoOverlayHideDescription,
+  onChannelInfoOverlayHideDescriptionChange,
 }: LiveViewTabProps) {
   return (
     <div className="settings-tab-content playback-tab-content">
@@ -49,6 +53,24 @@ export function LiveViewTab({
                 type="checkbox"
                 checked={channelInfoOverlayEnabled}
                 onChange={(e) => onChannelInfoOverlayChange(e.target.checked)}
+              />
+              <span className="toggle-slider" />
+            </label>
+          </div>
+
+          {/* Hide Program Description */}
+          <div className="timeshift-toggle-row">
+            <div className="timeshift-toggle-info">
+              <span className="timeshift-toggle-label">Hide Program Summary</span>
+              <span className="timeshift-toggle-sub">
+                When enabled, the program description text will be hidden from the overlay. The title, time, and progress bar will still be shown.
+              </span>
+            </div>
+            <label className="toggle-switch">
+              <input
+                type="checkbox"
+                checked={channelInfoOverlayHideDescription}
+                onChange={(e) => onChannelInfoOverlayHideDescriptionChange(e.target.checked)}
               />
               <span className="toggle-slider" />
             </label>

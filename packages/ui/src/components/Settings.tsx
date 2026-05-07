@@ -42,6 +42,8 @@ interface SettingsProps {
   onChannelInfoOverlayBoxWidthChange?: (width: number) => void;
   channelInfoOverlayOpacity?: number;
   onChannelInfoOverlayOpacityChange?: (opacity: number) => void;
+  channelInfoOverlayHideDescription?: boolean;
+  onChannelInfoOverlayHideDescriptionChange?: (hide: boolean) => void;
 }
 
 export function Settings({
@@ -61,6 +63,8 @@ export function Settings({
   onChannelInfoOverlayBoxWidthChange,
   channelInfoOverlayOpacity: channelInfoOverlayOpacityProp,
   onChannelInfoOverlayOpacityChange,
+  channelInfoOverlayHideDescription: channelInfoOverlayHideDescriptionProp,
+  onChannelInfoOverlayHideDescriptionChange,
 }: SettingsProps) {
   const [activeTab, setActiveTab] = useState<SettingsTabId>(initialTab);
   const [sources, setSources] = useState<Source[]>([]);
@@ -138,6 +142,7 @@ export function Settings({
   const [channelInfoOverlayLogoSize, setChannelInfoOverlayLogoSize] = useState(channelInfoOverlayLogoSizeProp ?? 42);
   const [channelInfoOverlayBoxWidth, setChannelInfoOverlayBoxWidth] = useState(channelInfoOverlayBoxWidthProp ?? 380);
   const [channelInfoOverlayOpacity, setChannelInfoOverlayOpacity] = useState(channelInfoOverlayOpacityProp ?? 55);
+  const [channelInfoOverlayHideDescription, setChannelInfoOverlayHideDescription] = useState(channelInfoOverlayHideDescriptionProp ?? false);
 
   // Sync prop values to internal state so changes from App.tsx take effect immediately
   useEffect(() => { setChannelInfoOverlayEnabled(channelInfoOverlayEnabledProp ?? false); }, [channelInfoOverlayEnabledProp]);
@@ -145,6 +150,7 @@ export function Settings({
   useEffect(() => { setChannelInfoOverlayLogoSize(channelInfoOverlayLogoSizeProp ?? 42); }, [channelInfoOverlayLogoSizeProp]);
   useEffect(() => { setChannelInfoOverlayBoxWidth(channelInfoOverlayBoxWidthProp ?? 380); }, [channelInfoOverlayBoxWidthProp]);
   useEffect(() => { setChannelInfoOverlayOpacity(channelInfoOverlayOpacityProp ?? 55); }, [channelInfoOverlayOpacityProp]);
+  useEffect(() => { setChannelInfoOverlayHideDescription(channelInfoOverlayHideDescriptionProp ?? false); }, [channelInfoOverlayHideDescriptionProp]);
 
   // Subtitle settings state
   const [subtitleSettings, setSubtitleSettings] = useState<SubtitleSettings>({
@@ -248,6 +254,7 @@ export function Settings({
         channelInfoOverlayLogoSize?: number;
         channelInfoOverlayBoxWidth?: number;
         channelInfoOverlayOpacity?: number;
+        channelInfoOverlayHideDescription?: boolean;
         subtitleSettings?: SubtitleSettings;
       };
 
@@ -368,6 +375,7 @@ export function Settings({
       setChannelInfoOverlayLogoSize(settings.channelInfoOverlayLogoSize ?? 42);
       setChannelInfoOverlayBoxWidth(settings.channelInfoOverlayBoxWidth ?? 380);
       setChannelInfoOverlayOpacity(settings.channelInfoOverlayOpacity ?? 55);
+      setChannelInfoOverlayHideDescription(settings.channelInfoOverlayHideDescription ?? false);
 
       // Load subtitle settings
       if (settings.subtitleSettings) {
@@ -522,6 +530,16 @@ export function Settings({
     }
     if (window.storage) {
       await window.storage.updateSettings({ channelInfoOverlayOpacity: opacity });
+    }
+  };
+
+  const handleChannelInfoOverlayHideDescriptionChange = async (hide: boolean) => {
+    setChannelInfoOverlayHideDescription(hide);
+    if (onChannelInfoOverlayHideDescriptionChange) {
+      onChannelInfoOverlayHideDescriptionChange(hide);
+    }
+    if (window.storage) {
+      await window.storage.updateSettings({ channelInfoOverlayHideDescription: hide });
     }
   };
 
@@ -785,6 +803,8 @@ export function Settings({
             onChannelInfoOverlayBoxWidthChange={handleChannelInfoOverlayBoxWidthChange}
             channelInfoOverlayOpacity={channelInfoOverlayOpacity}
             onChannelInfoOverlayOpacityChange={handleChannelInfoOverlayOpacityChange}
+            channelInfoOverlayHideDescription={channelInfoOverlayHideDescription}
+            onChannelInfoOverlayHideDescriptionChange={handleChannelInfoOverlayHideDescriptionChange}
           />
         );
       case 'about':

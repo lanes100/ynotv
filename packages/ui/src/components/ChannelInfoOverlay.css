@@ -57,10 +57,13 @@
   font-size: var(--cio-font-size, 16px);
   font-weight: 700;
   color: rgba(255, 255, 255, 0.95);
-  white-space: nowrap;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   overflow: hidden;
   text-overflow: ellipsis;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+  line-height: 1.25;
 }
 
 /* Metadata badge inside overlay */
@@ -99,10 +102,13 @@
   font-size: calc(var(--cio-font-size, 16px) * 0.88);
   font-weight: 600;
   color: rgba(255, 255, 255, 0.85);
-  white-space: nowrap;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   overflow: hidden;
   text-overflow: ellipsis;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+  line-height: 1.25;
 }
 
 .cio-program-desc {

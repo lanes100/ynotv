@@ -7,6 +7,7 @@ import './ChannelInfoOverlay.css';
 interface ChannelInfoOverlayProps {
   channel: StoredChannel | null;
   visible: boolean;
+  hideDescription?: boolean;
 }
 
 function formatTime(date: Date): string {
@@ -16,6 +17,7 @@ function formatTime(date: Date): string {
 export function ChannelInfoOverlay({
   channel,
   visible,
+  hideDescription,
 }: ChannelInfoOverlayProps) {
   const currentProgram = useCurrentProgram(channel?.stream_id ?? null);
   const [showDescription, setShowDescription] = useState(false);
@@ -83,6 +85,7 @@ export function ChannelInfoOverlay({
         <div className="cio-header">
           {channel.stream_icon && (
             <img
+              key={channel.stream_icon}
               src={channel.stream_icon}
               alt=""
               className="cio-logo"
@@ -124,7 +127,7 @@ export function ChannelInfoOverlay({
             </div>
 
             {/* Description */}
-            {currentProgram.description && (
+            {!hideDescription && currentProgram.description && (
               <div className="cio-program-desc" title={currentProgram.description}>
                 {currentProgram.description}
               </div>

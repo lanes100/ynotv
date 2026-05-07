@@ -116,6 +116,8 @@ function App() {
     setChannelInfoOverlayLogoSize,
     setChannelInfoOverlayBoxWidth,
     setChannelInfoOverlayOpacity,
+    channelInfoOverlayHideDescription,
+    setChannelInfoOverlayHideDescription,
   } = useAppSettings();
 
   // ==========================================================================
@@ -1230,6 +1232,7 @@ function App() {
       <ChannelInfoOverlay
         channel={currentChannel}
         visible={isChannelInfoOverlayVisible}
+        hideDescription={channelInfoOverlayHideDescription}
       />
 
       {/* Multiview Layout */}
@@ -1428,6 +1431,8 @@ function App() {
           onChannelInfoOverlayBoxWidthChange={setChannelInfoOverlayBoxWidth}
           channelInfoOverlayOpacity={channelInfoOverlayOpacity}
           onChannelInfoOverlayOpacityChange={setChannelInfoOverlayOpacity}
+          channelInfoOverlayHideDescription={channelInfoOverlayHideDescription}
+          onChannelInfoOverlayHideDescriptionChange={setChannelInfoOverlayHideDescription}
         />
       )}
 

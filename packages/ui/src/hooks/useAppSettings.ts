@@ -37,6 +37,7 @@ export interface AppSettings {
   channelInfoOverlayLogoSize: number;
   channelInfoOverlayBoxWidth: number;
   channelInfoOverlayOpacity: number;
+  channelInfoOverlayHideDescription: boolean;
 
   // Theme
   theme: ThemeId;
@@ -61,8 +62,9 @@ export interface AppSettings {
   setChannelInfoOverlayEnabled: (enabled: boolean) => void;
   setChannelInfoOverlayFontSize: (size: number) => void;
   setChannelInfoOverlayLogoSize: (size: number) => void;
-  setChannelInfoOverlayBoxWidth: (width: number) => void;
-  setChannelInfoOverlayOpacity: (opacity: number) => void;
+    setChannelInfoOverlayBoxWidth: (width: number) => void;
+    setChannelInfoOverlayOpacity: (opacity: number) => void;
+    setChannelInfoOverlayHideDescription: (hide: boolean) => void;
 }
 
 /**
@@ -103,6 +105,7 @@ export function useAppSettings(): AppSettings {
   const [channelInfoOverlayLogoSize, setChannelInfoOverlayLogoSizeState] = useState(42);
   const [channelInfoOverlayBoxWidth, setChannelInfoOverlayBoxWidthState] = useState(380);
   const [channelInfoOverlayOpacity, setChannelInfoOverlayOpacityState] = useState(55);
+  const [channelInfoOverlayHideDescription, setChannelInfoOverlayHideDescriptionState] = useState(false);
 
   // Theme state
   const [theme, setThemeState] = useState<ThemeId>('glass-neon');
@@ -167,6 +170,7 @@ export function useAppSettings(): AppSettings {
           setChannelInfoOverlayLogoSizeState(result.data.channelInfoOverlayLogoSize ?? 42);
           setChannelInfoOverlayBoxWidthState(result.data.channelInfoOverlayBoxWidth ?? 380);
           setChannelInfoOverlayOpacityState(result.data.channelInfoOverlayOpacity ?? 55);
+          setChannelInfoOverlayHideDescriptionState(result.data.channelInfoOverlayHideDescription ?? false);
           setCategoriesHiddenState(result.data.categoriesHidden ?? false);
 
           // Apply EPG darken current setting on load
@@ -284,6 +288,17 @@ export function useAppSettings(): AppSettings {
     }
   }, []);
 
+  const setChannelInfoOverlayHideDescription = useCallback(async (hide: boolean) => {
+    setChannelInfoOverlayHideDescriptionState(hide);
+    if (window.storage) {
+      try {
+        await window.storage.updateSettings({ channelInfoOverlayHideDescription: hide });
+      } catch (e) {
+        console.error('[useAppSettings] Failed to save channelInfoOverlayHideDescription:', e);
+      }
+    }
+  }, []);
+
   const setChannelInfoOverlayEnabled = useCallback(async (enabled: boolean) => {
     setChannelInfoOverlayEnabledState(enabled);
     if (window.storage) {
@@ -329,6 +344,7 @@ export function useAppSettings(): AppSettings {
     channelInfoOverlayLogoSize,
     channelInfoOverlayBoxWidth,
     channelInfoOverlayOpacity,
+    channelInfoOverlayHideDescription,
     theme,
     shortcuts,
     showSidebar,
@@ -341,11 +357,12 @@ export function useAppSettings(): AppSettings {
     setAdvancedSearchSourceIds,
     setAdvancedSearchCategoryIds,
     setUseAdvancedSearchForRegular,
-    setCategorySortOrder: setCategorySortOrderSetting,
     setChannelInfoOverlayEnabled,
     setChannelInfoOverlayFontSize,
     setChannelInfoOverlayLogoSize,
     setChannelInfoOverlayBoxWidth,
     setChannelInfoOverlayOpacity,
+    setChannelInfoOverlayHideDescription,
+    setCategorySortOrder: setCategorySortOrderSetting,
   };
 }
