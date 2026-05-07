@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import './EpgEditorModal.css';
 import { db } from '../db';
-import type { StoredChannel } from '../db';
+import type { StoredChannel, StoredCategory } from '../db';
 import {
   getChannelOverride,
   upsertChannelOverride,
@@ -22,7 +22,7 @@ import {
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type EditorTab = 'channel' | 'programs' | 'search' | 'source';
+type EditorTab = 'channel' | 'programs' | 'search' | 'source' | 'automatch';
 type SearchScope = 'source' | 'all';
 
 export interface EpgEditorModalProps {
@@ -253,6 +253,19 @@ export function EpgEditorModal({ channel: initialChannel, sourceId, sourceName, 
   // Track which stream_ids have overrides (for the indicator dot)
   const [overriddenIds, setOverriddenIds] = useState<Set<string>>(new Set());
 
+  // ── Automatch tab state ──
+  const [automatchSources, setAutomatchSources] = useState<{ id: string; name: string }[]>([]);
+  const [automatchSourceId, setAutomatchSourceId] = useState('');
+  const [automatchScope, setAutomatchScope] = useState<SearchScope>('source');
+  const [automatchMode, setAutomatchMode] = useState<EpgSearchMode>('m3u');
+  const [automatchThreshold, setAutomatchThreshold] = useState(40);
+  const [automatchCategories, setAutomatchCategories] = useState<string[]>([]);
+  const [automatchAllCategories, setAutomatchAllCategories] = useState(true);
+  const [automatchRunning, setAutomatchRunning] = useState(false);
+  const [automatchProgress, setAutomatchProgress] = useState<{ matched: number; total: number } | null>(null);
+  const [automatchResults, setAutomatchResults] = useState<{ matched: number; skipped: number; errors: number; details: string[] } | null>(null);
+  const [sourceCategories, setSourceCategories] = useState<StoredCategory[]>([]);
+
   // ── Load channel override when channel changes ──
   useEffect(() => {
     if (!channel) return;
@@ -287,6 +300,36 @@ export function EpgEditorModal({ channel: initialChannel, sourceId, sourceName, 
       setSourceLoading(false);
     });
   }, [activeTab, resolvedSourceId]);
+
+  // ── Load sources for Automatch tab ──
+  useEffect(() => {
+    if (activeTab !== 'automatch') return;
+    if (!window.storage) return;
+    window.storage.getSources().then((result: any) => {
+      if (result.data) {
+        const sources = result.data.map((s: any) => ({ id: s.id, name: s.name }));
+        setAutomatchSources(sources);
+        if (!automatchSourceId && resolvedSourceId) {
+          setAutomatchSourceId(resolvedSourceId);
+        } else if (!automatchSourceId && sources.length > 0) {
+          setAutomatchSourceId(sources[0].id);
+        }
+      }
+    }).catch(() => {});
+  }, [activeTab, resolvedSourceId]);
+
+  // ── Load categories for Automatch tab ──
+  useEffect(() => {
+    if (activeTab !== 'automatch') return;
+    if (!automatchSourceId || automatchScope !== 'source') {
+      setSourceCategories([]);
+      return;
+    }
+    db.categories.where('source_id').equals(automatchSourceId).toArray().then(cats => {
+      const sorted = cats.sort((a, b) => (a.category_name || '').localeCompare(b.category_name || ''));
+      setSourceCategories(sorted);
+    });
+  }, [activeTab, automatchSourceId, automatchScope]);
 
   // ── Debounced search ──
   useEffect(() => {
@@ -477,6 +520,121 @@ export function EpgEditorModal({ channel: initialChannel, sourceId, sourceName, 
     onClose(); // Close the modal since the channel is now reset
   }
 
+  // ── Automatch tab: get channels missing EPG ──
+  async function getChannelsMissingEpg(
+    sourceId: string | undefined,
+    categoryIds: string[],
+    scope: SearchScope
+  ): Promise<StoredChannel[]> {
+    const dbInstance = await (db as any).dbPromise;
+
+    let sql = `
+      SELECT c.*
+      FROM channels c
+      LEFT JOIN epg_channel_overrides o ON o.stream_id = c.stream_id
+      WHERE (COALESCE(o.epg_channel_id, c.epg_channel_id) IS NULL OR TRIM(COALESCE(o.epg_channel_id, c.epg_channel_id)) = '')
+    `;
+
+    const params: any[] = [];
+
+    if (scope === 'source' && sourceId) {
+      sql += ` AND c.source_id = $${params.length + 1}`;
+      params.push(sourceId);
+    }
+
+    if (categoryIds.length > 0) {
+      const likeClauses = categoryIds.map((_, i) => `c.category_ids LIKE $${params.length + i + 1}`).join(' OR ');
+      sql += ` AND (${likeClauses})`;
+      categoryIds.forEach(id => params.push(`%"${id}"%`));
+    }
+
+    sql += ` ORDER BY c.name COLLATE NOCASE`;
+
+    const rows = await dbInstance.select(sql, params) as any[];
+    return rows.map(r => ({
+      ...r,
+      category_ids: r.category_ids ? JSON.parse(r.category_ids) : [],
+    }));
+  }
+
+  // ── Automatch tab: run auto-match for all missing channels ──
+  async function handleAutoMatchMissing() {
+    setAutomatchRunning(true);
+    setAutomatchResults(null);
+    setAutomatchProgress(null);
+
+    try {
+      const channels = await getChannelsMissingEpg(
+        automatchScope === 'source' ? automatchSourceId : undefined,
+        automatchAllCategories ? [] : automatchCategories,
+        automatchScope
+      );
+
+      if (channels.length === 0) {
+        setAutomatchResults({ matched: 0, skipped: 0, errors: 0, details: ['No channels missing EPG in the selected scope.'] });
+        setAutomatchRunning(false);
+        return;
+      }
+
+      setAutomatchProgress({ matched: 0, total: channels.length });
+
+      let matched = 0;
+      let skipped = 0;
+      let errors = 0;
+      const details: string[] = [];
+      const threshold = automatchThreshold / 100;
+
+      for (let i = 0; i < channels.length; i++) {
+        const ch = channels[i];
+        try {
+          const results = await autoMatchChannelName(
+            ch.name,
+            automatchScope === 'source' ? (automatchSourceId || undefined) : undefined,
+            1,
+            automatchMode
+          );
+
+          if (results.length > 0 && results[0].score >= threshold) {
+            const topMatch = results[0];
+            await upsertChannelOverride({
+              stream_id: ch.stream_id,
+              epg_channel_id: topMatch.id,
+              stream_icon: topMatch.icon_url || ch.stream_icon,
+              timeshift_hours: 0,
+            });
+
+            try {
+              await copyProgramsFromEpgChannel(ch.stream_id, topMatch.id);
+            } catch (e) {
+              // Non-critical
+            }
+
+            matched++;
+            details.push(`✓ ${ch.name} → ${topMatch.display_name} (${(topMatch.score * 100).toFixed(0)}%)`);
+          } else {
+            skipped++;
+            const bestScore = results.length > 0 ? results[0].score : 0;
+            details.push(`✗ ${ch.name} — best match ${(bestScore * 100).toFixed(0)}% (below ${automatchThreshold}%)`);
+          }
+        } catch (e) {
+          errors++;
+          details.push(`⚠ ${ch.name} — error`);
+        }
+
+        setAutomatchProgress({ matched: matched + skipped + errors, total: channels.length });
+
+        // Yield to UI thread occasionally
+        if (i % 3 === 0) {
+          await new Promise(r => setTimeout(r, 1));
+        }
+      }
+
+      setAutomatchResults({ matched, skipped, errors, details });
+    } finally {
+      setAutomatchRunning(false);
+    }
+  }
+
   // ─────────────────────────────────────────────────────────────────────────────
   // RENDER
   // ─────────────────────────────────────────────────────────────────────────────
@@ -491,10 +649,12 @@ export function EpgEditorModal({ channel: initialChannel, sourceId, sourceName, 
         { key: 'programs', label: '📋 Programs' },
         { key: 'search',   label: '🔍 EPG Search' },
         { key: 'source',   label: '📺 All Channels' },
+        { key: 'automatch', label: '🤖 Automatch Missing' },
       ]
     : [
         { key: 'source',   label: '📺 All Channels' },
         { key: 'search',   label: '🔍 EPG Search' },
+        { key: 'automatch', label: '🤖 Automatch Missing' },
       ];
 
   const title = channel
@@ -892,6 +1052,200 @@ export function EpgEditorModal({ channel: initialChannel, sourceId, sourceName, 
                       <span style={{ color: 'var(--text-secondary,#666)', fontSize: '0.85rem' }}>›</span>
                     </div>
                   ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ═══ AUTOMATCH MISSING TAB ═══ */}
+          {activeTab === 'automatch' && (
+            <div>
+              <div style={{ marginBottom: 16, fontSize: '0.82rem', color: 'var(--text-secondary, #888)' }}>
+                Automatically find and apply EPG matches for channels that don't have an EPG assignment.
+              </div>
+
+              {/* Source selection */}
+              <div className="epg-editor-field">
+                <label className="epg-editor-label">Source</label>
+                <select
+                  className="epg-editor-input"
+                  value={automatchSourceId}
+                  onChange={e => setAutomatchSourceId(e.target.value)}
+                  disabled={automatchScope === 'all' || automatchRunning}
+                  style={{ cursor: 'pointer' }}
+                >
+                  {automatchSources.map(s => (
+                    <option key={s.id} value={s.id}>{s.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Scope toggle */}
+              <div className="epg-editor-field">
+                <label className="epg-editor-label">Scope</label>
+                <div className="epg-search-scope-toggle">
+                  <button
+                    className={`epg-search-scope-btn${automatchScope === 'source' ? ' active' : ''}`}
+                    onClick={() => setAutomatchScope('source')}
+                    disabled={automatchRunning}
+                  >This Source</button>
+                  <button
+                    className={`epg-search-scope-btn${automatchScope === 'all' ? ' active' : ''}`}
+                    onClick={() => setAutomatchScope('all')}
+                    disabled={automatchRunning}
+                  >All Sources</button>
+                </div>
+              </div>
+
+              {/* Search mode toggle */}
+              <div className="epg-editor-field">
+                <label className="epg-editor-label">Match Against</label>
+                <div className="epg-search-scope-toggle">
+                  <button
+                    className={`epg-search-scope-btn${automatchMode === 'm3u' ? ' active' : ''}`}
+                    onClick={() => setAutomatchMode('m3u')}
+                    disabled={automatchRunning}
+                    title="Search M3U channel names"
+                  >M3U Names</button>
+                  <button
+                    className={`epg-search-scope-btn${automatchMode === 'epg' ? ' active' : ''}`}
+                    onClick={() => setAutomatchMode('epg')}
+                    disabled={automatchRunning}
+                    title="Search raw EPG channel names from XMLTV"
+                  >EPG Names</button>
+                </div>
+              </div>
+
+              {/* Category selection */}
+              {automatchScope === 'source' && sourceCategories.length > 0 && (
+                <div className="epg-editor-field">
+                  <label className="epg-editor-label">Categories</label>
+                  <div style={{ marginBottom: 8 }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: '0.85rem', color: 'var(--text-primary, #e0e0e0)' }}>
+                      <input
+                        type="checkbox"
+                        checked={automatchAllCategories}
+                        onChange={e => setAutomatchAllCategories(e.target.checked)}
+                        disabled={automatchRunning}
+                      />
+                      All categories in this source
+                    </label>
+                  </div>
+                  {!automatchAllCategories && (
+                    <div className="epg-automatch-category-grid">
+                      {sourceCategories.map(cat => (
+                        <label key={cat.category_id} className="epg-automatch-category-item">
+                          <input
+                            type="checkbox"
+                            checked={automatchCategories.includes(cat.category_id)}
+                            onChange={e => {
+                              if (e.target.checked) {
+                                setAutomatchCategories(prev => [...prev, cat.category_id]);
+                              } else {
+                                setAutomatchCategories(prev => prev.filter(id => id !== cat.category_id));
+                              }
+                            }}
+                            disabled={automatchRunning}
+                          />
+                          <span>{cat.category_name}</span>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Threshold slider */}
+              <div className="epg-editor-field">
+                <label className="epg-editor-label">
+                  Minimum Match Threshold: <strong>{automatchThreshold}%</strong>
+                </label>
+                <input
+                  type="range"
+                  min={10}
+                  max={100}
+                  step={5}
+                  value={automatchThreshold}
+                  onChange={e => setAutomatchThreshold(Number(e.target.value))}
+                  disabled={automatchRunning}
+                  className="epg-automatch-slider"
+                />
+                <div className="epg-editor-hint">
+                  Only auto-apply matches that score at least this percentage. Lower values = more matches, but less accurate.
+                </div>
+              </div>
+
+              {/* Action button */}
+              <div style={{ marginTop: 20, marginBottom: 16 }}>
+                <button
+                  className="epg-editor-btn epg-editor-btn-primary"
+                  onClick={handleAutoMatchMissing}
+                  disabled={automatchRunning || (automatchScope === 'source' && !automatchSourceId) || (!automatchAllCategories && automatchCategories.length === 0)}
+                  style={{ width: '100%', padding: '12px 22px', fontSize: '0.95rem' }}
+                >
+                  {automatchRunning && automatchProgress
+                    ? `Matching… ${automatchProgress.matched}/${automatchProgress.total}`
+                    : '🤖 Auto-Match Missing in Source'}
+                </button>
+              </div>
+
+              {/* Progress bar */}
+              {automatchRunning && automatchProgress && automatchProgress.total > 0 && (
+                <div style={{ marginBottom: 20 }}>
+                  <div style={{
+                    height: 6,
+                    background: 'var(--bg-tertiary, rgba(255,255,255,0.05))',
+                    borderRadius: 3,
+                    overflow: 'hidden',
+                  }}>
+                    <div style={{
+                      height: '100%',
+                      width: `${(automatchProgress.matched / automatchProgress.total) * 100}%`,
+                      background: 'var(--accent-primary, #00d4ff)',
+                      borderRadius: 3,
+                      transition: 'width 0.2s ease-out',
+                    }} />
+                  </div>
+                  <div style={{ textAlign: 'center', marginTop: 6, fontSize: '0.8rem', color: 'var(--text-secondary, #888)' }}>
+                    {automatchProgress.matched} / {automatchProgress.total} channels processed
+                  </div>
+                </div>
+              )}
+
+              {/* Results */}
+              {automatchResults && (
+                <div style={{
+                  border: '1px solid var(--border-color, rgba(255,255,255,0.1))',
+                  borderRadius: 10,
+                  background: 'var(--bg-tertiary, rgba(255,255,255,0.03))',
+                  overflow: 'hidden',
+                }}>
+                  <div style={{
+                    padding: '10px 14px',
+                    background: 'rgba(255,255,255,0.03)',
+                    borderBottom: '1px solid var(--border-color, rgba(255,255,255,0.07))',
+                    display: 'flex',
+                    gap: 16,
+                    fontSize: '0.82rem',
+                  }}>
+                    <span style={{ color: '#4caf50' }}><strong>{automatchResults.matched}</strong> matched</span>
+                    <span style={{ color: 'var(--text-secondary, #888)' }}><strong>{automatchResults.skipped}</strong> skipped</span>
+                    {automatchResults.errors > 0 && (
+                      <span style={{ color: '#ff6b6b' }}><strong>{automatchResults.errors}</strong> errors</span>
+                    )}
+                  </div>
+                  <div style={{ maxHeight: 280, overflowY: 'auto', padding: '6px 0' }}>
+                    {automatchResults.details.map((detail, i) => (
+                      <div key={i} style={{
+                        padding: '4px 14px',
+                        fontSize: '0.8rem',
+                        color: detail.startsWith('✓') ? '#4caf50' : detail.startsWith('⚠') ? '#ffaa44' : 'var(--text-secondary, #888)',
+                        borderBottom: '1px solid rgba(255,255,255,0.03)',
+                      }}>
+                        {detail}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
