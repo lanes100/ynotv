@@ -267,8 +267,19 @@
   padding: 30px;
   display: flex;
   flex-direction: column;
-  justify-content: center;
   border-bottom: var(--glass-border, 1px solid rgba(255, 255, 255, 0.08));
+  overflow-y: auto;
+  min-width: 0;
+}
+
+.guide-info-pane::before,
+.guide-info-pane::after {
+  content: '';
+  flex: 1 0 0;
+}
+
+.guide-info-pane > * {
+  flex-shrink: 0;
 }
 
 .guide-top-section.alternate-view .guide-info-pane {
@@ -306,10 +317,11 @@
 
 /* Program Details Styles */
 .guide-program-title {
-  font-size: 2rem;
+  font-size: var(--epg-title-font-size, 32px);
   font-weight: 600;
   margin-bottom: 8px;
   color: var(--text-primary, white);
+  word-wrap: break-word;
 }
 
 .guide-program-meta {
@@ -335,19 +347,14 @@
 }
 
 .guide-program-description {
-  font-size: 1rem;
+  font-size: var(--epg-body-font-size, 16px);
   line-height: 1.5;
   color: var(--text-muted, rgba(255, 255, 255, 0.6));
-  max-width: 800px;
-  display: -webkit-box;
-  -webkit-line-clamp: 4;
-  line-clamp: 4;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+  word-wrap: break-word;
 }
 
 .guide-top-section.alternate-view .guide-program-title {
-  font-size: 1.4rem;
+  font-size: calc(var(--epg-title-font-size, 32px) * 0.7);
   margin-bottom: 0;
 }
 
@@ -356,10 +363,7 @@
 }
 
 .guide-top-section.alternate-view .guide-program-description {
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
-  font-size: 0.95rem;
-  max-width: 100%;
+  font-size: calc(var(--epg-body-font-size, 16px) * 0.9);
 }
 
 .guide-top-section.alternate-view .now-playing-bar {

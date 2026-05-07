@@ -62,6 +62,8 @@ export interface AppSettings {
     channelSortOrder?: string;
     channelFontSize?: number;
     categoryFontSize?: number;
+    epgTitleFontSize?: number;
+    epgBodyFontSize?: number;
     shortcuts?: ShortcutsMap;
     showSidebar?: boolean;
     startupWidth?: number;

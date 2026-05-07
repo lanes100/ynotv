@@ -675,6 +675,12 @@ function App() {
           if (settingsResult.data.categoryFontSize) {
             document.documentElement.style.setProperty('--category-font-size', `${settingsResult.data.categoryFontSize}px`);
           }
+          if (settingsResult.data.epgTitleFontSize) {
+            document.documentElement.style.setProperty('--epg-title-font-size', `${settingsResult.data.epgTitleFontSize}px`);
+          }
+          if (settingsResult.data.epgBodyFontSize) {
+            document.documentElement.style.setProperty('--epg-body-font-size', `${settingsResult.data.epgBodyFontSize}px`);
+          }
           // Apply other settings
           if (settingsResult.data.channelSortOrder) {
             setChannelSortOrder(settingsResult.data.channelSortOrder as 'alphabetical' | 'number');

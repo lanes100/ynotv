@@ -1308,7 +1308,7 @@
 }
 
 .modern-ui .guide-program-title {
-  font-size: 2.4rem;
+  font-size: var(--epg-title-font-size, 2.4rem);
   font-weight: 800;
   letter-spacing: -0.03em;
   line-height: 1.1;
@@ -1345,7 +1345,7 @@
 }
 
 .modern-ui .guide-program-description {
-  font-size: 1.05rem;
+  font-size: var(--epg-body-font-size, 1.05rem);
   line-height: 1.65;
   color: rgba(255, 255, 255, 0.65);
   margin-top: 16px;

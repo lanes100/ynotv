@@ -11,6 +11,10 @@ interface LiveTVTabProps {
   onCollapseSourceCategoriesOnStartupChange: (enabled: boolean) => void;
   modernUiEnabled: boolean;
   onModernUiEnabledChange: (enabled: boolean) => void;
+  epgTitleFontSize: number;
+  onEpgTitleFontSizeChange: (size: number) => void;
+  epgBodyFontSize: number;
+  onEpgBodyFontSizeChange: (size: number) => void;
 }
 
 export function LiveTVTab({
@@ -24,6 +28,10 @@ export function LiveTVTab({
   onCollapseSourceCategoriesOnStartupChange,
   modernUiEnabled,
   onModernUiEnabledChange,
+  epgTitleFontSize,
+  onEpgTitleFontSizeChange,
+  epgBodyFontSize,
+  onEpgBodyFontSizeChange,
 }: LiveTVTabProps) {
   return (
     <div className="settings-tab-content playback-tab-content">
@@ -81,6 +89,74 @@ export function LiveTVTab({
                 <span style={{ color: 'rgba(255,255,255,0.95)' }}>Current Program</span>
               </div>
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* EPG Font Size Settings */}
+      <div className="settings-section">
+        <div className="section-header">
+          <h3>EPG</h3>
+        </div>
+        <p className="section-description">
+          Adjust the font size for program information displayed in the EPG preview panel.
+        </p>
+
+        <div className="timeshift-settings">
+          {/* EPG Title Font Size */}
+          <div className="form-group" style={{ marginBottom: '16px' }}>
+            <label style={{ display: 'block', marginBottom: '0.5rem', color: 'rgba(255,255,255,0.9)' }}>Title Font Size</label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+              <input
+                type="range"
+                min="16"
+                max="64"
+                value={epgTitleFontSize}
+                onChange={(e) => onEpgTitleFontSizeChange(parseInt(e.target.value))}
+                style={{ flex: 1 }}
+              />
+              <span style={{ minWidth: '3rem', textAlign: 'right', color: 'rgba(255,255,255,0.8)' }}>
+                {epgTitleFontSize}px
+              </span>
+            </div>
+            <p className="form-hint" style={{ marginTop: '0.5rem' }}>
+              Preview: <span style={{ fontSize: `${epgTitleFontSize}px`, color: '#00d4ff' }}>Program Title</span>
+            </p>
+          </div>
+
+          {/* EPG Body Font Size */}
+          <div className="form-group" style={{ marginBottom: '12px' }}>
+            <label style={{ display: 'block', marginBottom: '0.5rem', color: 'rgba(255,255,255,0.9)' }}>Body Text Font Size</label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+              <input
+                type="range"
+                min="10"
+                max="32"
+                value={epgBodyFontSize}
+                onChange={(e) => onEpgBodyFontSizeChange(parseInt(e.target.value))}
+                style={{ flex: 1 }}
+              />
+              <span style={{ minWidth: '3rem', textAlign: 'right', color: 'rgba(255,255,255,0.8)' }}>
+                {epgBodyFontSize}px
+              </span>
+            </div>
+            <p className="form-hint" style={{ marginTop: '0.5rem' }}>
+              Preview: <span style={{ fontSize: `${epgBodyFontSize}px`, color: '#00d4ff' }}>Program description text displayed in the preview panel.</span>
+            </p>
+          </div>
+
+          {/* Reset Button */}
+          <div style={{ marginTop: '16px' }}>
+            <button
+              className="sync-btn"
+              onClick={() => {
+                onEpgTitleFontSizeChange(32);
+                onEpgBodyFontSizeChange(16);
+              }}
+              style={{ maxWidth: '200px' }}
+            >
+              Reset to Default
+            </button>
           </div>
         </div>
       </div>

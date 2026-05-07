@@ -98,6 +98,8 @@ export function Settings({ onClose, onShortcutsChange, theme, onThemeChange, ini
   const [miniMediaBarForEpgPreview, setMiniMediaBarForEpgPreview] = useState(false);
   const [collapseSourceCategoriesOnStartup, setCollapseSourceCategoriesOnStartup] = useState(false);
   const [modernUiEnabled, setModernUiEnabled] = useState(true);
+  const [epgTitleFontSize, setEpgTitleFontSize] = useState(32);
+  const [epgBodyFontSize, setEpgBodyFontSize] = useState(16);
   const epgView = useEpgView();
   const setEpgView = useSetEpgView();
 
@@ -195,6 +197,8 @@ export function Settings({ onClose, onShortcutsChange, theme, onThemeChange, ini
         epgView?: 'traditional' | 'alternate';
         collapseSourceCategoriesOnStartup?: boolean;
         modernUiEnabled?: boolean;
+        epgTitleFontSize?: number;
+        epgBodyFontSize?: number;
         subtitleSettings?: SubtitleSettings;
       };
 
@@ -289,6 +293,14 @@ export function Settings({ onClose, onShortcutsChange, theme, onThemeChange, ini
       // Load modern UI setting
       setModernUiEnabled(settings.modernUiEnabled ?? true);
 
+      // Load EPG font size settings
+      const loadedEpgTitleFontSize = settings.epgTitleFontSize ?? 32;
+      const loadedEpgBodyFontSize = settings.epgBodyFontSize ?? 16;
+      setEpgTitleFontSize(loadedEpgTitleFontSize);
+      setEpgBodyFontSize(loadedEpgBodyFontSize);
+      document.documentElement.style.setProperty('--epg-title-font-size', `${loadedEpgTitleFontSize}px`);
+      document.documentElement.style.setProperty('--epg-body-font-size', `${loadedEpgBodyFontSize}px`);
+
       // Load subtitle settings
       if (settings.subtitleSettings) {
         setSubtitleSettings(settings.subtitleSettings);
@@ -376,6 +388,22 @@ export function Settings({ onClose, onShortcutsChange, theme, onThemeChange, ini
     }
     if (window.storage) {
       await window.storage.updateSettings({ modernUiEnabled: enabled });
+    }
+  };
+
+  const handleEpgTitleFontSizeChange = async (size: number) => {
+    setEpgTitleFontSize(size);
+    document.documentElement.style.setProperty('--epg-title-font-size', `${size}px`);
+    if (window.storage) {
+      await window.storage.updateSettings({ epgTitleFontSize: size });
+    }
+  };
+
+  const handleEpgBodyFontSizeChange = async (size: number) => {
+    setEpgBodyFontSize(size);
+    document.documentElement.style.setProperty('--epg-body-font-size', `${size}px`);
+    if (window.storage) {
+      await window.storage.updateSettings({ epgBodyFontSize: size });
     }
   };
 
@@ -611,6 +639,10 @@ export function Settings({ onClose, onShortcutsChange, theme, onThemeChange, ini
             onCollapseSourceCategoriesOnStartupChange={handleCollapseSourceCategoriesOnStartupChange}
             modernUiEnabled={modernUiEnabled}
             onModernUiEnabledChange={handleModernUiEnabledChange}
+            epgTitleFontSize={epgTitleFontSize}
+            onEpgTitleFontSizeChange={handleEpgTitleFontSizeChange}
+            epgBodyFontSize={epgBodyFontSize}
+            onEpgBodyFontSizeChange={handleEpgBodyFontSizeChange}
           />
         );
       case 'about':
