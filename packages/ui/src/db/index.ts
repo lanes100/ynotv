@@ -113,6 +113,7 @@ export interface StoredProgram {
   title: string;
   description: string;
   start: Date | string;
+  raw_start?: string;
   end: Date | string;
   source_id: string;
 }
@@ -914,6 +915,7 @@ class YnotvDatabase extends SqliteDatabase {
                    CAST((IFNULL(sm.epg_timeshift_hours, 0) + IFNULL(co.timeshift_hours, 0)) * 60 AS INTEGER) || ' minutes')
           END
         ) AS end,
+        p.start AS raw_start,
         p.source_id,
         0 AS is_custom
       FROM programs p
@@ -929,6 +931,7 @@ class YnotvDatabase extends SqliteDatabase {
         description,
         start,
         end,
+        NULL AS raw_start,
         '' AS source_id,
         1  AS is_custom
       FROM epg_program_overrides

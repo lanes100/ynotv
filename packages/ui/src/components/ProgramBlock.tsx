@@ -97,7 +97,10 @@ export const ProgramBlock = memo(function ProgramBlock({
     // If program is in the past or current and catchup is available, play catchup
     if ((isPast || isCurrent) && isCatchupAvailable && onPlayCatchup && channel) {
       const durationMins = Math.round((progEndMs - progStartMs) / 60000);
-      onPlayCatchup(channel, program.title, progStartMs, durationMins);
+      const rawStartMs = program.raw_start 
+        ? new Date(program.raw_start).getTime() 
+        : progStartMs;
+      onPlayCatchup(channel, program.title, rawStartMs, durationMins);
     } else if (onClick) {
       onClick(); // Default (plays live channel)
     }

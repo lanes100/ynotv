@@ -78,11 +78,11 @@ export class XtreamClient {
     const formattedBase = baseUrl.replace(/\/+$/, '');
 
     // Format start time exactly as "YYYY-MM-DD:HH-MM"
-    const year = startTime.getFullYear();
-    const month = String(startTime.getMonth() + 1).padStart(2, '0');
-    const day = String(startTime.getDate()).padStart(2, '0');
-    const hour = String(startTime.getHours()).padStart(2, '0');
-    const minute = String(startTime.getMinutes()).padStart(2, '0');
+    const year = startTime.getUTCFullYear();
+    const month = String(startTime.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(startTime.getUTCDate()).padStart(2, '0');
+    const hour = String(startTime.getUTCHours()).padStart(2, '0');
+    const minute = String(startTime.getUTCMinutes()).padStart(2, '0');
     const formattedStartTime = `${year}-${month}-${day}:${hour}-${minute}`;
 
     // http://<server>/timeshift/<username>/<password>/<duration>/<YYYY-MM-DD:HH-MM>/<stream_id>.<extension>

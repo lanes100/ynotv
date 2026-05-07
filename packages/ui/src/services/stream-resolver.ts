@@ -127,13 +127,41 @@ export async function resolvePlayUrl(
             (Math.min(endMs, Date.now()) - startTimeMs) / 60_000,
         );
 
+        // Fetch server_info to calculate the precise timezone offset of the server
+        let offsetMs = 0;
+        try {
+            const client = new XtreamClient({
+                baseUrl: sourceData.url,
+                username: sourceData.username || '',
+                password: sourceData.password || '',
+                userAgent: sourceData.user_agent,
+            }, sourceData.id);
+
+            const auth = await client.authenticate();
+            if (auth?.server_info?.time_now && auth?.server_info?.timestamp_now) {
+                // Parse time_now ("YYYY-MM-DD HH:MM:SS") assuming it's UTC to find the exact drift
+                const timeNowUtcStr = auth.server_info.time_now.replace(' ', 'T') + 'Z';
+                const timeNowUtcMs = new Date(timeNowUtcStr).getTime();
+                const actualUtcMs = auth.server_info.timestamp_now * 1000;
+
+                if (!isNaN(timeNowUtcMs) && !isNaN(actualUtcMs)) {
+                    offsetMs = timeNowUtcMs - actualUtcMs;
+                    console.log(`[stream-resolver] Calculated Xtream server timezone offset: ${offsetMs / 3600000} hours`);
+                }
+            }
+        } catch (e) {
+            console.warn('[stream-resolver] Failed to fetch server info for timezone offset:', e);
+        }
+
+        const serverTimeMs = startTimeMs + offsetMs;
+
         resolvedUrl = XtreamClient.buildTimeshiftUrl(
             rawStreamId,
             sourceData.url,
             sourceData.username || '',
             sourceData.password || '',
             actualDurationMinutes,
-            new Date(startTimeMs),
+            new Date(serverTimeMs),
         );
         return { url: resolvedUrl, userAgent, sourceName };
     }
