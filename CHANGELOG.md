@@ -1,26 +1,45 @@
   # Changelog
   
-  ## v1.6.7
-  Added:
-  - Advanced search feature, select the search icon at the end of the searchbar to use. Can search Channels only, EPG only, and option to choose specific sources/categories.
-  - Multiple EPG support for sources. Use the Add Additional EPG button in Source settings. Additional EPGs will only fill in missing EPG from main
-  - SubSource support for subtitles for Vod, set key in Settings -> Subtitles. Will autosearch title when subtitled button is clicked playing a Movies or Series.
-  - New subtitle menu, added  Delay, Size, Offest, Background, Opacity adjustments
-  - More Dark themes with black background instead of grey with different accented colors
-  - Channel search for EPG editor for EPGs that doesn't use tvgid (similar to Advanced EPG matching)
-  - Drag to resize Category sidebar and Channel column in EPG. Right click to reset to default.
-  - Channel info overlay. Enable in Settings -> Live View. It will remove the channel information in the Now Playing bar and moves it to the top left corner. Text/Logo/Box/Background opacity adjustable.
-  - New look for Match cards in sports
-  - Added option in EPG Editor to auto-match everything in a source/category. Use the new Automatch Missing tab.
-  - Adjustable EPG preview text now available in Settings -> LiveTV
-  - Sync debug logging 
-  - Added Hide Channel option on channel right click
-  - Sort category option in ABC order. Settings -> Channels -> Category Display
-  
-  Fixes:
-  - Catchup channels will grab correct TZ from provider to playback correct catchup program.
-  - Fixed channels from disabled categories showing in search
-  - Modern UI not loading properly on fresh install. If you'd rather the old look, disable in Settings -> LiveTV
+## v1.6.7
+
+### Added
+
+- **Advanced search** — Access via the search icon at the end of the search bar. Supports filtering by Channels only, EPG only, or specific sources and categories.
+
+- **Multiple EPG support per source** — Additional EPG sources can be added via `Source Settings → Add Additional EPG`. Supplemental EPGs will only populate data absent from the primary EPG.
+
+- **SubSource subtitle integration** — Configure your SubSource API key under `Settings → Subtitles`. The app will automatically search for subtitles by title when the subtitles button is activated during Movies or Series playback.
+
+- **Enhanced subtitle menu** — New controls for Delay, Size, Offset, Background, and Opacity.
+
+- **Additional dark themes** — New variants featuring true black backgrounds in place of grey, available in multiple accent colors.
+
+- **Channel search in EPG Editor** — Enables matching for EPGs that do not rely on TVG-IDs, using a workflow similar to the existing Advanced EPG Matching feature.
+
+- **Resizable EPG sidebar and channel column** — Drag to adjust the width of the Category sidebar and Channel column in the EPG view. Right-click either element to restore default dimensions.
+
+- **Channel info overlay** — Enable under `Settings → Live View`. Relocates channel information from the Now Playing bar to the top-left corner of the screen. Text, logo, box, and background opacity are each individually adjustable.
+
+- **Refreshed sports match cards** — Updated visual design for match cards in the Sports section.
+
+- **Bulk EPG auto-matching** — A new `Automatch Missing` tab in the EPG Editor allows all unmatched channels within a source or category to be matched in a single operation.
+
+- **Adjustable EPG preview text size** — Configurable under `Settings → Live TV`.
+
+- **Sync debug logging** — Detailed logging output is now available to assist with diagnosing synchronisation issues.
+
+- **Hide channel option** — Channels can now be hidden via the right-click context menu.
+
+- **Alphabetical category sorting** — Categories can now be sorted A–Z under `Settings → Channels → Category Display`.
+
+### Fixed
+
+- **Catch-up timezone resolution** — Catch-up channels now correctly retrieve the timezone from the provider, ensuring accurate playback of recorded programmes.
+
+- **Disabled category channels appearing in search** — Channels belonging to disabled categories will no longer appear in search results.
+
+- **Modern UI failing to load on fresh install** — The Modern UI now initialises correctly on a clean installation. Users who prefer the previous appearance may revert via `Settings → Live TV`.
+
   
   ## v1.6.6
   Added:

@@ -2,6 +2,7 @@ import { checkForUpdates } from '../../services/updater';
 import { invoke } from '@tauri-apps/api/core';
 import { getVersion } from '@tauri-apps/api/app';
 import { useState, useEffect } from 'react';
+import ReactMarkdown from 'react-markdown';
 import './PlaybackTab.css'; // Reuse existing tab styles
 import './AboutTab.css';
 import changelogContent from '@root/CHANGELOG.md?raw';
@@ -74,7 +75,7 @@ export function AboutTab() {
 
           <div className="about-section" style={{ marginTop: '24px', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '24px' }}>
             <h4 style={{ margin: '0 0 12px 0', fontSize: '1rem' }}>Changelog</h4>
-            <pre
+            <div
               className="changelog-content"
               style={{
                 margin: '0',
@@ -86,14 +87,11 @@ export function AboutTab() {
                 fontSize: '0.8125rem',
                 lineHeight: '1.5',
                 maxHeight: '300px',
-                overflow: 'auto',
-                whiteSpace: 'pre-wrap',
-                wordWrap: 'break-word',
-                fontFamily: 'inherit'
+                overflow: 'auto'
               }}
             >
-              {changelogContent}
-            </pre>
+              <ReactMarkdown>{changelogContent}</ReactMarkdown>
+            </div>
           </div>
         </div>
       </div>

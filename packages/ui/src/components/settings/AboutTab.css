@@ -14,3 +14,53 @@
 .changelog-content::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.2);
 }
+
+.changelog-content h2 {
+  margin: 0 0 8px 0;
+  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.changelog-content h3 {
+  margin: 12px 0 6px 0;
+  font-size: 0.875rem;
+  color: rgba(255, 255, 255, 0.9);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.changelog-content p {
+  margin: 0 0 8px 0;
+}
+
+.changelog-content ul {
+  margin: 0 0 12px 0;
+  padding-left: 18px;
+}
+
+.changelog-content li {
+  margin-bottom: 6px;
+}
+
+.changelog-content li:last-child {
+  margin-bottom: 0;
+}
+
+.changelog-content strong {
+  color: rgba(255, 255, 255, 0.95);
+  font-weight: 600;
+}
+
+.changelog-content code {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.75rem;
+}
+
+.changelog-content hr {
+  border: 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  margin: 12px 0;
+}
