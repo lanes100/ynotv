@@ -38,6 +38,7 @@ interface SourceFormData {
   autoLoadEpg: boolean;
   vodOnly: boolean;
   epgUrl: string;
+  additionalEpgUrls: string[];
   userAgent: string;
   epgTimeshiftHours: number;
   backupMacs: string[];
@@ -57,6 +58,7 @@ const emptyForm: SourceFormData = {
   autoLoadEpg: true,
   vodOnly: false,
   epgUrl: '',
+  additionalEpgUrls: [],
   userAgent: '',
   epgTimeshiftHours: 0,
   backupMacs: [],
@@ -138,6 +140,10 @@ export function SourcesTab({ sources, isEncryptionAvailable, onSourcesChange, ed
   const [newBackupUser, setNewBackupUser] = useState('');
   const [newBackupPass, setNewBackupPass] = useState('');
   const [showBackupCredInput, setShowBackupCredInput] = useState(false);
+
+  // State for additional EPG URLs
+  const [newAdditionalEpgUrl, setNewAdditionalEpgUrl] = useState('');
+  const [showAdditionalEpgInput, setShowAdditionalEpgInput] = useState(false);
 
   // Password visibility state
   const [showPassword, setShowPassword] = useState(false);
@@ -242,6 +248,7 @@ export function SourcesTab({ sources, isEncryptionAvailable, onSourcesChange, ed
       autoLoadEpg: source.auto_load_epg ?? (source.type === 'xtream'),
       vodOnly: source.vod_only ?? false,
       epgUrl: source.epg_url || '',
+      additionalEpgUrls: source.additional_epg_urls || [],
       userAgent: source.user_agent || '',
       epgTimeshiftHours: source.epg_timeshift_hours || 0,
       backupMacs: source.backup_macs || [],
@@ -374,6 +381,7 @@ export function SourcesTab({ sources, isEncryptionAvailable, onSourcesChange, ed
       auto_load_epg: formData.autoLoadEpg,
       vod_only: formData.vodOnly,
       epg_url: fixDuplicatedUrl(formData.epgUrl.trim()) || undefined,
+      additional_epg_urls: formData.additionalEpgUrls.length > 0 ? formData.additionalEpgUrls : undefined,
       user_agent: formData.userAgent.trim() || undefined,
       epg_timeshift_hours: formData.epgTimeshiftHours || undefined,
       backup_macs: formData.type === 'stalker' && formData.backupMacs.length > 0 ? formData.backupMacs : undefined,
@@ -497,6 +505,33 @@ export function SourcesTab({ sources, isEncryptionAvailable, onSourcesChange, ed
     setShowBackupCredInput(false);
     setNewBackupUser('');
     setNewBackupPass('');
+  }
+
+  // Additional EPG URL Handlers
+  function handleAddAdditionalEpg() {
+    setShowAdditionalEpgInput(true);
+    setNewAdditionalEpgUrl('');
+  }
+
+  function confirmAddAdditionalEpg() {
+    if (newAdditionalEpgUrl && newAdditionalEpgUrl.trim()) {
+      setFormData({
+        ...formData,
+        additionalEpgUrls: [...formData.additionalEpgUrls, newAdditionalEpgUrl.trim()]
+      });
+      setShowAdditionalEpgInput(false);
+      setNewAdditionalEpgUrl('');
+    }
+  }
+
+  function cancelAddAdditionalEpg() {
+    setShowAdditionalEpgInput(false);
+    setNewAdditionalEpgUrl('');
+  }
+
+  function handleDeleteAdditionalEpg(index: number) {
+    const newUrls = formData.additionalEpgUrls.filter((_, i) => i !== index);
+    setFormData({ ...formData, additionalEpgUrls: newUrls });
   }
 
   function handleSwapCredential(type: 'stalker' | 'xtream', index: number) {
@@ -1257,6 +1292,68 @@ export function SourcesTab({ sources, isEncryptionAvailable, onSourcesChange, ed
                 <span className="hint">XMLTV format EPG URL</span>
               </div>
             )}
+
+            {/* Additional EPG URLs */}
+            <div className="form-group backup-section">
+              <label>Additional EPG URLs</label>
+              <span className="hint" style={{ display: 'block', marginBottom: '10px' }}>
+                Waterfall EPG: these fill in channels the primary EPG missed, in order
+              </span>
+              <div className="backup-list">
+                {formData.additionalEpgUrls.map((url, index) => (
+                  <div key={index} className="backup-item">
+                    <span className="backup-val" style={{ fontSize: '0.8rem' }}>{url}</span>
+                    <div className="backup-actions">
+                      <button
+                        type="button"
+                        className="delete-btn"
+                        onClick={() => handleDeleteAdditionalEpg(index)}
+                        title="Delete additional EPG"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {showAdditionalEpgInput ? (
+                <div className="backup-input-row">
+                  <input
+                    type="text"
+                    value={newAdditionalEpgUrl}
+                    onChange={(e) => setNewAdditionalEpgUrl(e.target.value)}
+                    placeholder="http://example.com/additional-epg.xml"
+                    className="backup-input"
+                    autoFocus
+                  />
+                  <div className="backup-input-actions">
+                    <button
+                      type="button"
+                      className="confirm-btn"
+                      onClick={confirmAddAdditionalEpg}
+                    >
+                      Add
+                    </button>
+                    <button
+                      type="button"
+                      className="cancel-btn"
+                      onClick={cancelAddAdditionalEpg}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  className="add-backup-btn"
+                  onClick={handleAddAdditionalEpg}
+                >
+                  + Add Additional EPG
+                </button>
+              )}
+            </div>
 
             {/* VOD Only Setting */}
             <div className="form-group vod-settings">

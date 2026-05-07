@@ -856,6 +856,165 @@ async function syncEpgForStalker(source: Source, channels: Channel[]): Promise<n
 }
 
 
+// ─── Additional EPG waterfall helper ─────────────────────────────────────────
+/**
+ * Get the set of stream_ids that currently have at least one program for a source.
+ */
+async function getStreamIdsWithPrograms(sourceId: string): Promise<Set<string>> {
+  try {
+    const dbInstance = await (db as any).dbPromise;
+    // Use a single aggregated query to find all stream_ids with programs
+    const rows = await dbInstance.select(
+      `SELECT DISTINCT stream_id FROM programs WHERE source_id = ?`,
+      [sourceId]
+    );
+    return new Set((rows || []).map((r: any) => r.stream_id as string));
+  } catch (err) {
+    console.error(`[EPG] Failed to query existing programs for source ${sourceId}:`, err);
+    return new Set();
+  }
+}
+
+/**
+ * Sync additional EPG URLs in waterfall order.
+ * Each additional EPG only fills in channels that have no programs yet.
+ */
+async function syncAdditionalEpgUrls(
+  source: Source,
+  channels: Channel[],
+  onProgress?: (msg: string) => void
+): Promise<number> {
+  if (!source.additional_epg_urls || source.additional_epg_urls.length === 0) {
+    return 0;
+  }
+  if (channels.length === 0) {
+    return 0;
+  }
+
+  debugLog(`Starting waterfall additional EPG sync for source: ${source.name}`, 'epg');
+
+  // Find channels that currently have no programs
+  let channelsWithPrograms = await getStreamIdsWithPrograms(source.id);
+  let channelsNeedingEpg = channels.filter(ch => !channelsWithPrograms.has(ch.stream_id));
+
+  debugLog(
+    `${channelsNeedingEpg.length}/${channels.length} channels need EPG from additional sources`,
+    'epg'
+  );
+
+  if (channelsNeedingEpg.length === 0) {
+    debugLog('All channels already have EPG, skipping additional EPGs', 'epg');
+    return 0;
+  }
+
+  // Load user-applied EPG channel ID overrides
+  const epgOverrideMap = await loadEpgChannelOverrideMap();
+  let totalInserted = 0;
+
+  for (let i = 0; i < source.additional_epg_urls.length; i++) {
+    if (channelsNeedingEpg.length === 0) break;
+
+    const epgUrl = source.additional_epg_urls[i].trim();
+    if (!epgUrl) continue;
+
+    debugLog(
+      `Additional EPG ${i + 1}/${source.additional_epg_urls.length}: ${epgUrl.substring(0, 80)}...`,
+      'epg'
+    );
+    onProgress?.(`Updating EPG (additional ${i + 1}/${source.additional_epg_urls.length})...`);
+
+    try {
+      // Fetch XMLTV programs
+      const xmltvPrograms = await fetchXmltvFromUrl(epgUrl);
+
+      if (xmltvPrograms.length === 0) {
+        debugLog(`Additional EPG ${i + 1} returned no programs`, 'epg');
+        continue;
+      }
+
+      // Build channel map only for channels still needing EPG
+      const channelMap = new Map<string, string>();
+      for (const ch of channelsNeedingEpg) {
+        const effectiveEpgId = epgOverrideMap.get(ch.stream_id) || ch.epg_channel_id;
+        if (effectiveEpgId) {
+          channelMap.set(effectiveEpgId, ch.stream_id);
+        }
+      }
+
+      if (channelMap.size === 0) {
+        debugLog(`No channels with EPG IDs remaining for additional EPG ${i + 1}`, 'epg');
+        continue;
+      }
+
+      // Convert XMLTV programs to stored format, filtering to only matched channels
+      const { programs: matchedPrograms, unmatchedCount } = buildStoredPrograms(
+        xmltvPrograms,
+        channelMap,
+        source.id
+      );
+
+      debugLog(
+        `Additional EPG ${i + 1}: matched ${matchedPrograms.length}/${xmltvPrograms.length} programs (${unmatchedCount} unmatched)`,
+        'epg'
+      );
+
+      if (matchedPrograms.length === 0) {
+        continue;
+      }
+
+      // Insert programs WITHOUT clearing existing ones (waterfall behavior)
+      const bulkPrograms = matchedPrograms.map((p) => ({
+        id: p.id,
+        stream_id: p.stream_id,
+        title: p.title,
+        description:
+          p.description?.length > 2000
+            ? p.description.substring(0, 2000)
+            : p.description || '',
+        start: p.start instanceof Date ? p.start.toISOString() : p.start,
+        end: p.end instanceof Date ? p.end.toISOString() : p.end,
+        source_id: p.source_id,
+      }));
+
+      await db.programs.bulkPut(bulkPrograms);
+      totalInserted += matchedPrograms.length;
+
+      debugLog(
+        `Additional EPG ${i + 1}: inserted ${matchedPrograms.length} programs`,
+        'epg'
+      );
+
+      // Update channels still needing EPG
+      const newlyServed = new Set(matchedPrograms.map(p => p.stream_id));
+      channelsNeedingEpg = channelsNeedingEpg.filter(
+        ch => !newlyServed.has(ch.stream_id)
+      );
+
+      debugLog(
+        `${channelsNeedingEpg.length} channels still need EPG after additional ${i + 1}`,
+        'epg'
+      );
+
+      // Notify UI of new programs
+      if (matchedPrograms.length > 0) {
+        dbEvents.notify('programs', 'add');
+      }
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : String(err);
+      console.error(`[EPG] Additional EPG ${i + 1} failed: ${errMsg}`);
+      debugLog(`Additional EPG ${i + 1} failed: ${errMsg}`, 'epg');
+      // Continue to next additional EPG
+    }
+  }
+
+  debugLog(
+    `Waterfall additional EPG complete: ${totalInserted} programs inserted total`,
+    'epg'
+  );
+  return totalInserted;
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 // Check if EPG needs refresh
 // refreshHours: 0 = manual only (never auto-stale), default 6 hours
 export async function isEpgStale(sourceId: string, refreshHours: number = DEFAULT_EPG_STALE_HOURS): Promise<boolean> {
@@ -1441,6 +1600,17 @@ export async function syncSource(source: Source, onProgress?: (msg: string) => v
       programCount = await syncEpgFromUrl(source, fixedEpgUrl, channels);
       console.timeEnd('sync-epg-manual');
       debugLog(`Manual EPG sync complete: ${programCount} programs`, 'epg');
+    }
+
+    // Waterfall: fill in gaps with additional EPG URLs (skip for VOD-only sources)
+    if (!source.vod_only && source.additional_epg_urls && source.additional_epg_urls.length > 0) {
+      debugLog('Syncing additional EPG URLs (waterfall)...', 'epg');
+      onProgress?.('Updating EPG (additional sources)...');
+      console.time('sync-epg-additional');
+      const additionalCount = await syncAdditionalEpgUrls(source, channels, onProgress);
+      console.timeEnd('sync-epg-additional');
+      programCount += additionalCount;
+      debugLog(`Additional EPG waterfall complete: ${additionalCount} programs`, 'epg');
     }
 
     debugLog(`Sync complete for ${source.name}: ${channels.length} channels, ${categories.length} categories, ${programCount} programs`, 'sync');
