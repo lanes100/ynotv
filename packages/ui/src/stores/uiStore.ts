@@ -51,6 +51,8 @@ interface UIState {
   // Channel display settings
   channelSortOrder: 'alphabetical' | 'number';
   setChannelSortOrder: (value: 'alphabetical' | 'number') => void;
+  categorySortOrder: 'default' | 'alphabetical';
+  setCategorySortOrder: (value: 'default' | 'alphabetical') => void;
   epgView: 'traditional' | 'alternate';
   setEpgView: (value: 'traditional' | 'alternate') => void;
 }
@@ -103,6 +105,8 @@ export const useUIStore = create<UIState>((set) => ({
   // Channel display settings
   channelSortOrder: 'number',
   setChannelSortOrder: (value) => set({ channelSortOrder: value }),
+  categorySortOrder: 'default',
+  setCategorySortOrder: (value) => set({ categorySortOrder: value }),
   epgView: 'traditional',
   setEpgView: (value) => set({ epgView: value }),
 
@@ -140,6 +144,8 @@ export const useSetSyncStatusMessage = () => useUIStore((s) => s.setSyncStatusMe
 // Channel display settings selectors
 export const useChannelSortOrder = () => useUIStore((s) => s.channelSortOrder);
 export const useSetChannelSortOrder = () => useUIStore((s) => s.setChannelSortOrder);
+export const useCategorySortOrder = () => useUIStore((s) => s.categorySortOrder);
+export const useSetCategorySortOrder = () => useUIStore((s) => s.setCategorySortOrder);
 export const useEpgView = () => useUIStore((s) => s.epgView);
 export const useSetEpgView = () => useUIStore((s) => s.setEpgView);
 

@@ -88,6 +88,7 @@ export function Settings({
 
   // Channel display state
   const [channelSortOrder, setChannelSortOrder] = useState<'alphabetical' | 'number'>('alphabetical');
+  const [categorySortOrder, setCategorySortOrder] = useState<'default' | 'alphabetical'>('default');
   const [includeSourceInSearch, setIncludeSourceInSearch] = useState(false);
   const [maxSearchResults, setMaxSearchResults] = useState(200);
   const [searchResultsOrder, setSearchResultsOrder] = useState<'default' | 'alphabetical'>('default');
@@ -216,6 +217,7 @@ export function Settings({
         debugLoggingEnabled?: boolean;
         logRetentionDays?: number;
         channelSortOrder?: 'alphabetical' | 'number';
+        categorySortOrder?: 'default' | 'alphabetical';
         includeSourceInSearch?: boolean;
         maxSearchResults?: number;
         searchResultsOrder?: 'default' | 'alphabetical';
@@ -284,6 +286,7 @@ export function Settings({
 
       // Load channel display settings
       setChannelSortOrder(settings.channelSortOrder ?? 'alphabetical');
+      setCategorySortOrder(settings.categorySortOrder ?? 'default');
       setIncludeSourceInSearch(settings.includeSourceInSearch ?? false);
       setMaxSearchResults(settings.maxSearchResults ?? 200);
       setSearchResultsOrder(settings.searchResultsOrder ?? 'default');
@@ -597,6 +600,13 @@ export function Settings({
     }
   };
 
+  const handleCategorySortOrderChange = async (order: 'default' | 'alphabetical') => {
+    setCategorySortOrder(order);
+    if (window.storage) {
+      await window.storage.updateSettings({ categorySortOrder: order });
+    }
+  };
+
   function renderTabContent() {
     switch (activeTab) {
       case 'sources':
@@ -647,6 +657,8 @@ export function Settings({
           <ChannelsTab
             channelSortOrder={channelSortOrder}
             onChannelSortOrderChange={setChannelSortOrder}
+            categorySortOrder={categorySortOrder}
+            onCategorySortOrderChange={handleCategorySortOrderChange}
             includeSourceInSearch={includeSourceInSearch}
             onIncludeSourceInSearchChange={handleIncludeSourceInSearchChange}
             maxSearchResults={maxSearchResults}

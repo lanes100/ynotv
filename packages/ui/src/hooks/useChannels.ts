@@ -6,6 +6,7 @@ import { getRecentChannels, onRecentChannelsUpdate } from '../utils/recentChanne
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useSourceVersion } from '../contexts/SourceVersionContext';
 import { applyFilterWords } from './useFilterWords';
+import { useCategorySortOrder } from '../stores/uiStore';
 import type { Source } from '@ynotv/core';
 
 // Hook to get enabled source IDs (for filtering data from disabled sources)
@@ -796,6 +797,7 @@ export interface SourceWithCategories {
 export function useCategoriesBySource(): SourceWithCategories[] {
   const enabledSourceIds = useEnabledSources();
   const { version } = useSourceVersion(); // Track reorders and edits
+  const categorySortOrder = useCategorySortOrder();
 
   const enabledSourceKey = useMemo(
     () => (enabledSourceIds ? Array.from(enabledSourceIds).sort().join(',') : 'loading'),
@@ -888,16 +890,21 @@ export function useCategoriesBySource(): SourceWithCategories[] {
         return acc;
       }, {} as Record<string, CategoryWithCount[]>);
 
-      // Sort INDIVIDUAL categories inside each source strictly by name (unless category has its own order)
+      // Sort INDIVIDUAL categories inside each source based on user preference
       Object.values(grouped).forEach(cats => {
-        cats.sort((a, b) => {
-          if (a.display_order !== undefined && b.display_order !== undefined) {
-            return a.display_order - b.display_order;
-          }
-          if (a.display_order !== undefined) return -1;
-          if (b.display_order !== undefined) return 1;
-          return a.category_name.localeCompare(b.category_name);
-        });
+        if (categorySortOrder === 'alphabetical') {
+          cats.sort((a, b) => a.category_name.localeCompare(b.category_name));
+        } else {
+          // Default: use display_order if available, otherwise alphabetical
+          cats.sort((a, b) => {
+            if (a.display_order !== undefined && b.display_order !== undefined) {
+              return a.display_order - b.display_order;
+            }
+            if (a.display_order !== undefined) return -1;
+            if (b.display_order !== undefined) return 1;
+            return a.category_name.localeCompare(b.category_name);
+          });
+        }
       });
 
       // 3. Convert Object map into final Array, and SORT it by the Parent Source display order we mapped
@@ -914,7 +921,7 @@ export function useCategoriesBySource(): SourceWithCategories[] {
 
       return finalArray;
     },
-    [enabledSourceKey, version]
+    [enabledSourceKey, version, categorySortOrder]
   );
 
   return data ?? [];

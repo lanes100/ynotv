@@ -60,6 +60,7 @@ export interface AppSettings {
     epgRefreshHours?: number;
     vodRefreshHours?: number;
     channelSortOrder?: string;
+    categorySortOrder?: 'default' | 'alphabetical';
     channelFontSize?: number;
     categoryFontSize?: number;
     epgTitleFontSize?: number;

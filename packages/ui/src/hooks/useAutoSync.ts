@@ -5,6 +5,7 @@ import {
     useSetChannelSyncing,
     useSetVodSyncing,
     useSetChannelSortOrder,
+    useSetCategorySortOrder,
     useSetSyncStatusMessage,
 } from '../stores/uiStore';
 
@@ -33,6 +34,7 @@ export function useAutoSync(callbacks: AutoSyncSettings = {}) {
     const setChannelSyncing = useSetChannelSyncing();
     const setVodSyncing = useSetVodSyncing();
     const setChannelSortOrder = useSetChannelSortOrder();
+    const setCategorySortOrder = useSetCategorySortOrder();
     const setSyncStatusMessage = useSetSyncStatusMessage();
 
     // Refs to track state across renders and intervals
@@ -53,6 +55,12 @@ export function useAutoSync(callbacks: AutoSyncSettings = {}) {
             setSyncStatusMessage,
         };
     }, [setChannelSyncing, setVodSyncing, setSyncStatusMessage]);
+
+    // Keep category sort order setter in a separate ref since it's used in startup
+    const categorySortRef = useRef(setCategorySortOrder);
+    useEffect(() => {
+        categorySortRef.current = setCategorySortOrder;
+    }, [setCategorySortOrder]);
 
     useEffect(() => {
         // Helper to set syncing state both in React and ref
@@ -180,6 +188,9 @@ export function useAutoSync(callbacks: AutoSyncSettings = {}) {
                 // Apply stored settings via callbacks
                 if (settingsResult.data?.channelSortOrder) {
                     setChannelSortOrder(settingsResult.data.channelSortOrder as 'alphabetical' | 'number');
+                }
+                if (settingsResult.data?.categorySortOrder) {
+                    categorySortRef.current(settingsResult.data.categorySortOrder as 'default' | 'alphabetical');
                 }
                 if (settingsResult.data?.shortcuts) {
                     callbacks.onShortcutsLoaded?.(settingsResult.data.shortcuts);

@@ -20,6 +20,9 @@ export interface AppSettings {
   maxSearchResults: number;
   searchResultsOrder: 'default' | 'alphabetical';
 
+  // Category display
+  categorySortOrder: 'default' | 'alphabetical';
+
   // Advanced Search
   advancedSearchScope: 'channels' | 'epg' | 'both';
   advancedSearchSourceIds: string[];
@@ -54,6 +57,7 @@ export interface AppSettings {
   setAdvancedSearchSourceIds: (ids: string[]) => void;
   setAdvancedSearchCategoryIds: (ids: string[]) => void;
   setUseAdvancedSearchForRegular: (use: boolean) => void;
+  setCategorySortOrder: (order: 'default' | 'alphabetical') => void;
   setChannelInfoOverlayEnabled: (enabled: boolean) => void;
   setChannelInfoOverlayFontSize: (size: number) => void;
   setChannelInfoOverlayLogoSize: (size: number) => void;
@@ -81,6 +85,9 @@ export function useAppSettings(): AppSettings {
   const [includeSourceInSearch, setIncludeSourceInSearch] = useState(false);
   const [maxSearchResults, setMaxSearchResults] = useState(200);
   const [searchResultsOrder, setSearchResultsOrder] = useState<'default' | 'alphabetical'>('default');
+
+  // Category display settings
+  const [categorySortOrder, setCategorySortOrder] = useState<'default' | 'alphabetical'>('default');
 
   // Advanced search settings
   const [advancedSearchScope, setAdvancedSearchScope] = useState<'channels' | 'epg' | 'both'>('both');
@@ -148,6 +155,7 @@ export function useAppSettings(): AppSettings {
           setIncludeSourceInSearch(result.data.includeSourceInSearch ?? false);
           setMaxSearchResults(result.data.maxSearchResults ?? 200);
           setSearchResultsOrder(result.data.searchResultsOrder ?? 'default');
+          setCategorySortOrder(result.data.categorySortOrder ?? 'default');
           setAdvancedSearchScope(result.data.advancedSearchScope ?? 'both');
           setAdvancedSearchSourceIds(result.data.advancedSearchSourceIds ?? []);
           setAdvancedSearchCategoryIds(result.data.advancedSearchCategoryIds ?? []);
@@ -287,6 +295,17 @@ export function useAppSettings(): AppSettings {
     }
   }, []);
 
+  const setCategorySortOrderSetting = useCallback(async (order: 'default' | 'alphabetical') => {
+    setCategorySortOrder(order);
+    if (window.storage) {
+      try {
+        await window.storage.updateSettings({ categorySortOrder: order });
+      } catch (e) {
+        console.error('[useAppSettings] Failed to save categorySortOrder:', e);
+      }
+    }
+  }, []);
+
   return {
     rememberLastChannels,
     reopenLastOnStartup,
@@ -298,6 +317,7 @@ export function useAppSettings(): AppSettings {
     includeSourceInSearch,
     maxSearchResults,
     searchResultsOrder,
+    categorySortOrder,
     advancedSearchScope,
     advancedSearchSourceIds,
     advancedSearchCategoryIds,
@@ -321,6 +341,7 @@ export function useAppSettings(): AppSettings {
     setAdvancedSearchSourceIds,
     setAdvancedSearchCategoryIds,
     setUseAdvancedSearchForRegular,
+    setCategorySortOrder: setCategorySortOrderSetting,
     setChannelInfoOverlayEnabled,
     setChannelInfoOverlayFontSize,
     setChannelInfoOverlayLogoSize,

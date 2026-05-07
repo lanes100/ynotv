@@ -30,10 +30,12 @@ import {
   useTmdbMatching,
   useSyncStatusMessage,
   useChannelSortOrder,
+  useCategorySortOrder,
   useSetChannelSyncing,
   useSetVodSyncing,
   useSetSyncStatusMessage,
   useSetChannelSortOrder,
+  useSetCategorySortOrder,
   useEpgView,
   useSetEpgView
 } from './stores/uiStore';
@@ -394,6 +396,7 @@ function App() {
   const setVodSyncing = useSetVodSyncing();
   const setSyncStatusMessage = useSetSyncStatusMessage();
   const setChannelSortOrder = useSetChannelSortOrder();
+  const setCategorySortOrder = useSetCategorySortOrder();
   const setEpgView = useSetEpgView();
   const epgView = useEpgView();
 
@@ -732,6 +735,9 @@ function App() {
           // Apply other settings
           if (settingsResult.data.channelSortOrder) {
             setChannelSortOrder(settingsResult.data.channelSortOrder as 'alphabetical' | 'number');
+          }
+          if (settingsResult.data.categorySortOrder) {
+            setCategorySortOrder(settingsResult.data.categorySortOrder as 'default' | 'alphabetical');
           }
           if (settingsResult.data.epgView) {
             setEpgView(settingsResult.data.epgView as 'traditional' | 'alternate');

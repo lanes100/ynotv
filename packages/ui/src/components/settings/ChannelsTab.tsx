@@ -1,9 +1,11 @@
-import { useSetChannelSortOrder } from '../../stores/uiStore';
+import { useSetChannelSortOrder, useSetCategorySortOrder } from '../../stores/uiStore';
 import './PlaybackTab.css'; // Reuse existing tab styles for toggle
 
 interface ChannelsTabProps {
   channelSortOrder: 'alphabetical' | 'number';
   onChannelSortOrderChange: (order: 'alphabetical' | 'number') => void;
+  categorySortOrder: 'default' | 'alphabetical';
+  onCategorySortOrderChange: (order: 'default' | 'alphabetical') => void;
   includeSourceInSearch: boolean;
   onIncludeSourceInSearchChange: (enabled: boolean) => void;
   maxSearchResults: number;
@@ -30,6 +32,8 @@ async function saveSearchResultsOrder(order: 'default' | 'alphabetical') {
 export function ChannelsTab({
   channelSortOrder,
   onChannelSortOrderChange,
+  categorySortOrder,
+  onCategorySortOrderChange,
   includeSourceInSearch,
   onIncludeSourceInSearchChange,
   maxSearchResults,
@@ -38,12 +42,20 @@ export function ChannelsTab({
   onSearchResultsOrderChange,
 }: ChannelsTabProps) {
   const setChannelSortOrder = useSetChannelSortOrder();
+  const setCategorySortOrder = useSetCategorySortOrder();
 
   async function handleSortOrderChange(order: 'alphabetical' | 'number') {
     onChannelSortOrderChange(order);
     setChannelSortOrder(order); // Update global store immediately
     if (!window.storage) return;
     await window.storage.updateSettings({ channelSortOrder: order });
+  }
+
+  async function handleCategorySortOrderChange(order: 'default' | 'alphabetical') {
+    onCategorySortOrderChange(order);
+    setCategorySortOrder(order); // Update global store immediately
+    if (!window.storage) return;
+    await window.storage.updateSettings({ categorySortOrder: order });
   }
 
   return (
@@ -73,6 +85,34 @@ export function ChannelsTab({
         <p className="form-hint" style={{ marginTop: '0.75rem' }}>
           "Channel Number" uses the order from your provider (Xtream num or M3U tvg-chno).
           Channels without a number will appear at the end, sorted alphabetically.
+        </p>
+      </div>
+
+      <div className="settings-section" style={{ marginTop: '24px' }}>
+        <div className="section-header">
+          <h3>Category Display</h3>
+        </div>
+
+        <p className="section-description">
+          Configure how categories are sorted under each source.
+        </p>
+
+        <div className="refresh-settings">
+          <div className="form-group inline">
+            <label>Sort Order</label>
+            <select
+              value={categorySortOrder}
+              onChange={(e) => handleCategorySortOrderChange(e.target.value as 'default' | 'alphabetical')}
+            >
+              <option value="default">Default</option>
+              <option value="alphabetical">Alphabetical (A-Z)</option>
+            </select>
+          </div>
+        </div>
+
+        <p className="form-hint" style={{ marginTop: '0.75rem' }}>
+          "Default" uses the order from your provider or any custom order set in Manage Categories.
+          "Alphabetical" sorts all categories alphabetically (A-Z).
         </p>
       </div>
 

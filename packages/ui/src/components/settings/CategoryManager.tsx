@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { createPortal } from 'react-dom';
 import { useLiveQuery } from '../../hooks/useSqliteLiveQuery';
 import { db, type StoredCategory, updateCategoriesBatch } from '../../db';
+import { useCategorySortOrder } from '../../stores/uiStore';
 import { ChannelManager } from './ChannelManager';
 import './CategoryManager.css';
 
@@ -19,6 +20,7 @@ export function CategoryManager({ sourceId, sourceName, onClose, onChange }: Cat
     const [searchQuery, setSearchQuery] = useState('');
     const [managingCategory, setManagingCategory] = useState<{ id: string; name: string } | null>(null);
     const isSavingRef = useRef(false);
+    const categorySortOrder = useCategorySortOrder();
 
     // Pointer-event drag state
     const dragFromIdx = useRef<number | null>(null);
@@ -44,15 +46,23 @@ export function CategoryManager({ sourceId, sourceName, onClose, onChange }: Cat
     // Initialize categories from database (but not while saving)
     useEffect(() => {
         if (dbCategories && !isSavingRef.current) {
-            // Sort by display_order if available, otherwise by category_name
-            const sorted = [...dbCategories].sort((a, b) => {
-                if (a.display_order !== undefined && b.display_order !== undefined) {
-                    return a.display_order - b.display_order;
-                }
-                if (a.display_order !== undefined) return -1;
-                if (b.display_order !== undefined) return 1;
-                return a.category_name.localeCompare(b.category_name);
-            });
+            let sorted: StoredCategory[];
+            if (categorySortOrder === 'alphabetical') {
+                // Sort alphabetically when that mode is selected
+                sorted = [...dbCategories].sort((a, b) =>
+                    a.category_name.localeCompare(b.category_name)
+                );
+            } else {
+                // Default: sort by display_order if available, otherwise by category_name
+                sorted = [...dbCategories].sort((a, b) => {
+                    if (a.display_order !== undefined && b.display_order !== undefined) {
+                        return a.display_order - b.display_order;
+                    }
+                    if (a.display_order !== undefined) return -1;
+                    if (b.display_order !== undefined) return 1;
+                    return a.category_name.localeCompare(b.category_name);
+                });
+            }
 
             // Set display_order if not set (use sorted index)
             const categoriesWithOrder = sorted.map((cat, idx) => ({
@@ -63,7 +73,7 @@ export function CategoryManager({ sourceId, sourceName, onClose, onChange }: Cat
             setCategories(categoriesWithOrder);
             setIsDirty(false);
         }
-    }, [dbCategories]);
+    }, [dbCategories, categorySortOrder]);
 
     // Toggle enable/disable
     const toggleCategory = useCallback((categoryId: string) => {
@@ -222,6 +232,9 @@ export function CategoryManager({ sourceId, sourceName, onClose, onChange }: Cat
 
                 <div className="category-manager-stats">
                     {enabledCount} of {totalCount} categories enabled
+                    <span style={{ marginLeft: '12px', opacity: 0.7, fontSize: '0.85em' }}>
+                        ({categorySortOrder === 'alphabetical' ? 'Alphabetical' : 'Default'} order)
+                    </span>
                 </div>
 
                 <div className="category-manager-actions">
@@ -257,18 +270,22 @@ export function CategoryManager({ sourceId, sourceName, onClose, onChange }: Cat
                         const isDragging = dragFromIdx.current === index;
                         const isDragOver = dragOverIdx === index && dragFromIdx.current !== null && dragFromIdx.current !== index;
 
+                        const isAlphabetical = categorySortOrder === 'alphabetical';
+
                         return (
                             <div
                                 key={cat.category_id}
-                                className={`category-item ${isDragging ? 'dragging' : ''} ${isDragOver ? 'drag-over' : ''}`}
+                                className={`category-item ${!isAlphabetical && isDragging ? 'dragging' : ''} ${!isAlphabetical && isDragOver ? 'drag-over' : ''}`}
                             >
-                                <span
-                                    className="drag-handle"
-                                    style={{ touchAction: 'none' }}
-                                    onPointerDown={(e) => handleHandlePointerDown(e, index)}
-                                >
-                                    ⋮⋮
-                                </span>
+                                {!isAlphabetical && (
+                                    <span
+                                        className="drag-handle"
+                                        style={{ touchAction: 'none' }}
+                                        onPointerDown={(e) => handleHandlePointerDown(e, index)}
+                                    >
+                                        ⋮⋮
+                                    </span>
+                                )}
 
                                 <label className="category-checkbox">
                                     <input
@@ -287,24 +304,26 @@ export function CategoryManager({ sourceId, sourceName, onClose, onChange }: Cat
                                     📺 Channels
                                 </button>
 
-                                <div className="category-reorder">
-                                    <button
-                                        className="order-btn"
-                                        onClick={() => moveUp(index)}
-                                        disabled={index === 0}
-                                        title="Move up"
-                                    >
-                                        ↑
-                                    </button>
-                                    <button
-                                        className="order-btn"
-                                        onClick={() => moveDown(index)}
-                                        disabled={index === categories.length - 1}
-                                        title="Move down"
-                                    >
-                                        ↓
-                                    </button>
-                                </div>
+                                {!isAlphabetical && (
+                                    <div className="category-reorder">
+                                        <button
+                                            className="order-btn"
+                                            onClick={() => moveUp(index)}
+                                            disabled={index === 0}
+                                            title="Move up"
+                                        >
+                                            ↑
+                                        </button>
+                                        <button
+                                            className="order-btn"
+                                            onClick={() => moveDown(index)}
+                                            disabled={index === categories.length - 1}
+                                            title="Move down"
+                                        >
+                                            ↓
+                                        </button>
+                                    </div>
+                                )}
                             </div>
                         );
                     })}
