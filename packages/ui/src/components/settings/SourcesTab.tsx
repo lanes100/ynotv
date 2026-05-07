@@ -1302,7 +1302,13 @@ export function SourcesTab({ sources, isEncryptionAvailable, onSourcesChange, ed
               <div className="backup-list">
                 {formData.additionalEpgUrls.map((url, index) => (
                   <div key={index} className="backup-item">
-                    <span className="backup-val" style={{ fontSize: '0.8rem' }}>{url}</span>
+                    <input
+                      type="text"
+                      readOnly
+                      value={url}
+                      className="backup-val epg-url-display"
+                      onClick={(e) => (e.target as HTMLInputElement).select()}
+                    />
                     <div className="backup-actions">
                       <button
                         type="button"
