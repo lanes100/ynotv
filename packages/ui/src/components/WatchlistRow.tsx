@@ -5,8 +5,7 @@ import { WatchlistOptionsModal } from './WatchlistOptionsModal';
 import { FavoriteButton } from './FavoriteButton';
 import './ChannelPanel.css';
 
-// Width of the channel info column (must match SearchResultRow)
-const CHANNEL_COLUMN_WIDTH = 264;
+// Channel column width is controlled via CSS custom property for resizability
 
 interface WatchlistRowProps {
   item: WatchlistItem;
@@ -50,9 +49,9 @@ export function WatchlistRow({
         <div
           className="guide-channel-info"
           style={{
-            width: CHANNEL_COLUMN_WIDTH,
-            minWidth: CHANNEL_COLUMN_WIDTH,
-            maxWidth: CHANNEL_COLUMN_WIDTH,
+            width: 'var(--epg-channel-column-width, 264px)',
+            minWidth: 'var(--epg-channel-column-width, 264px)',
+            maxWidth: 'var(--epg-channel-column-width, 264px)',
             opacity: 0.5,
           }}
         >
@@ -128,9 +127,9 @@ export function WatchlistRow({
         <div
           className="guide-channel-info"
           style={{
-            width: CHANNEL_COLUMN_WIDTH,
-            minWidth: CHANNEL_COLUMN_WIDTH,
-            maxWidth: CHANNEL_COLUMN_WIDTH,
+            width: 'var(--epg-channel-column-width, 264px)',
+            minWidth: 'var(--epg-channel-column-width, 264px)',
+            maxWidth: 'var(--epg-channel-column-width, 264px)',
           }}
           onClick={onPlay}
         >

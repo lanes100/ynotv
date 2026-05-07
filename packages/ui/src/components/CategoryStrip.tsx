@@ -186,6 +186,17 @@ export function CategoryStrip({ selectedCategoryId, onSelectCategory, visible, s
   const [expandedSources, setExpandedSources] = useState<Record<string, boolean>>({});
   const { version } = useSourceVersion(); // Listen for source changes
 
+  // Resizable category sidebar width
+  const [categoryWidth, setCategoryWidth] = useState(() => {
+    const saved = localStorage.getItem('categoryStripContentWidth');
+    return saved ? parseInt(saved) : 240;
+  });
+
+  // Set CSS custom property for layout
+  useEffect(() => {
+    document.documentElement.style.setProperty('--category-strip-content-width', `${categoryWidth}px`);
+  }, [categoryWidth]);
+
   // Track mouse position for hover-to-show sidebar button
   const [mouseX, setMouseX] = useState(0);
   const [mouseY, setMouseY] = useState(0);
@@ -285,6 +296,49 @@ export function CategoryStrip({ selectedCategoryId, onSelectCategory, visible, s
     setFavoritesContextMenu({ x: e.clientX, y: e.clientY });
   };
 
+  // ── Drag-to-resize for category sidebar ───────────────────────────────────
+  const isResizingCategory = useRef(false);
+
+  const handleCategoryResizeMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    isResizingCategory.current = true;
+
+    const startX = e.clientX;
+    const startWidth = categoryWidth;
+
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      if (!isResizingCategory.current) return;
+      const dx = moveEvent.clientX - startX;
+      let newWidth = startWidth + dx;
+      newWidth = Math.max(180, Math.min(newWidth, 500));
+      document.documentElement.style.setProperty('--category-strip-content-width', `${newWidth}px`);
+    };
+
+    const handleMouseUp = () => {
+      if (!isResizingCategory.current) return;
+      isResizingCategory.current = false;
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+
+      const finalWidthStr = getComputedStyle(document.documentElement).getPropertyValue('--category-strip-content-width');
+      const finalWidth = parseInt(finalWidthStr) || 240;
+      setCategoryWidth(finalWidth);
+      localStorage.setItem('categoryStripContentWidth', String(finalWidth));
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  }, [categoryWidth]);
+
+  const handleCategoryResizeContextMenu = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setCategoryWidth(240);
+    localStorage.setItem('categoryStripContentWidth', '240');
+    document.documentElement.style.setProperty('--category-strip-content-width', '240px');
+  }, []);
+
   // Fetch source names to resolve IDs
   useEffect(() => {
     async function fetchSources() {
@@ -335,6 +389,13 @@ export function CategoryStrip({ selectedCategoryId, onSelectCategory, visible, s
   return (
     <>
       <div className={`category-strip ${visible ? 'visible' : 'hidden'} ${sidebarExpanded ? 'sidebar-expanded' : ''} ${showSidebar ? 'with-sidebar' : 'no-sidebar'}`}>
+        {/* Resizer Handle */}
+        <div
+          className="category-strip-resizer"
+          onMouseDown={handleCategoryResizeMouseDown}
+          onContextMenu={handleCategoryResizeContextMenu}
+          title="Drag to resize sidebar | Right-click to reset"
+        />
         <div className="category-strip-header">
           <span className="category-strip-title">Categories</span>
           <div className="category-strip-actions">

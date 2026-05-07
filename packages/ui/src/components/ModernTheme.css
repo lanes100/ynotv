@@ -4,7 +4,7 @@
 
 /* Modern Category Strip - Fixed Widths */
 .modern-ui .category-strip {
-  width: 260px;
+  width: var(--category-strip-content-width, 260px);
   background: 
     linear-gradient(180deg, 
       color-mix(in srgb, var(--bg-primary, rgba(10, 10, 15, 0.95)) 95%, transparent) 0%,
@@ -18,16 +18,16 @@
     opacity 0.3s ease;
 }
 
-.modern-ui .category-strip.with-sidebar { width: 300px; }
-.modern-ui .category-strip.with-sidebar.sidebar-expanded { width: 380px; }
+.modern-ui .category-strip.with-sidebar { width: calc(var(--category-strip-content-width, 260px) + 60px); }
+.modern-ui .category-strip.with-sidebar.sidebar-expanded { width: calc(var(--category-strip-content-width, 260px) + 160px); }
 
 /* Modern Guide Panel Padding - Match new widths */
 .modern-ui .guide-panel.with-categories {
-  padding-left: 260px;
+  padding-left: var(--category-strip-content-width, 260px);
 }
 
 .modern-ui .guide-panel.with-sidebar.with-categories.sidebar-expanded {
-  padding-left: 380px;
+  padding-left: calc(var(--category-strip-content-width, 260px) + 160px);
 }
 
 /* Modern Category Strip Header */

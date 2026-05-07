@@ -23,8 +23,7 @@ interface SearchResultRowProps {
   currentChannel?: StoredChannel | null;
 }
 
-// Width of the channel info column (must match ChannelPanel)
-const CHANNEL_COLUMN_WIDTH = 264;
+// Channel column width is controlled via CSS custom property for resizability
 const HOUR_WIDTH = 175; // Fixed width per program slot (75% wider than before: 100 * 1.75 = 175)
 
 // Format date for display
@@ -130,9 +129,9 @@ export const SearchResultRow = memo(function SearchResultRow({
       <div
         className={`guide-channel-info ${isRecording ? 'is-recording' : ''}`}
         style={{
-          width: CHANNEL_COLUMN_WIDTH,
-          minWidth: CHANNEL_COLUMN_WIDTH,
-          maxWidth: CHANNEL_COLUMN_WIDTH
+          width: 'var(--epg-channel-column-width, 264px)',
+          minWidth: 'var(--epg-channel-column-width, 264px)',
+          maxWidth: 'var(--epg-channel-column-width, 264px)'
         }}
         onClick={onPlay}
         onContextMenu={handleChannelContextMenu}

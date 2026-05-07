@@ -23,8 +23,8 @@ import { MetadataBadge } from './MetadataBadge';
 import './ChannelPanel.css';
 
 
-// Width of the channel info column (20% bigger than original 220)
-const CHANNEL_COLUMN_WIDTH = 264;
+// Default width of the channel info column (20% bigger than original 220)
+const DEFAULT_CHANNEL_COLUMN_WIDTH = 264;
 
 // Memoized Virtuoso row component to prevent unnecessary re-renders
 // This must be defined OUTSIDE the ChannelPanel component
@@ -226,6 +226,19 @@ export function ChannelPanel({
     return saved ? parseInt(saved) : 360; // default 360px
   });
 
+  // Channel column width state
+  const [channelColumnWidth, setChannelColumnWidth] = useState(() => {
+    const saved = localStorage.getItem('epgChannelColumnWidth');
+    return saved ? parseInt(saved) : DEFAULT_CHANNEL_COLUMN_WIDTH;
+  });
+  const channelColumnWidthRef = useRef(channelColumnWidth);
+  channelColumnWidthRef.current = channelColumnWidth;
+
+  // Set CSS custom property for channel column width
+  useEffect(() => {
+    document.documentElement.style.setProperty('--epg-channel-column-width', `${channelColumnWidth}px`);
+  }, [channelColumnWidth]);
+
   // Get active recordings for showing indicators
   const { recordings: activeRecordings } = useActiveRecordings(5000);
 
@@ -357,13 +370,13 @@ export function ChannelPanel({
       const currentWindowWidth = window.innerWidth;
       const isWindowResize = currentWindowWidth !== lastWindowWidth.current;
 
-      if (isWindowResize) {
+        if (isWindowResize) {
         // Actual window resize - recalculate program positions
         lastWindowWidth.current = currentWindowWidth;
 
         if (rafId === null) {
           rafId = requestAnimationFrame(() => {
-            const width = entry.contentRect.width - CHANNEL_COLUMN_WIDTH;
+            const width = entry.contentRect.width - channelColumnWidthRef.current;
             setAvailableWidth(Math.max(width, 200));
             rafId = null;
           });
@@ -378,12 +391,12 @@ export function ChannelPanel({
       if (!container) return;
 
       lastWindowWidth.current = window.innerWidth;
-      const width = container.getBoundingClientRect().width - CHANNEL_COLUMN_WIDTH;
+      const width = container.getBoundingClientRect().width - channelColumnWidthRef.current;
       setAvailableWidth(Math.max(width, 200));
     };
 
     // Set initial width
-    const initialWidth = container.getBoundingClientRect().width - CHANNEL_COLUMN_WIDTH;
+    const initialWidth = container.getBoundingClientRect().width - channelColumnWidthRef.current;
     setAvailableWidth(Math.max(initialWidth, 200));
 
     observer.observe(container);
@@ -891,6 +904,63 @@ export function ChannelPanel({
     }
   }, [epgView]);
 
+  // ── Drag-to-resize for EPG channel column ─────────────────────────────────
+  const isResizingChannelCol = useRef(false);
+
+  const handleChannelColResizeMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    isResizingChannelCol.current = true;
+
+    const startX = e.clientX;
+    const startWidth = channelColumnWidthRef.current;
+
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      if (!isResizingChannelCol.current) return;
+      const dx = moveEvent.clientX - startX;
+      let newWidth = startWidth + dx;
+      newWidth = Math.max(180, Math.min(newWidth, 500));
+      document.documentElement.style.setProperty('--epg-channel-column-width', `${newWidth}px`);
+    };
+
+    const handleMouseUp = () => {
+      if (!isResizingChannelCol.current) return;
+      isResizingChannelCol.current = false;
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+
+      const finalWidthStr = getComputedStyle(document.documentElement).getPropertyValue('--epg-channel-column-width');
+      const finalWidth = parseInt(finalWidthStr) || DEFAULT_CHANNEL_COLUMN_WIDTH;
+      setChannelColumnWidth(finalWidth);
+      localStorage.setItem('epgChannelColumnWidth', String(finalWidth));
+
+      // Recalculate available width after resize
+      const container = gridContainerRef.current;
+      if (container) {
+        const width = container.getBoundingClientRect().width - finalWidth;
+        setAvailableWidth(Math.max(width, 200));
+      }
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  }, []);
+
+  const handleChannelColResizeContextMenu = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setChannelColumnWidth(DEFAULT_CHANNEL_COLUMN_WIDTH);
+    localStorage.setItem('epgChannelColumnWidth', String(DEFAULT_CHANNEL_COLUMN_WIDTH));
+    document.documentElement.style.setProperty('--epg-channel-column-width', `${DEFAULT_CHANNEL_COLUMN_WIDTH}px`);
+
+    // Recalculate available width after reset
+    const container = gridContainerRef.current;
+    if (container) {
+      const width = container.getBoundingClientRect().width - DEFAULT_CHANNEL_COLUMN_WIDTH;
+      setAvailableWidth(Math.max(width, 200));
+    }
+  }, []);
+
   // Refresh search results when favorites change
   const refreshSearchResults = useCallback(async () => {
     if (!isSearchMode) return;
@@ -1347,6 +1417,15 @@ export function ChannelPanel({
 
       {/* Bottom Section: EPG Grid */}
       <div className="guide-grid-section">
+        {/* Channel Column Resizer */}
+        {!isSearchMode && !isWatchlistMode && (
+          <div
+            className="epg-channel-resizer"
+            onMouseDown={handleChannelColResizeMouseDown}
+            onContextMenu={handleChannelColResizeContextMenu}
+            title="Drag to resize channel column | Right-click to reset"
+          />
+        )}
         {/* Navigation / Header Bar */}
         <div className="guide-header">
           <div className="guide-header-left">
@@ -1437,7 +1516,7 @@ export function ChannelPanel({
         {/* Time Scale - Hide in search mode and watchlist mode */}
         {!isSearchMode && !isWatchlistMode && (
           <div className="guide-time-header">
-            <div className="guide-time-header-spacer" style={{ width: CHANNEL_COLUMN_WIDTH }} />
+            <div className="guide-time-header-spacer" style={{ width: 'var(--epg-channel-column-width, 264px)' }} />
             <div className="guide-time-header-grid">
               {timeSlots.map((slot, i) => {
                 const position = getTimeSlotPosition(slot);
@@ -1750,7 +1829,7 @@ export function ChannelPanel({
           {!isSearchMode && !isWatchlistMode && currentTimeIndicatorPosition !== null && (
             <div
               className="guide-current-time-indicator"
-              style={{ left: currentTimeIndicatorPosition + CHANNEL_COLUMN_WIDTH }}
+              style={{ left: `calc(${currentTimeIndicatorPosition}px + var(--epg-channel-column-width, 264px))` }}
             />
           )}
         </div>

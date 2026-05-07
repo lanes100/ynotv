@@ -9,8 +9,7 @@ import type { StoredChannel, StoredProgram } from '../db';
 import { normalizeBoolean } from '../utils/db-helpers';
 import type { RecordingInfo } from '../hooks/useActiveRecordings';
 
-// Width of the channel info column (must match ChannelPanel)
-const CHANNEL_COLUMN_WIDTH = 264;
+// Channel column width is controlled via CSS custom property for resizability
 
 interface ChannelRowProps {
   channel: StoredChannel;
@@ -111,9 +110,9 @@ export const ChannelRow = memo(function ChannelRow({
       <div
         className={`guide-channel-info ${isRecording ? 'is-recording' : ''}`}
         style={{
-          width: CHANNEL_COLUMN_WIDTH,
-          minWidth: CHANNEL_COLUMN_WIDTH,
-          maxWidth: CHANNEL_COLUMN_WIDTH
+          width: 'var(--epg-channel-column-width, 264px)',
+          minWidth: 'var(--epg-channel-column-width, 264px)',
+          maxWidth: 'var(--epg-channel-column-width, 264px)'
         }}
         onClick={onPlay}
         onContextMenu={handleChannelContextMenu}

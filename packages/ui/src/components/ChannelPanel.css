@@ -38,7 +38,7 @@
 
 /* With categories visible (no sidebar) */
 .guide-panel.with-categories {
-  padding-left: 240px;
+  padding-left: var(--category-strip-content-width, 240px);
 }
 
 /* With sidebar expanded */
@@ -48,12 +48,12 @@
 
 /* With categories AND sidebar */
 .guide-panel.with-sidebar.with-categories {
-  padding-left: 300px;
+  padding-left: calc(var(--category-strip-content-width, 240px) + 60px);
 }
 
 /* With categories AND sidebar expanded */
 .guide-panel.with-sidebar.with-categories.sidebar-expanded {
-  padding-left: 400px;
+  padding-left: calc(var(--category-strip-content-width, 240px) + 160px);
 }
 
 
@@ -313,6 +313,37 @@
   -webkit-backdrop-filter: blur(var(--glass-blur, 20px));
   overflow: hidden;
   /* Ensure virtual list scrolls inside */
+  position: relative;
+}
+
+/* EPG Channel Column Resizer */
+.epg-channel-resizer {
+  position: absolute;
+  left: var(--epg-channel-column-width, 264px);
+  top: 0;
+  bottom: 0;
+  width: 8px;
+  cursor: col-resize;
+  z-index: 50;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+}
+
+.epg-channel-resizer::after {
+  content: '';
+  width: 2px;
+  height: 24px;
+  background: var(--surface-border, rgba(255, 255, 255, 0.3));
+  border-radius: 1px;
+  transition: all 0.2s ease;
+}
+
+.epg-channel-resizer:hover::after {
+  background: var(--accent-primary, #00d4ff);
+  box-shadow: 0 0 8px var(--accent-primary, #00d4ff);
 }
 
 /* Program Details Styles */

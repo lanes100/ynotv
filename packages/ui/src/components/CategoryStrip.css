@@ -5,7 +5,7 @@
   top: 32px;
   /* Below title bar */
   bottom: 0;
-  width: 240px;
+  width: var(--category-strip-content-width, 240px);
   /* Just content width when no sidebar */
   padding-left: 0;
   /* No sidebar space by default */
@@ -69,16 +69,16 @@
 
 /* When sidebar is visible - add padding and adjust width */
 .category-strip.with-sidebar {
-  width: 300px;
-  /* 60px sidebar + 240px content */
+  width: calc(var(--category-strip-content-width, 240px) + 60px);
+  /* 60px sidebar + content */
   padding-left: 60px;
   /* Space for collapsed sidebar */
 }
 
 /* Shift right when sidebar is expanded */
 .category-strip.with-sidebar.sidebar-expanded {
-  width: 400px;
-  /* 160px expanded sidebar + 240px content */
+  width: calc(var(--category-strip-content-width, 240px) + 160px);
+  /* 160px expanded sidebar + content */
   padding-left: 160px;
 }
 
@@ -489,6 +489,35 @@
   margin-top: 8px;
   font-size: 0.75rem;
   opacity: 0.7;
+}
+
+/* Category Strip Resizer */
+.category-strip-resizer {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 6px;
+  cursor: col-resize;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+}
+
+.category-strip-resizer::after {
+  content: '';
+  width: 2px;
+  height: 24px;
+  background: var(--surface-border, rgba(255, 255, 255, 0.3));
+  border-radius: 1px;
+  transition: all 0.2s ease;
+}
+
+.category-strip-resizer:hover::after {
+  background: var(--accent-primary, #00d4ff);
+  box-shadow: 0 0 8px var(--accent-primary, #00d4ff);
 }
 
 /* Section divider between top section and scrollable sources */
