@@ -29,6 +29,7 @@ interface NowPlayingBarProps {
     startTime: number;
     duration: number; // in minutes
   } | null;
+  channelInfoOverlayEnabled?: boolean;
   onTogglePlay: () => void;
   onStop: () => void;
   onToggleMute: () => void;
@@ -84,6 +85,7 @@ export function NowPlayingBar({
   vodInfo,
   isCatchup,
   catchupInfo,
+  channelInfoOverlayEnabled,
   onTogglePlay,
   onStop,
   onToggleMute,
@@ -117,6 +119,9 @@ export function NowPlayingBar({
   const canControl = mpvReady && channel !== null;
   const currentProgram = useCurrentProgram(channel?.stream_id ?? null);
   const { showSuccess, showError, ModalComponent } = useModal();
+
+  // When channel info overlay is enabled, hide channel details from the bar for live TV
+  const hideChannelInfo = channelInfoOverlayEnabled && !isVod;
 
   // Update DVR with currently playing stream info
   useEffect(() => {
@@ -391,9 +396,10 @@ export function NowPlayingBar({
       {channel ? (
         <>
           {/* Row 1: Channel/VOD info with description */}
-          <div className="npb-row npb-info-row">
-            {/* Left: Logo + Channel/Program or VOD info */}
-            <div className="npb-channel-section">
+          {!hideChannelInfo && (
+            <div className="npb-row npb-info-row">
+              {/* Left: Logo + Channel/Program or VOD info */}
+              <div className="npb-channel-section">
               {channel.stream_icon && (
                 <img
                   key={channel.stream_icon}
@@ -444,18 +450,19 @@ export function NowPlayingBar({
               </div>
             </div>
 
-            {/* Divider + Description (VOD plot or TV program description) */}
-            {(isVod ? vodInfo?.plot : currentProgram?.description) && (
-              <>
-                <div className="npb-divider" />
-                <div className="npb-description-section">
-                  <span className="npb-program-desc" title={isVod ? vodInfo?.plot : currentProgram?.description}>
-                    {isVod ? vodInfo?.plot : currentProgram?.description}
-                  </span>
-                </div>
-              </>
-            )}
-          </div>
+              {/* Divider + Description (VOD plot or TV program description) */}
+              {(isVod ? vodInfo?.plot : currentProgram?.description) && (
+                <>
+                  <div className="npb-divider" />
+                  <div className="npb-description-section">
+                    <span className="npb-program-desc" title={isVod ? vodInfo?.plot : currentProgram?.description}>
+                      {isVod ? vodInfo?.plot : currentProgram?.description}
+                    </span>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
 
           {/* Row 2: Progress and controls */}
           <div className="npb-row npb-controls-row">

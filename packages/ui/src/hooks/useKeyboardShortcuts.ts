@@ -45,6 +45,9 @@ export interface UseKeyboardShortcutsOptions {
     setCategoriesOpen: React.Dispatch<React.SetStateAction<boolean>>;
     setSidebarExpanded: React.Dispatch<React.SetStateAction<boolean>>;
     setShowControls: React.Dispatch<React.SetStateAction<boolean>>;
+
+    // --- Channel info overlay flash ---
+    onChannelChangeFlash?: () => void;
 }
 
 /**
@@ -97,6 +100,7 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions): void
                 setCategoriesOpen,
                 setSidebarExpanded,
                 setShowControls,
+                onChannelChangeFlash,
             } = latestRefs.current;
 
             // Helper to match keys case-insensitively for letters
@@ -215,6 +219,10 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions): void
                         // Wrap to last channel
                         handlePlayChannel(currentChannels[currentChannels.length - 1]);
                     }
+                    // Flash channel info overlay when changing channels outside guide/sports
+                    if (activeView !== 'guide' && activeView !== 'sports') {
+                        onChannelChangeFlash?.();
+                    }
                 }
             } else if (matches('channelDown', e.key)) {
                 e.preventDefault();
@@ -225,6 +233,10 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions): void
                     } else if (currentIndex === currentChannels.length - 1) {
                         // Wrap to first channel
                         handlePlayChannel(currentChannels[0]);
+                    }
+                    // Flash channel info overlay when changing channels outside guide/sports
+                    if (activeView !== 'guide' && activeView !== 'sports') {
+                        onChannelChangeFlash?.();
                     }
                 }
             } else if (matches('replayLastStream', e.key)) {

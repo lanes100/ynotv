@@ -20,6 +20,7 @@ import { PlaybackTab } from './settings/PlaybackTab';
 import { CacheTab } from './settings/CacheTab';
 import { AboutTab } from './settings/AboutTab';
 import { LiveTVTab } from './settings/LiveTVTab';
+import { LiveViewTab } from './settings/LiveViewTab';
 import { SubtitlesTab, type SubtitleSettings } from './settings/SubtitlesTab';
 import type { ShortcutsMap, ThemeId } from '../types/app';
 import './Settings.css';
@@ -31,9 +32,36 @@ interface SettingsProps {
   onThemeChange?: (theme: ThemeId) => void;
   initialTab?: SettingsTabId;
   editSourceId?: string | null;
+  channelInfoOverlayEnabled?: boolean;
+  onChannelInfoOverlayChange?: (enabled: boolean) => void;
+  channelInfoOverlayFontSize?: number;
+  onChannelInfoOverlayFontSizeChange?: (size: number) => void;
+  channelInfoOverlayLogoSize?: number;
+  onChannelInfoOverlayLogoSizeChange?: (size: number) => void;
+  channelInfoOverlayBoxWidth?: number;
+  onChannelInfoOverlayBoxWidthChange?: (width: number) => void;
+  channelInfoOverlayOpacity?: number;
+  onChannelInfoOverlayOpacityChange?: (opacity: number) => void;
 }
 
-export function Settings({ onClose, onShortcutsChange, theme, onThemeChange, initialTab = 'sources', editSourceId = null }: SettingsProps) {
+export function Settings({
+  onClose,
+  onShortcutsChange,
+  theme,
+  onThemeChange,
+  initialTab = 'sources',
+  editSourceId = null,
+  channelInfoOverlayEnabled: channelInfoOverlayEnabledProp,
+  onChannelInfoOverlayChange,
+  channelInfoOverlayFontSize: channelInfoOverlayFontSizeProp,
+  onChannelInfoOverlayFontSizeChange,
+  channelInfoOverlayLogoSize: channelInfoOverlayLogoSizeProp,
+  onChannelInfoOverlayLogoSizeChange,
+  channelInfoOverlayBoxWidth: channelInfoOverlayBoxWidthProp,
+  onChannelInfoOverlayBoxWidthChange,
+  channelInfoOverlayOpacity: channelInfoOverlayOpacityProp,
+  onChannelInfoOverlayOpacityChange,
+}: SettingsProps) {
   const [activeTab, setActiveTab] = useState<SettingsTabId>(initialTab);
   const [sources, setSources] = useState<Source[]>([]);
   const [isEncryptionAvailable, setIsEncryptionAvailable] = useState(true);
@@ -102,6 +130,20 @@ export function Settings({ onClose, onShortcutsChange, theme, onThemeChange, ini
   const [epgBodyFontSize, setEpgBodyFontSize] = useState(16);
   const epgView = useEpgView();
   const setEpgView = useSetEpgView();
+
+  // Live View settings state
+  const [channelInfoOverlayEnabled, setChannelInfoOverlayEnabled] = useState(channelInfoOverlayEnabledProp ?? false);
+  const [channelInfoOverlayFontSize, setChannelInfoOverlayFontSize] = useState(channelInfoOverlayFontSizeProp ?? 16);
+  const [channelInfoOverlayLogoSize, setChannelInfoOverlayLogoSize] = useState(channelInfoOverlayLogoSizeProp ?? 42);
+  const [channelInfoOverlayBoxWidth, setChannelInfoOverlayBoxWidth] = useState(channelInfoOverlayBoxWidthProp ?? 380);
+  const [channelInfoOverlayOpacity, setChannelInfoOverlayOpacity] = useState(channelInfoOverlayOpacityProp ?? 55);
+
+  // Sync prop values to internal state so changes from App.tsx take effect immediately
+  useEffect(() => { setChannelInfoOverlayEnabled(channelInfoOverlayEnabledProp ?? false); }, [channelInfoOverlayEnabledProp]);
+  useEffect(() => { setChannelInfoOverlayFontSize(channelInfoOverlayFontSizeProp ?? 16); }, [channelInfoOverlayFontSizeProp]);
+  useEffect(() => { setChannelInfoOverlayLogoSize(channelInfoOverlayLogoSizeProp ?? 42); }, [channelInfoOverlayLogoSizeProp]);
+  useEffect(() => { setChannelInfoOverlayBoxWidth(channelInfoOverlayBoxWidthProp ?? 380); }, [channelInfoOverlayBoxWidthProp]);
+  useEffect(() => { setChannelInfoOverlayOpacity(channelInfoOverlayOpacityProp ?? 55); }, [channelInfoOverlayOpacityProp]);
 
   // Subtitle settings state
   const [subtitleSettings, setSubtitleSettings] = useState<SubtitleSettings>({
@@ -199,6 +241,11 @@ export function Settings({ onClose, onShortcutsChange, theme, onThemeChange, ini
         modernUiEnabled?: boolean;
         epgTitleFontSize?: number;
         epgBodyFontSize?: number;
+        channelInfoOverlayEnabled?: boolean;
+        channelInfoOverlayFontSize?: number;
+        channelInfoOverlayLogoSize?: number;
+        channelInfoOverlayBoxWidth?: number;
+        channelInfoOverlayOpacity?: number;
         subtitleSettings?: SubtitleSettings;
       };
 
@@ -300,6 +347,13 @@ export function Settings({ onClose, onShortcutsChange, theme, onThemeChange, ini
       setEpgBodyFontSize(loadedEpgBodyFontSize);
       document.documentElement.style.setProperty('--epg-title-font-size', `${loadedEpgTitleFontSize}px`);
       document.documentElement.style.setProperty('--epg-body-font-size', `${loadedEpgBodyFontSize}px`);
+
+      // Load Live View settings
+      setChannelInfoOverlayEnabled(settings.channelInfoOverlayEnabled ?? false);
+      setChannelInfoOverlayFontSize(settings.channelInfoOverlayFontSize ?? 16);
+      setChannelInfoOverlayLogoSize(settings.channelInfoOverlayLogoSize ?? 42);
+      setChannelInfoOverlayBoxWidth(settings.channelInfoOverlayBoxWidth ?? 380);
+      setChannelInfoOverlayOpacity(settings.channelInfoOverlayOpacity ?? 55);
 
       // Load subtitle settings
       if (settings.subtitleSettings) {
@@ -404,6 +458,56 @@ export function Settings({ onClose, onShortcutsChange, theme, onThemeChange, ini
     document.documentElement.style.setProperty('--epg-body-font-size', `${size}px`);
     if (window.storage) {
       await window.storage.updateSettings({ epgBodyFontSize: size });
+    }
+  };
+
+  const handleChannelInfoOverlayChange = async (enabled: boolean) => {
+    setChannelInfoOverlayEnabled(enabled);
+    if (onChannelInfoOverlayChange) {
+      onChannelInfoOverlayChange(enabled);
+    }
+    if (window.storage) {
+      await window.storage.updateSettings({ channelInfoOverlayEnabled: enabled });
+    }
+  };
+
+  const handleChannelInfoOverlayFontSizeChange = async (size: number) => {
+    setChannelInfoOverlayFontSize(size);
+    if (onChannelInfoOverlayFontSizeChange) {
+      onChannelInfoOverlayFontSizeChange(size);
+    }
+    if (window.storage) {
+      await window.storage.updateSettings({ channelInfoOverlayFontSize: size });
+    }
+  };
+
+  const handleChannelInfoOverlayLogoSizeChange = async (size: number) => {
+    setChannelInfoOverlayLogoSize(size);
+    if (onChannelInfoOverlayLogoSizeChange) {
+      onChannelInfoOverlayLogoSizeChange(size);
+    }
+    if (window.storage) {
+      await window.storage.updateSettings({ channelInfoOverlayLogoSize: size });
+    }
+  };
+
+  const handleChannelInfoOverlayBoxWidthChange = async (width: number) => {
+    setChannelInfoOverlayBoxWidth(width);
+    if (onChannelInfoOverlayBoxWidthChange) {
+      onChannelInfoOverlayBoxWidthChange(width);
+    }
+    if (window.storage) {
+      await window.storage.updateSettings({ channelInfoOverlayBoxWidth: width });
+    }
+  };
+
+  const handleChannelInfoOverlayOpacityChange = async (opacity: number) => {
+    setChannelInfoOverlayOpacity(opacity);
+    if (onChannelInfoOverlayOpacityChange) {
+      onChannelInfoOverlayOpacityChange(opacity);
+    }
+    if (window.storage) {
+      await window.storage.updateSettings({ channelInfoOverlayOpacity: opacity });
     }
   };
 
@@ -643,6 +747,21 @@ export function Settings({ onClose, onShortcutsChange, theme, onThemeChange, ini
             onEpgTitleFontSizeChange={handleEpgTitleFontSizeChange}
             epgBodyFontSize={epgBodyFontSize}
             onEpgBodyFontSizeChange={handleEpgBodyFontSizeChange}
+          />
+        );
+      case 'live-view':
+        return (
+          <LiveViewTab
+            channelInfoOverlayEnabled={channelInfoOverlayEnabled}
+            onChannelInfoOverlayChange={handleChannelInfoOverlayChange}
+            channelInfoOverlayFontSize={channelInfoOverlayFontSize}
+            onChannelInfoOverlayFontSizeChange={handleChannelInfoOverlayFontSizeChange}
+            channelInfoOverlayLogoSize={channelInfoOverlayLogoSize}
+            onChannelInfoOverlayLogoSizeChange={handleChannelInfoOverlayLogoSizeChange}
+            channelInfoOverlayBoxWidth={channelInfoOverlayBoxWidth}
+            onChannelInfoOverlayBoxWidthChange={handleChannelInfoOverlayBoxWidthChange}
+            channelInfoOverlayOpacity={channelInfoOverlayOpacity}
+            onChannelInfoOverlayOpacityChange={handleChannelInfoOverlayOpacityChange}
           />
         );
       case 'about':

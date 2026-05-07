@@ -29,6 +29,11 @@ export interface AppSettings {
   // LiveTV
   miniMediaBarForEpgPreview: boolean;
   epgView: 'traditional' | 'alternate';
+  channelInfoOverlayEnabled: boolean;
+  channelInfoOverlayFontSize: number;
+  channelInfoOverlayLogoSize: number;
+  channelInfoOverlayBoxWidth: number;
+  channelInfoOverlayOpacity: number;
 
   // Theme
   theme: ThemeId;
@@ -49,6 +54,11 @@ export interface AppSettings {
   setAdvancedSearchSourceIds: (ids: string[]) => void;
   setAdvancedSearchCategoryIds: (ids: string[]) => void;
   setUseAdvancedSearchForRegular: (use: boolean) => void;
+  setChannelInfoOverlayEnabled: (enabled: boolean) => void;
+  setChannelInfoOverlayFontSize: (size: number) => void;
+  setChannelInfoOverlayLogoSize: (size: number) => void;
+  setChannelInfoOverlayBoxWidth: (width: number) => void;
+  setChannelInfoOverlayOpacity: (opacity: number) => void;
 }
 
 /**
@@ -81,6 +91,11 @@ export function useAppSettings(): AppSettings {
   // LiveTV settings
   const [miniMediaBarForEpgPreview, setMiniMediaBarForEpgPreview] = useState(true);
   const [epgView, setEpgView] = useState<'traditional' | 'alternate'>('traditional');
+  const [channelInfoOverlayEnabled, setChannelInfoOverlayEnabledState] = useState(false);
+  const [channelInfoOverlayFontSize, setChannelInfoOverlayFontSizeState] = useState(16);
+  const [channelInfoOverlayLogoSize, setChannelInfoOverlayLogoSizeState] = useState(42);
+  const [channelInfoOverlayBoxWidth, setChannelInfoOverlayBoxWidthState] = useState(380);
+  const [channelInfoOverlayOpacity, setChannelInfoOverlayOpacityState] = useState(55);
 
   // Theme state
   const [theme, setThemeState] = useState<ThemeId>('glass-neon');
@@ -139,6 +154,11 @@ export function useAppSettings(): AppSettings {
           setUseAdvancedSearchForRegular(result.data.useAdvancedSearchForRegular ?? false);
           setMiniMediaBarForEpgPreview(result.data.miniMediaBarForEpgPreview ?? true);
           setEpgView(result.data.epgView ?? 'traditional');
+          setChannelInfoOverlayEnabled(result.data.channelInfoOverlayEnabled ?? false);
+          setChannelInfoOverlayFontSizeState(result.data.channelInfoOverlayFontSize ?? 16);
+          setChannelInfoOverlayLogoSizeState(result.data.channelInfoOverlayLogoSize ?? 42);
+          setChannelInfoOverlayBoxWidthState(result.data.channelInfoOverlayBoxWidth ?? 380);
+          setChannelInfoOverlayOpacityState(result.data.channelInfoOverlayOpacity ?? 55);
           setCategoriesHiddenState(result.data.categoriesHidden ?? false);
 
           // Apply EPG darken current setting on load
@@ -208,6 +228,65 @@ export function useAppSettings(): AppSettings {
     }
   }, []);
 
+  const setChannelInfoOverlayFontSize = useCallback(async (size: number) => {
+    setChannelInfoOverlayFontSizeState(size);
+    document.documentElement.style.setProperty('--cio-font-size', `${size}px`);
+    if (window.storage) {
+      try {
+        await window.storage.updateSettings({ channelInfoOverlayFontSize: size });
+      } catch (e) {
+        console.error('[useAppSettings] Failed to save channelInfoOverlayFontSize:', e);
+      }
+    }
+  }, []);
+
+  const setChannelInfoOverlayLogoSize = useCallback(async (size: number) => {
+    setChannelInfoOverlayLogoSizeState(size);
+    document.documentElement.style.setProperty('--cio-logo-size', `${size}px`);
+    if (window.storage) {
+      try {
+        await window.storage.updateSettings({ channelInfoOverlayLogoSize: size });
+      } catch (e) {
+        console.error('[useAppSettings] Failed to save channelInfoOverlayLogoSize:', e);
+      }
+    }
+  }, []);
+
+  const setChannelInfoOverlayBoxWidth = useCallback(async (width: number) => {
+    setChannelInfoOverlayBoxWidthState(width);
+    document.documentElement.style.setProperty('--cio-box-width', `${width}px`);
+    if (window.storage) {
+      try {
+        await window.storage.updateSettings({ channelInfoOverlayBoxWidth: width });
+      } catch (e) {
+        console.error('[useAppSettings] Failed to save channelInfoOverlayBoxWidth:', e);
+      }
+    }
+  }, []);
+
+  const setChannelInfoOverlayOpacity = useCallback(async (opacity: number) => {
+    setChannelInfoOverlayOpacityState(opacity);
+    document.documentElement.style.setProperty('--cio-bg-opacity', `${opacity / 100}`);
+    if (window.storage) {
+      try {
+        await window.storage.updateSettings({ channelInfoOverlayOpacity: opacity });
+      } catch (e) {
+        console.error('[useAppSettings] Failed to save channelInfoOverlayOpacity:', e);
+      }
+    }
+  }, []);
+
+  const setChannelInfoOverlayEnabled = useCallback(async (enabled: boolean) => {
+    setChannelInfoOverlayEnabledState(enabled);
+    if (window.storage) {
+      try {
+        await window.storage.updateSettings({ channelInfoOverlayEnabled: enabled });
+      } catch (e) {
+        console.error('[useAppSettings] Failed to save channelInfoOverlayEnabled:', e);
+      }
+    }
+  }, []);
+
   return {
     rememberLastChannels,
     reopenLastOnStartup,
@@ -225,6 +304,11 @@ export function useAppSettings(): AppSettings {
     useAdvancedSearchForRegular,
     miniMediaBarForEpgPreview,
     epgView,
+    channelInfoOverlayEnabled,
+    channelInfoOverlayFontSize,
+    channelInfoOverlayLogoSize,
+    channelInfoOverlayBoxWidth,
+    channelInfoOverlayOpacity,
     theme,
     shortcuts,
     showSidebar,
@@ -237,5 +321,10 @@ export function useAppSettings(): AppSettings {
     setAdvancedSearchSourceIds,
     setAdvancedSearchCategoryIds,
     setUseAdvancedSearchForRegular,
+    setChannelInfoOverlayEnabled,
+    setChannelInfoOverlayFontSize,
+    setChannelInfoOverlayLogoSize,
+    setChannelInfoOverlayBoxWidth,
+    setChannelInfoOverlayOpacity,
   };
 }

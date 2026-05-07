@@ -9,6 +9,7 @@ import { Settings } from './components/Settings';
 import type { SettingsTabId } from './components/settings/SettingsSidebar';
 import { Sidebar, type View } from './components/Sidebar';
 import { NowPlayingBar } from './components/NowPlayingBar';
+import { ChannelInfoOverlay } from './components/ChannelInfoOverlay';
 import { TrackSelectionModal } from './components/TrackSelectionModal';
 import { SubtitleControlModal } from './components/SubtitleControlModal';
 import { CategoryStrip } from './components/CategoryStrip';
@@ -91,6 +92,11 @@ function App() {
     advancedSearchCategoryIds,
     useAdvancedSearchForRegular,
     miniMediaBarForEpgPreview,
+    channelInfoOverlayEnabled,
+    channelInfoOverlayFontSize,
+    channelInfoOverlayLogoSize,
+    channelInfoOverlayBoxWidth,
+    channelInfoOverlayOpacity,
     theme,
     shortcuts,
     showSidebar: showSidebarFromSettings,
@@ -103,6 +109,11 @@ function App() {
     setAdvancedSearchSourceIds,
     setAdvancedSearchCategoryIds,
     setUseAdvancedSearchForRegular,
+    setChannelInfoOverlayEnabled,
+    setChannelInfoOverlayFontSize,
+    setChannelInfoOverlayLogoSize,
+    setChannelInfoOverlayBoxWidth,
+    setChannelInfoOverlayOpacity,
   } = useAppSettings();
 
   // ==========================================================================
@@ -113,6 +124,14 @@ function App() {
     clearLiveQueryCache();
     console.log('[App] Live query cache cleared on startup');
   }, []);
+
+  // Apply channel info overlay CSS variables on mount
+  useEffect(() => {
+    document.documentElement.style.setProperty('--cio-font-size', `${channelInfoOverlayFontSize}px`);
+    document.documentElement.style.setProperty('--cio-logo-size', `${channelInfoOverlayLogoSize}px`);
+    document.documentElement.style.setProperty('--cio-box-width', `${channelInfoOverlayBoxWidth}px`);
+    document.documentElement.style.setProperty('--cio-bg-opacity', `${channelInfoOverlayOpacity / 100}`);
+  }, [channelInfoOverlayFontSize, channelInfoOverlayLogoSize, channelInfoOverlayBoxWidth, channelInfoOverlayOpacity]);
 
   // ==========================================================================
   // MPV Listeners (must be before useLayoutPersistence for mpvReady)
@@ -295,6 +314,34 @@ function App() {
     handleSelectCategory,
     handleMouseMove,
   } = nav;
+
+  // ==========================================================================
+  // Channel Info Overlay
+  // ==========================================================================
+  // The overlay follows the titlebar/nowplaying bar visibility (showControls).
+  // Exception: it flashes briefly on keyboard channel up/down outside guide/sports.
+  const [channelChangeFlash, setChannelChangeFlash] = useState(false);
+  const channelChangeFlashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const triggerChannelChangeFlash = useCallback(() => {
+    if (!channelInfoOverlayEnabled) return;
+    setChannelChangeFlash(true);
+    if (channelChangeFlashTimerRef.current) {
+      clearTimeout(channelChangeFlashTimerRef.current);
+    }
+    channelChangeFlashTimerRef.current = setTimeout(() => {
+      setChannelChangeFlash(false);
+    }, 4000);
+  }, [channelInfoOverlayEnabled]);
+
+  const isChannelInfoOverlayVisible = useMemo(() => {
+    if (!channelInfoOverlayEnabled || !currentChannel) return false;
+    const isVod = currentChannel.stream_id === 'vod' || currentChannel.stream_id?.startsWith('recording_');
+    if (isVod) return false;
+    // Don't show when in LiveTV guide or Sports views
+    if (activeView === 'guide' || activeView === 'sports') return false;
+    return showControls || channelChangeFlash;
+  }, [channelInfoOverlayEnabled, currentChannel, showControls, channelChangeFlash, activeView]);
 
   // ==========================================================================
   // Watchlist State (from useWatchlist)
@@ -636,6 +683,7 @@ function App() {
     setCategoriesOpen,
     setSidebarExpanded,
     setShowControls,
+    onChannelChangeFlash: triggerChannelChangeFlash,
   });
 
   // ==========================================================================
@@ -1136,6 +1184,7 @@ function App() {
         vodInfo={vodInfo}
         isCatchup={isCatchup}
         catchupInfo={catchupInfo}
+        channelInfoOverlayEnabled={channelInfoOverlayEnabled}
         onTogglePlay={handleTogglePlay}
         onStop={handleStop}
         onToggleMute={handleToggleMute}
@@ -1162,6 +1211,12 @@ function App() {
         }}
         onChannelUp={handleChannelUp}
         onChannelDown={handleChannelDown}
+      />
+
+      {/* Channel Info Overlay */}
+      <ChannelInfoOverlay
+        channel={currentChannel}
+        visible={isChannelInfoOverlayVisible}
       />
 
       {/* Multiview Layout */}
@@ -1350,6 +1405,16 @@ function App() {
           onShortcutsChange={setShortcuts}
           theme={theme}
           onThemeChange={setTheme}
+          channelInfoOverlayEnabled={channelInfoOverlayEnabled}
+          onChannelInfoOverlayChange={setChannelInfoOverlayEnabled}
+          channelInfoOverlayFontSize={channelInfoOverlayFontSize}
+          onChannelInfoOverlayFontSizeChange={setChannelInfoOverlayFontSize}
+          channelInfoOverlayLogoSize={channelInfoOverlayLogoSize}
+          onChannelInfoOverlayLogoSizeChange={setChannelInfoOverlayLogoSize}
+          channelInfoOverlayBoxWidth={channelInfoOverlayBoxWidth}
+          onChannelInfoOverlayBoxWidthChange={setChannelInfoOverlayBoxWidth}
+          channelInfoOverlayOpacity={channelInfoOverlayOpacity}
+          onChannelInfoOverlayOpacityChange={setChannelInfoOverlayOpacity}
         />
       )}
 

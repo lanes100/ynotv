@@ -1,0 +1,188 @@
+/* Channel Info Overlay - cable TV style top-left transparent box */
+.channel-info-overlay {
+  position: absolute;
+  top: 40px;
+  left: 16px;
+  z-index: 60;
+  max-width: var(--cio-box-width, 380px);
+  min-width: 200px;
+  pointer-events: none;
+  transition: opacity 0.4s ease, transform 0.4s ease;
+}
+
+.channel-info-overlay.hidden {
+  opacity: 0;
+  transform: translateY(-10px);
+}
+
+.channel-info-overlay.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.cio-content {
+  background: rgba(0, 0, 0, var(--cio-bg-opacity, 0.55));
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-radius: 10px;
+  padding: 14px 18px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.35);
+}
+
+/* Header row: logo + name + metadata */
+.cio-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.cio-logo {
+  width: var(--cio-logo-size, 42px);
+  height: var(--cio-logo-size, 42px);
+  object-fit: contain;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  flex-shrink: 0;
+}
+
+.cio-header-text {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.cio-channel-name {
+  font-size: var(--cio-font-size, 16px);
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.95);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+
+/* Metadata badge inside overlay */
+.cio-header-text .metadata-badge {
+  margin-top: 2px;
+}
+
+.cio-header-text .metadata-badge.detailed {
+  font-size: calc(var(--cio-font-size, 16px) * 0.72);
+  gap: 5px;
+}
+
+.cio-header-text .metadata-badge .quality,
+.cio-header-text .metadata-badge .fps,
+.cio-header-text .metadata-badge .audio {
+  padding: 1px 5px;
+  font-size: calc(var(--cio-font-size, 16px) * 0.68);
+}
+
+/* Program info */
+.cio-program {
+  margin-top: 0;
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition: max-height 0.4s ease, opacity 0.4s ease, margin-top 0.4s ease;
+}
+
+.cio-program.show {
+  margin-top: 10px;
+  max-height: 200px;
+  opacity: 1;
+}
+
+.cio-program-title {
+  font-size: calc(var(--cio-font-size, 16px) * 0.88);
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.85);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+
+.cio-program-desc {
+  margin-top: 6px;
+  font-size: calc(var(--cio-font-size, 16px) * 0.78);
+  color: rgba(255, 255, 255, 0.55);
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+/* Time row: start-end range + remaining */
+.cio-time-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 6px;
+  font-size: calc(var(--cio-font-size, 16px) * 0.72);
+}
+
+.cio-time-range {
+  color: rgba(255, 255, 255, 0.6);
+  white-space: nowrap;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.cio-time-remaining {
+  color: rgba(255, 255, 255, 0.45);
+  white-space: nowrap;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+/* Progress bar */
+.cio-progress-bar {
+  margin-top: 6px;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.cio-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #00d4ff, #00a8cc);
+  border-radius: 2px;
+  transition: width 0.5s ease;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  .channel-info-overlay {
+    top: 38px;
+    left: 10px;
+    max-width: 280px;
+    min-width: 160px;
+  }
+
+  .cio-content {
+    padding: 10px 14px;
+  }
+
+  .cio-logo {
+    width: 34px;
+    height: 34px;
+  }
+
+  .cio-channel-name {
+    font-size: 0.9rem;
+  }
+
+  .cio-program-title {
+    font-size: 0.8rem;
+  }
+
+  .cio-program-desc {
+    font-size: 0.72rem;
+    -webkit-line-clamp: 2;
+  }
+}
