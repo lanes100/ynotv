@@ -131,12 +131,12 @@ function WindowSizeSettings({ width, height, onChange }: { width: number; height
 
 export function UITab({ settings, onSettingsChange }: UITabProps) {
   const [channelFontSize, setChannelFontSize] = useState(settings.channelFontSize || 14);
-  const [categoryFontSize, setCategoryFontSize] = useState(settings.categoryFontSize || 14);
+  const [categoryFontSize, setCategoryFontSize] = useState(settings.categoryFontSize || 13);
   const [showSidebar, setShowSidebar] = useState(settings.showSidebar ?? false);
 
   useEffect(() => {
     setChannelFontSize(settings.channelFontSize || 14);
-    setCategoryFontSize(settings.categoryFontSize || 14);
+    setCategoryFontSize(settings.categoryFontSize || 13);
     setShowSidebar(settings.showSidebar ?? false);
   }, [settings]);
 

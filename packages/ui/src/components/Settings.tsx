@@ -106,7 +106,7 @@ export function Settings({
     dontSaveWindowSizeOnClose?: boolean;
   }>({
     channelFontSize: 14,
-    categoryFontSize: 14,
+    categoryFontSize: 13,
     showSidebar: false,
   });
 
@@ -299,7 +299,7 @@ export function Settings({
       // Load UI settings
       const loadedUiSettings = {
         channelFontSize: settings.channelFontSize ?? 14,
-        categoryFontSize: settings.categoryFontSize ?? 14,
+        categoryFontSize: settings.categoryFontSize ?? 13,
         showSidebar: settings.showSidebar ?? false,
         startupWidth: settings.startupWidth,
         startupHeight: settings.startupHeight,

@@ -1,7 +1,7 @@
 /* CSS Variables for dynamic theming */
 :root {
   --channel-font-size: 14px;
-  --category-font-size: 14px;
+  --category-font-size: 13px;
   --epg-title-font-size: 32px;
   --epg-body-font-size: 16px;
 }

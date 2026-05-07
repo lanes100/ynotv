@@ -140,7 +140,7 @@
 
 .modern-ui .category-item.nested {
   padding-left: 32px;
-  font-size: 0.8rem;
+  font-size: calc(var(--category-font-size, 13px) * 0.9);
   border-radius: 8px;
   margin: 2px 0;
   background: rgba(255, 255, 255, 0.01);
@@ -174,7 +174,7 @@
 
 .modern-ui .category-name {
   font-weight: 500;
-  font-size: 0.8rem;
+  font-size: var(--category-font-size, 13px);
   letter-spacing: 0.01em;
   display: flex;
   align-items: center;
@@ -205,7 +205,7 @@
 }
 
 .modern-ui .category-count {
-  font-size: 0.7rem;
+  font-size: calc(var(--category-font-size, 13px) * 0.85);
   font-weight: 700;
   padding: 2px 8px;
   background: rgba(255, 255, 255, 0.08);
@@ -274,13 +274,13 @@
 
 .modern-ui .category-strip .source-name {
   font-weight: 500;
-  font-size: 0.82rem;
+  font-size: var(--category-font-size, 13px);
   letter-spacing: 0.01em;
   line-height: 1.2;
 }
 
 .modern-ui .category-strip button.category-source-header .source-count {
-  font-size: 0.7rem !important;
+  font-size: calc(var(--category-font-size, 13px) * 0.85) !important;
   font-weight: 600 !important;
   padding: 2px 8px !important;
   background: rgba(255, 255, 255, 0.1) !important;

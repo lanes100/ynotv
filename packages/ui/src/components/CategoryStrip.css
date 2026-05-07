@@ -448,7 +448,7 @@
 }
 
 .category-name {
-  font-size: var(--category-font-size, 14px);
+  font-size: var(--category-font-size, 13px);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -491,10 +491,10 @@
   opacity: 0.7;
 }
 
-/* Category Strip Resizer */
+/* Category Strip Resizer - sits just outside the right edge so it doesn't overlap the scrollbar */
 .category-strip-resizer {
   position: absolute;
-  right: 0;
+  right: -5px;
   top: 0;
   bottom: 0;
   width: 6px;
@@ -508,16 +508,17 @@
 
 .category-strip-resizer::after {
   content: '';
-  width: 2px;
-  height: 24px;
-  background: var(--surface-border, rgba(255, 255, 255, 0.3));
-  border-radius: 1px;
+  width: 3px;
+  height: 32px;
+  background: var(--surface-border, rgba(255, 255, 255, 0.25));
+  border-radius: 2px;
   transition: all 0.2s ease;
 }
 
 .category-strip-resizer:hover::after {
   background: var(--accent-primary, #00d4ff);
-  box-shadow: 0 0 8px var(--accent-primary, #00d4ff);
+  box-shadow: 0 0 10px var(--accent-primary, #00d4ff);
+  height: 48px;
 }
 
 /* Section divider between top section and scrollable sources */

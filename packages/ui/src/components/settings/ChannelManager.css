@@ -42,7 +42,7 @@
 
 .channel-manager-header h2 {
     margin: 0;
-    font-size: calc(var(--category-font-size, 14px) * 1.25);
+    font-size: calc(var(--category-font-size, 13px) * 1.25);
     color: var(--text-primary, white);
 }
 
@@ -71,7 +71,7 @@
     padding: 10px 20px;
     background: var(--surface-color, rgba(255, 255, 255, 0.05));
     color: var(--text-secondary, rgba(255, 255, 255, 0.7));
-    font-size: var(--category-font-size, 14px);
+    font-size: var(--category-font-size, 13px);
 }
 
 .channel-manager-actions {
@@ -89,7 +89,7 @@
     padding: 8px 16px;
     border-radius: 6px;
     cursor: pointer;
-    font-size: var(--category-font-size, 14px);
+    font-size: var(--category-font-size, 13px);
     transition: all 0.2s;
 }
 
@@ -257,7 +257,7 @@
     border: var(--glass-border, 1px solid rgba(255, 255, 255, 0.1));
     border-radius: 8px;
     cursor: pointer;
-    font-size: var(--category-font-size, 14px);
+    font-size: var(--category-font-size, 13px);
     transition: all 0.2s;
 }
 
@@ -305,7 +305,7 @@
 
 .filter-words-header span:first-child {
     color: var(--text-primary, white);
-    font-size: var(--category-font-size, 14px);
+    font-size: var(--category-font-size, 13px);
     font-weight: 500;
 }
 
@@ -344,7 +344,7 @@
     border-radius: 6px;
     color: var(--accent-primary, #00d4ff);
     cursor: pointer;
-    font-size: var(--category-font-size, 14px);
+    font-size: var(--category-font-size, 13px);
     transition: all 0.2s;
 }
 

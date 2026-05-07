@@ -1272,7 +1272,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: calc(var(--category-font-size, 14px) * 0.9);
+  font-size: calc(var(--category-font-size, 13px) * 0.9);
   font-weight: 600;
   color: rgba(255, 255, 255, 0.7);
   margin-bottom: 8px;
@@ -1303,7 +1303,7 @@
 
 /* Search section title styling */
 .search-section-title {
-  font-size: calc(var(--category-font-size, 14px) * 0.85);
+  font-size: calc(var(--category-font-size, 13px) * 0.85);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
