@@ -139,7 +139,7 @@
 }
 
 .modern-ui .category-item.nested {
-  padding-left: 32px;
+  padding-left: 12px;
   font-size: calc(var(--category-font-size, 13px) * 0.9);
   border-radius: 8px;
   margin: 2px 0;

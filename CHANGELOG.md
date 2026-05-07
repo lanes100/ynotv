@@ -20,6 +20,7 @@
   Fixes:
   - Catchup channels will grab correct TZ from provider to playback correct catchup program.
   - Fixed channels from disabled categories showing in search
+  - Modern UI not loading properly on fresh install. If you'd rather the old look, disable in Settings -> LiveTV
   
   ## v1.6.6
   Added:
