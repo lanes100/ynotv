@@ -2,13 +2,23 @@
   
   ## v1.6.7
   Added:
-  - Advanced search feature, select the search icon at the end of the searchbar to use
-  - SubSource support for subtitles for Vod, set key in Settings -> subtitles
-  - More Dark themes with different accented colors
+  - Advanced search feature, select the search icon at the end of the searchbar to use. Can search Channels only, EPG only, and option to choose specific sources/categories.
+  - Multiple EPG support for sources. Use the Add Additional EPG button in Source settings. Additional EPGs will only fill in missing EPG from main
+  - SubSource support for subtitles for Vod, set key in Settings -> Subtitles. Will autosearch title when subtitled button is clicked playing a Movies or Series.
+  - New subtitle menu, added  Delay, Size, Offest, Background, Opacity adjustments
+  - More Dark themes with black background instead of grey with different accented colors
   - Channel search for EPG editor for EPGs that doesn't use tvgid (similar to Advanced EPG matching)
+  - Drag to resize Category sidebar and Channel column in EPG. Right click to reset to default.
+  - Channel info overlay. Enable in Settings -> Live View. It will remove the channel information in the Now Playing bar and moves it to the top left corner. Text/Logo/Box/Background opacity adjustable.
   - New look for Match cards in sports
+  - Added option in EPG Editor to auto-match everything in a source/category. Use the new Automatch Missing tab.
+  - Adjustable EPG preview text now available in Settings -> LiveTV
+  - Sync debug logging 
+  - Added Hide Channel option on channel right click
+  - Sort category option in ABC order. Settings -> Channels -> Category Display
   
   Fixes:
+  - Catchup channels will grab correct TZ from provider to playback correct catchup program.
   - Fixed channels from disabled categories showing in search
   
   ## v1.6.6
