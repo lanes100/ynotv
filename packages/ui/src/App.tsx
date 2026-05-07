@@ -742,9 +742,16 @@ function App() {
           if (settingsResult.data.epgView) {
             setEpgView(settingsResult.data.epgView as 'traditional' | 'alternate');
           }
-          // Apply modern UI setting
-          if (settingsResult.data.modernUiEnabled) {
+          // Apply modern UI setting (default to true if never set)
+          const shouldEnableModernUi = settingsResult.data.modernUiEnabled ?? true;
+          if (shouldEnableModernUi) {
             document.documentElement.classList.add('modern-ui');
+          } else {
+            document.documentElement.classList.remove('modern-ui');
+          }
+          // Persist the default value on first run so future reads are explicit
+          if (settingsResult.data.modernUiEnabled === undefined) {
+            await window.storage.updateSettings({ modernUiEnabled: true });
           }
         }
 

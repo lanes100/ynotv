@@ -340,8 +340,19 @@ export function Settings({
       // Load collapse source categories setting
       setCollapseSourceCategoriesOnStartup(settings.collapseSourceCategoriesOnStartup ?? false);
       
-      // Load modern UI setting
-      setModernUiEnabled(settings.modernUiEnabled ?? true);
+      // Load modern UI setting (default true)
+      const loadedModernUi = settings.modernUiEnabled ?? true;
+      setModernUiEnabled(loadedModernUi);
+      // Apply CSS class on load
+      if (loadedModernUi) {
+        document.documentElement.classList.add('modern-ui');
+      } else {
+        document.documentElement.classList.remove('modern-ui');
+      }
+      // Persist default if not already saved
+      if (settings.modernUiEnabled === undefined) {
+        await window.storage.updateSettings({ modernUiEnabled: true });
+      }
 
       // Load EPG font size settings
       const loadedEpgTitleFontSize = settings.epgTitleFontSize ?? 32;
