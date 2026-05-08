@@ -1,0 +1,70 @@
+.epg-shift-overlay {
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.epg-shift-modal {
+  max-width: 320px;
+}
+
+.epg-shift-body {
+  padding: 16px 24px 24px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.epg-shift-value {
+  font-size: 36px;
+  font-weight: 700;
+  color: var(--accent-primary, #00d4ff);
+  font-variant-numeric: tabular-nums;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.epg-shift-controls {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.epg-shift-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  border: 1px solid var(--surface-border, rgba(255, 255, 255, 0.15));
+  background: var(--surface-hover, rgba(255, 255, 255, 0.1));
+  color: var(--text-primary, #fff);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.epg-shift-btn:hover:not(:disabled) {
+  background: var(--surface-active, rgba(255, 255, 255, 0.2));
+  border-color: var(--accent-primary, #00d4ff);
+}
+
+.epg-shift-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.epg-shift-hint {
+  font-size: 13px;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.6));
+  white-space: nowrap;
+}
+
+.epg-shift-footer {
+  padding: 0 24px 24px 24px;
+  display: flex;
+  justify-content: center;
+}

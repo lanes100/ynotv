@@ -20,6 +20,8 @@ import { syncSource, type SyncResult } from '../db/sync';
 import { VideoErrorOverlay } from './VideoErrorOverlay';
 import { Bridge } from '../services/tauri-bridge';
 import { MetadataBadge } from './MetadataBadge';
+import { EpgShiftModal } from './EpgShiftModal';
+import { dbEvents } from '../db/sqlite-adapter';
 import './ChannelPanel.css';
 
 
@@ -344,6 +346,10 @@ export function ChannelPanel({
   const [syncingSourceId, setSyncingSourceId] = useState<string | null>(null);
   const [syncStatusMsg, setSyncStatusMsg] = useState<string | null>(null);
 
+  // State for EPG shift modal
+  const [showEpgShiftModal, setShowEpgShiftModal] = useState(false);
+  const [currentEpgOffset, setCurrentEpgOffset] = useState(0);
+
   // Volume/mute state for mini media bar
   const [previewVolume, setPreviewVolume] = useState(100);
   const [previewMuted, setPreviewMuted] = useState(false);
@@ -587,6 +593,24 @@ export function ChannelPanel({
   // Get source ID from current category
   const sourceId = currentCategory?.source_id ?? '';
 
+  // Load current EPG offset and keep it in sync with Settings
+  useEffect(() => {
+    if (!sourceId) return;
+    const loadOffset = async () => {
+      try {
+        const meta = await db.sourcesMeta.get(sourceId);
+        setCurrentEpgOffset((meta as any)?.epg_timeshift_hours ?? 0);
+      } catch (e) {
+        console.warn('[ChannelPanel] Failed to load EPG offset:', e);
+      }
+    };
+    loadOffset();
+    const unsubscribe = dbEvents.subscribe('programs', () => {
+      loadOffset();
+    });
+    return () => unsubscribe();
+  }, [sourceId]);
+
   // Handle opening channel manager
   const handleManageChannels = useCallback(() => {
     if (categoryId && sourceId && !categoryId.startsWith('__')) {
@@ -620,6 +644,30 @@ export function ChannelPanel({
     } finally {
       setSyncingSourceId(null);
       setSyncStatusMsg(null);
+    }
+  }, [sourceId]);
+
+  // Handle EPG time offset shift
+  const handleEpgShiftChange = useCallback(async (newOffset: number) => {
+    if (!sourceId || !window.storage) return;
+    const result = await window.storage.getSources();
+    const source = result.data?.find(s => s.id === sourceId);
+    if (!source) return;
+    const updatedSource = { ...source, epg_timeshift_hours: newOffset };
+    const saveResult = await window.storage.saveSource(updatedSource);
+    if (saveResult.error) {
+      console.error('[ChannelPanel] Failed to save EPG shift:', saveResult.error);
+      return;
+    }
+    try {
+      const dbInstance = await (db as any).dbPromise;
+      await dbInstance.execute(
+        `UPDATE sourcesMeta SET epg_timeshift_hours = $1 WHERE source_id = $2`,
+        [newOffset, sourceId]
+      );
+      dbEvents.notify('programs', 'update');
+    } catch (e) {
+      console.warn('[ChannelPanel] Could not update sourcesMeta epg_timeshift_hours:', e);
     }
   }, [sourceId]);
 
@@ -1471,26 +1519,39 @@ export function ChannelPanel({
                       {isCustomGroup ? '📂 Manage Custom Group' : '📺 Manage Channels'}
                     </button>
                     {!isCustomGroup && (
-                      <button
-                        className="guide-refresh-source-btn"
-                        onClick={handleRefreshSource}
-                        disabled={syncingSourceId === sourceId}
-                        title="Refresh source data"
-                      >
-                        {syncingSourceId === sourceId ? (
-                          <>
-                            <span className="sync-spinner">⟳</span>
-                            {syncStatusMsg || 'Refreshing...'}
-                          </>
-                        ) : (
-                          <>
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                              <path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
-                            </svg>
-                            Refresh Source
-                          </>
-                        )}
-                      </button>
+                      <>
+                        <button
+                          className="guide-refresh-source-btn"
+                          onClick={handleRefreshSource}
+                          disabled={syncingSourceId === sourceId}
+                          title="Refresh source data"
+                        >
+                          {syncingSourceId === sourceId ? (
+                            <>
+                              <span className="sync-spinner">⟳</span>
+                              {syncStatusMsg || 'Refreshing...'}
+                            </>
+                          ) : (
+                            <>
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
+                              </svg>
+                              Refresh Source
+                            </>
+                          )}
+                        </button>
+                        <button
+                          className="guide-epg-shift-btn"
+                          onClick={() => setShowEpgShiftModal(true)}
+                          title="Adjust EPG time offset"
+                        >
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <circle cx="12" cy="12" r="10"/>
+                            <polyline points="12 6 12 12 16 14"/>
+                          </svg>
+                          {currentEpgOffset === 0 ? 'EPG Shift' : `Shift ${currentEpgOffset > 0 ? '+' : ''}${currentEpgOffset}h`}
+                        </button>
+                      </>
                     )}
                   </>
                 )}
@@ -1862,6 +1923,14 @@ export function ChannelPanel({
           onClose={() => setManagingCustomGroup(null)}
         />
       )}
+
+      {/* EPG Shift Modal */}
+      <EpgShiftModal
+        isOpen={showEpgShiftModal}
+        currentOffset={currentEpgOffset}
+        onClose={() => setShowEpgShiftModal(false)}
+        onChange={handleEpgShiftChange}
+      />
     </div>
   );
 }
