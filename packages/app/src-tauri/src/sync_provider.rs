@@ -398,7 +398,7 @@ pub async fn sync_m3u_source(
                     if let Some(start) = extinf.find(&format!("{}=\"", key)) {
                         let substr = &extinf[start + key.len() + 2..];
                         if let Some(end) = substr.find('"') {
-                            return substr[..end].to_string();
+                            return substr[..end].trim().to_string();
                         }
                     }
                     "".to_string()

@@ -248,7 +248,7 @@ function parseExtInf(line: string): ExtInfMetadata {
   // Extract tvg-id
   const tvgIdMatch = attrPart.match(/tvg-id="([^"]*)"/i);
   if (tvgIdMatch) {
-    metadata.tvgId = tvgIdMatch[1];
+    metadata.tvgId = tvgIdMatch[1].trim();
   }
 
   // Extract tvg-name

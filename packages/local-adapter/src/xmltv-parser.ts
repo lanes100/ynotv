@@ -86,3 +86,36 @@ function decodeXmlEntities(str: string): string {
     .replace(/&apos;/g, "'")
     .replace(/&#(\d+);/g, (_, code) => String.fromCharCode(parseInt(code, 10)));
 }
+
+export interface XmltvChannel {
+  id: string;
+  displayName: string;
+}
+
+/**
+ * Extract channel IDs and display names from XMLTV data.
+ * Returns the first <display-name> found for each <channel>.
+ */
+export function extractXmltvChannels(xml: string): XmltvChannel[] {
+  const channels: XmltvChannel[] = [];
+  const channelPattern = /<channel\s+([^>]*)>([\s\S]*?)<\/channel>/gi;
+  const idAttr = /id="([^"]+)"/;
+  const displayNamePattern = /<display-name[^>]*>([^<]*)<\/display-name>/i;
+
+  let match;
+  while ((match = channelPattern.exec(xml)) !== null) {
+    const [, attrs, content] = match;
+    const idMatch = attrs.match(idAttr);
+    if (!idMatch) continue;
+
+    const displayNameMatch = content.match(displayNamePattern);
+    if (displayNameMatch) {
+      channels.push({
+        id: idMatch[1],
+        displayName: decodeXmlEntities(displayNameMatch[1].trim()),
+      });
+    }
+  }
+
+  return channels;
+}

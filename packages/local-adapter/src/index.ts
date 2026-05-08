@@ -3,8 +3,8 @@ export { parseM3U, fetchAndParseM3U } from './m3u-parser';
 export type { M3UParseResult } from './m3u-parser';
 
 // XMLTV Parser (shared by Xtream and M3U)
-export { parseXmltv } from './xmltv-parser';
-export type { XmltvProgram } from './xmltv-parser';
+export { parseXmltv, extractXmltvChannels } from './xmltv-parser';
+export type { XmltvProgram, XmltvChannel } from './xmltv-parser';
 
 // Xtream Client
 export { XtreamClient } from './xtream-client';

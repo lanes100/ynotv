@@ -12,12 +12,14 @@ export interface EpgWorkerMessage {
   buffer?: Uint8Array;  // Transferred buffer (for large data)
   isBuffer?: boolean;   // True if using buffer instead of string
   isGzipped: boolean;
+  includeRawXml?: boolean; // If true, return the (decompressed) XML text back
 }
 
 export interface EpgWorkerResponse {
   type: 'result' | 'error';
   id: number;
   programs?: XmltvProgram[];
+  rawXml?: string;
   error?: string;
 }
 
@@ -36,7 +38,7 @@ async function decompressGzip(base64Data: string): Promise<string> {
 }
 
 self.onmessage = async (event: MessageEvent<EpgWorkerMessage>) => {
-  const { type, id, data, buffer, isBuffer, isGzipped } = event.data;
+  const { type, id, data, buffer, isBuffer, isGzipped, includeRawXml } = event.data;
 
   if (type !== 'parse') return;
 
@@ -63,11 +65,17 @@ self.onmessage = async (event: MessageEvent<EpgWorkerMessage>) => {
 
     const programs = parseXmltv(xmlText);
 
-    self.postMessage({
+    const response: EpgWorkerResponse = {
       type: 'result',
       id,
       programs,
-    } as EpgWorkerResponse);
+    };
+
+    if (includeRawXml) {
+      response.rawXml = xmlText;
+    }
+
+    self.postMessage(response);
   } catch (err) {
     self.postMessage({
       type: 'error',

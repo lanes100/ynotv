@@ -1,5 +1,5 @@
 import { db, clearSourceData, clearVodData, type SourceMeta, type StoredProgram, type StoredMovie, type StoredSeries, type StoredEpisode, type VodCategory } from './index';
-import { fetchAndParseM3U, XtreamClient, StalkerClient, type XmltvProgram } from '@ynotv/local-adapter';
+import { fetchAndParseM3U, XtreamClient, StalkerClient, type XmltvProgram, extractXmltvChannels } from '@ynotv/local-adapter';
 import type { Source, Channel, Category, Movie, Series } from '@ynotv/core';
 import { useUIStore } from '../stores/uiStore';
 import { bulkOps, type BulkChannel, type BulkCategory } from '../services/bulk-ops';
@@ -258,7 +258,7 @@ const MAX_COMPRESSED_BYTES = MAX_COMPRESSED_SIZE_MB * 1024 * 1024;
 let epgWorker: Worker | null = null;
 let epgWorkerIdCounter = 0;
 let epgWorkerIdleTimeout: ReturnType<typeof setTimeout> | null = null;
-const epgWorkerCallbacks = new Map<number, { resolve: (programs: XmltvProgram[]) => void; reject: (err: Error) => void }>();
+const epgWorkerCallbacks = new Map<number, { resolve: (value: any) => void; reject: (err: Error) => void }>();
 
 const EPG_WORKER_IDLE_MS = 5 * 60 * 1000; // 5 minutes
 
@@ -291,12 +291,17 @@ function getEpgWorker(): Worker {
   if (!epgWorker) {
     epgWorker = new Worker(new URL('../workers/epg-parser.worker.ts', import.meta.url), { type: 'module' });
     epgWorker.onmessage = (event) => {
-      const { type, id, programs, error } = event.data;
+      const { type, id, programs, rawXml, error } = event.data;
       const callback = epgWorkerCallbacks.get(id);
       if (callback) {
         epgWorkerCallbacks.delete(id);
         if (type === 'result') {
-          callback.resolve(programs || []);
+          // Pass full response object when rawXml is included, otherwise just programs array
+          if (rawXml !== undefined) {
+            callback.resolve({ programs: programs || [], rawXml });
+          } else {
+            callback.resolve(programs || []);
+          }
         } else {
           callback.reject(new Error(error || 'Worker error'));
         }
@@ -352,14 +357,18 @@ async function stringToBufferChunked(str: string): Promise<Uint8Array> {
 
 // Parse EPG data using Web Worker (off main thread)
 // Uses Transferable for large data to avoid blocking structured clone
-async function parseEpgInWorker(data: string | Uint8Array, isGzipped: boolean): Promise<XmltvProgram[]> {
+async function parseEpgInWorker(
+  data: string | Uint8Array,
+  isGzipped: boolean,
+  includeRawXml?: boolean
+): Promise<{ programs: XmltvProgram[]; rawXml?: string }> {
   return new Promise(async (resolve, reject) => {
     const id = ++epgWorkerIdCounter;
     epgWorkerCallbacks.set(id, { resolve, reject });
 
     if (data instanceof Uint8Array) {
       getEpgWorker().postMessage(
-        { type: 'parse', id, buffer: data, isGzipped, isBuffer: true },
+        { type: 'parse', id, buffer: data, isGzipped, isBuffer: true, includeRawXml },
         [data.buffer]
       );
       return;
@@ -370,17 +379,20 @@ async function parseEpgInWorker(data: string | Uint8Array, isGzipped: boolean): 
       debugLog(`Large EPG data (${Math.round(data.length / 1024 / 1024)}MB), using chunked transfer...`, 'epg');
       const buffer = await stringToBufferChunked(data);
       getEpgWorker().postMessage(
-        { type: 'parse', id, buffer, isGzipped, isBuffer: true },
+        { type: 'parse', id, buffer, isGzipped, isBuffer: true, includeRawXml },
         [buffer.buffer] // Transfer ownership
       );
     } else {
-      getEpgWorker().postMessage({ type: 'parse', id, data, isGzipped });
+      getEpgWorker().postMessage({ type: 'parse', id, data, isGzipped, includeRawXml });
     }
   });
 }
 
 // Fetch XMLTV from a single URL and parse it (parsing happens in worker)
-async function fetchXmltvFromUrl(epgUrl: string): Promise<XmltvProgram[]> {
+async function fetchXmltvFromUrl(
+  epgUrl: string,
+  includeRawXml?: boolean
+): Promise<{ programs: XmltvProgram[]; rawXml?: string }> {
   const url = epgUrl.trim();
   debugLog(`Fetching XMLTV from: ${url}`, 'epg');
 
@@ -407,9 +419,9 @@ async function fetchXmltvFromUrl(epgUrl: string): Promise<XmltvProgram[]> {
     }
 
     debugLog(`Received ${response.data.length} bytes (base64), sending to worker for decompression...`, 'epg');
-    const programs = await parseEpgInWorker(response.data, true);
+    const { programs, rawXml } = await parseEpgInWorker(response.data, true, includeRawXml);
     debugLog(`Worker parsed ${programs.length} programs`, 'epg');
-    return programs;
+    return { programs, rawXml };
   } else {
     const response = await window.fetchProxy.fetch(url);
     if (!response.data?.ok) {
@@ -418,9 +430,10 @@ async function fetchXmltvFromUrl(epgUrl: string): Promise<XmltvProgram[]> {
       throw new Error(errorMsg);
     }
     debugLog(`Received ${response.data.text.length} bytes, sending to worker for parsing...`, 'epg');
-    const programs = await parseEpgInWorker(response.data.text, false);
+    const rawXml = response.data.text;
+    const { programs } = await parseEpgInWorker(rawXml, false, includeRawXml);
     debugLog(`Worker parsed ${programs.length} programs`, 'epg');
-    return programs;
+    return { programs, rawXml: includeRawXml ? rawXml : undefined };
   }
 }
 
@@ -444,7 +457,8 @@ async function fetchXmltvFromUrls(epgUrlStr: string): Promise<XmltvProgram[]> {
   }
 
   if (urls.length === 1) {
-    return fetchXmltvFromUrl(urls[0]);
+    const result = await fetchXmltvFromUrl(urls[0]);
+    return result.programs;
   }
 
   // Multiple URLs - fetch in parallel batches to avoid overwhelming servers
@@ -460,7 +474,8 @@ async function fetchXmltvFromUrls(epgUrlStr: string): Promise<XmltvProgram[]> {
     const results = await Promise.all(
       batch.map(async (url) => {
         try {
-          return await fetchXmltvFromUrl(url);
+          const result = await fetchXmltvFromUrl(url);
+          return result.programs;
         } catch (err) {
           const errMsg = err instanceof Error ? err.message : String(err);
           // Always log EPG fetch errors to console for visibility
@@ -856,6 +871,20 @@ async function syncEpgForStalker(source: Source, channels: Channel[]): Promise<n
 }
 
 
+/**
+ * Normalize a channel name for fuzzy EPG matching.
+ * Mirrors the Rust normalize_channel_name logic.
+ */
+function normalizeChannelName(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/^prime:\s*|^il:\s*|^f:\s*|^ss:\s*|^##+\s*/g, '')
+    .replace(/[\[\](){}]/g, '')
+    .replace(/[\u{1d3f}\u{1d2c}\u{1d42}\u{1d34}\u{1d35}\u{2076}\u{2070}\u{1da0}\u{1d56}\u{02e2}]/gu, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 // ─── Additional EPG waterfall helper ─────────────────────────────────────────
 /**
  * Get the set of stream_ids that currently have at least one program for a source.
@@ -924,8 +953,11 @@ async function syncAdditionalEpgUrls(
     onProgress?.(`Updating EPG (additional ${i + 1}/${source.additional_epg_urls.length})...`);
 
     try {
-      // Fetch XMLTV programs
-      const xmltvPrograms = await fetchXmltvFromUrl(epgUrl);
+      // Fetch XMLTV programs (request raw XML only if advanced matching is enabled)
+      const { programs: xmltvPrograms, rawXml } = await fetchXmltvFromUrl(
+        epgUrl,
+        source.advanced_epg_matching
+      );
 
       if (xmltvPrograms.length === 0) {
         debugLog(`Additional EPG ${i + 1} returned no programs`, 'epg');
@@ -934,10 +966,35 @@ async function syncAdditionalEpgUrls(
 
       // Build channel map only for channels still needing EPG
       const channelMap = new Map<string, string>();
+      const exactMatchedStreamIds = new Set<string>();
+
       for (const ch of channelsNeedingEpg) {
-        const effectiveEpgId = epgOverrideMap.get(ch.stream_id) || ch.epg_channel_id;
+        const effectiveEpgId = (epgOverrideMap.get(ch.stream_id) || ch.epg_channel_id || '').trim();
         if (effectiveEpgId) {
           channelMap.set(effectiveEpgId, ch.stream_id);
+          exactMatchedStreamIds.add(ch.stream_id);
+        }
+      }
+
+      // Advanced EPG matching: try to match by display name if exact tvg-id match failed
+      if (source.advanced_epg_matching && rawXml && channelsNeedingEpg.length > exactMatchedStreamIds.size) {
+        const epgChannels = extractXmltvChannels(rawXml);
+        const displayNameMap = new Map<string, string>();
+        for (const ch of epgChannels) {
+          const normalized = normalizeChannelName(ch.displayName);
+          if (normalized && !displayNameMap.has(normalized)) {
+            displayNameMap.set(normalized, ch.id);
+          }
+        }
+
+        for (const ch of channelsNeedingEpg) {
+          if (exactMatchedStreamIds.has(ch.stream_id)) continue;
+          const normalizedName = normalizeChannelName(ch.name);
+          if (normalizedName && displayNameMap.has(normalizedName)) {
+            const epgId = displayNameMap.get(normalizedName)!;
+            channelMap.set(epgId, ch.stream_id);
+            debugLog(`Advanced match: "${ch.name}" -> "${epgId}"`, 'epg');
+          }
         }
       }
 
@@ -1390,6 +1447,7 @@ export async function syncSource(source: Source, onProgress?: (msg: string) => v
           existing.name !== channel.name ||
           existing.direct_url !== channel.direct_url ||
           existing.channel_num !== channel.channel_num ||
+          existing.epg_channel_id !== channel.epg_channel_id ||
           categoriesChanged;
 
         if (hasChanged) {
