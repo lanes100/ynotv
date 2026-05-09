@@ -1,0 +1,287 @@
+.failover-group-list-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.75);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    backdrop-filter: blur(8px);
+}
+
+.failover-group-list-modal {
+    width: 90vw;
+    max-width: 600px;
+    height: auto;
+    max-height: 80vh;
+    background: var(--bg-secondary, #1a1a2e);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+    border-radius: 14px;
+    display: flex;
+    flex-direction: column;
+    color: var(--text-primary, #fff);
+    overflow: hidden;
+}
+
+/* ── Header ── */
+.failover-group-list-header {
+    padding: 16px 24px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.03);
+    flex-shrink: 0;
+}
+
+.failover-group-list-header h2 {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-primary, #fff);
+}
+
+/* ── Content ── */
+.failover-group-list-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px 24px;
+}
+
+/* ── Toolbar ── */
+.failover-group-list-toolbar {
+    margin-bottom: 16px;
+}
+
+.fgl-create-btn {
+    width: 100%;
+    padding: 10px 14px;
+    border-radius: 8px;
+    border: 1px dashed rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--text-primary, #fff);
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    font-family: inherit;
+}
+
+.fgl-create-btn:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: var(--accent-primary, #00d4ff);
+    color: var(--accent-primary, #00d4ff);
+}
+
+.fgl-create-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.fgl-create-input {
+    flex: 1;
+    padding: 8px 12px;
+    border-radius: 7px;
+    border: 1px solid var(--accent-primary, #00d4ff);
+    background: rgba(0, 0, 0, 0.3);
+    color: var(--text-primary, #fff);
+    font-size: 0.9rem;
+    outline: none;
+    font-family: inherit;
+}
+
+.fgl-create-ok {
+    padding: 8px 14px;
+    border-radius: 7px;
+    border: none;
+    background: var(--accent-primary, #00d4ff);
+    color: #000;
+    font-weight: 600;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: inherit;
+}
+
+.fgl-create-ok:hover {
+    filter: brightness(1.1);
+}
+
+.fgl-create-cancel {
+    padding: 8px 14px;
+    border-radius: 7px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.06);
+    color: rgba(255, 255, 255, 0.7);
+    font-weight: 500;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: inherit;
+}
+
+.fgl-create-cancel:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+}
+
+/* ── List ── */
+.fgl-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.fgl-item {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 8px;
+    transition: background 0.15s, border-color 0.15s;
+}
+
+.fgl-item:hover {
+    background: rgba(255, 255, 255, 0.07);
+    border-color: rgba(255, 255, 255, 0.12);
+}
+
+.fgl-item-main {
+    padding: 12px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    gap: 12px;
+}
+
+.fgl-item-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.fgl-item-name {
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: var(--text-primary, #fff);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.fgl-item-count {
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.4);
+}
+
+.fgl-item-actions {
+    display: flex;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.fgl-action-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 0.9rem;
+    padding: 4px 6px;
+    border-radius: 4px;
+    transition: background 0.15s;
+    line-height: 1;
+    opacity: 0.5;
+}
+
+.fgl-item:hover .fgl-action-btn {
+    opacity: 0.8;
+}
+
+.fgl-action-btn:hover {
+    opacity: 1 !important;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.fgl-action-btn.fgl-danger:hover {
+    background: rgba(255, 92, 92, 0.15);
+}
+
+.fgl-action-btn.fgl-confirm {
+    color: #4ade80;
+}
+
+.fgl-action-btn.fgl-confirm:hover {
+    background: rgba(74, 222, 128, 0.15);
+}
+
+/* ── Edit Row ── */
+.fgl-edit-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+}
+
+.fgl-edit-input {
+    flex: 1;
+    padding: 6px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--accent-primary, #00d4ff);
+    background: rgba(0, 0, 0, 0.3);
+    color: var(--text-primary, #fff);
+    font-size: 0.9rem;
+    outline: none;
+    font-family: inherit;
+}
+
+.fgl-edit-ok {
+    background: var(--accent-primary, #00d4ff);
+    color: #000;
+    border: none;
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-weight: 700;
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+
+/* ── Empty State ── */
+.fgl-empty {
+    padding: 40px 20px;
+    text-align: center;
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 0.9rem;
+}
+
+.fgl-empty p {
+    margin: 0 0 8px 0;
+}
+
+.fgl-hint {
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.25);
+}
+
+/* ── Footer ── */
+.failover-group-list-footer {
+    padding: 12px 24px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.02);
+    flex-shrink: 0;
+}
+
+.fgl-footer-hint {
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.3);
+}

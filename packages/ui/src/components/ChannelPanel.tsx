@@ -11,6 +11,7 @@ import { WatchlistRow } from './WatchlistRow';
 import { ChannelManager } from './settings/ChannelManager';
 import { FavoriteManager } from './settings/FavoriteManager';
 import { CustomGroupManager } from './CustomGroupManager';
+import { FailoverGroupListModal } from './FailoverGroupListModal';
 
 import { useChannelSortOrder, useEpgView } from '../stores/uiStore';
 import { NowPlayingBar } from './NowPlayingBar';
@@ -358,6 +359,9 @@ export function ChannelPanel({
   // State for EPG shift modal
   const [showEpgShiftModal, setShowEpgShiftModal] = useState(false);
   const [currentEpgOffset, setCurrentEpgOffset] = useState(0);
+
+  // State for failover group list modal
+  const [showFailoverGroupModal, setShowFailoverGroupModal] = useState(false);
 
   // Volume/mute state for mini media bar
   const [previewVolume, setPreviewVolume] = useState(100);
@@ -1568,6 +1572,18 @@ export function ChannelPanel({
                           </svg>
                           {currentEpgOffset === 0 ? 'EPG Shift' : `Shift ${currentEpgOffset > 0 ? '+' : ''}${currentEpgOffset}h`}
                         </button>
+                        <button
+                          className="guide-epg-shift-btn"
+                          onClick={() => setShowFailoverGroupModal(true)}
+                          title="Manage failover groups"
+                        >
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                            <path d="M2 17l10 5 10-5"/>
+                            <path d="M2 12l10 5 10-5"/>
+                          </svg>
+                          Failover Group
+                        </button>
                       </>
                     )}
                   </>
@@ -1948,6 +1964,13 @@ export function ChannelPanel({
         onClose={() => setShowEpgShiftModal(false)}
         onChange={handleEpgShiftChange}
       />
+
+      {/* Failover Group List Modal */}
+      {showFailoverGroupModal && (
+        <FailoverGroupListModal
+          onClose={() => setShowFailoverGroupModal(false)}
+        />
+      )}
     </div>
   );
 }

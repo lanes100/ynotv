@@ -203,6 +203,26 @@ export async function reorderFailoverGroupMember(
   }
 }
 
+/** Bulk reorder all channels in a group by ordered stream IDs */
+export async function reorderFailoverGroupChannels(
+  groupId: string,
+  orderedStreamIds: string[]
+): Promise<void> {
+  const members = await db.failoverGroupMembers
+    .where('group_id')
+    .equals(groupId)
+    .toArray();
+  const memberMap = new Map(members.map(m => [m.stream_id, m]));
+
+  for (let i = 0; i < orderedStreamIds.length; i++) {
+    const streamId = orderedStreamIds[i];
+    const member = memberMap.get(streamId);
+    if (member && member.id !== undefined && member.priority !== i) {
+      await db.failoverGroupMembers.update(member.id, { priority: i });
+    }
+  }
+}
+
 /** Delete an entire failover group (members cascade-deleted by FK) */
 export async function deleteFailoverGroup(groupId: string): Promise<void> {
   await db.failoverGroups.delete(groupId);
