@@ -357,6 +357,7 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
   const healthLoadGraceUntilRef = useRef(0);
   const streamFailureHandlingRef = useRef(false);
   const recoveryArmedRef = useRef(false);
+  const userPausedRef = useRef(false);
   // Stable refs for use inside intervals (avoids stale closure issues)
   const currentChannelRef = useRef(currentChannel);
   const vodInfoRef2 = useRef(vodInfo);
@@ -529,6 +530,7 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
   ): Promise<boolean> => {
     // Clear error immediately - stale errors from old channel will be ignored
     setError(null);
+    userPausedRef.current = false;
     if (options.recoveryMode) {
       recoveryArmedRef.current = true;
     }
@@ -755,6 +757,10 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
   const handleStreamDied = useCallback(async () => {
     // Only retry for Live TV (not VOD, not catchup)
     if (!currentChannelRef.current || vodInfoRef2.current || catchupInfoRef.current) return;
+    if (userPausedRef.current) {
+      logInfo('[Retry] Ignoring stream failure while user-paused');
+      return;
+    }
     if (isRetryingRef.current) return;
     if (failoverSwitchingRef.current) {
       failoverFailedDuringSwitchRef.current = true;
@@ -883,6 +889,7 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
         healthCheckInFlightRef.current ||
         isRetryingRef.current ||
         failoverSwitchingRef.current ||
+        userPausedRef.current ||
         now < healthLoadGraceUntilRef.current
       ) {
         return;
@@ -1013,6 +1020,7 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
     retryAttemptRef.current = 0;
     streamFailureHandlingRef.current = false;
     recoveryArmedRef.current = autoSwitched;
+    userPausedRef.current = false;
     resetHealthTracking();
 
     // Reset failover state on manual channel switch
@@ -1028,6 +1036,7 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
     bufferStarvedSinceRef.current = null;
     healthCheckInFlightRef.current = false;
     recoveryArmedRef.current = autoSwitched;
+    userPausedRef.current = false;
     setFailoverState(null);
 
     // Save VOD progress before switching to Live TV
@@ -1409,6 +1418,7 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
     bufferStarvedSinceRef.current = null;
     healthCheckInFlightRef.current = false;
     recoveryArmedRef.current = false;
+    userPausedRef.current = false;
     setFailoverState(null);
   }, [vodInfo, position, duration]);
 
@@ -1425,11 +1435,15 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
 
   const handleTogglePlay = useCallback(async () => {
     if (playing) {
+      userPausedRef.current = true;
+      resetHealthTracking(0);
       await Bridge.pause();
     } else {
+      userPausedRef.current = false;
+      resetHealthTracking();
       await Bridge.resume();
     }
-  }, [playing]);
+  }, [playing, resetHealthTracking]);
 
   const handleVolumeChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const newVolume = parseInt(e.target.value);
