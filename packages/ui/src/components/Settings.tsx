@@ -414,6 +414,9 @@ export function Settings({
     if (window.storage) {
       await window.storage.updateSettings({ streamWatchdogSeconds: seconds });
     }
+    window.dispatchEvent(new CustomEvent('ynotv:retry-settings-changed', {
+      detail: { streamWatchdogSeconds: seconds }
+    }));
   };
 
   const handleStreamMaxRetriesChange = async (retries: number) => {
@@ -421,6 +424,9 @@ export function Settings({
     if (window.storage) {
       await window.storage.updateSettings({ streamMaxRetries: retries });
     }
+    window.dispatchEvent(new CustomEvent('ynotv:retry-settings-changed', {
+      detail: { streamMaxRetries: retries }
+    }));
   };
 
   const handleTimeshiftChange = async (enabled: boolean, cacheBytes: number, bufferOffset?: number) => {

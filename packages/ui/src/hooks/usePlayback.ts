@@ -292,6 +292,23 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
     }).catch(() => {});
   }, []);
 
+  // Listen for real-time changes dispatched by Settings.tsx — no restart required
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent<{ streamWatchdogSeconds?: number; streamMaxRetries?: number }>).detail;
+      if (typeof detail.streamWatchdogSeconds === 'number' && detail.streamWatchdogSeconds >= 3) {
+        stallThresholdMsRef.current = detail.streamWatchdogSeconds * 1_000;
+        logInfo(`[Retry] Watchdog threshold updated to ${detail.streamWatchdogSeconds}s`);
+      }
+      if (typeof detail.streamMaxRetries === 'number' && detail.streamMaxRetries > 0) {
+        maxRetriesRef.current = detail.streamMaxRetries;
+        logInfo(`[Retry] Max retries updated to ${detail.streamMaxRetries}`);
+      }
+    };
+    window.addEventListener('ynotv:retry-settings-changed', handler);
+    return () => window.removeEventListener('ynotv:retry-settings-changed', handler);
+  }, []);
+
   const retryAttemptRef = useRef(0);
   const isRetryingRef = useRef(false);
   const retryCountdownTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
