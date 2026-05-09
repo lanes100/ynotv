@@ -785,10 +785,20 @@ export function ChannelPanel({
   const handleChannelClick = useCallback((channel: StoredChannel) => {
     blockAutoScrollRef.current = true;
     if (selectedChannel?.stream_id === channel.stream_id) {
-      // Already selected/previewing -> Go Fullscreen (Close Guide)
-      onClose();
+      // Already selected/previewing -> check for double click to close guide
+      const now = Date.now();
+      const lastClick = lastChannelClickRef.current;
+      if (lastClick && lastClick.streamId === channel.stream_id && (now - lastClick.timestamp) <= DOUBLE_CLICK_MS) {
+        // Double-click detected -> Go Fullscreen (Close Guide)
+        onClose();
+      } else {
+        // Single click -> Replay the stream without closing LiveTV
+        lastChannelClickRef.current = { streamId: channel.stream_id, timestamp: now };
+        onPlayChannel(channel);
+      }
     } else {
       // Select for preview and play immediately
+      lastChannelClickRef.current = { streamId: channel.stream_id, timestamp: Date.now() };
       setSelectedChannel(channel);
       // Also update last channel ref immediately for resize effect
       lastChannelIdRef.current = channel.stream_id;
@@ -830,10 +840,20 @@ export function ChannelPanel({
   const handleSearchChannelClick = (channel: StoredChannel) => {
     blockAutoScrollRef.current = true;
     if (selectedChannel?.stream_id === channel.stream_id) {
-      // Already selected/previewing -> Go Fullscreen (Close Guide)
-      onClose();
+      // Already selected/previewing -> check for double click to close guide
+      const now = Date.now();
+      const lastClick = lastChannelClickRef.current;
+      if (lastClick && lastClick.streamId === channel.stream_id && (now - lastClick.timestamp) <= DOUBLE_CLICK_MS) {
+        // Double-click detected -> Go Fullscreen (Close Guide)
+        onClose();
+      } else {
+        // Single click -> Replay the stream without closing LiveTV
+        lastChannelClickRef.current = { streamId: channel.stream_id, timestamp: now };
+        onPlayChannel(channel);
+      }
     } else {
       // Select for preview and play immediately
+      lastChannelClickRef.current = { streamId: channel.stream_id, timestamp: Date.now() };
       setSelectedChannel(channel);
       // Also update last channel ref immediately for resize effect
       lastChannelIdRef.current = channel.stream_id;
@@ -847,10 +867,20 @@ export function ChannelPanel({
     if (channel) {
       blockAutoScrollRef.current = true;
       if (selectedChannel?.stream_id === channel.stream_id) {
-        // Already selected/previewing -> Go Fullscreen (Close Guide)
-        onClose();
+        // Already selected/previewing -> check for double click to close guide
+        const now = Date.now();
+        const lastClick = lastChannelClickRef.current;
+        if (lastClick && lastClick.streamId === channel.stream_id && (now - lastClick.timestamp) <= DOUBLE_CLICK_MS) {
+          // Double-click detected -> Go Fullscreen (Close Guide)
+          onClose();
+        } else {
+          // Single click -> Replay the stream without closing LiveTV
+          lastChannelClickRef.current = { streamId: channel.stream_id, timestamp: now };
+          onPlayChannel(channel);
+        }
       } else {
         // Select for preview and play immediately
+        lastChannelClickRef.current = { streamId: channel.stream_id, timestamp: Date.now() };
         setSelectedChannel(channel);
         // Also update last channel ref immediately for resize effect
         lastChannelIdRef.current = channel.stream_id;
@@ -1101,6 +1131,9 @@ export function ChannelPanel({
   const virtuosoRef = useRef<VirtuosoHandle>(null);
   const visibleRangeRef = useRef({ startIndex: 0, endIndex: 0 });
   const blockAutoScrollRef = useRef(false);
+  // Track last channel click for double-click detection to close LiveTV
+  const lastChannelClickRef = useRef<{ streamId: string; timestamp: number } | null>(null);
+  const DOUBLE_CLICK_MS = 500;
 
   // Handle auto-scrolling to keep the selected channel near the middle/visible
   useEffect(() => {
