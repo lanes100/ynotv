@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import type { RetryState } from '../components/StreamRetryOverlay';
 import { invoke } from '@tauri-apps/api/core';
 import type { StoredChannel } from '../db';
-import { getNextFailoverChannel, getPrimaryChannelForGroup } from '../services/failover-groups';
+import { getFailoverCandidatesAfter } from '../services/failover-groups';
 import type { VodPlayInfo } from '../types/media';
 import { Bridge, registerOnAppClose, unregisterOnAppClose } from '../services/tauri-bridge';
 import { resolvePlayUrl } from '../services/stream-resolver';
@@ -116,6 +116,25 @@ function getStreamFallbacks(url: string, isLive: boolean): string[] {
   } catch {
     return [];
   }
+}
+
+const HEALTH_POLL_INTERVAL_MS = 1000;
+const MIN_LOAD_GRACE_MS = 5000;
+const MIN_BUFFER_STARVATION_MS = 3500;
+
+function mpvNumber(value: any): number | null {
+  const data = value && typeof value === 'object' && 'data' in value ? value.data : value;
+  return typeof data === 'number' && Number.isFinite(data) ? data : null;
+}
+
+function mpvBoolean(value: any): boolean | null {
+  const data = value && typeof value === 'object' && 'data' in value ? value.data : value;
+  return typeof data === 'boolean' ? data : null;
+}
+
+function mpvObject(value: any): Record<string, any> | null {
+  const data = value && typeof value === 'object' && 'data' in value ? value.data : value;
+  return data && typeof data === 'object' && !Array.isArray(data) ? data : null;
 }
 
 /**
@@ -263,7 +282,7 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
     mpvReady, playing, volume, muted, position, duration, error,
     volumeDraggingRef, seekingRef,
     setError, setPlaying, setPosition, setVolume,
-    setIgnoreHttpErrors,
+    setIgnoreHttpErrors, isIgnoringHttpErrors,
   } = mpvListeners;
 
   // Pending seek ref for deferred scrubbing
@@ -329,6 +348,14 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
   const watchdogIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const lastPositionRef = useRef<number>(0);
   const lastPositionTimeRef = useRef<number>(Date.now());
+  const lastHealthPositionRef = useRef<number>(0);
+  const lastHealthCacheEndRef = useRef<number | null>(null);
+  const lastHealthForwardBytesRef = useRef<number | null>(null);
+  const lastHealthActivityTimeRef = useRef<number>(Date.now());
+  const bufferStarvedSinceRef = useRef<number | null>(null);
+  const healthCheckInFlightRef = useRef(false);
+  const healthLoadGraceUntilRef = useRef(0);
+  const streamFailureHandlingRef = useRef(false);
   // Stable refs for use inside intervals (avoids stale closure issues)
   const currentChannelRef = useRef(currentChannel);
   const vodInfoRef2 = useRef(vodInfo);
@@ -336,8 +363,13 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
 
   // Failover state
   const failoverActiveRef = useRef(false);
+  const failoverSwitchingRef = useRef(false);
   const failoverOriginChannelRef = useRef<StoredChannel | null>(null);
   const failoverAttemptRef = useRef(0);
+  const failoverCursorStreamIdRef = useRef<string | null>(null);
+  const failoverCycleStartStreamIdRef = useRef<string | null>(null);
+  const failoverAttemptedStreamIdsRef = useRef<Set<string>>(new Set());
+  const failoverFailedDuringSwitchRef = useRef(false);
 
   useEffect(() => { currentChannelRef.current = currentChannel; }, [currentChannel]);
   useEffect(() => { vodInfoRef2.current = vodInfo; }, [vodInfo]);
@@ -362,6 +394,19 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
   }, [duration]);
 
   const isCatchup = catchupInfo !== null;
+
+  const resetHealthTracking = useCallback((graceMs: number = MIN_LOAD_GRACE_MS) => {
+    const now = Date.now();
+    lastPositionRef.current = positionRef.current;
+    lastPositionTimeRef.current = now;
+    lastHealthPositionRef.current = positionRef.current;
+    lastHealthCacheEndRef.current = null;
+    lastHealthForwardBytesRef.current = null;
+    lastHealthActivityTimeRef.current = now;
+    bufferStarvedSinceRef.current = null;
+    healthCheckInFlightRef.current = false;
+    healthLoadGraceUntilRef.current = now + graceMs;
+  }, []);
 
   // Handle pending catchup seek when duration becomes available
   useEffect(() => {
@@ -477,9 +522,10 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
   }, [vodInfo, playing, duration]); // Dependencies control when to start/stop the interval
 
   // Playback handlers
-  const handleLoadStream = useCallback(async (channel: StoredChannel) => {
+  const handleLoadStream = useCallback(async (channel: StoredChannel): Promise<boolean> => {
     // Clear error immediately - stale errors from old channel will be ignored
     setError(null);
+    resetHealthTracking();
 
     logInfo('[Playback] Loading channel:', channel.name);
     logInfo('[Playback] Raw URL:', channel.direct_url);
@@ -490,7 +536,7 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
     } catch (e) {
       logError('Stalker resolution failed:', e);
       setError('Failed to resolve Stalker link');
-      return;
+      return false;
     }
 
     logInfo('[Playback] Resolved URL:', resolved.url);
@@ -522,12 +568,15 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
       setIgnoreHttpErrors(false);
       const errMsg = result.error ?? 'Failed to load stream';
       setError(errMsg);
+      return false;
     } else {
       const resolvedChannel = result.url !== resolved.url
         ? { ...channel, direct_url: result.url }
         : channel;
+      currentChannelRef.current = resolvedChannel;
       setCurrentChannel(resolvedChannel);
       setPlaying(true);
+      resetHealthTracking();
       // Explicitly force MPV to unpause after loading.
       // If a previous stream ended/was interrupted, MPV may hold pause=true,
       // causing the new stream to load but not start playing.
@@ -538,8 +587,9 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
       import('../services/video-metadata').then(({ captureAndSaveMetadata }) => {
         captureAndSaveMetadata(channel.stream_id, channel.source_id).catch(console.error);
       });
+      return true;
     }
-  }, [notifyMainLoaded]);
+  }, [notifyMainLoaded, resetHealthTracking, setIgnoreHttpErrors]);
 
   // ── Retry helpers ──────────────────────────────────────────────────────────
 
@@ -597,16 +647,21 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
         setRetryState({ isRetrying: true, countdown: 0, attempt, maxRetries: maxRetriesRef.current });
 
         // Reset position tracking so watchdog doesn't immediately re-fire
-        lastPositionRef.current = 0;
-        lastPositionTimeRef.current = Date.now() + 10_000; // give 10s grace period to load
+        resetHealthTracking(10_000); // give the reload time to connect and buffer
 
         // Reload the stream
         handleLoadStream(channel)
-          .then(() => {
-            logInfo(`[Retry] Reconnected successfully on attempt ${attempt}`);
-            setRetryState(null);
-            isRetryingRef.current = false;
-            retryAttemptRef.current = 0;
+          .then((loaded) => {
+            if (loaded) {
+              logInfo(`[Retry] Reconnected successfully on attempt ${attempt}`);
+              setRetryState(null);
+              isRetryingRef.current = false;
+              retryAttemptRef.current = 0;
+            } else {
+              logWarn(`[Retry] Stream load failed on attempt ${attempt}`);
+              setRetryState(null);
+              isRetryingRef.current = false;
+            }
           })
           .catch((err) => {
             logWarn(`[Retry] handleLoadStream threw on attempt ${attempt}:`, err);
@@ -618,17 +673,21 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
         setRetryState({ isRetrying: true, countdown, attempt, maxRetries: maxRetriesRef.current });
       }
     }, 1000);
-  }, [clearRetryTimers, handleLoadStream]);
+  }, [clearRetryTimers, handleLoadStream, resetHealthTracking]);
 
   /**
    * Switch to a failover backup channel.
    */
-  const handleFailover = useCallback(async (nextChannel: StoredChannel) => {
+  const handleFailover = useCallback(async (nextChannel: StoredChannel): Promise<boolean> => {
     const dying = currentChannelRef.current;
-    if (!dying) return;
+    if (!dying || failoverSwitchingRef.current) return false;
 
     failoverAttemptRef.current += 1;
     failoverActiveRef.current = true;
+    failoverSwitchingRef.current = true;
+    failoverCursorStreamIdRef.current = nextChannel.stream_id;
+    failoverAttemptedStreamIdsRef.current.add(nextChannel.stream_id);
+    failoverFailedDuringSwitchRef.current = false;
 
     logInfo(`[Failover] Switching from "${dying.name}" → "${nextChannel.name}" (attempt ${failoverAttemptRef.current})`);
 
@@ -649,20 +708,37 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
     // Brief pause so the overlay is visible, then switch
     await new Promise(resolve => setTimeout(resolve, 800));
 
+    // Treat the candidate as current while loading so immediate failures can
+    // advance to the next group member instead of retrying the previous stream.
+    currentChannelRef.current = nextChannel;
+    setCurrentChannel(nextChannel);
+
     // Load the backup channel (reuse existing path — this sets currentChannel)
     try {
-      await handleLoadStream(nextChannel);
-      // On success, clear failover UI but keep failoverActiveRef true
-      // (so if THIS stream also dies, we continue cycling, not restart from the primary)
-      setFailoverState(null);
-      // Reset stall tracking so watchdog gives the new stream time to buffer
-      lastPositionRef.current = 0;
-      lastPositionTimeRef.current = Date.now() + stallThresholdMsRef.current;
+      const loaded = await handleLoadStream(nextChannel);
+      const failedDuringSwitch = failoverFailedDuringSwitchRef.current;
+      failoverFailedDuringSwitchRef.current = false;
+      const usable = loaded && !failedDuringSwitch;
+      if (usable) {
+        // On success, clear failover UI but keep failoverActiveRef true
+        // (so if THIS stream also dies, we continue cycling, not restart from the primary)
+        setFailoverState(null);
+        // Reset stall tracking so watchdog gives the new stream time to buffer
+        resetHealthTracking();
+      } else {
+        logWarn(`[Failover] Backup "${nextChannel.name}" failed to load; trying next candidate`);
+        setFailoverState(null);
+      }
+      return usable;
     } catch {
-      // handleLoadStream failed — try next backup
-      handleStreamDied();
+      // handleLoadStream normally returns false, but keep this path defensive.
+      logWarn(`[Failover] Backup "${nextChannel.name}" threw while loading; trying next candidate`);
+      setFailoverState(null);
+      return false;
+    } finally {
+      failoverSwitchingRef.current = false;
     }
-  }, [handleLoadStream]);
+  }, [handleLoadStream, resetHealthTracking]);
 
   /**
    * Entry point for both the event-based and watchdog-based stream failure detection.
@@ -671,28 +747,54 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
   const handleStreamDied = useCallback(async () => {
     // Only retry for Live TV (not VOD, not catchup)
     if (!currentChannelRef.current || vodInfoRef2.current || catchupInfoRef.current) return;
-    // Don't start another retry or failover if one is already in progress
-    if (isRetryingRef.current || failoverActiveRef.current) return;
+    if (isRetryingRef.current) return;
+    if (failoverSwitchingRef.current) {
+      failoverFailedDuringSwitchRef.current = true;
+      return;
+    }
+    if (streamFailureHandlingRef.current) return;
+    streamFailureHandlingRef.current = true;
 
-    // Check if this channel has a failover backup
-    const nextChannel = await getNextFailoverChannel(currentChannelRef.current.stream_id);
-
-    if (nextChannel) {
-      // Failover path — switch to backup stream
-      handleFailover(nextChannel);
-    } else if (failoverAttemptRef.current > 0) {
-      // We were in a failover cycle and just exhausted all backups.
-      // Loop back to the primary channel and start the cycle again.
-      const primary = await getPrimaryChannelForGroup(currentChannelRef.current.stream_id);
-      if (primary) {
-        logWarn('[Failover] All backups exhausted, looping back to primary');
-        handleFailover(primary);
+    try {
+      if (!failoverActiveRef.current) {
+        failoverCycleStartStreamIdRef.current = currentChannelRef.current.stream_id;
+        failoverAttemptedStreamIdsRef.current = new Set([currentChannelRef.current.stream_id]);
       } else {
+        failoverAttemptedStreamIdsRef.current.add(currentChannelRef.current.stream_id);
+        if (failoverCursorStreamIdRef.current) {
+          failoverAttemptedStreamIdsRef.current.add(failoverCursorStreamIdRef.current);
+        }
+      }
+
+      // Walk the ordered group from the stream that started this failover cycle.
+      // The attempted set prevents getting stuck retrying one bad backup while
+      // later backups are still available.
+      while (currentChannelRef.current && failoverCycleStartStreamIdRef.current) {
+        const candidates = await getFailoverCandidatesAfter(failoverCycleStartStreamIdRef.current);
+        const nextChannel = candidates.find(
+          candidate => !failoverAttemptedStreamIdsRef.current.has(candidate.stream_id)
+        );
+        if (!nextChannel) break;
+
+        const loaded = await handleFailover(nextChannel);
+        if (loaded) return;
+      }
+
+      if (failoverAttemptRef.current > 0) {
+        // We were in a failover cycle and just exhausted all backups.
         failoverActiveRef.current = false;
+        failoverSwitchingRef.current = false;
+        failoverAttemptRef.current = 0;
+        failoverCursorStreamIdRef.current = null;
+        failoverCycleStartStreamIdRef.current = null;
+        failoverAttemptedStreamIdsRef.current = new Set();
+        failoverFailedDuringSwitchRef.current = false;
+        setFailoverState(null);
         logWarn('[Failover] All backups exhausted, falling back to retry on current stream');
         startRetryCountdown();
+        return;
       }
-    } else {
+
       // Standard retry path (no failover group configured)
       if (retryAttemptRef.current >= maxRetriesRef.current) {
         logError('[Retry] Max retries reached, giving up');
@@ -702,6 +804,8 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
         return;
       }
       startRetryCountdown();
+    } finally {
+      streamFailureHandlingRef.current = false;
     }
   }, [handleFailover, startRetryCountdown, clearWatchdog, setError]);
 
@@ -713,6 +817,7 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
     let unlistenEnded: (() => void) | null = null;
     let unlistenEndFileError: (() => void) | null = null;
     let unlistenHttpError: (() => void) | null = null;
+    let unlistenMpvError: (() => void) | null = null;
 
     import('@tauri-apps/api/event').then(({ listen }) => {
       listen('mpv-stream-ended', () => {
@@ -726,17 +831,27 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
       }).then((fn) => { unlistenEndFileError = fn; });
 
       listen('mpv-http-error', () => {
+        if (isIgnoringHttpErrors()) {
+          logInfo('[Retry] Ignoring mpv-http-error event for current stream');
+          return;
+        }
         logInfo('[Retry] Received mpv-http-error event');
         handleStreamDied();
       }).then((fn) => { unlistenHttpError = fn; });
+
+      listen('mpv-error', () => {
+        logInfo('[Retry] Received mpv-error event');
+        handleStreamDied();
+      }).then((fn) => { unlistenMpvError = fn; });
     });
 
     return () => {
       unlistenEnded?.();
       unlistenEndFileError?.();
       unlistenHttpError?.();
+      unlistenMpvError?.();
     };
-  }, [handleStreamDied]);
+  }, [handleStreamDied, isIgnoringHttpErrors]);
 
   // ── Watchdog interval ──────────────────────────────────────────────────────
   // Runs every 2 seconds while a Live TV channel is active. If position hasn't
@@ -748,34 +863,129 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
       return;
     }
 
-    // Reset position tracking whenever a new channel starts
-    lastPositionRef.current = position;
-    lastPositionTimeRef.current = Date.now();
+    resetHealthTracking();
 
-    const watchdog = setInterval(() => {
+    const watchdog = setInterval(async () => {
       const now = Date.now();
-      const currentPos = positionRef.current;
-
-      if (currentPos !== lastPositionRef.current) {
-        // Position is advancing — stream is alive
-        lastPositionRef.current = currentPos;
-        lastPositionTimeRef.current = now;
+      if (
+        healthCheckInFlightRef.current ||
+        isRetryingRef.current ||
+        failoverSwitchingRef.current ||
+        now < healthLoadGraceUntilRef.current
+      ) {
         return;
       }
 
-      // Position hasn't changed — check elapsed time
-      const elapsed = now - lastPositionTimeRef.current;
-      if (elapsed >= stallThresholdMsRef.current && !isRetryingRef.current) {
-        logWarn(`[Retry] Watchdog: position stalled for ${elapsed}ms, triggering retry`);
-        handleStreamDied();
+      healthCheckInFlightRef.current = true;
+
+      try {
+        const [
+          timePosResult,
+          pausedForCacheResult,
+          bufferingStateResult,
+          cacheStateResult,
+          eofReachedResult,
+          coreIdleResult,
+          idleActiveResult,
+        ] = await Promise.allSettled([
+          Bridge.getProperty('time-pos'),
+          Bridge.getProperty('paused-for-cache'),
+          Bridge.getProperty('cache-buffering-state'),
+          Bridge.getProperty('demuxer-cache-state'),
+          Bridge.getProperty('eof-reached'),
+          Bridge.getProperty('core-idle'),
+          Bridge.getProperty('idle-active'),
+        ]);
+
+        const getValue = (result: PromiseSettledResult<any>) =>
+          result.status === 'fulfilled' ? result.value : null;
+
+        const sampledPosition = mpvNumber(getValue(timePosResult)) ?? positionRef.current;
+        const pausedForCache = mpvBoolean(getValue(pausedForCacheResult)) === true;
+        const bufferingState = mpvNumber(getValue(bufferingStateResult));
+        const cacheState = mpvObject(getValue(cacheStateResult));
+        const eofReached = mpvBoolean(getValue(eofReachedResult)) === true;
+        const coreIdle = mpvBoolean(getValue(coreIdleResult)) === true;
+        const idleActive = mpvBoolean(getValue(idleActiveResult)) === true;
+
+        const cacheStart = mpvNumber(cacheState?.['cache-start']);
+        const cacheEnd = mpvNumber(cacheState?.['cache-end']);
+        const cacheDurationProp = mpvNumber(cacheState?.['cache-duration']);
+        const readerPts = mpvNumber(cacheState?.['reader-pts']);
+        const forwardBytes = mpvNumber(cacheState?.['fw-bytes']);
+        const cacheDuration = cacheDurationProp
+          ?? (cacheStart !== null && cacheEnd !== null ? Math.max(0, cacheEnd - cacheStart) : null);
+
+        const positionAdvanced = sampledPosition > lastHealthPositionRef.current + 0.25;
+        const cacheEndAdvanced = cacheEnd !== null && (
+          lastHealthCacheEndRef.current === null ||
+          cacheEnd > lastHealthCacheEndRef.current + 0.25
+        );
+        const readerAdvanced = readerPts !== null && readerPts > sampledPosition + 0.5;
+        const forwardBytesAdvanced = forwardBytes !== null && (
+          lastHealthForwardBytesRef.current === null ||
+          forwardBytes > lastHealthForwardBytesRef.current
+        );
+        const cacheHasPlayableData = cacheDuration !== null && cacheDuration > 1.5;
+        const cacheIsGrowing = cacheEndAdvanced || readerAdvanced || forwardBytesAdvanced;
+        const buffering = pausedForCache || (bufferingState !== null && bufferingState < 100);
+        const madeProgress = positionAdvanced || cacheIsGrowing;
+
+        if (positionAdvanced) {
+          lastHealthPositionRef.current = sampledPosition;
+          lastPositionRef.current = sampledPosition;
+        }
+        if (cacheEnd !== null) {
+          lastHealthCacheEndRef.current = cacheEnd;
+        }
+        if (forwardBytes !== null) {
+          lastHealthForwardBytesRef.current = forwardBytes;
+        }
+        if (madeProgress) {
+          lastHealthActivityTimeRef.current = now;
+          lastPositionTimeRef.current = now;
+          bufferStarvedSinceRef.current = null;
+        }
+
+        if (eofReached || ((coreIdle || idleActive) && !madeProgress)) {
+          logWarn('[Health] MPV reported idle/eof during live playback, triggering failover/retry');
+          handleStreamDied();
+          return;
+        }
+
+        if (buffering && !cacheIsGrowing && !cacheHasPlayableData) {
+          bufferStarvedSinceRef.current ??= now;
+          const starvedFor = now - bufferStarvedSinceRef.current;
+          const starvationThreshold = Math.min(
+            Math.max(MIN_BUFFER_STARVATION_MS, stallThresholdMsRef.current / 2),
+            stallThresholdMsRef.current
+          );
+          if (starvedFor >= starvationThreshold) {
+            logWarn(`[Health] MPV buffer starved for ${starvedFor}ms, triggering failover/retry`);
+            handleStreamDied();
+            return;
+          }
+        } else {
+          bufferStarvedSinceRef.current = null;
+        }
+
+        const stalledFor = now - lastHealthActivityTimeRef.current;
+        if (stalledFor >= stallThresholdMsRef.current) {
+          logWarn(`[Health] No playback or cache progress for ${stalledFor}ms, triggering failover/retry`);
+          handleStreamDied();
+        }
+      } catch (e) {
+        logWarn('[Health] MPV health check failed:', e);
+      } finally {
+        healthCheckInFlightRef.current = false;
       }
-    }, 2000);
+    }, HEALTH_POLL_INTERVAL_MS);
 
     watchdogIntervalRef.current = watchdog;
 
     return () => { clearInterval(watchdog); watchdogIntervalRef.current = null; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentChannel?.stream_id, !!vodInfo, !!catchupInfo]);
+  }, [currentChannel?.stream_id, !!vodInfo, !!catchupInfo, resetHealthTracking]);
 
   const handlePlayChannel = useCallback((channel: StoredChannel, autoSwitched: boolean = false) => {
     // Cancel any in-progress retry when the user switches channels
@@ -784,13 +994,21 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
     setRetryState(null);
     isRetryingRef.current = false;
     retryAttemptRef.current = 0;
-    lastPositionRef.current = 0;
-    lastPositionTimeRef.current = Date.now();
+    streamFailureHandlingRef.current = false;
+    resetHealthTracking();
 
     // Reset failover state on manual channel switch
     failoverActiveRef.current = false;
+    failoverSwitchingRef.current = false;
     failoverOriginChannelRef.current = null;
     failoverAttemptRef.current = 0;
+    failoverCursorStreamIdRef.current = null;
+    failoverCycleStartStreamIdRef.current = null;
+    failoverAttemptedStreamIdsRef.current = new Set();
+    failoverFailedDuringSwitchRef.current = false;
+    streamFailureHandlingRef.current = false;
+    bufferStarvedSinceRef.current = null;
+    healthCheckInFlightRef.current = false;
     setFailoverState(null);
 
     // Save VOD progress before switching to Live TV
@@ -843,7 +1061,7 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
       addToRecentChannels(channel);
     }
     handleLoadStream(channel);
-  }, [handleLoadStream, vodInfo, position, duration]);
+  }, [handleLoadStream, resetHealthTracking, vodInfo, position, duration]);
 
   const handlePlayCatchup = useCallback(async (channel: StoredChannel, programTitle: string, startTimeMs: number, durationMinutes: number) => {
     // Save VOD progress before switching to catchup
@@ -1161,8 +1379,16 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
 
     // Reset failover state on stop
     failoverActiveRef.current = false;
+    failoverSwitchingRef.current = false;
     failoverOriginChannelRef.current = null;
     failoverAttemptRef.current = 0;
+    failoverCursorStreamIdRef.current = null;
+    failoverCycleStartStreamIdRef.current = null;
+    failoverAttemptedStreamIdsRef.current = new Set();
+    failoverFailedDuringSwitchRef.current = false;
+    streamFailureHandlingRef.current = false;
+    bufferStarvedSinceRef.current = null;
+    healthCheckInFlightRef.current = false;
     setFailoverState(null);
   }, [vodInfo, position, duration]);
 

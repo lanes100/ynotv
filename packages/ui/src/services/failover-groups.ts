@@ -61,6 +61,41 @@ export async function getNextFailoverChannel(
   return null; // All backups exhausted
 }
 
+/** Given a stream_id in a failover group, return ordered enabled candidates after it */
+export async function getFailoverCandidatesAfter(
+  startStreamId: string
+): Promise<StoredChannel[]> {
+  const membership = await db.failoverGroupMembers
+    .where('stream_id')
+    .equals(startStreamId)
+    .first();
+  if (!membership) return [];
+
+  const allMembers = await db.failoverGroupMembers
+    .where('group_id')
+    .equals(membership.group_id)
+    .toArray();
+
+  allMembers.sort((a, b) => {
+    if (a.priority !== b.priority) return a.priority - b.priority;
+    return (a.id ?? 0) - (b.id ?? 0);
+  });
+
+  const startIndex = allMembers.findIndex(m => m.stream_id === startStreamId);
+  if (startIndex === -1) return [];
+
+  const candidateMembers = allMembers.slice(startIndex + 1);
+  if (candidateMembers.length === 0) return [];
+
+  const streamIds = candidateMembers.map(m => m.stream_id);
+  const channels = await db.channels.where('stream_id').anyOf(streamIds).toArray();
+  const channelMap = new Map(channels.map(c => [c.stream_id, c]));
+
+  return candidateMembers
+    .map(m => channelMap.get(m.stream_id))
+    .filter((channel): channel is StoredChannel => !!channel && channel.enabled !== false);
+}
+
 /** Given a stream_id, return the primary (priority=0) channel of its group, or null */
 export async function getPrimaryChannelForGroup(
   anyStreamId: string

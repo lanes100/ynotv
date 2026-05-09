@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import type { MpvStatus } from '../types/app';
 import { Bridge } from '../services/tauri-bridge';
 
@@ -47,7 +47,8 @@ export function useMpvListeners(options: UseMpvListenersOptions = {}) {
     // Used for Stalker/MAC sources where auth headers cause false 401/403 errors
     // even when the stream actually plays successfully.
     const ignoreHttpErrorsRef = useRef(false);
-    const setIgnoreHttpErrors = (val: boolean) => { ignoreHttpErrorsRef.current = val; };
+    const setIgnoreHttpErrors = useCallback((val: boolean) => { ignoreHttpErrorsRef.current = val; }, []);
+    const isIgnoringHttpErrors = useCallback(() => ignoreHttpErrorsRef.current, []);
 
     // Keep a ref to the onReady callback to avoid re-running the effect on identity changes
     const onReadyRef = useRef(options.onReady);
@@ -130,6 +131,6 @@ export function useMpvListeners(options: UseMpvListenersOptions = {}) {
         volumeDraggingRef, seekingRef,
         setError, setPlaying, setPosition, setVolume, setMuted,
         setDuration, setMpvReady,
-        setIgnoreHttpErrors,
+        setIgnoreHttpErrors, isIgnoringHttpErrors,
     };
 }
