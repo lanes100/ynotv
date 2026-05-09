@@ -344,6 +344,7 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
 
   const retryAttemptRef = useRef(0);
   const isRetryingRef = useRef(false);
+  const retryFailedDuringLoadRef = useRef(false);
   const retryCountdownTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const watchdogIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const lastPositionRef = useRef<number>(0);
@@ -631,6 +632,16 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
     const channel = currentChannelRef.current;
     if (!channel) return;
 
+    if (retryAttemptRef.current >= maxRetriesRef.current) {
+      logError('[Retry] Max retries reached, giving up');
+      setError('Stream unavailable after maximum retry attempts');
+      setRetryState(null);
+      isRetryingRef.current = false;
+      retryFailedDuringLoadRef.current = false;
+      clearWatchdog();
+      return;
+    }
+
     retryAttemptRef.current += 1;
     const attempt = retryAttemptRef.current;
 
@@ -657,32 +668,48 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
 
         // Reset position tracking so watchdog doesn't immediately re-fire
         resetHealthTracking(10_000); // give the reload time to connect and buffer
+        retryFailedDuringLoadRef.current = false;
 
         // Reload the stream
         handleLoadStream(channel, { recoveryMode: true })
           .then((loaded) => {
-            if (loaded) {
-              logInfo(`[Retry] Reconnected successfully on attempt ${attempt}`);
+            const failedDuringLoad = retryFailedDuringLoadRef.current;
+            retryFailedDuringLoadRef.current = false;
+            if (loaded && !failedDuringLoad) {
+              logInfo(`[Retry] Stream accepted on attempt ${attempt}; waiting for playback progress`);
               setRetryState(null);
               isRetryingRef.current = false;
-              retryAttemptRef.current = 0;
             } else {
               logWarn(`[Retry] Stream load failed on attempt ${attempt}`);
-              setRetryState(null);
               isRetryingRef.current = false;
+              if (retryAttemptRef.current >= maxRetriesRef.current) {
+                logError('[Retry] Max retries reached, giving up');
+                setError('Stream unavailable after maximum retry attempts');
+                setRetryState(null);
+                clearWatchdog();
+              } else {
+                startRetryCountdown();
+              }
             }
           })
           .catch((err) => {
             logWarn(`[Retry] handleLoadStream threw on attempt ${attempt}:`, err);
-            // handleLoadStream sets error state internally; overlay will disappear
-            setRetryState(null);
+            retryFailedDuringLoadRef.current = false;
             isRetryingRef.current = false;
+            if (retryAttemptRef.current >= maxRetriesRef.current) {
+              logError('[Retry] Max retries reached, giving up');
+              setError('Stream unavailable after maximum retry attempts');
+              setRetryState(null);
+              clearWatchdog();
+            } else {
+              startRetryCountdown();
+            }
           });
       } else {
         setRetryState({ isRetrying: true, countdown, attempt, maxRetries: maxRetriesRef.current });
       }
     }, 1000);
-  }, [clearRetryTimers, handleLoadStream, resetHealthTracking]);
+  }, [clearRetryTimers, clearWatchdog, handleLoadStream, resetHealthTracking, setError]);
 
   /**
    * Switch to a failover backup channel.
@@ -761,7 +788,10 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
       logInfo('[Retry] Ignoring stream failure while user-paused');
       return;
     }
-    if (isRetryingRef.current) return;
+    if (isRetryingRef.current) {
+      retryFailedDuringLoadRef.current = true;
+      return;
+    }
     if (failoverSwitchingRef.current) {
       failoverFailedDuringSwitchRef.current = true;
       return;
@@ -961,6 +991,10 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
           lastHealthForwardBytesRef.current = forwardBytes;
         }
         if (madeProgress) {
+          if (retryAttemptRef.current > 0 && !isRetryingRef.current) {
+            logInfo('[Retry] Playback progress detected, resetting retry attempts');
+            retryAttemptRef.current = 0;
+          }
           recoveryArmedRef.current = true;
           lastHealthActivityTimeRef.current = now;
           lastPositionTimeRef.current = now;
@@ -1018,6 +1052,7 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
     setRetryState(null);
     isRetryingRef.current = false;
     retryAttemptRef.current = 0;
+    retryFailedDuringLoadRef.current = false;
     streamFailureHandlingRef.current = false;
     recoveryArmedRef.current = autoSwitched;
     userPausedRef.current = false;
@@ -1032,6 +1067,7 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
     failoverCycleStartStreamIdRef.current = null;
     failoverAttemptedStreamIdsRef.current = new Set();
     failoverFailedDuringSwitchRef.current = false;
+    retryFailedDuringLoadRef.current = false;
     streamFailureHandlingRef.current = false;
     bufferStarvedSinceRef.current = null;
     healthCheckInFlightRef.current = false;
@@ -1414,6 +1450,7 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
     failoverCycleStartStreamIdRef.current = null;
     failoverAttemptedStreamIdsRef.current = new Set();
     failoverFailedDuringSwitchRef.current = false;
+    retryFailedDuringLoadRef.current = false;
     streamFailureHandlingRef.current = false;
     bufferStarvedSinceRef.current = null;
     healthCheckInFlightRef.current = false;
