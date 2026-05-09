@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import type { RetryState } from '../components/StreamRetryOverlay';
 import { invoke } from '@tauri-apps/api/core';
 import type { StoredChannel } from '../db';
-import { getFailoverCandidatesAfter } from '../services/failover-groups';
+import { getFailoverCandidatesAfter, getPrimaryChannelForGroup } from '../services/failover-groups';
 import type { VodPlayInfo } from '../types/media';
 import { Bridge, registerOnAppClose, unregisterOnAppClose } from '../services/tauri-bridge';
 import { resolvePlayUrl } from '../services/stream-resolver';
@@ -829,7 +829,38 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
       }
 
       if (failoverAttemptRef.current > 0) {
-        // We were in a failover cycle and just exhausted all backups.
+        // We were in a failover cycle and just exhausted the tail of the group.
+        // Failover groups are circular: after the last backup, rotate back to
+        // the primary channel and start a fresh pass through the group.
+        const primary = await getPrimaryChannelForGroup(
+          failoverCycleStartStreamIdRef.current ?? currentChannelRef.current.stream_id
+        );
+        if (primary) {
+          logWarn('[Failover] End of group reached, rotating back to primary');
+          failoverCycleStartStreamIdRef.current = primary.stream_id;
+          failoverAttemptedStreamIdsRef.current = new Set();
+          failoverCursorStreamIdRef.current = null;
+          failoverFailedDuringSwitchRef.current = false;
+          setFailoverState(null);
+
+          const loadedPrimary = await handleFailover(primary);
+          if (loadedPrimary) return;
+
+          // If the primary fails immediately, continue through the rest of the
+          // fresh cycle instead of falling into retry on the last backup.
+          while (currentChannelRef.current && failoverCycleStartStreamIdRef.current) {
+            const candidates = await getFailoverCandidatesAfter(failoverCycleStartStreamIdRef.current);
+            const nextChannel = candidates.find(
+              candidate => !failoverAttemptedStreamIdsRef.current.has(candidate.stream_id)
+            );
+            if (!nextChannel) break;
+
+            const loaded = await handleFailover(nextChannel);
+            if (loaded) return;
+          }
+        }
+
+        logWarn('[Failover] Could not rotate failover group, falling back to retry on current stream');
         failoverActiveRef.current = false;
         failoverSwitchingRef.current = false;
         failoverAttemptRef.current = 0;
