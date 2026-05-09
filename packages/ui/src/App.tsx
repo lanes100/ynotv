@@ -43,6 +43,7 @@ import { getAdjacentEpisode, recordVodWatch, recordEpisodeWatch, getEpisodeProgr
 import type { StoredChannel } from './db';
 import { db } from './db';
 import { VideoErrorOverlay } from './components/VideoErrorOverlay';
+import { StreamRetryOverlay } from './components/StreamRetryOverlay';
 import { syncSource, syncVodForSource, isEpgStale, isVodStale } from './db/sync';
 import { bulkOps } from './services/bulk-ops';
 import { Bridge } from './services/tauri-bridge';
@@ -242,6 +243,7 @@ function App() {
     vodInfo,
     catchupInfo,
     isCatchup,
+    retryState,
     setCurrentChannel,
     handlePlayChannel,
     handlePlayCatchup,
@@ -1169,6 +1171,11 @@ function App() {
             onDismiss={() => setError(null)}
           />
         )}
+
+        {/* Stream retry overlay — shown in fullscreen/main view (not when LiveTV guide is open) */}
+        {retryState?.isRetrying && activeView !== 'guide' && (
+          <StreamRetryOverlay retryState={retryState} />
+        )}
       </div>
 
       {/* Video double-click overlay - captures double-clicks on video area to toggle fullscreen */}
@@ -1399,6 +1406,7 @@ function App() {
         onToggleFullscreen={handleToggleFullscreen}
         onShowSubtitleModal={handleShowSubtitleModal}
         onShowAudioModal={handleShowAudioModal}
+        retryState={retryState}
         onCatchupSeek={handleCatchupSeek}
         timeshiftEnabled={timeshiftEnabled}
         timeshiftState={timeshiftState}

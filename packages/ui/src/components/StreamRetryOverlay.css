@@ -1,0 +1,126 @@
+/* StreamRetryOverlay — inline, non-popup status message centered in the video area */
+
+.stream-retry-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* Semi-transparent dark backdrop — just enough to read the text */
+  background: rgba(0, 0, 0, 0.65);
+  z-index: 20;
+  pointer-events: none;
+  border-radius: inherit;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+.stream-retry-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  text-align: center;
+  padding: 24px 32px;
+  border-radius: 16px;
+  background: rgba(15, 15, 20, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(255, 255, 255, 0.04) inset;
+}
+
+/* ── Icon ─────────────────────────────────────────────────── */
+
+.stream-retry-icon {
+  position: relative;
+  width: 52px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 160, 60, 0.9); /* warm amber */
+}
+
+.stream-retry-icon svg {
+  width: 28px;
+  height: 28px;
+  filter: drop-shadow(0 0 6px rgba(255, 160, 60, 0.5));
+}
+
+/* Pulsing ring behind the icon */
+.stream-retry-pulse {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 160, 60, 0.35);
+  animation: retry-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes retry-pulse {
+  0%   { transform: scale(0.85); opacity: 0.9; }
+  50%  { transform: scale(1.15); opacity: 0.25; }
+  100% { transform: scale(0.85); opacity: 0.9; }
+}
+
+/* ── Text ─────────────────────────────────────────────────── */
+
+.stream-retry-text {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.stream-retry-title {
+  font-family: 'Inter', 'Outfit', system-ui, sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.92);
+  letter-spacing: 0.01em;
+}
+
+.stream-retry-countdown {
+  font-family: 'Inter', 'Outfit', system-ui, sans-serif;
+  font-size: 13px;
+  font-weight: 400;
+  color: rgba(255, 200, 100, 0.85);
+  letter-spacing: 0.02em;
+}
+
+.stream-retry-attempt {
+  font-family: 'Inter', 'Outfit', system-ui, sans-serif;
+  font-size: 11px;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.38);
+  letter-spacing: 0.03em;
+}
+
+/* ── Small variant (ChannelPanel preview pane) ──────────────── */
+
+.stream-retry-overlay.small .stream-retry-content {
+  padding: 12px 18px;
+  gap: 8px;
+  border-radius: 10px;
+}
+
+.stream-retry-overlay.small .stream-retry-icon {
+  width: 32px;
+  height: 32px;
+}
+
+.stream-retry-overlay.small .stream-retry-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.stream-retry-overlay.small .stream-retry-title {
+  font-size: 11px;
+}
+
+.stream-retry-overlay.small .stream-retry-countdown {
+  font-size: 10px;
+}
+
+.stream-retry-overlay.small .stream-retry-attempt {
+  font-size: 9px;
+}

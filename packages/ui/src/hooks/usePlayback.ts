@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import type { RetryState } from '../components/StreamRetryOverlay';
 import { invoke } from '@tauri-apps/api/core';
 import type { StoredChannel } from '../db';
 import type { VodPlayInfo } from '../types/media';
@@ -192,6 +193,9 @@ export interface PlaybackState {
   // Derived
   isCatchup: boolean;
 
+  // Retry state (Live TV only)
+  retryState: RetryState | null;
+
   // Actions
   setError: (error: string | null) => void;
   setPlaying: (playing: boolean) => void;
@@ -263,6 +267,27 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
     startTime: number;
     duration: number;
   } | null>(null);
+
+  // Retry state for Live TV stream recovery
+  const [retryState, setRetryState] = useState<RetryState | null>(null);
+
+  // Refs for retry logic (stable across renders)
+  const MAX_RETRIES = 20;
+  const STALL_THRESHOLD_MS = 10_000; // 10 seconds of no position change
+  const retryAttemptRef = useRef(0);
+  const isRetryingRef = useRef(false);
+  const retryCountdownTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const watchdogIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const lastPositionRef = useRef<number>(0);
+  const lastPositionTimeRef = useRef<number>(Date.now());
+  // Stable refs for use inside intervals (avoids stale closure issues)
+  const currentChannelRef = useRef(currentChannel);
+  const vodInfoRef2 = useRef(vodInfo);
+  const catchupInfoRef = useRef(catchupInfo);
+
+  useEffect(() => { currentChannelRef.current = currentChannel; }, [currentChannel]);
+  useEffect(() => { vodInfoRef2.current = vodInfo; }, [vodInfo]);
+  useEffect(() => { catchupInfoRef.current = catchupInfo; }, [catchupInfo]);
 
   // Refs to track current values for interval callbacks
   const vodInfoRef = useRef(vodInfo);
@@ -462,7 +487,172 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
     }
   }, [notifyMainLoaded]);
 
+  // ── Retry helpers ──────────────────────────────────────────────────────────
+
+  /**
+   * Clear all retry timers. Call before starting a new retry cycle or when
+   * cancelling retries (channel switch, stop, etc.).
+   */
+  const clearRetryTimers = useCallback(() => {
+    if (retryCountdownTimerRef.current) {
+      clearInterval(retryCountdownTimerRef.current);
+      retryCountdownTimerRef.current = null;
+    }
+  }, []);
+
+  /**
+   * Clear the watchdog interval (called on channel switch / stop).
+   */
+  const clearWatchdog = useCallback(() => {
+    if (watchdogIntervalRef.current) {
+      clearInterval(watchdogIntervalRef.current);
+      watchdogIntervalRef.current = null;
+    }
+  }, []);
+
+  /**
+   * Kick off a 5-second countdown and then reload the current channel.
+   * Expects `currentChannelRef.current` to be set.
+   */
+  const startRetryCountdown = useCallback(() => {
+    const channel = currentChannelRef.current;
+    if (!channel) return;
+
+    retryAttemptRef.current += 1;
+    const attempt = retryAttemptRef.current;
+
+    logInfo(`[Retry] Attempt ${attempt}/${MAX_RETRIES} — stopping MPV frame and starting countdown`);
+
+    // Stop MPV immediately so the frozen video frame is cleared.
+    // This is critical — without it the frozen frame sits on top of the overlay.
+    Bridge.stop().catch(() => {});
+
+    // Show overlay with initial countdown
+    let countdown = 5;
+    setRetryState({ isRetrying: true, countdown, attempt, maxRetries: MAX_RETRIES });
+    isRetryingRef.current = true;
+
+    // Tick every second
+    clearRetryTimers();
+    retryCountdownTimerRef.current = setInterval(() => {
+      countdown -= 1;
+
+      if (countdown <= 0) {
+        clearRetryTimers();
+        // Show "Reconnecting…" state (countdown = 0)
+        setRetryState({ isRetrying: true, countdown: 0, attempt, maxRetries: MAX_RETRIES });
+
+        // Reset position tracking so watchdog doesn't immediately re-fire
+        lastPositionRef.current = 0;
+        lastPositionTimeRef.current = Date.now() + 10_000; // give 10s grace period to load
+
+        // Reload the stream
+        handleLoadStream(channel)
+          .then(() => {
+            logInfo(`[Retry] Reconnected successfully on attempt ${attempt}`);
+            setRetryState(null);
+            isRetryingRef.current = false;
+            retryAttemptRef.current = 0;
+          })
+          .catch((err) => {
+            logWarn(`[Retry] handleLoadStream threw on attempt ${attempt}:`, err);
+            // handleLoadStream sets error state internally; overlay will disappear
+            setRetryState(null);
+            isRetryingRef.current = false;
+          });
+      } else {
+        setRetryState({ isRetrying: true, countdown, attempt, maxRetries: MAX_RETRIES });
+      }
+    }, 1000);
+  }, [clearRetryTimers, handleLoadStream]);
+
+  /**
+   * Entry point for both the event-based and watchdog-based stream failure detection.
+   * Guards against double-firing and max retry exhaustion.
+   */
+  const handleStreamDied = useCallback(() => {
+    // Only retry for Live TV (not VOD, not catchup)
+    if (!currentChannelRef.current || vodInfoRef2.current || catchupInfoRef.current) return;
+    // Don't start another retry if one is already in progress
+    if (isRetryingRef.current) return;
+
+    if (retryAttemptRef.current >= MAX_RETRIES) {
+      logError('[Retry] Max retries reached, giving up');
+      setError('Stream unavailable after maximum retry attempts');
+      setRetryState(null);
+      clearWatchdog();
+      return;
+    }
+
+    startRetryCountdown();
+  }, [startRetryCountdown, clearWatchdog, setError]);
+
+  // ── mpv-stream-ended listener ──────────────────────────────────────────────
+  // Fires when the backend receives end-file with reason=eof or reason=network.
+  useEffect(() => {
+    if (!Bridge.isTauri) return;
+
+    let unlisten: (() => void) | null = null;
+
+    import('@tauri-apps/api/event').then(({ listen }) => {
+      listen('mpv-stream-ended', () => {
+        logInfo('[Retry] Received mpv-stream-ended event');
+        handleStreamDied();
+      }).then((fn) => { unlisten = fn; });
+    });
+
+    return () => { unlisten?.(); };
+  }, [handleStreamDied]);
+
+  // ── Watchdog interval ──────────────────────────────────────────────────────
+  // Runs every 2 seconds while a Live TV channel is active. If position hasn't
+  // advanced in STALL_THRESHOLD_MS, treats it as a stalled/dead stream.
+  useEffect(() => {
+    // Only run for Live TV
+    if (!currentChannel || vodInfo || catchupInfo) {
+      clearWatchdog();
+      return;
+    }
+
+    // Reset position tracking whenever a new channel starts
+    lastPositionRef.current = position;
+    lastPositionTimeRef.current = Date.now();
+
+    const watchdog = setInterval(() => {
+      const now = Date.now();
+      const currentPos = positionRef.current;
+
+      if (currentPos !== lastPositionRef.current) {
+        // Position is advancing — stream is alive
+        lastPositionRef.current = currentPos;
+        lastPositionTimeRef.current = now;
+        return;
+      }
+
+      // Position hasn't changed — check elapsed time
+      const elapsed = now - lastPositionTimeRef.current;
+      if (elapsed >= STALL_THRESHOLD_MS && !isRetryingRef.current) {
+        logWarn(`[Retry] Watchdog: position stalled for ${elapsed}ms, triggering retry`);
+        handleStreamDied();
+      }
+    }, 2000);
+
+    watchdogIntervalRef.current = watchdog;
+
+    return () => { clearInterval(watchdog); watchdogIntervalRef.current = null; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentChannel?.stream_id, !!vodInfo, !!catchupInfo]);
+
   const handlePlayChannel = useCallback((channel: StoredChannel, autoSwitched: boolean = false) => {
+    // Cancel any in-progress retry when the user switches channels
+    clearRetryTimers();
+    clearWatchdog();
+    setRetryState(null);
+    isRetryingRef.current = false;
+    retryAttemptRef.current = 0;
+    lastPositionRef.current = 0;
+    lastPositionTimeRef.current = Date.now();
+
     // Save VOD progress before switching to Live TV
     if (vodInfo && position > 0 && duration > 0) {
       const mediaId = vodInfo.mediaId || (vodInfo.source_id && vodInfo.url
@@ -893,6 +1083,7 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
     volumeDraggingRef,
     seekingRef,
     isCatchup,
+    retryState,
     setError,
     setPlaying,
     setPosition,

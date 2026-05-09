@@ -477,6 +477,15 @@ async fn connect_ipc<R: Runtime>(
                                         };
                                         let _ = app_handle.emit("mpv-end-file-error", error_msg);
                                     }
+
+                                    // Emit stream-ended for unexpected disconnections (not user-stop, not error which is above).
+                                    // "eof" fires when the server closes the connection (proxy killed, stream dropped).
+                                    // "network" fires on network-level failures.
+                                    // We exclude "stop" (user or app initiated) and "error" (handled above).
+                                    if matches!(reason.as_deref(), Some("eof") | Some("network")) {
+                                        log::info!("[MPV] Stream ended unexpectedly (reason={:?}), emitting mpv-stream-ended", reason);
+                                        let _ = app_handle.emit("mpv-stream-ended", ());
+                                    }
                                 }
                             }
                             MpvResponse::Response { request_id, error, data } => {
