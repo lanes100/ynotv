@@ -9,12 +9,13 @@ import {
   reorderFailoverGroupMember,
   type getFailoverGroupForChannel,
 } from '../../services/failover-groups';
+import { db } from '../../db';
 import type { FailoverGroup } from '../../db';
 import './FailoverTab.css';
 
 interface GroupWithMembers extends FailoverGroup {
   memberCount: number;
-  members?: Array<{ stream_id: string; priority: number; name: string; stream_icon?: string }>;
+  members?: Array<{ stream_id: string; priority: number; name: string; stream_icon?: string; source_id?: string; category_ids?: string | string[] }>;
   expanded?: boolean;
 }
 
@@ -106,11 +107,25 @@ function SortableList<T>({ items, getKey, onReorder, renderItem }: SortableListP
 
 // ── Main FailoverTab ──────────────────────────────────────────────────────────
 
+function parseCategoryIds(raw: string | string[] | number[] | undefined): string[] {
+  if (!raw) return [];
+  if (Array.isArray(raw)) return raw.map(String);
+  try {
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) return parsed.map(String);
+  } catch { /* not JSON */ }
+  if (typeof raw === 'string') return raw.split(',').map(s => s.trim()).filter(Boolean);
+  return [String(raw)];
+}
+
 export function FailoverTab() {
   const [groups, setGroups] = useState<GroupWithMembers[]>([]);
   const [loading, setLoading] = useState(true);
   const [newGroupName, setNewGroupName] = useState('');
   const [creating, setCreating] = useState(false);
+  const [displaySource, setDisplaySource] = useState(false);
+  const [sourceNameMap, setSourceNameMap] = useState<Map<string, string>>(new Map());
+  const [categoryNameMap, setCategoryNameMap] = useState<Map<string, string>>(new Map());
 
   const loadGroups = useCallback(async () => {
     setLoading(true);
@@ -131,6 +146,25 @@ export function FailoverTab() {
   useEffect(() => {
     loadGroups();
   }, [loadGroups]);
+
+  // Load source and category name maps for display
+  useEffect(() => {
+    async function loadMaps() {
+      try {
+        const sourcesResult = await window.storage.getSources();
+        const allSources = (sourcesResult.data || []).filter((s: any) => s.enabled !== false);
+        const sMap = new Map(allSources.map((s: any) => [String(s.id), s.name]));
+        setSourceNameMap(sMap);
+
+        const allCategories = await db.categories.toArray();
+        const cMap = new Map(allCategories.map(c => [String(c.category_id), c.category_name]));
+        setCategoryNameMap(cMap);
+      } catch (e) {
+        console.error('[FailoverTab] Failed to load source/category maps:', e);
+      }
+    }
+    loadMaps();
+  }, []);
 
   const toggleExpand = useCallback(async (groupId: string) => {
     setGroups(prev => {
@@ -208,7 +242,7 @@ export function FailoverTab() {
     }
   }, []);
 
-  const handleReorder = useCallback(async (groupId: string, newItems: Array<{ stream_id: string; priority: number; name: string; stream_icon?: string }>) => {
+  const handleReorder = useCallback(async (groupId: string, newItems: Array<{ stream_id: string; priority: number; name: string; stream_icon?: string; source_id?: string; category_ids?: string | string[] }>) => {
     setGroups(prev => {
       const idx = prev.findIndex(g => g.group_id === groupId);
       if (idx === -1) return prev;
@@ -231,6 +265,13 @@ export function FailoverTab() {
     return `BACKUP ${priority}`;
   };
 
+  const getMemberSourceCategory = (member: NonNullable<GroupWithMembers['members']>[number]): string => {
+    const sourceName = sourceNameMap.get(String(member.source_id)) || member.source_id || 'Unknown';
+    const catIds = parseCategoryIds(member.category_ids);
+    const catName = catIds.length > 0 ? (categoryNameMap.get(String(catIds[0])) || catIds[0]) : '—';
+    return `${sourceName} → ${catName}`;
+  };
+
   return (
     <div className="failover-tab">
       <h3>Failover Groups</h3>
@@ -238,6 +279,17 @@ export function FailoverTab() {
         When a stream stalls or disconnects, the app will automatically switch to the next channel in the group.
         Drag channels to change priority order.
       </p>
+
+      <div className="failover-toolbar">
+        <label className="failover-display-source-label" title="Show source and category for each channel">
+          <input
+            type="checkbox"
+            checked={displaySource}
+            onChange={e => setDisplaySource(e.target.checked)}
+          />
+          Display Source
+        </label>
+      </div>
 
       {/* Create new group */}
       <div className="failover-create-row">
@@ -305,7 +357,12 @@ export function FailoverTab() {
                             ? <img src={member.stream_icon} className="failover-member-icon" alt="" />
                             : <span className="failover-member-icon-placeholder">📺</span>
                           }
-                          <span className="failover-member-name">{member.name}</span>
+                          <div className="failover-member-info">
+                            <span className="failover-member-name">{member.name}</span>
+                            {displaySource && (
+                              <span className="failover-member-source">{getMemberSourceCategory(member)}</span>
+                            )}
+                          </div>
                           <span className={`failover-priority-badge ${member.priority === 0 ? 'primary' : ''}`}>
                             {getPriorityLabel(member.priority)}
                           </span>

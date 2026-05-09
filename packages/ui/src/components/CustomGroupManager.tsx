@@ -361,6 +361,9 @@ export function CustomGroupManager({ groupId, groupName, onClose }: CustomGroupM
     const [sourcesAndCategories, setSourcesAndCategories] = useState<{ sources: any[]; categories: StoredCategory[]; enabledSourceIds: Set<string> } | undefined>();
     const [loading, setLoading] = useState(true);
 
+    // Display source/category for each channel
+    const [displaySource, setDisplaySource] = useState(false);
+
     // Rename state
     const [isRenaming, setIsRenaming] = useState(false);
     const [renameValue, setRenameValue] = useState(groupName);
@@ -371,6 +374,24 @@ export function CustomGroupManager({ groupId, groupName, onClose }: CustomGroupM
     const enabledSourceIdsKey = sourcesAndCategories
         ? Array.from(sourcesAndCategories.enabledSourceIds).sort().join(',')
         : '';
+
+    // Lookup maps for source/category display
+    const sourceNameMap = React.useMemo(() => {
+        if (!sourcesAndCategories) return new Map<string, string>();
+        return new Map(sourcesAndCategories.sources.map((s: any) => [String(s.id), s.name]));
+    }, [sourcesAndCategories]);
+
+    const categoryNameMap = React.useMemo(() => {
+        if (!sourcesAndCategories) return new Map<string, string>();
+        return new Map(sourcesAndCategories.categories.map(c => [String(c.category_id), c.category_name]));
+    }, [sourcesAndCategories]);
+
+    const getChannelSourceCategory = (ch: GroupChannel): string => {
+        const sourceName = sourceNameMap.get(String(ch.source_id)) || ch.source_id || 'Unknown';
+        const catIds = parseCategoryIds(ch.category_ids);
+        const catName = catIds.length > 0 ? (categoryNameMap.get(String(catIds[0])) || catIds[0]) : '—';
+        return `${sourceName} → ${catName}`;
+    };
 
     useEffect(() => {
         let isMounted = true;
@@ -473,7 +494,17 @@ export function CustomGroupManager({ groupId, groupName, onClose }: CustomGroupM
                     <div className="group-channels-pane">
                         <div className="pane-header">
                             <span>In Group</span>
-                            <span className="cgm-badge">{groupChannels.length}</span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                <label className="cgm-display-source-label" title="Show source and category for each channel">
+                                    <input
+                                        type="checkbox"
+                                        checked={displaySource}
+                                        onChange={e => setDisplaySource(e.target.checked)}
+                                    />
+                                    Display Source
+                                </label>
+                                <span className="cgm-badge">{groupChannels.length}</span>
+                            </div>
                         </div>
                         {groupChannels.length === 0 && !loading
                             ? <div className="cgm-empty" style={{ padding: '20px 16px' }}>Click channels on the right to add them.</div>
@@ -488,7 +519,12 @@ export function CustomGroupManager({ groupId, groupName, onClose }: CustomGroupM
                                             ? <img src={ch.stream_icon} className="cgm-ch-logo" alt="" />
                                             : <span className="cgm-ch-logo-placeholder">📺</span>
                                         }
-                                        <span className="cgm-ch-name">{ch.name}</span>
+                                        <div className="cgm-ch-info">
+                                            <span className="cgm-ch-name">{ch.name}</span>
+                                            {displaySource && (
+                                                <span className="cgm-ch-source">{getChannelSourceCategory(ch)}</span>
+                                            )}
+                                        </div>
                                         <button className="remove-btn" onClick={() => handleRemove(ch.stream_id)}>✕</button>
                                     </>
                                 )}

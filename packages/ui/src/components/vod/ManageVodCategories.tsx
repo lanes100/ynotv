@@ -32,7 +32,9 @@ export function ManageVodCategories({ sourceId, sourceName, onClose, onChange }:
 
     // Initialize categories from database
     useEffect(() => {
-        if (dbCategories && !isSavingRef.current) {
+        // Do not overwrite local state if the user has unsaved changes or we are
+        // in the middle of a save operation – either case would discard edits.
+        if (dbCategories && !isSavingRef.current && !isDirty) {
             // Sort by display_order if available, otherwise by name
             const sorted = [...dbCategories].sort((a, b) => {
                 if (a.display_order !== undefined && b.display_order !== undefined) {
@@ -50,9 +52,8 @@ export function ManageVodCategories({ sourceId, sourceName, onClose, onChange }:
             }));
             
             setCategories(processed);
-            setIsDirty(false);
         }
-    }, [dbCategories]);
+    }, [dbCategories, isDirty]);
 
     // Compute which list-item index a clientY falls into among VISIBLE items
     const getIndexFromClientY = (clientY: number): number => {
@@ -190,6 +191,8 @@ export function ManageVodCategories({ sourceId, sourceName, onClose, onChange }:
             
             if (onChange) await onChange();
             
+            // Reset the saving flag before closing so a re-open starts fresh.
+            isSavingRef.current = false;
             onClose();
         } catch (err) {
             console.error('[ManageVodCategories] Failed to save:', err);

@@ -4,7 +4,7 @@ import type { FailoverGroup, StoredChannel } from '../db';
 /** Get the full ordered member list for a group, with channel data joined */
 export async function getFailoverGroupMembers(
   groupId: string
-): Promise<Array<{ stream_id: string; priority: number; name: string; stream_icon?: string }>> {
+): Promise<Array<{ stream_id: string; priority: number; name: string; stream_icon?: string; source_id?: string; category_ids?: string | string[] }>> {
   const members = await db.failoverGroupMembers
     .where('group_id')
     .equals(groupId)
@@ -13,7 +13,7 @@ export async function getFailoverGroupMembers(
   const streamIds = members.map(m => m.stream_id);
   const channels = await db.channels.where('stream_id').anyOf(streamIds).toArray();
   const channelMap = new Map(channels.map(c => [c.stream_id, c]));
-  const result: Array<{ stream_id: string; priority: number; name: string; stream_icon?: string }> = [];
+  const result: Array<{ stream_id: string; priority: number; name: string; stream_icon?: string; source_id?: string; category_ids?: string | string[] }> = [];
   for (const m of members) {
     const ch = channelMap.get(m.stream_id);
     if (ch && ch.name) {
@@ -22,6 +22,8 @@ export async function getFailoverGroupMembers(
         priority: m.priority,
         name: ch.name,
         stream_icon: ch.stream_icon,
+        source_id: ch.source_id,
+        category_ids: ch.category_ids,
       });
     }
   }

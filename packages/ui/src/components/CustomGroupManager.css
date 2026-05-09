@@ -246,6 +246,40 @@
     color: var(--text-primary, #eee);
 }
 
+.cgm-ch-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    gap: 1px;
+}
+
+.cgm-ch-source {
+    font-size: 0.72rem;
+    color: rgba(255, 255, 255, 0.4);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.cgm-display-source-label {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.78rem;
+    color: rgba(255, 255, 255, 0.55);
+    cursor: pointer;
+    user-select: none;
+    text-transform: none;
+    letter-spacing: normal;
+    font-weight: 500;
+}
+
+.cgm-display-source-label input[type="checkbox"] {
+    cursor: pointer;
+    accent-color: var(--accent-primary, #00d4ff);
+}
+
 .remove-btn {
     display: none;
     background: none;
