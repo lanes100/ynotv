@@ -9,6 +9,10 @@ interface PlaybackTabProps {
   mpvDisableWhitelist: boolean;
   onMpvParamsChange: (params: string) => Promise<void>;
   onMpvDisableWhitelistChange: (disabled: boolean) => Promise<void>;
+  streamWatchdogSeconds: number;
+  streamMaxRetries: number;
+  onStreamWatchdogSecondsChange: (seconds: number) => Promise<void>;
+  onStreamMaxRetriesChange: (retries: number) => Promise<void>;
 }
 
 const DEFAULT_MPV_PARAMS = `--hwdec=auto
@@ -22,11 +26,28 @@ const DEFAULT_MPV_PARAMS = `--hwdec=auto
 --stream-lavf-o=reconnect_streamed=1
 --stream-lavf-o=reconnect_delay_max=5`;
 
-export function PlaybackTab({ mpvParams, mpvDisableWhitelist, onMpvParamsChange, onMpvDisableWhitelistChange }: PlaybackTabProps) {
+export function PlaybackTab({
+  mpvParams,
+  mpvDisableWhitelist,
+  onMpvParamsChange,
+  onMpvDisableWhitelistChange,
+  streamWatchdogSeconds,
+  streamMaxRetries,
+  onStreamWatchdogSecondsChange,
+  onStreamMaxRetriesChange,
+}: PlaybackTabProps) {
   const [localParams, setLocalParams] = useState(mpvParams);
   const [hasChanges, setHasChanges] = useState(false);
   const [debugInfo, setDebugInfo] = useState<string | null>(null);
   const [showRestartModal, setShowRestartModal] = useState(false);
+
+  // Local state for retry settings (committed on blur / enter)
+  const [localWatchdog, setLocalWatchdog] = useState(String(streamWatchdogSeconds));
+  const [localMaxRetries, setLocalMaxRetries] = useState(String(streamMaxRetries));
+
+  // Sync if parent value changes (e.g. loaded from storage after mount)
+  useEffect(() => { setLocalWatchdog(String(streamWatchdogSeconds)); }, [streamWatchdogSeconds]);
+  useEffect(() => { setLocalMaxRetries(String(streamMaxRetries)); }, [streamMaxRetries]);
 
   useEffect(() => {
     setLocalParams(mpvParams);
@@ -85,6 +106,98 @@ export function PlaybackTab({ mpvParams, mpvDisableWhitelist, onMpvParamsChange,
 
   return (
     <div className="settings-tab-content playback-tab-content">
+
+      {/* ── Stream Recovery ──────────────────────────────────────── */}
+      <div className="settings-section">
+        <div className="section-header">
+          <h3>Stream Recovery</h3>
+        </div>
+        <p className="section-description">
+          Controls how YNOTV detects and recovers from a stalled or disconnected Live TV stream.
+        </p>
+
+        <div className="playback-section">
+
+          {/* Watchdog timeout */}
+          <div className="retry-setting-row">
+            <div className="timeshift-toggle-info">
+              <span className="timeshift-toggle-label">Stall Detection Timeout</span>
+              <span className="timeshift-toggle-sub">
+                Seconds of no position change before a stream is considered stalled. Lower values react faster but may false-trigger on slow servers.
+              </span>
+            </div>
+            <div className="retry-input-wrapper">
+              <input
+                id="stream-watchdog-seconds"
+                type="number"
+                min={3}
+                max={60}
+                step={1}
+                className="retry-number-input"
+                value={localWatchdog}
+                onChange={(e) => setLocalWatchdog(e.target.value)}
+                onBlur={() => {
+                  const n = Math.max(3, Math.min(60, parseInt(localWatchdog, 10) || 10));
+                  setLocalWatchdog(String(n));
+                  onStreamWatchdogSecondsChange(n);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+                }}
+              />
+              <span className="retry-input-unit">sec</span>
+            </div>
+          </div>
+
+          {/* Warning for low values */}
+          {parseInt(localWatchdog, 10) < 8 && (
+            <div className="retry-warning">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                <line x1="12" y1="9" x2="12" y2="13" />
+                <line x1="12" y1="17" x2="12.01" y2="17" />
+              </svg>
+              <span>
+                Values below 8s may cause false retries on slow IPTV servers or streams that take time to buffer. If you notice unexpected reconnects on healthy streams, increase this value.
+              </span>
+            </div>
+          )}
+
+          {/* Max retries */}
+          <div className="retry-setting-row" style={{ marginTop: '16px' }}>
+            <div className="timeshift-toggle-info">
+              <span className="timeshift-toggle-label">Max Retry Attempts</span>
+              <span className="timeshift-toggle-sub">
+                Maximum number of reconnection attempts before giving up and showing a permanent error.
+              </span>
+            </div>
+            <div className="retry-input-wrapper">
+              <input
+                id="stream-max-retries"
+                type="number"
+                min={1}
+                max={100}
+                step={1}
+                className="retry-number-input"
+                value={localMaxRetries}
+                onChange={(e) => setLocalMaxRetries(e.target.value)}
+                onBlur={() => {
+                  const n = Math.max(1, Math.min(100, parseInt(localMaxRetries, 10) || 20));
+                  setLocalMaxRetries(String(n));
+                  onStreamMaxRetriesChange(n);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+                }}
+              />
+              <span className="retry-input-unit">retries</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      {/* ── MPV Parameters ────────────────────────────────────────── */}
       <div className="settings-section">
         <div className="section-header">
           <h3>Playback Settings</h3>

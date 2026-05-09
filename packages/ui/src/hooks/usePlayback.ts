@@ -271,9 +271,27 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
   // Retry state for Live TV stream recovery
   const [retryState, setRetryState] = useState<RetryState | null>(null);
 
-  // Refs for retry logic (stable across renders)
-  const MAX_RETRIES = 20;
-  const STALL_THRESHOLD_MS = 10_000; // 10 seconds of no position change
+  // Configurable retry settings — loaded from storage, stored in refs so
+  // they're always current inside interval callbacks without stale closures.
+  const maxRetriesRef = useRef(20);
+  const stallThresholdMsRef = useRef(10_000);
+
+  // Load retry settings from storage once on mount
+  useEffect(() => {
+    if (!window.storage) return;
+    window.storage.getSettings().then((result: any) => {
+      if (result?.data) {
+        const s = result.data;
+        if (typeof s.streamMaxRetries === 'number' && s.streamMaxRetries > 0) {
+          maxRetriesRef.current = s.streamMaxRetries;
+        }
+        if (typeof s.streamWatchdogSeconds === 'number' && s.streamWatchdogSeconds >= 3) {
+          stallThresholdMsRef.current = s.streamWatchdogSeconds * 1_000;
+        }
+      }
+    }).catch(() => {});
+  }, []);
+
   const retryAttemptRef = useRef(0);
   const isRetryingRef = useRef(false);
   const retryCountdownTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -521,15 +539,15 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
     retryAttemptRef.current += 1;
     const attempt = retryAttemptRef.current;
 
-    logInfo(`[Retry] Attempt ${attempt}/${MAX_RETRIES} — stopping MPV frame and starting countdown`);
+    logInfo(`[Retry] Attempt ${attempt}/${maxRetriesRef.current} — stopping MPV frame and starting countdown`);
 
     // Stop MPV immediately so the frozen video frame is cleared.
     // This is critical — without it the frozen frame sits on top of the overlay.
     Bridge.stop().catch(() => {});
 
-    // Show overlay with initial countdown
-    let countdown = 5;
-    setRetryState({ isRetrying: true, countdown, attempt, maxRetries: MAX_RETRIES });
+    // Show overlay with ramping countdown: attempt 1=1s, 2=2s, 3=3s, 4=4s, 5+=5s
+    let countdown = Math.min(attempt, 5);
+    setRetryState({ isRetrying: true, countdown, attempt, maxRetries: maxRetriesRef.current });
     isRetryingRef.current = true;
 
     // Tick every second
@@ -540,7 +558,7 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
       if (countdown <= 0) {
         clearRetryTimers();
         // Show "Reconnecting…" state (countdown = 0)
-        setRetryState({ isRetrying: true, countdown: 0, attempt, maxRetries: MAX_RETRIES });
+        setRetryState({ isRetrying: true, countdown: 0, attempt, maxRetries: maxRetriesRef.current });
 
         // Reset position tracking so watchdog doesn't immediately re-fire
         lastPositionRef.current = 0;
@@ -561,7 +579,7 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
             isRetryingRef.current = false;
           });
       } else {
-        setRetryState({ isRetrying: true, countdown, attempt, maxRetries: MAX_RETRIES });
+        setRetryState({ isRetrying: true, countdown, attempt, maxRetries: maxRetriesRef.current });
       }
     }, 1000);
   }, [clearRetryTimers, handleLoadStream]);
@@ -576,7 +594,7 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
     // Don't start another retry if one is already in progress
     if (isRetryingRef.current) return;
 
-    if (retryAttemptRef.current >= MAX_RETRIES) {
+    if (retryAttemptRef.current >= maxRetriesRef.current) {
       logError('[Retry] Max retries reached, giving up');
       setError('Stream unavailable after maximum retry attempts');
       setRetryState(null);
@@ -631,7 +649,7 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
 
       // Position hasn't changed — check elapsed time
       const elapsed = now - lastPositionTimeRef.current;
-      if (elapsed >= STALL_THRESHOLD_MS && !isRetryingRef.current) {
+      if (elapsed >= stallThresholdMsRef.current && !isRetryingRef.current) {
         logWarn(`[Retry] Watchdog: position stalled for ${elapsed}ms, triggering retry`);
         handleStreamDied();
       }

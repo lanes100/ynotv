@@ -125,6 +125,9 @@ export function Settings({
   const [timeshiftEnabled, setTimeshiftEnabled] = useState(false);
   const [timeshiftCacheBytes, setTimeshiftCacheBytes] = useState(1_073_741_824);
   const [liveBufferOffset, setLiveBufferOffset] = useState(0);
+  // Stream retry settings
+  const [streamWatchdogSeconds, setStreamWatchdogSeconds] = useState(10);
+  const [streamMaxRetries, setStreamMaxRetries] = useState(20);
 
   // LiveTV settings state
   const [epgDarkenCurrent, setEpgDarkenCurrent] = useState(false);
@@ -242,6 +245,8 @@ export function Settings({
         timeshiftEnabled?: boolean;
         timeshiftCacheBytes?: number;
         liveBufferOffset?: number;
+        streamWatchdogSeconds?: number;
+        streamMaxRetries?: number;
         epgDarkenCurrent?: boolean;
         miniMediaBarForEpgPreview?: boolean;
         epgView?: 'traditional' | 'alternate';
@@ -329,6 +334,8 @@ export function Settings({
       setTimeshiftEnabled(settings.timeshiftEnabled ?? false);
       setTimeshiftCacheBytes(settings.timeshiftCacheBytes ?? 1_073_741_824);
       setLiveBufferOffset(settings.liveBufferOffset ?? 0);
+      setStreamWatchdogSeconds(settings.streamWatchdogSeconds ?? 10);
+      setStreamMaxRetries(settings.streamMaxRetries ?? 20);
 
       // Load LiveTV settings
       const darkenCurrent = settings.epgDarkenCurrent ?? false;
@@ -399,6 +406,20 @@ export function Settings({
     setMpvDisableWhitelist(disabled);
     if (window.storage) {
       await window.storage.updateSettings({ mpvDisableWhitelist: disabled });
+    }
+  };
+
+  const handleStreamWatchdogSecondsChange = async (seconds: number) => {
+    setStreamWatchdogSeconds(seconds);
+    if (window.storage) {
+      await window.storage.updateSettings({ streamWatchdogSeconds: seconds });
+    }
+  };
+
+  const handleStreamMaxRetriesChange = async (retries: number) => {
+    setStreamMaxRetries(retries);
+    if (window.storage) {
+      await window.storage.updateSettings({ streamMaxRetries: retries });
     }
   };
 
@@ -760,6 +781,10 @@ export function Settings({
             mpvDisableWhitelist={mpvDisableWhitelist}
             onMpvParamsChange={handleMpvParamsChange}
             onMpvDisableWhitelistChange={handleMpvDisableWhitelistChange}
+            streamWatchdogSeconds={streamWatchdogSeconds}
+            streamMaxRetries={streamMaxRetries}
+            onStreamWatchdogSecondsChange={handleStreamWatchdogSecondsChange}
+            onStreamMaxRetriesChange={handleStreamMaxRetriesChange}
           />
         );
       case 'cache':
