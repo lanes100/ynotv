@@ -5,12 +5,13 @@ import type { StoredChannel } from '../db';
 import { StalkerClient } from '@ynotv/local-adapter';
 import { useModal } from './Modal';
 import { addChannelsToGroup } from '../services/custom-groups';
+import { addChannelToFailoverGroup, createFailoverGroup } from '../services/failover-groups';
 import { addToRecentChannels } from '../utils/recentChannels';
 import { TVMazeSearchModal } from './TVMazeSearchModal';
 import { EpgEditorModal } from './EpgEditorModal';
 import './ProgramContextMenu.css'; // Reuse the same styles
 
-type MenuView = 'main' | 'quick' | 'custom' | 'group';
+type MenuView = 'main' | 'quick' | 'custom' | 'group' | 'failover';
 
 interface ChannelContextMenuProps {
     channel: StoredChannel;
@@ -50,6 +51,13 @@ export function ChannelContextMenu({
     const [customGroups, setCustomGroups] = useState<{ group_id: string; name: string }[]>([]);
     const [addingToGroup, setAddingToGroup] = useState<string | null>(null);
 
+    // Failover group state
+    const [failoverGroups, setFailoverGroups] = useState<{ group_id: string; name: string }[]>([]);
+    const [addingToFailoverGroup, setAddingToFailoverGroup] = useState<string | null>(null);
+    const [creatingFailoverGroup, setCreatingFailoverGroup] = useState(false);
+    const [newFailoverGroupName, setNewFailoverGroupName] = useState('');
+    const failoverNameInputRef = useRef<HTMLInputElement>(null);
+
     // Custom date/time state
     const now = new Date();
     const defaultEnd = new Date(now.getTime() + 30 * 60 * 1000);
@@ -66,6 +74,18 @@ export function ChannelContextMenu({
             if (isMounted) setCustomGroups(groups.sort((a, b) => a.name.localeCompare(b.name)));
         }).catch(() => {
             if (isMounted) setCustomGroups([]);
+        });
+        return () => { isMounted = false; };
+    }, [currentView]);
+
+    // Load failover groups when the user opens the failover group submenu
+    useEffect(() => {
+        if (currentView !== 'failover') return;
+        let isMounted = true;
+        db.failoverGroups.toArray().then(groups => {
+            if (isMounted) setFailoverGroups(groups.sort((a, b) => a.name.localeCompare(b.name)));
+        }).catch(() => {
+            if (isMounted) setFailoverGroups([]);
         });
         return () => { isMounted = false; };
     }, [currentView]);
@@ -245,6 +265,34 @@ export function ChannelContextMenu({
         }
     }
 
+    async function handleAddToFailoverGroup(groupId: string, groupName: string) {
+        if (addingToFailoverGroup) return;
+        setAddingToFailoverGroup(groupId);
+        try {
+            await addChannelToFailoverGroup(groupId, channel.stream_id);
+            showSuccess('Added to Failover Group', `${channel.name} added to "${groupName}"`);
+            onClose();
+        } catch (e: any) {
+            console.error('Failed to add channel to failover group:', e);
+            showError('Failed', e?.message || 'Could not add channel to failover group');
+            setAddingToFailoverGroup(null);
+        }
+    }
+
+    async function handleCreateAndAddToFailoverGroup() {
+        const trimmed = newFailoverGroupName.trim();
+        if (!trimmed) return;
+        try {
+            const newGroupId = await createFailoverGroup(trimmed);
+            await addChannelToFailoverGroup(newGroupId, channel.stream_id);
+            showSuccess('Created & Added', `Failover group "${trimmed}" created and ${channel.name} added`);
+            onClose();
+        } catch (e: any) {
+            console.error('Failed to create failover group:', e);
+            showError('Failed', e?.message || 'Could not create failover group');
+        }
+    }
+
     async function handleHideChannel() {
         try {
             await db.channels.update(channel.stream_id, { enabled: false });
@@ -284,6 +332,114 @@ export function ChannelContextMenu({
                         style={{ opacity: addingToGroup === group.group_id ? 0.5 : 1 }}
                     >
                         {addingToGroup === group.group_id ? '⏳' : '📋'} {group.name}
+                    </div>
+                ))}
+                <div className="context-menu-separator" />
+                <div className="context-menu-item context-menu-item-secondary" onClick={() => setCurrentView('main')}>
+                    ← Back
+                </div>
+                <ModalComponent />
+            </div>,
+            document.body
+        );
+    }
+
+    // ── ADD TO FAILOVER GROUP VIEW ──
+    if (currentView === 'failover') {
+        return createPortal(
+            <div
+                ref={menuRef}
+                className="program-context-menu"
+                style={{ left: `${adjustedPosition.x}px`, top: `${adjustedPosition.y}px`, minWidth: '200px' }}
+            >
+                <div className="context-menu-header">
+                    Add to Failover Group
+                </div>
+                <div className="context-menu-separator" />
+                {!creatingFailoverGroup ? (
+                    <div
+                        className="context-menu-item"
+                        onClick={() => {
+                            setCreatingFailoverGroup(true);
+                            setTimeout(() => failoverNameInputRef.current?.focus(), 50);
+                        }}
+                    >
+                        ➕ Create New Failover Group
+                    </div>
+                ) : (
+                    <div style={{ padding: '6px 12px', display: 'flex', gap: '6px', alignItems: 'center' }}>
+                        <input
+                            ref={failoverNameInputRef}
+                            type="text"
+                            placeholder="Group name…"
+                            value={newFailoverGroupName}
+                            onChange={e => setNewFailoverGroupName(e.target.value)}
+                            onKeyDown={e => {
+                                if (e.key === 'Enter') handleCreateAndAddToFailoverGroup();
+                                if (e.key === 'Escape') {
+                                    setCreatingFailoverGroup(false);
+                                    setNewFailoverGroupName('');
+                                }
+                            }}
+                            style={{
+                                flex: 1,
+                                padding: '5px 8px',
+                                borderRadius: '4px',
+                                border: '1px solid var(--accent-primary, #00d4ff)',
+                                background: 'rgba(0,0,0,0.3)',
+                                color: 'var(--text-primary, #fff)',
+                                fontSize: '0.85rem',
+                                fontFamily: 'inherit',
+                                outline: 'none',
+                            }}
+                        />
+                        <button
+                            onClick={handleCreateAndAddToFailoverGroup}
+                            style={{
+                                padding: '5px 10px',
+                                borderRadius: '4px',
+                                border: 'none',
+                                background: 'var(--accent-primary, #00d4ff)',
+                                color: '#000',
+                                fontWeight: 600,
+                                fontSize: '0.8rem',
+                                cursor: 'pointer',
+                                fontFamily: 'inherit',
+                            }}
+                        >
+                            Create
+                        </button>
+                        <button
+                            onClick={() => { setCreatingFailoverGroup(false); setNewFailoverGroupName(''); }}
+                            style={{
+                                padding: '5px 10px',
+                                borderRadius: '4px',
+                                border: '1px solid rgba(255,255,255,0.2)',
+                                background: 'rgba(255,255,255,0.06)',
+                                color: 'rgba(255,255,255,0.7)',
+                                fontSize: '0.8rem',
+                                cursor: 'pointer',
+                                fontFamily: 'inherit',
+                            }}
+                        >
+                            Cancel
+                        </button>
+                    </div>
+                )}
+                <div className="context-menu-separator" />
+                {failoverGroups.length === 0 && !creatingFailoverGroup && (
+                    <div style={{ padding: '10px 16px', opacity: 0.5, fontSize: '0.85rem' }}>
+                        No failover groups yet
+                    </div>
+                )}
+                {failoverGroups.map(group => (
+                    <div
+                        key={group.group_id}
+                        className="context-menu-item"
+                        onClick={() => handleAddToFailoverGroup(group.group_id, group.name)}
+                        style={{ opacity: addingToFailoverGroup === group.group_id ? 0.5 : 1 }}
+                    >
+                        {addingToFailoverGroup === group.group_id ? '⏳' : '🔗'} {group.name}
                     </div>
                 ))}
                 <div className="context-menu-separator" />
@@ -451,6 +607,9 @@ export function ChannelContextMenu({
             <div className="context-menu-separator" />
             <div className="context-menu-item" onClick={() => setCurrentView('group')}>
                 📋 Add to Group →
+            </div>
+            <div className="context-menu-item" onClick={() => setCurrentView('failover')}>
+                🔗 Add to Failover Group →
             </div>
             <div className="context-menu-separator" />
             <div className="context-menu-item" onClick={handleCopyStreamUrl}>
