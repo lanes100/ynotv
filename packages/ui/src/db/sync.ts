@@ -140,7 +140,7 @@ const VOD_SERIES_FIELDS = [
  */
 function buildStoredPrograms(
   xmltvPrograms: import('@ynotv/local-adapter').XmltvProgram[],
-  channelMap: Map<string, string>,
+  channelMap: Map<string, string | string[]>,
   sourceId: string,
   options: { compressDescriptions?: boolean; idPrefix?: string } = {}
 ): { programs: StoredProgram[]; unmatchedCount: number } {
@@ -148,25 +148,29 @@ function buildStoredPrograms(
   const unmatched = new Set<string>();
 
   for (const prog of xmltvPrograms) {
-    const streamId = channelMap.get(prog.channel_id);
-    if (streamId) {
-      const idBase = options.idPrefix
-        ? `${options.idPrefix}-${streamId}-${prog.start.getTime()}`
-        : `${streamId}_${prog.start.getTime()}`;
+    const streamIds = channelMap.get(prog.channel_id);
+    if (streamIds) {
+      const ids = Array.isArray(streamIds) ? streamIds : [streamIds];
+      
+      for (const streamId of ids) {
+        const idBase = options.idPrefix
+          ? `${options.idPrefix}-${streamId}-${prog.start.getTime()}`
+          : `${streamId}_${prog.start.getTime()}`;
 
-      const description = options.compressDescriptions
-        ? (compressEpgDescription(prog.description) ?? '')
-        : (prog.description || '');
+        const description = options.compressDescriptions
+          ? (compressEpgDescription(prog.description) ?? '')
+          : (prog.description || '');
 
-      programs.push({
-        id: idBase,
-        stream_id: streamId,
-        title: prog.title,
-        description,
-        start: prog.start,
-        end: prog.stop,
-        source_id: sourceId,
-      });
+        programs.push({
+          id: idBase,
+          stream_id: streamId,
+          title: prog.title,
+          description,
+          start: prog.start,
+          end: prog.stop,
+          source_id: sourceId,
+        });
+      }
     } else {
       unmatched.add(prog.channel_id);
     }
@@ -300,7 +304,7 @@ function getEpgWorker(): Worker {
           if (rawXml !== undefined) {
             callback.resolve({ programs: programs || [], rawXml });
           } else {
-            callback.resolve(programs || []);
+            callback.resolve({ programs: programs || [] });
           }
         } else {
           callback.reject(new Error(error || 'Worker error'));
@@ -400,8 +404,32 @@ async function fetchXmltvFromUrl(
     throw new Error('fetchProxy not available');
   }
 
+  // Handle local file paths (C:\... or /Users/...)
+  const isLocalFile = url.startsWith('C:') || url.startsWith('D:') || url.startsWith('/') || url.startsWith('file://');
+  if (isLocalFile) {
+    debugLog(`Detected local file path, reading directly from disk...`, 'epg');
+    const fs = await import('@tauri-apps/plugin-fs');
+    const path = url.replace('file://', '');
+    try {
+      const data = await fs.readFile(path);
+      const isGz = path.split('?')[0].endsWith('.gz');
+      
+      if (isGz && data.length > MAX_COMPRESSED_BYTES) {
+         throw new Error(`EPG file too large.`);
+      }
+      
+      const { programs, rawXml } = await parseEpgInWorker(data, isGz, includeRawXml);
+      debugLog(`Worker parsed ${programs.length} programs from local file`, 'epg');
+      return { programs, rawXml };
+    } catch (e: any) {
+      const errorMsg = `Failed to read local XMLTV file: ${e.message}`;
+      console.error(`[EPG] ${errorMsg}`);
+      throw new Error(errorMsg);
+    }
+  }
+
   // Handle gzipped files
-  if (url.endsWith('.gz')) {
+  if (url.split('?')[0].endsWith('.gz')) {
     debugLog('Detected gzipped file, fetching binary...', 'epg');
     const response = await window.fetchProxy.fetchBinary(url);
     if (!response.data) {
@@ -411,7 +439,7 @@ async function fetchXmltvFromUrl(
     }
 
     // Check compressed size before processing (large files freeze UI)
-    const estimatedCompressedSize = Math.floor(response.data.length * 0.75);
+    const estimatedCompressedSize = response.data.length;
     if (estimatedCompressedSize > MAX_COMPRESSED_BYTES) {
       const sizeMB = Math.round(estimatedCompressedSize / 1024 / 1024);
       debugLog(`Skipping oversized EPG file: ${sizeMB}MB (max ${MAX_COMPRESSED_SIZE_MB}MB) - ${url}`, 'epg');
@@ -570,7 +598,8 @@ async function syncEpgFromUrl(
         }
         : undefined,
       source.advanced_epg_matching,
-      source.epg_timeshift_hours ?? 0
+      source.epg_timeshift_hours ?? 0,
+      true // clearExisting = true for main EPG
     );
 
     debugLog(
@@ -743,6 +772,7 @@ async function syncEpgForSource(source: Source, channels: Channel[], epgUrl?: st
       channelMappings,
       advancedEpgMatching: source.advanced_epg_matching ?? false,
       timeshiftHours: source.epg_timeshift_hours ?? 0,
+      clearExisting: true,
     });
 
     console.log(`[EPG] Rust streaming parser COMPLETE:`);
@@ -926,12 +956,15 @@ async function syncAdditionalEpgUrls(
   let channelsWithPrograms = await getStreamIdsWithPrograms(source.id);
   let channelsNeedingEpg = channels.filter(ch => !channelsWithPrograms.has(ch.stream_id));
 
+  console.log(`[EPG] Additional EPG sync starting: ${channelsNeedingEpg.length} channels out of ${channels.length} need EPG.`);
+  
   debugLog(
     `${channelsNeedingEpg.length}/${channels.length} channels need EPG from additional sources`,
     'epg'
   );
 
   if (channelsNeedingEpg.length === 0) {
+    console.log(`[EPG] Additional EPG sync skipped: All channels already have EPG.`);
     debugLog('All channels already have EPG, skipping additional EPGs', 'epg');
     return 0;
   }
@@ -953,99 +986,59 @@ async function syncAdditionalEpgUrls(
     onProgress?.(`Updating EPG (additional ${i + 1}/${source.additional_epg_urls.length})...`);
 
     try {
-      // Fetch XMLTV programs (request raw XML only if advanced matching is enabled)
-      const { programs: xmltvPrograms, rawXml } = await fetchXmltvFromUrl(
-        epgUrl,
-        source.advanced_epg_matching
-      );
+      // Build channel mappings for Rust parser
+      // We only pass channels that STILL need EPGs
+      const channelMappings = channelsNeedingEpg
+        .filter((ch) => epgOverrideMap.has(ch.stream_id) || ch.epg_channel_id || ch.name)
+        .map((ch) => ({
+          epg_channel_id: epgOverrideMap.get(ch.stream_id) || ch.epg_channel_id || ch.name || '',
+          stream_id: ch.stream_id,
+          channel_name: ch.name || '',
+        }));
 
-      if (xmltvPrograms.length === 0) {
-        debugLog(`Additional EPG ${i + 1} returned no programs`, 'epg');
-        continue;
-      }
-
-      // Build channel map only for channels still needing EPG
-      const channelMap = new Map<string, string>();
-      const exactMatchedStreamIds = new Set<string>();
-
-      for (const ch of channelsNeedingEpg) {
-        const effectiveEpgId = (epgOverrideMap.get(ch.stream_id) || ch.epg_channel_id || '').trim();
-        if (effectiveEpgId) {
-          channelMap.set(effectiveEpgId, ch.stream_id);
-          exactMatchedStreamIds.add(ch.stream_id);
-        }
-      }
-
-      // Advanced EPG matching: try to match by display name if exact tvg-id match failed
-      if (source.advanced_epg_matching && rawXml && channelsNeedingEpg.length > exactMatchedStreamIds.size) {
-        const epgChannels = extractXmltvChannels(rawXml);
-        const displayNameMap = new Map<string, string>();
-        for (const ch of epgChannels) {
-          const normalized = normalizeChannelName(ch.displayName);
-          if (normalized && !displayNameMap.has(normalized)) {
-            displayNameMap.set(normalized, ch.id);
-          }
-        }
-
-        for (const ch of channelsNeedingEpg) {
-          if (exactMatchedStreamIds.has(ch.stream_id)) continue;
-          const normalizedName = normalizeChannelName(ch.name);
-          if (normalizedName && displayNameMap.has(normalizedName)) {
-            const epgId = displayNameMap.get(normalizedName)!;
-            channelMap.set(epgId, ch.stream_id);
-            debugLog(`Advanced match: "${ch.name}" -> "${epgId}"`, 'epg');
-          }
-        }
-      }
-
-      if (channelMap.size === 0) {
+      if (channelMappings.length === 0) {
         debugLog(`No channels with EPG IDs remaining for additional EPG ${i + 1}`, 'epg');
         continue;
       }
 
-      // Convert XMLTV programs to stored format, filtering to only matched channels
-      const { programs: matchedPrograms, unmatchedCount } = buildStoredPrograms(
-        xmltvPrograms,
-        channelMap,
-        source.id
+      console.log(`[EPG] Additional EPG ${i + 1}: Built channel map with ${channelMappings.length} unique mappings`);
+
+      // Use streaming EPG parser (with clearExisting = false to preserve waterfall)
+      const result = await epgStreaming.streamParseEpg(
+        source.id,
+        source.name || source.id,
+        epgUrl,
+        channelMappings,
+        onProgress
+          ? (progress) => {
+              debugLog(epgStreaming.formatProgress(progress), 'epg');
+              onProgress(epgStreaming.formatProgress(progress));
+            }
+          : undefined,
+        source.advanced_epg_matching,
+        source.epg_timeshift_hours ?? 0,
+        false // clearExisting = false
       );
 
+      console.log(`[EPG] Additional EPG ${i + 1}: Matched ${result.matched_programs}/${result.total_programs} programs. Inserted: ${result.inserted_programs}`);
+
       debugLog(
-        `Additional EPG ${i + 1}: matched ${matchedPrograms.length}/${xmltvPrograms.length} programs (${unmatchedCount} unmatched)`,
+        `Additional EPG ${i + 1}: inserted ${result.inserted_programs} programs`,
         'epg'
       );
 
-      if (matchedPrograms.length === 0) {
+      if (result.inserted_programs === 0) {
+        console.warn(`[EPG] Additional EPG ${i + 1}: No programs inserted!`);
         continue;
       }
 
-      // Insert programs WITHOUT clearing existing ones (waterfall behavior)
-      const bulkPrograms = matchedPrograms.map((p) => ({
-        id: p.id,
-        stream_id: p.stream_id,
-        title: p.title,
-        description:
-          p.description?.length > 2000
-            ? p.description.substring(0, 2000)
-            : p.description || '',
-        start: p.start instanceof Date ? p.start.toISOString() : p.start,
-        end: p.end instanceof Date ? p.end.toISOString() : p.end,
-        source_id: p.source_id,
-      }));
+      totalInserted += result.inserted_programs;
 
-      await db.programs.bulkPut(bulkPrograms);
-      totalInserted += matchedPrograms.length;
-
-      debugLog(
-        `Additional EPG ${i + 1}: inserted ${matchedPrograms.length} programs`,
-        'epg'
-      );
-
-      // Update channels still needing EPG
-      const newlyServed = new Set(matchedPrograms.map(p => p.stream_id));
-      channelsNeedingEpg = channelsNeedingEpg.filter(
-        ch => !newlyServed.has(ch.stream_id)
-      );
+      // After streaming insertion, we need to know which channels ACTUALLY got programs
+      // so we can filter them out of channelsNeedingEpg for the next additional URL.
+      // Easiest way is just to re-query the DB for channelsWithPrograms!
+      channelsWithPrograms = await getStreamIdsWithPrograms(source.id);
+      channelsNeedingEpg = channels.filter(ch => !channelsWithPrograms.has(ch.stream_id));
 
       debugLog(
         `${channelsNeedingEpg.length} channels still need EPG after additional ${i + 1}`,
@@ -1053,9 +1046,7 @@ async function syncAdditionalEpgUrls(
       );
 
       // Notify UI of new programs
-      if (matchedPrograms.length > 0) {
-        dbEvents.notify('programs', 'add');
-      }
+      dbEvents.notify('programs', 'add');
     } catch (err) {
       const errMsg = err instanceof Error ? err.message : String(err);
       console.error(`[EPG] Additional EPG ${i + 1} failed: ${errMsg}`);

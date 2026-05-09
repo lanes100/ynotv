@@ -293,11 +293,12 @@ pub async fn stream_parse_epg<R: tauri::Runtime>(
     channel_mappings: Vec<ChannelMapping>,
     advanced_epg_matching: bool,
     timeshift_hours: f64,
+    clear_existing: bool,
 ) -> Result<EpgParseResult> {
     let start_time = std::time::Instant::now();
     let src_ctx = format!("{} ({})", source_name, source_id);
 
-    info!("Starting TRUE streaming EPG parse for source {} from {} (advanced matching: {})", src_ctx, epg_url, advanced_epg_matching);
+    info!("Starting TRUE streaming EPG parse for source {} from {} (advanced matching: {}, clear_existing: {})", src_ctx, epg_url, advanced_epg_matching, clear_existing);
 
     // Build channel lookup map (supports multiple stream_ids per epg_channel_id)
     let channel_lookup = build_channel_lookup(channel_mappings);
@@ -409,6 +410,7 @@ pub async fn stream_parse_epg<R: tauri::Runtime>(
             db_clone,
             src_ctx_clone,
             timeshift_hours,
+            clear_existing,
         ).await
     });
 
@@ -477,6 +479,7 @@ async fn parse_download_stream<R: tauri::Runtime>(
     db: crate::dvr::database::DvrDatabase,
     src_ctx: String,
     timeshift_hours: f64,
+    clear_existing: bool,
 ) -> Result<StreamingParserResult> {
     let start_time = std::time::Instant::now();
 
@@ -518,10 +521,15 @@ async fn parse_download_stream<R: tauri::Runtime>(
     }
 
     // Defer SQLite deletion until we know the EPG was completely downloaded into memory!
-    info!("[EPG] EPG Download verified successful. Safe to delete old programs!");
-    info!("[EPG] Deleting old programs for source {}", src_ctx);
-    let deleted_count = delete_programs_for_source(&db, &source_id)?;
-    info!("[EPG] Deleted {} old programs for source {}", deleted_count, src_ctx);
+    info!("[EPG] EPG Download verified successful.");
+    if clear_existing {
+        info!("[EPG] Safe to delete old programs!");
+        info!("[EPG] Deleting old programs for source {}", src_ctx);
+        let deleted_count = delete_programs_for_source(&db, &source_id)?;
+        info!("[EPG] Deleted {} old programs for source {}", deleted_count, src_ctx);
+    } else {
+        info!("[EPG] Skipping deletion of old programs because clear_existing is false");
+    }
 
     let download_ms = start_time.elapsed().as_millis() as u64;
 
@@ -1301,11 +1309,12 @@ pub async fn parse_epg_file<R: tauri::Runtime>(
     channel_mappings: Vec<ChannelMapping>,
     advanced_epg_matching: bool,
     timeshift_hours: f64,
+    clear_existing: bool,
 ) -> Result<EpgParseResult> {
     use tokio::fs::File;
     use tokio::io::AsyncReadExt;
 
-    info!("Parsing local EPG file with streaming: {}", file_path);
+    info!("Parsing local EPG file with streaming: {}, clear_existing: {}", file_path, clear_existing);
     let start_time = std::time::Instant::now();
 
     // Read file
@@ -1324,9 +1333,13 @@ pub async fn parse_epg_file<R: tauri::Runtime>(
     // Build channel lookup map (supports multiple stream_ids per epg_channel_id)
     let channel_lookup = build_channel_lookup(channel_mappings);
 
-    // Delete old programs first
-    let deleted_count = delete_programs_for_source(db, &source_id)?;
-    info!("[EPG] Deleted {} old programs for source {}", deleted_count, source_id);
+    // Delete old programs first if requested
+    if clear_existing {
+        let deleted_count = delete_programs_for_source(db, &source_id)?;
+        info!("[EPG] Deleted {} old programs for source {}", deleted_count, source_id);
+    } else {
+        info!("[EPG] Skipping deletion of old programs because clear_existing is false");
+    }
 
     // Extract and persist EPG channel metadata (id, display_name, icon) for the editor
     let epg_channels = extract_epg_channels(&xml_data);

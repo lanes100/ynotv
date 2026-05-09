@@ -24,15 +24,22 @@ export interface EpgWorkerResponse {
 }
 
 // Decompress gzipped data
-async function decompressGzip(base64Data: string): Promise<string> {
-  const binaryString = atob(base64Data);
-  const bytes = new Uint8Array(binaryString.length);
-  for (let i = 0; i < binaryString.length; i++) {
-    bytes[i] = binaryString.charCodeAt(i);
+async function decompressGzip(data: Uint8Array | string): Promise<string> {
+  let bytes: Uint8Array;
+  
+  if (data instanceof Uint8Array) {
+    bytes = data;
+  } else {
+    // Legacy base64 support
+    const binaryString = atob(data);
+    bytes = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+      bytes[i] = binaryString.charCodeAt(i);
+    }
   }
 
   const ds = new DecompressionStream('gzip');
-  const decompressedStream = new Blob([bytes]).stream().pipeThrough(ds);
+  const decompressedStream = new Blob([bytes as any]).stream().pipeThrough(ds);
   const decompressedBlob = await new Response(decompressedStream).blob();
   return await decompressedBlob.text();
 }
@@ -45,21 +52,30 @@ self.onmessage = async (event: MessageEvent<EpgWorkerMessage>) => {
   try {
     let xmlText: string;
 
-    // Get the data - either from transferred buffer or string
-    let inputData: string;
-    if (isBuffer && buffer) {
-      // Decode transferred buffer back to string
-      const decoder = new TextDecoder();
-      inputData = decoder.decode(buffer);
-    } else if (data) {
-      inputData = data;
-    } else {
-      throw new Error('No data provided');
-    }
-
     if (isGzipped) {
-      xmlText = await decompressGzip(inputData);
+      // If gzipped, the input must be treated as binary bytes.
+      let binaryInput: Uint8Array | string;
+      if (isBuffer && buffer) {
+        binaryInput = buffer;
+      } else if (data) {
+        binaryInput = data;
+      } else {
+        throw new Error('No data provided');
+      }
+      xmlText = await decompressGzip(binaryInput);
+      console.log(`[EPG Worker] Decompressed gzip. Length: ${xmlText.length}. Starts with: ${xmlText.substring(0, 200)}`);
     } else {
+      // Not gzipped, so it's a string.
+      let inputData: string;
+      if (isBuffer && buffer) {
+        // Decode transferred buffer back to string
+        const decoder = new TextDecoder();
+        inputData = decoder.decode(buffer);
+      } else if (data) {
+        inputData = data;
+      } else {
+        throw new Error('No data provided');
+      }
       xmlText = inputData;
     }
 
