@@ -1,0 +1,209 @@
+import { db } from '../db';
+import type { FailoverGroup, StoredChannel } from '../db';
+
+/** Get the full ordered member list for a group, with channel data joined */
+export async function getFailoverGroupMembers(
+  groupId: string
+): Promise<Array<{ stream_id: string; priority: number; name: string; stream_icon?: string }>> {
+  const members = await db.failoverGroupMembers
+    .where('group_id')
+    .equals(groupId)
+    .sortBy('priority');
+  if (!members.length) return [];
+  const streamIds = members.map(m => m.stream_id);
+  const channels = await db.channels.where('stream_id').anyOf(streamIds).toArray();
+  const channelMap = new Map(channels.map(c => [c.stream_id, c]));
+  const result: Array<{ stream_id: string; priority: number; name: string; stream_icon?: string }> = [];
+  for (const m of members) {
+    const ch = channelMap.get(m.stream_id);
+    if (ch && ch.name) {
+      result.push({
+        stream_id: m.stream_id,
+        priority: m.priority,
+        name: ch.name,
+        stream_icon: ch.stream_icon,
+      });
+    }
+  }
+  return result;
+}
+
+/** Given a currently playing stream_id, return the next backup channel or null */
+export async function getNextFailoverChannel(
+  currentStreamId: string
+): Promise<StoredChannel | null> {
+  // Find which group this channel is in
+  const membership = await db.failoverGroupMembers
+    .where('stream_id')
+    .equals(currentStreamId)
+    .first();
+  if (!membership) return null;
+
+  // Get all members of that group ordered by priority
+  const allMembers = await db.failoverGroupMembers
+    .where('group_id')
+    .equals(membership.group_id)
+    .sortBy('priority');
+
+  const currentIndex = allMembers.findIndex(m => m.stream_id === currentStreamId);
+  if (currentIndex === -1) return null;
+
+  // Try each subsequent member in priority order
+  for (let i = currentIndex + 1; i < allMembers.length; i++) {
+    const candidate = await db.channels
+      .where('stream_id')
+      .equals(allMembers[i].stream_id)
+      .first();
+    if (candidate && candidate.enabled !== false) {
+      return candidate;
+    }
+  }
+  return null; // All backups exhausted
+}
+
+/** Given a stream_id, return the primary (priority=0) channel of its group, or null */
+export async function getPrimaryChannelForGroup(
+  anyStreamId: string
+): Promise<StoredChannel | null> {
+  const membership = await db.failoverGroupMembers
+    .where('stream_id')
+    .equals(anyStreamId)
+    .first();
+  if (!membership) return null;
+
+  const primary = await db.failoverGroupMembers
+    .where('group_id')
+    .equals(membership.group_id)
+    .filter(m => m.priority === 0)
+    .first();
+  if (!primary) return null;
+
+  const channel = await db.channels.where('stream_id').equals(primary.stream_id).first();
+  return channel || null;
+}
+
+/** Create a new failover group and return its ID */
+export async function createFailoverGroup(name: string): Promise<string> {
+  const group_id = crypto.randomUUID();
+  await db.failoverGroups.put({ group_id, name, created_at: Date.now() });
+  return group_id;
+}
+
+/** Add a channel to a group. Throws if channel is already in a different group. */
+export async function addChannelToFailoverGroup(
+  groupId: string,
+  streamId: string
+): Promise<void> {
+  // Check existing membership
+  const existing = await db.failoverGroupMembers
+    .where('stream_id')
+    .equals(streamId)
+    .first();
+  if (existing && existing.group_id !== groupId) {
+    throw new Error(`Channel is already in failover group "${existing.group_id}". Remove it first.`);
+  }
+  if (existing) return; // Already in this group, nothing to do
+
+  // Determine next priority
+  const members = await db.failoverGroupMembers
+    .where('group_id')
+    .equals(groupId)
+    .toArray();
+  const maxPriority = members.reduce((max, m) => Math.max(max, m.priority), -1);
+
+  await db.failoverGroupMembers.put({
+    group_id: groupId,
+    stream_id: streamId,
+    priority: maxPriority + 1,
+  });
+}
+
+/** Remove a channel from its failover group. Re-normalizes priority numbers. */
+export async function removeChannelFromFailoverGroup(streamId: string): Promise<void> {
+  const member = await db.failoverGroupMembers
+    .where('stream_id')
+    .equals(streamId)
+    .first();
+  if (!member || member.id === undefined) return;
+
+  await db.failoverGroupMembers.delete(member.id);
+
+  // Re-normalize priorities (0, 1, 2, ... without gaps)
+  const remaining = await db.failoverGroupMembers
+    .where('group_id')
+    .equals(member.group_id)
+    .sortBy('priority');
+  for (let i = 0; i < remaining.length; i++) {
+    if (remaining[i].priority !== i && remaining[i].id !== undefined) {
+      await db.failoverGroupMembers.update(remaining[i].id!, { priority: i });
+    }
+  }
+}
+
+/** Reorder: move a member to a new priority index within its group */
+export async function reorderFailoverGroupMember(
+  streamId: string,
+  newPriority: number
+): Promise<void> {
+  const member = await db.failoverGroupMembers
+    .where('stream_id')
+    .equals(streamId)
+    .first();
+  if (!member || member.id === undefined) return;
+
+  const members = await db.failoverGroupMembers
+    .where('group_id')
+    .equals(member.group_id)
+    .sortBy('priority');
+
+  // Remove from current position, insert at new position
+  const reordered = members.filter(m => m.stream_id !== streamId);
+  reordered.splice(newPriority, 0, member);
+
+  // Write back new priorities
+  for (let i = 0; i < reordered.length; i++) {
+    if (reordered[i].id !== undefined && reordered[i].priority !== i) {
+      await db.failoverGroupMembers.update(reordered[i].id!, { priority: i });
+    }
+  }
+}
+
+/** Delete an entire failover group (members cascade-deleted by FK) */
+export async function deleteFailoverGroup(groupId: string): Promise<void> {
+  await db.failoverGroups.delete(groupId);
+}
+
+/** Rename a failover group */
+export async function renameFailoverGroup(groupId: string, newName: string): Promise<void> {
+  await db.failoverGroups.update(groupId, { name: newName });
+}
+
+/** Get the group name for a given stream_id (for display in channel lists) */
+export async function getFailoverGroupForChannel(
+  streamId: string
+): Promise<{ groupId: string; groupName: string; priority: number } | null> {
+  const member = await db.failoverGroupMembers
+    .where('stream_id')
+    .equals(streamId)
+    .first();
+  if (!member) return null;
+  const group = await db.failoverGroups.where('group_id').equals(member.group_id).first();
+  if (!group) return null;
+  return { groupId: group.group_id, groupName: group.name, priority: member.priority };
+}
+
+/** List all failover groups with their member count */
+export async function listFailoverGroups(): Promise<
+  Array<FailoverGroup & { memberCount: number }>
+> {
+  const groups = await db.failoverGroups.toArray();
+  const result = [];
+  for (const g of groups) {
+    const count = await db.failoverGroupMembers
+      .where('group_id')
+      .equals(g.group_id)
+      .count();
+    result.push({ ...g, memberCount: count });
+  }
+  return result;
+}

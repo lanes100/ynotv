@@ -19,6 +19,8 @@ import { db } from '../db';
 import { syncSource, type SyncResult } from '../db/sync';
 import { VideoErrorOverlay } from './VideoErrorOverlay';
 import { StreamRetryOverlay, type RetryState } from './StreamRetryOverlay';
+import { FailoverOverlay } from './FailoverOverlay';
+import type { FailoverState } from '../hooks/usePlayback';
 import { Bridge } from '../services/tauri-bridge';
 import { MetadataBadge } from './MetadataBadge';
 import { EpgShiftModal } from './EpgShiftModal';
@@ -151,6 +153,8 @@ interface ChannelPanelProps {
   onTimeshiftCatchUp?: () => void;
   /** Retry state for Live TV — shown in preview pane */
   retryState?: RetryState | null;
+  /** Failover state for Live TV — shown in preview pane */
+  failoverState?: FailoverState | null;
 }
 
 export function ChannelPanel({
@@ -205,6 +209,7 @@ export function ChannelPanel({
   timeshiftState = null,
   onTimeshiftCatchUp,
   retryState = null,
+  failoverState = null,
 }: ChannelPanelProps) {
   const epgView = useEpgView();
 
@@ -1302,6 +1307,10 @@ export function ChannelPanel({
             {/* Show Stream Retry Overlay if a retry is in progress */}
             {retryState?.isRetrying && (
               <StreamRetryOverlay retryState={retryState} isSmall />
+            )}
+            {/* Show Failover Overlay if a failover is in progress */}
+            {failoverState?.isFailingOver && (
+              <FailoverOverlay state={failoverState} isSmall />
             )}
           </div>
           {/* Mini Media Bar for EPG Preview - transparent overlay in bottom right */}

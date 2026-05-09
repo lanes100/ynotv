@@ -235,6 +235,21 @@ export interface CustomGroupChannel {
   added_at: number;
 }
 
+// Failover Group — ordered set of channels representing the same logical stream
+export interface FailoverGroup {
+  group_id: string;      // UUID
+  name: string;          // User-facing label
+  created_at: number;    // Unix timestamp ms
+}
+
+// Failover Group Member — channel within a failover group
+export interface FailoverGroupMember {
+  id?: number;           // Auto-increment PK
+  group_id: string;      // FK → failover_groups.group_id
+  stream_id: string;     // FK → channels.stream_id
+  priority: number;      // 0 = primary, 1 = first backup, etc.
+}
+
 // EPG Channel Override — persistent overrides for a channel's EPG identity
 export interface EpgChannelOverride {
   stream_id: string;          // PK – FK to channels.stream_id
@@ -309,6 +324,8 @@ class YnotvDatabase extends SqliteDatabase {
   epgProgramOverrides: SqliteTable<EpgProgramOverride, string>;
   vodHistory: SqliteTable<VodWatchHistory, number>;
   episodeHistory: SqliteTable<EpisodeWatchHistory, number>;
+  failoverGroups: SqliteTable<FailoverGroup, string>;
+  failoverGroupMembers: SqliteTable<FailoverGroupMember, number>;
 
 
   constructor() {
@@ -337,6 +354,8 @@ class YnotvDatabase extends SqliteDatabase {
     this.epgProgramOverrides = new SqliteTable('epg_program_overrides', 'id', this.dbPromise);
     this.vodHistory = new SqliteTable('vod_history', 'id', this.dbPromise);
     this.episodeHistory = new SqliteTable('episode_history', 'id', this.dbPromise);
+    this.failoverGroups = new SqliteTable('failover_groups', 'group_id', this.dbPromise);
+    this.failoverGroupMembers = new SqliteTable('failover_group_members', 'id', this.dbPromise);
 
     // Initialize Schema (Async) - Chain to DB promise to ensure tables exist before usage
     const rawPromise = this.dbPromise;
@@ -367,6 +386,8 @@ class YnotvDatabase extends SqliteDatabase {
     this.epgProgramOverrides.updateDbPromise(this.dbPromise);
     this.vodHistory.updateDbPromise(this.dbPromise);
     this.episodeHistory.updateDbPromise(this.dbPromise);
+    this.failoverGroups.updateDbPromise(this.dbPromise);
+    this.failoverGroupMembers.updateDbPromise(this.dbPromise);
   }
 
   async initSchema(dbInstance?: Database) {
@@ -412,7 +433,7 @@ class YnotvDatabase extends SqliteDatabase {
     // Each version block runs exactly ONCE. To add new columns in the future,
     // increment DB_VERSION and add a new case (do NOT modify existing cases).
     // ─────────────────────────────────────────────────────────────────────────
-    const DB_VERSION = 6;
+    const DB_VERSION = 7;
     const versionResult = await db.select('PRAGMA user_version') as Array<{ user_version: number }>;
     const currentVersion = versionResult[0]?.user_version ?? 0;
 
@@ -467,6 +488,12 @@ class YnotvDatabase extends SqliteDatabase {
           try { await db.execute(`ALTER TABLE ${table} ADD COLUMN ${col} ${type}`); } catch { /* already exists */ }
         };
         await addColumn('sourcesMeta', 'epg_timeshift_hours', 'REAL DEFAULT 0');
+      }
+
+      if (currentVersion < 7) {
+        // v7: Failover Groups — priority-ordered channel backup lists
+        console.log('[DB] v7 migration: Adding failover_groups tables');
+        // No ALTER TABLE needed — tables created below via CREATE TABLE IF NOT EXISTS
       }
 
       if (currentVersion < 2) {
@@ -801,6 +828,28 @@ class YnotvDatabase extends SqliteDatabase {
     await db.execute(`CREATE INDEX IF NOT EXISTS idx_custom_group_channels_group ON custom_group_channels(group_id)`);
     await db.execute(`CREATE INDEX IF NOT EXISTS idx_custom_group_channels_stream ON custom_group_channels(stream_id)`);
     await db.execute(`CREATE INDEX IF NOT EXISTS idx_custom_group_channels_order ON custom_group_channels(group_id, display_order)`);
+
+    // Failover Groups
+    await db.execute(`CREATE TABLE IF NOT EXISTS failover_groups (
+      group_id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      created_at INTEGER NOT NULL
+    )`);
+
+    await db.execute(`CREATE TABLE IF NOT EXISTS failover_group_members (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      group_id TEXT NOT NULL,
+      stream_id TEXT NOT NULL UNIQUE,
+      priority INTEGER NOT NULL DEFAULT 0,
+      FOREIGN KEY (group_id) REFERENCES failover_groups(group_id) ON DELETE CASCADE,
+      FOREIGN KEY (stream_id) REFERENCES channels(stream_id) ON DELETE CASCADE
+    )`);
+
+    await db.execute(`CREATE INDEX IF NOT EXISTS idx_failover_members_group
+      ON failover_group_members(group_id, priority)`);
+
+    await db.execute(`CREATE INDEX IF NOT EXISTS idx_failover_members_stream
+      ON failover_group_members(stream_id)`);
 
     // Migration: Add missing columns for optimized bulk operations (VOD sync fix)
     // These columns were added after initial schema creation for faster bulk upserts

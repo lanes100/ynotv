@@ -1,0 +1,260 @@
+.failover-tab {
+  padding: 16px;
+}
+
+.failover-tab h3 {
+  margin: 0 0 8px 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.failover-desc {
+  margin: 0 0 20px 0;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.6);
+  line-height: 1.5;
+}
+
+/* Create row */
+.failover-create-row {
+  margin-bottom: 20px;
+}
+
+.failover-create-btn {
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(60, 200, 180, 0.12);
+  color: rgba(100, 230, 210, 0.9);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.failover-create-btn:hover {
+  background: rgba(60, 200, 180, 0.2);
+}
+
+.failover-create-form {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.failover-create-form input {
+  flex: 1;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(0, 0, 0, 0.3);
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 13px;
+}
+
+.failover-create-form button {
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(60, 200, 180, 0.15);
+  color: rgba(100, 230, 210, 0.9);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.failover-create-form button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.failover-create-form button.cancel-btn {
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.6);
+}
+
+/* Empty state */
+.failover-empty {
+  padding: 32px;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 13px;
+}
+
+/* Group list */
+.failover-group-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.failover-group-card {
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+}
+
+.failover-group-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+}
+
+.failover-expand-btn {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 11px;
+  cursor: pointer;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.failover-group-name {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.9);
+  cursor: text;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: background 0.1s;
+}
+
+.failover-group-name:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.failover-rename-input {
+  flex: 1;
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(0, 0, 0, 0.4);
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 14px;
+}
+
+.failover-group-count {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.failover-delete-btn {
+  background: none;
+  border: none;
+  color: rgba(255, 100, 100, 0.7);
+  font-size: 14px;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: background 0.1s;
+}
+
+.failover-delete-btn:hover {
+  background: rgba(255, 100, 100, 0.12);
+}
+
+/* Members */
+.failover-group-members {
+  padding: 0 14px 14px 14px;
+}
+
+.failover-channel-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.failover-member-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid transparent;
+  transition: background 0.1s, border-color 0.1s;
+}
+
+.failover-member-item:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.failover-member-item[data-dragover="true"] {
+  border-color: rgba(60, 200, 180, 0.4);
+}
+
+.failover-drag-handle {
+  color: rgba(255, 255, 255, 0.2);
+  font-size: 12px;
+  line-height: 1;
+  user-select: none;
+  padding: 2px;
+}
+
+.failover-member-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  object-fit: cover;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.failover-member-icon-placeholder {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+}
+
+.failover-member-name {
+  flex: 1;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.failover-priority-badge {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  padding: 2px 8px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.55);
+  text-transform: uppercase;
+}
+
+.failover-priority-badge.primary {
+  background: rgba(60, 200, 180, 0.15);
+  color: rgba(80, 220, 200, 0.9);
+}
+
+.failover-remove-member-btn {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.3);
+  font-size: 12px;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: color 0.1s, background 0.1s;
+}
+
+.failover-remove-member-btn:hover {
+  color: rgba(255, 100, 100, 0.8);
+  background: rgba(255, 100, 100, 0.1);
+}
+
+.failover-no-members {
+  padding: 16px;
+  text-align: center;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.35);
+}

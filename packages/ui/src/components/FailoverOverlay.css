@@ -1,0 +1,116 @@
+/* FailoverOverlay — inline, non-popup status message centered in the video area */
+
+.failover-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.65);
+  z-index: 20;
+  pointer-events: none;
+  border-radius: inherit;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+.failover-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  text-align: center;
+  padding: 24px 32px;
+  border-radius: 16px;
+  background: rgba(15, 15, 20, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(255, 255, 255, 0.04) inset;
+}
+
+/* ── Icon ─────────────────────────────────────────────────── */
+
+.failover-icon {
+  position: relative;
+  width: 52px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(60, 200, 180, 0.9); /* teal/cyan accent */
+}
+
+.failover-icon svg {
+  width: 28px;
+  height: 28px;
+  filter: drop-shadow(0 0 6px rgba(60, 200, 180, 0.5));
+  animation: failover-spin 1.2s linear infinite;
+}
+
+@keyframes failover-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* ── Text ─────────────────────────────────────────────────── */
+
+.failover-text {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.failover-title {
+  font-family: 'Inter', 'Outfit', system-ui, sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.92);
+  letter-spacing: 0.01em;
+}
+
+.failover-from {
+  font-family: 'Inter', 'Outfit', system-ui, sans-serif;
+  font-size: 13px;
+  font-weight: 400;
+  color: rgba(100, 220, 200, 0.85);
+  letter-spacing: 0.02em;
+}
+
+.failover-attempt {
+  font-family: 'Inter', 'Outfit', system-ui, sans-serif;
+  font-size: 11px;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.38);
+  letter-spacing: 0.03em;
+}
+
+/* ── Small variant (ChannelPanel preview pane) ──────────────── */
+
+.failover-overlay.small .failover-content {
+  padding: 12px 18px;
+  gap: 8px;
+  border-radius: 10px;
+}
+
+.failover-overlay.small .failover-icon {
+  width: 32px;
+  height: 32px;
+}
+
+.failover-overlay.small .failover-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.failover-overlay.small .failover-title {
+  font-size: 11px;
+}
+
+.failover-overlay.small .failover-from {
+  font-size: 10px;
+}
+
+.failover-overlay.small .failover-attempt {
+  font-size: 9px;
+}

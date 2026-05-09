@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import type { RetryState } from '../components/StreamRetryOverlay';
 import { invoke } from '@tauri-apps/api/core';
 import type { StoredChannel } from '../db';
+import { getNextFailoverChannel, getPrimaryChannelForGroup } from '../services/failover-groups';
 import type { VodPlayInfo } from '../types/media';
 import { Bridge, registerOnAppClose, unregisterOnAppClose } from '../services/tauri-bridge';
 import { resolvePlayUrl } from '../services/stream-resolver';
@@ -166,6 +167,13 @@ async function tryLoadWithFallbacks(
   return { success: false, url: primaryUrl, error: errorMsg };
 }
 
+export interface FailoverState {
+  isFailingOver: boolean;
+  fromChannelName: string;
+  toChannelName: string;
+  attempt: number;
+}
+
 export interface PlaybackState {
   // MPV state
   mpvReady: boolean;
@@ -195,6 +203,9 @@ export interface PlaybackState {
 
   // Retry state (Live TV only)
   retryState: RetryState | null;
+
+  // Failover state (Live TV only)
+  failoverState: FailoverState | null;
 
   // Actions
   setError: (error: string | null) => void;
@@ -271,6 +282,9 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
   // Retry state for Live TV stream recovery
   const [retryState, setRetryState] = useState<RetryState | null>(null);
 
+  // Failover state for Live TV stream recovery
+  const [failoverState, setFailoverState] = useState<FailoverState | null>(null);
+
   // Configurable retry settings — loaded from storage, stored in refs so
   // they're always current inside interval callbacks without stale closures.
   const maxRetriesRef = useRef(20);
@@ -319,6 +333,11 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
   const currentChannelRef = useRef(currentChannel);
   const vodInfoRef2 = useRef(vodInfo);
   const catchupInfoRef = useRef(catchupInfo);
+
+  // Failover state
+  const failoverActiveRef = useRef(false);
+  const failoverOriginChannelRef = useRef<StoredChannel | null>(null);
+  const failoverAttemptRef = useRef(0);
 
   useEffect(() => { currentChannelRef.current = currentChannel; }, [currentChannel]);
   useEffect(() => { vodInfoRef2.current = vodInfo; }, [vodInfo]);
@@ -602,41 +621,121 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
   }, [clearRetryTimers, handleLoadStream]);
 
   /**
+   * Switch to a failover backup channel.
+   */
+  const handleFailover = useCallback(async (nextChannel: StoredChannel) => {
+    const dying = currentChannelRef.current;
+    if (!dying) return;
+
+    failoverAttemptRef.current += 1;
+    failoverActiveRef.current = true;
+
+    logInfo(`[Failover] Switching from "${dying.name}" → "${nextChannel.name}" (attempt ${failoverAttemptRef.current})`);
+
+    // Clear any error overlay so failover UI is visible (z-index stacking)
+    setError(null);
+
+    // Show the failover overlay
+    setFailoverState({
+      isFailingOver: true,
+      fromChannelName: dying.name,
+      toChannelName: nextChannel.name,
+      attempt: failoverAttemptRef.current,
+    });
+
+    // Clear the frozen frame immediately
+    Bridge.stop().catch(() => {});
+
+    // Brief pause so the overlay is visible, then switch
+    await new Promise(resolve => setTimeout(resolve, 800));
+
+    // Load the backup channel (reuse existing path — this sets currentChannel)
+    try {
+      await handleLoadStream(nextChannel);
+      // On success, clear failover UI but keep failoverActiveRef true
+      // (so if THIS stream also dies, we continue cycling, not restart from the primary)
+      setFailoverState(null);
+      // Reset stall tracking so watchdog gives the new stream time to buffer
+      lastPositionRef.current = 0;
+      lastPositionTimeRef.current = Date.now() + stallThresholdMsRef.current;
+    } catch {
+      // handleLoadStream failed — try next backup
+      handleStreamDied();
+    }
+  }, [handleLoadStream]);
+
+  /**
    * Entry point for both the event-based and watchdog-based stream failure detection.
    * Guards against double-firing and max retry exhaustion.
    */
-  const handleStreamDied = useCallback(() => {
+  const handleStreamDied = useCallback(async () => {
     // Only retry for Live TV (not VOD, not catchup)
     if (!currentChannelRef.current || vodInfoRef2.current || catchupInfoRef.current) return;
-    // Don't start another retry if one is already in progress
-    if (isRetryingRef.current) return;
+    // Don't start another retry or failover if one is already in progress
+    if (isRetryingRef.current || failoverActiveRef.current) return;
 
-    if (retryAttemptRef.current >= maxRetriesRef.current) {
-      logError('[Retry] Max retries reached, giving up');
-      setError('Stream unavailable after maximum retry attempts');
-      setRetryState(null);
-      clearWatchdog();
-      return;
+    // Check if this channel has a failover backup
+    const nextChannel = await getNextFailoverChannel(currentChannelRef.current.stream_id);
+
+    if (nextChannel) {
+      // Failover path — switch to backup stream
+      handleFailover(nextChannel);
+    } else if (failoverAttemptRef.current > 0) {
+      // We were in a failover cycle and just exhausted all backups.
+      // Loop back to the primary channel and start the cycle again.
+      const primary = await getPrimaryChannelForGroup(currentChannelRef.current.stream_id);
+      if (primary) {
+        logWarn('[Failover] All backups exhausted, looping back to primary');
+        handleFailover(primary);
+      } else {
+        failoverActiveRef.current = false;
+        logWarn('[Failover] All backups exhausted, falling back to retry on current stream');
+        startRetryCountdown();
+      }
+    } else {
+      // Standard retry path (no failover group configured)
+      if (retryAttemptRef.current >= maxRetriesRef.current) {
+        logError('[Retry] Max retries reached, giving up');
+        setError('Stream unavailable after maximum retry attempts');
+        setRetryState(null);
+        clearWatchdog();
+        return;
+      }
+      startRetryCountdown();
     }
+  }, [handleFailover, startRetryCountdown, clearWatchdog, setError]);
 
-    startRetryCountdown();
-  }, [startRetryCountdown, clearWatchdog, setError]);
-
-  // ── mpv-stream-ended listener ──────────────────────────────────────────────
-  // Fires when the backend receives end-file with reason=eof or reason=network.
+  // ── mpv-stream-ended / mpv-end-file-error / mpv-http-error listeners ───────
+  // All three failure signals route through handleStreamDied so failover runs.
   useEffect(() => {
     if (!Bridge.isTauri) return;
 
-    let unlisten: (() => void) | null = null;
+    let unlistenEnded: (() => void) | null = null;
+    let unlistenEndFileError: (() => void) | null = null;
+    let unlistenHttpError: (() => void) | null = null;
 
     import('@tauri-apps/api/event').then(({ listen }) => {
       listen('mpv-stream-ended', () => {
         logInfo('[Retry] Received mpv-stream-ended event');
         handleStreamDied();
-      }).then((fn) => { unlisten = fn; });
+      }).then((fn) => { unlistenEnded = fn; });
+
+      listen('mpv-end-file-error', () => {
+        logInfo('[Retry] Received mpv-end-file-error event');
+        handleStreamDied();
+      }).then((fn) => { unlistenEndFileError = fn; });
+
+      listen('mpv-http-error', () => {
+        logInfo('[Retry] Received mpv-http-error event');
+        handleStreamDied();
+      }).then((fn) => { unlistenHttpError = fn; });
     });
 
-    return () => { unlisten?.(); };
+    return () => {
+      unlistenEnded?.();
+      unlistenEndFileError?.();
+      unlistenHttpError?.();
+    };
   }, [handleStreamDied]);
 
   // ── Watchdog interval ──────────────────────────────────────────────────────
@@ -687,6 +786,12 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
     retryAttemptRef.current = 0;
     lastPositionRef.current = 0;
     lastPositionTimeRef.current = Date.now();
+
+    // Reset failover state on manual channel switch
+    failoverActiveRef.current = false;
+    failoverOriginChannelRef.current = null;
+    failoverAttemptRef.current = 0;
+    setFailoverState(null);
 
     // Save VOD progress before switching to Live TV
     if (vodInfo && position > 0 && duration > 0) {
@@ -1053,6 +1158,12 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
     setVodInfo(null); // Clear vodInfo on stop
     setCatchupInfo(null);
     setError(null);
+
+    // Reset failover state on stop
+    failoverActiveRef.current = false;
+    failoverOriginChannelRef.current = null;
+    failoverAttemptRef.current = 0;
+    setFailoverState(null);
   }, [vodInfo, position, duration]);
 
   const handleSeek = useCallback(async (seconds: number) => {
@@ -1119,6 +1230,7 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
     seekingRef,
     isCatchup,
     retryState,
+    failoverState,
     setError,
     setPlaying,
     setPosition,

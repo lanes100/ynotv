@@ -44,6 +44,7 @@ import type { StoredChannel } from './db';
 import { db } from './db';
 import { VideoErrorOverlay } from './components/VideoErrorOverlay';
 import { StreamRetryOverlay } from './components/StreamRetryOverlay';
+import { FailoverOverlay } from './components/FailoverOverlay';
 import { syncSource, syncVodForSource, isEpgStale, isVodStale } from './db/sync';
 import { bulkOps } from './services/bulk-ops';
 import { Bridge } from './services/tauri-bridge';
@@ -244,6 +245,7 @@ function App() {
     catchupInfo,
     isCatchup,
     retryState,
+    failoverState,
     setCurrentChannel,
     handlePlayChannel,
     handlePlayCatchup,
@@ -1176,6 +1178,11 @@ function App() {
         {retryState?.isRetrying && activeView !== 'guide' && (
           <StreamRetryOverlay retryState={retryState} />
         )}
+
+        {/* Failover overlay — shown when switching to backup stream */}
+        {failoverState?.isFailingOver && activeView !== 'guide' && (
+          <FailoverOverlay state={failoverState} />
+        )}
       </div>
 
       {/* Video double-click overlay - captures double-clicks on video area to toggle fullscreen */}
@@ -1407,6 +1414,7 @@ function App() {
         onShowSubtitleModal={handleShowSubtitleModal}
         onShowAudioModal={handleShowAudioModal}
         retryState={retryState}
+        failoverState={failoverState}
         onCatchupSeek={handleCatchupSeek}
         timeshiftEnabled={timeshiftEnabled}
         timeshiftState={timeshiftState}
