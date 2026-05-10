@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useLiveQuery } from '../hooks/useSqliteLiveQuery';
 import { useCategoriesBySource, type CategoryWithCount, type SourceWithCategories } from '../hooks/useChannels';
-import { db, getWatchlistCount, type CustomGroup } from '../db';
+import { db, getWatchlistCount, type CustomGroup, updateCategoryEnabled } from '../db';
 import type { Source } from '@ynotv/core';
 import { useSourceVersion } from '../contexts/SourceVersionContext';
 import { normalizeBoolean } from '../utils/db-helpers';
@@ -11,6 +11,7 @@ import { CustomGroupManager } from './CustomGroupManager';
 import { CategoryManager } from './settings/CategoryManager';
 import { FavoriteManager } from './settings/FavoriteManager';
 import { SourceContextMenu } from './SourceContextMenu';
+import { CategoryContextMenu } from './CategoryContextMenu';
 import { EpgEditorModal } from './EpgEditorModal';
 import './CategoryStrip.css';
 
@@ -250,6 +251,9 @@ export function CategoryStrip({ selectedCategoryId, onSelectCategory, visible, s
   const [favoritesContextMenu, setFavoritesContextMenu] = useState<{ x: number, y: number } | null>(null);
   const [managingFavorites, setManagingFavorites] = useState(false);
 
+  // Category Context Menu additions
+  const [categoryContextMenu, setCategoryContextMenu] = useState<{ x: number, y: number, categoryId: string, categoryName: string, sourceId: string, sourceName: string } | null>(null);
+
   const customGroups = useLiveQuery(
     () => db.customGroups.orderBy('display_order').toArray()
   );
@@ -294,6 +298,20 @@ export function CategoryStrip({ selectedCategoryId, onSelectCategory, visible, s
   const handleFavoritesContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
     setFavoritesContextMenu({ x: e.clientX, y: e.clientY });
+  };
+
+  const handleCategoryContextMenu = (e: React.MouseEvent, categoryId: string, categoryName: string, sourceId: string, sourceName: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setCategoryContextMenu({ x: e.clientX, y: e.clientY, categoryId, categoryName, sourceId, sourceName });
+  };
+
+  const handleHideCategory = async (categoryId: string) => {
+    try {
+      await updateCategoryEnabled(categoryId, false);
+    } catch (err) {
+      console.error('[CategoryStrip] Failed to hide category:', err);
+    }
   };
 
   // ── Drag-to-resize for category sidebar ───────────────────────────────────
@@ -494,6 +512,7 @@ export function CategoryStrip({ selectedCategoryId, onSelectCategory, visible, s
                     key={category.category_id}
                     className={`category-item nested ${selectedCategoryId === category.category_id ? 'selected' : ''}`}
                     onClick={() => onSelectCategory(category.category_id)}
+                    onContextMenu={(e) => handleCategoryContextMenu(e, category.category_id, category.category_name, group.sourceId, sources[group.sourceId] || 'Source')}
                   >
                     <ScrollingText className="category-name">{category.category_name}</ScrollingText>
                     <span className="category-count">{category.channelCount}</span>
@@ -578,6 +597,20 @@ export function CategoryStrip({ selectedCategoryId, onSelectCategory, visible, s
             }
           }}
           onEditEpg={(id, name) => setEpgEditorSource({ id, name })}
+        />
+      )}
+
+      {/* Category Context Menu */}
+      {categoryContextMenu && (
+        <CategoryContextMenu
+          categoryId={categoryContextMenu.categoryId}
+          categoryName={categoryContextMenu.categoryName}
+          sourceId={categoryContextMenu.sourceId}
+          sourceName={categoryContextMenu.sourceName}
+          position={{ x: categoryContextMenu.x, y: categoryContextMenu.y }}
+          onClose={() => setCategoryContextMenu(null)}
+          onManageCategories={(id, name) => setManagingCategorySource({ id, name })}
+          onHideCategory={handleHideCategory}
         />
       )}
 
