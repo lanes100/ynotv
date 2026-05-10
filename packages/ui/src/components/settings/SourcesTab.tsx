@@ -13,7 +13,7 @@ import {
   useSyncStatusMessage,
   useSetSyncStatusMessage
 } from '../../stores/uiStore';
-import { parseM3U } from '@ynotv/local-adapter';
+import { parseM3U, XtreamClient, StalkerClient } from '@ynotv/local-adapter';
 import { CategoryManager } from './CategoryManager';
 import './SourcesTab.css';
 import { useSourceVersion } from '../../contexts/SourceVersionContext';
@@ -150,6 +150,7 @@ export function SourcesTab({ sources, isEncryptionAvailable, onSourcesChange, ed
   // State for backup URLs
   const [newBackupUrl, setNewBackupUrl] = useState('');
   const [showBackupUrlInput, setShowBackupUrlInput] = useState(false);
+  const [backupTestStatus, setBackupTestStatus] = useState<Map<number, 'idle' | 'testing' | 'success' | 'error'>>(new Map());
 
   // Password visibility state
   const [showPassword, setShowPassword] = useState(false);
@@ -573,6 +574,68 @@ export function SourcesTab({ sources, isEncryptionAvailable, onSourcesChange, ed
   function handleDeleteBackupUrl(index: number) {
     const newUrls = formData.backupUrls.filter((_, i) => i !== index);
     setFormData({ ...formData, backupUrls: newUrls });
+    // Clear test status for deleted index and shift others
+    const newStatus = new Map(backupTestStatus);
+    newStatus.delete(index);
+    const shifted = new Map<number, 'idle' | 'testing' | 'success' | 'error'>();
+    newStatus.forEach((val, key) => {
+      if (key > index) {
+        shifted.set(key - 1, val);
+      } else {
+        shifted.set(key, val);
+      }
+    });
+    setBackupTestStatus(shifted);
+  }
+
+  async function handleTestBackupUrl(index: number, url: string) {
+    setBackupTestStatus(prev => new Map(prev).set(index, 'testing'));
+
+    try {
+      let success = false;
+
+      if (formData.type === 'xtream') {
+        if (!formData.username || !formData.password) {
+          setBackupTestStatus(prev => new Map(prev).set(index, 'error'));
+          return;
+        }
+        const client = new XtreamClient(
+          { baseUrl: url, username: formData.username, password: formData.password, userAgent: formData.userAgent },
+          'test'
+        );
+        const result = await client.testConnection();
+        success = result.success;
+      } else if (formData.type === 'stalker') {
+        if (!formData.mac) {
+          setBackupTestStatus(prev => new Map(prev).set(index, 'error'));
+          return;
+        }
+        const client = new StalkerClient(
+          { baseUrl: url, mac: formData.mac, userAgent: formData.userAgent },
+          'test'
+        );
+        const result = await client.testConnection();
+        success = result.success;
+      } else {
+        // M3U: try a lightweight fetch
+        if (window.fetchProxy) {
+          const result = await window.fetchProxy.fetch(url, {
+            headers: formData.userAgent ? { 'User-Agent': formData.userAgent } : {}
+          });
+          success = !!(result.success && result.data && result.data.ok);
+        } else {
+          const response = await fetch(url, {
+            method: 'HEAD',
+            headers: formData.userAgent ? { 'User-Agent': formData.userAgent } : {}
+          });
+          success = response.ok;
+        }
+      }
+
+      setBackupTestStatus(prev => new Map(prev).set(index, success ? 'success' : 'error'));
+    } catch {
+      setBackupTestStatus(prev => new Map(prev).set(index, 'error'));
+    }
   }
 
   function handleSwapCredential(type: 'stalker' | 'xtream', index: number) {
@@ -1419,6 +1482,21 @@ export function SourcesTab({ sources, isEncryptionAvailable, onSourcesChange, ed
                       onClick={(e) => (e.target as HTMLInputElement).select()}
                     />
                     <div className="backup-actions">
+                      <button
+                        type="button"
+                        className={`test-btn ${backupTestStatus.get(index) === 'success' ? 'test-success' : backupTestStatus.get(index) === 'error' ? 'test-error' : ''}`}
+                        onClick={() => handleTestBackupUrl(index, url)}
+                        disabled={backupTestStatus.get(index) === 'testing'}
+                        title="Test backup URL connection"
+                      >
+                        {backupTestStatus.get(index) === 'testing'
+                          ? '...'
+                          : backupTestStatus.get(index) === 'success'
+                          ? '✓'
+                          : backupTestStatus.get(index) === 'error'
+                          ? '✕'
+                          : 'Test'}
+                      </button>
                       <button
                         type="button"
                         className="delete-btn"
