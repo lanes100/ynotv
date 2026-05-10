@@ -155,12 +155,13 @@ export function parseM3U(content: string, sourceId: string): M3UParseResult {
         console.log(`[M3U DEBUG] Channel ${channels.length}: tvgId="${currentMetadata.tvgId}" -> stream_id="${streamId}"`);
       }
 
-      // Create category if needed
-      const categoryId = createCategoryId(sourceId, currentMetadata.groupTitle);
-      if (currentMetadata.groupTitle && !categoriesMap.has(categoryId)) {
+      // Create category if needed — use "Uncategorized" when group-title is missing
+      const categoryName = currentMetadata.groupTitle || 'Uncategorized';
+      const categoryId = createCategoryId(sourceId, categoryName);
+      if (!categoriesMap.has(categoryId)) {
         categoriesMap.set(categoryId, {
           category_id: categoryId,
-          category_name: currentMetadata.groupTitle,
+          category_name: categoryName,
           source_id: sourceId,
         });
       }
@@ -171,7 +172,7 @@ export function parseM3U(content: string, sourceId: string): M3UParseResult {
         name: currentMetadata.displayName || currentMetadata.tvgName || `Channel ${channelCounter}`,
         stream_icon: currentMetadata.tvgLogo || '',
         epg_channel_id: currentMetadata.tvgId || '',
-        category_ids: categoryId ? [categoryId] : [],
+        category_ids: [categoryId],
         direct_url: line,
         source_id: sourceId,
         tv_archive: currentMetadata.tvArchive ? 1 : 0,
