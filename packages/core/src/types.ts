@@ -28,6 +28,7 @@ export interface Source {
     username: string;
     password: string;
   }>;
+  backup_urls?: string[];  // Backup server URLs for connection failover
   display_order?: number;
   enabled: boolean;
   advanced_epg_matching?: boolean; // Enable display name-based EPG matching for external EPGs (default: false)

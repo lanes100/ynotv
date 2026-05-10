@@ -1095,8 +1095,53 @@ export async function isVodStale(sourceId: string, refreshHours: number = DEFAUL
   return Date.now() - new Date(meta.vod_last_synced).getTime() > staleMs;
 }
 
-// Sync a single source - fetches data and stores in SQLite
+// Exported sync wrapper with backup URL failover support
 export async function syncSource(source: Source, onProgress?: (msg: string) => void): Promise<SyncResult> {
+  // Try primary URL first
+  const result = await _doSyncSourceImpl(source, onProgress);
+  if (result.success) return result;
+
+  // If primary failed and we have backup URLs, try them in order
+  if (source.backup_urls && source.backup_urls.length > 0) {
+    for (const backupUrl of source.backup_urls) {
+      const trimmedUrl = backupUrl.trim();
+      if (!trimmedUrl) continue;
+
+      debugLog(`Primary URL failed. Trying backup URL: ${trimmedUrl}`, 'sync');
+      onProgress?.(`Primary URL failed. Trying backup: ${trimmedUrl}...`);
+
+      const backupSource: Source = { ...source, url: trimmedUrl };
+      const backupResult = await _doSyncSourceImpl(backupSource, onProgress);
+
+      if (backupResult.success) {
+        // Swap: working backup becomes primary, old primary moves to backup list
+        const newBackups = source.backup_urls.filter(u => u !== backupUrl);
+        newBackups.unshift(source.url);
+        const updatedSource: Source = {
+          ...source,
+          url: trimmedUrl,
+          backup_urls: newBackups,
+        };
+
+        try {
+          if (window.storage) {
+            await window.storage.saveSource(updatedSource);
+            debugLog(`Backup URL succeeded. Swapped primary to ${trimmedUrl} and moved old primary to backups.`, 'sync');
+          }
+        } catch (saveErr) {
+          debugLog(`Failed to save updated source after backup swap: ${saveErr}`, 'sync');
+        }
+
+        return backupResult;
+      }
+    }
+  }
+
+  return result;
+}
+
+// Internal sync implementation
+async function _doSyncSourceImpl(source: Source, onProgress?: (msg: string) => void): Promise<SyncResult> {
   debugLog(`Starting sync for source: ${source.name} (${source.type})`, 'sync');
   onProgress?.(`Starting sync for ${source.name}...`);
   const startTime = performance.now();
@@ -1993,6 +2038,10 @@ export async function syncVodMovies(
     }
   } catch (err) {
     console.warn('[VOD Movies] Fetch failed, keeping existing data:', err);
+    // If backup URLs are configured, throw so the caller can try backups
+    if (source.backup_urls && source.backup_urls.length > 0) {
+      throw err;
+    }
     return { count: 0, categoryCount: 0, skipped: true };
   }
 
@@ -2208,6 +2257,10 @@ export async function syncVodSeries(
     }
   } catch (err) {
     console.warn('[VOD Series] Fetch failed, keeping existing data:', err);
+    // If backup URLs are configured, throw so the caller can try backups
+    if (source.backup_urls && source.backup_urls.length > 0) {
+      throw err;
+    }
     return { count: 0, categoryCount: 0, skipped: true };
   }
 
@@ -2399,8 +2452,51 @@ export async function syncSeriesEpisodes(source: Source, seriesId: string): Prom
   return storedEpisodes.length;
 }
 
-// Sync all VOD content for a source
+// Exported VOD sync wrapper with backup URL failover support
 export async function syncVodForSource(source: Source): Promise<VodSyncResult> {
+  const result = await _doSyncVodForSource(source);
+  if (result.success) return result;
+
+  // If primary failed and we have backup URLs, try them in order
+  if (source.backup_urls && source.backup_urls.length > 0) {
+    for (const backupUrl of source.backup_urls) {
+      const trimmedUrl = backupUrl.trim();
+      if (!trimmedUrl) continue;
+
+      debugLog(`VOD primary URL failed. Trying backup URL: ${trimmedUrl}`, 'vod');
+
+      const backupSource: Source = { ...source, url: trimmedUrl };
+      const backupResult = await _doSyncVodForSource(backupSource);
+
+      if (backupResult.success) {
+        // Swap: working backup becomes primary, old primary moves to backup list
+        const newBackups = source.backup_urls.filter(u => u !== backupUrl);
+        newBackups.unshift(source.url);
+        const updatedSource: Source = {
+          ...source,
+          url: trimmedUrl,
+          backup_urls: newBackups,
+        };
+
+        try {
+          if (window.storage) {
+            await window.storage.saveSource(updatedSource);
+            debugLog(`VOD backup URL succeeded. Swapped primary to ${trimmedUrl} and moved old primary to backups.`, 'vod');
+          }
+        } catch (saveErr) {
+          debugLog(`Failed to save updated source after VOD backup swap: ${saveErr}`, 'vod');
+        }
+
+        return backupResult;
+      }
+    }
+  }
+
+  return result;
+}
+
+// Internal VOD sync implementation
+async function _doSyncVodForSource(source: Source): Promise<VodSyncResult> {
   try {
     // For Stalker sources, create a shared client to avoid token conflicts
     // from parallel handshakes invalidating each other's tokens

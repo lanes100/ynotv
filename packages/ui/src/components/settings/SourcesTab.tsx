@@ -43,6 +43,7 @@ interface SourceFormData {
   epgTimeshiftHours: number;
   backupMacs: string[];
   backupCredentials: Array<{ username: string; password: string }>;
+  backupUrls: string[];
   pendingSwap: boolean;
   display_order?: number;
   advancedEpgMatching: boolean;
@@ -63,6 +64,7 @@ const emptyForm: SourceFormData = {
   epgTimeshiftHours: 0,
   backupMacs: [],
   backupCredentials: [],
+  backupUrls: [],
   pendingSwap: false,
   display_order: undefined,
   advancedEpgMatching: false,
@@ -144,6 +146,10 @@ export function SourcesTab({ sources, isEncryptionAvailable, onSourcesChange, ed
   // State for additional EPG URLs
   const [newAdditionalEpgUrl, setNewAdditionalEpgUrl] = useState('');
   const [showAdditionalEpgInput, setShowAdditionalEpgInput] = useState(false);
+
+  // State for backup URLs
+  const [newBackupUrl, setNewBackupUrl] = useState('');
+  const [showBackupUrlInput, setShowBackupUrlInput] = useState(false);
 
   // Password visibility state
   const [showPassword, setShowPassword] = useState(false);
@@ -253,6 +259,7 @@ export function SourcesTab({ sources, isEncryptionAvailable, onSourcesChange, ed
       epgTimeshiftHours: source.epg_timeshift_hours || 0,
       backupMacs: source.backup_macs || [],
       backupCredentials: source.backup_credentials || [],
+      backupUrls: source.backup_urls || [],
       pendingSwap: false,
       display_order: source.display_order,
       advancedEpgMatching: source.advanced_epg_matching ?? false,
@@ -386,6 +393,7 @@ export function SourcesTab({ sources, isEncryptionAvailable, onSourcesChange, ed
       epg_timeshift_hours: formData.epgTimeshiftHours || undefined,
       backup_macs: formData.type === 'stalker' && formData.backupMacs.length > 0 ? formData.backupMacs : undefined,
       backup_credentials: formData.type === 'xtream' && formData.backupCredentials.length > 0 ? formData.backupCredentials : undefined,
+      backup_urls: formData.backupUrls.length > 0 ? formData.backupUrls : undefined,
       display_order: formData.display_order,
       advanced_epg_matching: formData.advancedEpgMatching || undefined,
     };
@@ -532,6 +540,39 @@ export function SourcesTab({ sources, isEncryptionAvailable, onSourcesChange, ed
   function handleDeleteAdditionalEpg(index: number) {
     const newUrls = formData.additionalEpgUrls.filter((_, i) => i !== index);
     setFormData({ ...formData, additionalEpgUrls: newUrls });
+  }
+
+  // Backup URL Handlers
+  function handleAddBackupUrl() {
+    setShowBackupUrlInput(true);
+    setNewBackupUrl('');
+  }
+
+  function confirmAddBackupUrl() {
+    if (newBackupUrl && newBackupUrl.trim()) {
+      const urls = newBackupUrl
+        .split('\n')
+        .map(u => u.trim())
+        .filter(u => u.length > 0);
+      if (urls.length > 0) {
+        setFormData({
+          ...formData,
+          backupUrls: [...formData.backupUrls, ...urls]
+        });
+      }
+      setShowBackupUrlInput(false);
+      setNewBackupUrl('');
+    }
+  }
+
+  function cancelAddBackupUrl() {
+    setShowBackupUrlInput(false);
+    setNewBackupUrl('');
+  }
+
+  function handleDeleteBackupUrl(index: number) {
+    const newUrls = formData.backupUrls.filter((_, i) => i !== index);
+    setFormData({ ...formData, backupUrls: newUrls });
   }
 
   function handleSwapCredential(type: 'stalker' | 'xtream', index: number) {
@@ -1357,6 +1398,74 @@ export function SourcesTab({ sources, isEncryptionAvailable, onSourcesChange, ed
                   onClick={handleAddAdditionalEpg}
                 >
                   + Add Additional EPG
+                </button>
+              )}
+            </div>
+
+            {/* Backup URLs */}
+            <div className="form-group backup-section">
+              <label>Backup URLs</label>
+              <span className="hint" style={{ display: 'block', marginBottom: '10px' }}>
+                If the primary URL fails, these will be tried in order. A working backup will automatically become the primary URL.
+              </span>
+              <div className="backup-list">
+                {formData.backupUrls.map((url, index) => (
+                  <div key={index} className="backup-item">
+                    <input
+                      type="text"
+                      readOnly
+                      value={url}
+                      className="backup-val epg-url-display"
+                      onClick={(e) => (e.target as HTMLInputElement).select()}
+                    />
+                    <div className="backup-actions">
+                      <button
+                        type="button"
+                        className="delete-btn"
+                        onClick={() => handleDeleteBackupUrl(index)}
+                        title="Delete backup URL"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {showBackupUrlInput ? (
+                <div className="backup-input-col">
+                  <textarea
+                    value={newBackupUrl}
+                    onChange={(e) => setNewBackupUrl(e.target.value)}
+                    placeholder="http://backup-provider.com:8080&#10;http://backup2.com:8080&#10;http://backup3.com:8080"
+                    className="backup-input backup-textarea"
+                    rows={4}
+                    autoFocus
+                  />
+                  <div className="backup-input-actions">
+                    <button
+                      type="button"
+                      className="confirm-btn"
+                      onClick={confirmAddBackupUrl}
+                    >
+                      Add
+                    </button>
+                    <button
+                      type="button"
+                      className="cancel-btn"
+                      onClick={cancelAddBackupUrl}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  className="add-backup-btn"
+                  onClick={handleAddBackupUrl}
+                >
+                  + Add Backup URL
                 </button>
               )}
             </div>

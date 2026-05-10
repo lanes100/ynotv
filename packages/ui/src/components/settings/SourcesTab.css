@@ -197,6 +197,13 @@
         0 0 10px var(--accent-glow, rgba(0, 212, 255, 0.3));
 }
 
+.backup-textarea {
+    resize: vertical;
+    min-height: 80px;
+    font-family: monospace;
+    line-height: 1.4;
+}
+
 .backup-input-actions {
     display: flex;
     gap: 8px;
