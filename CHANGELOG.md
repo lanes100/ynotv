@@ -1,5 +1,23 @@
   # Changelog
   
+## v1.6.8
+
+### Added
+
+- **Stream Failover** *(Beta)* — Automatically detects when a channel stalls or drops and seamlessly switches to an alternate channel from a user-defined failover group. Channels can be added to a group via the new `Stream Failover Group` button in Live TV, or through `Right-click → Add to Failover Group`.
+
+- **Automatic stream retry** — Detects stream failures and automatically attempts to reconnect. The maximum number of reconnection attempts can be configured under `Settings → Playback`.
+
+- **EPG shift shortcut** — A quick-access EPG Shift button has been added to the top of the EPG view for faster time offset adjustments.
+
+### Fixed
+
+- **Additional EPG failing for large uncompressed `.gz` files** — Resolved an issue preventing large uncompressed `.gz` EPG files from loading correctly.
+
+- **VOD Manage Categories resetting unsaved changes** — The category list will no longer refresh and discard unsaved changes while managing VOD categories.
+
+- **Double-click to exit Live TV triggering too broadly** — Exiting Live TV to fullscreen via double-click now requires both clicks to occur within 500ms, preventing unintended dismissals.
+  
 ## v1.6.7
 
 ### Added
