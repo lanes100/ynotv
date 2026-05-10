@@ -10,6 +10,7 @@ import type { SettingsTabId } from './components/settings/SettingsSidebar';
 import { Sidebar, type View } from './components/Sidebar';
 import { NowPlayingBar } from './components/NowPlayingBar';
 import { ChannelInfoOverlay } from './components/ChannelInfoOverlay';
+import { FailoverGroupOverlay } from './components/FailoverGroupOverlay';
 import { TrackSelectionModal } from './components/TrackSelectionModal';
 import { SubtitleControlModal } from './components/SubtitleControlModal';
 import { CategoryStrip } from './components/CategoryStrip';
@@ -350,6 +351,16 @@ function App() {
     if (activeView === 'guide' || activeView === 'sports') return false;
     return showControls || channelChangeFlash;
   }, [channelInfoOverlayEnabled, currentChannel, showControls, channelChangeFlash, activeView]);
+
+  // Failover group overlay visibility: same conditions as NowPlayingBar
+  const isFailoverGroupOverlayVisible = useMemo(() => {
+    if (!currentChannel) return false;
+    const isVod = currentChannel.stream_id === 'vod' || currentChannel.stream_id?.startsWith('recording_');
+    if (isVod) return false;
+    // Don't show when in LiveTV guide or Sports views
+    if (activeView === 'guide' || activeView === 'sports') return false;
+    return showControls;
+  }, [currentChannel, showControls, activeView]);
 
   // ==========================================================================
   // Watchlist State (from useWatchlist)
@@ -1240,6 +1251,13 @@ function App() {
         }}
         onChannelUp={handleChannelUp}
         onChannelDown={handleChannelDown}
+        overlay={
+          <FailoverGroupOverlay
+            currentChannel={currentChannel}
+            visible={isFailoverGroupOverlayVisible}
+            onChannelClick={handlePlayChannel}
+          />
+        }
       />
 
       {/* Channel Info Overlay */}

@@ -26,6 +26,21 @@
   opacity: 1;
 }
 
+/* Overlay slot — positioned above the bar */
+.npb-overlay-slot {
+  position: absolute;
+  bottom: 100%;
+  right: 0;
+  margin-bottom: 6px;
+  padding-right: 16px;
+  pointer-events: none;
+  z-index: 100;
+}
+
+.npb-overlay-slot > * {
+  pointer-events: auto;
+}
+
 /* Row container */
 .npb-row {
   display: flex;

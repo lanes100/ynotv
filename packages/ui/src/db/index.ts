@@ -30,6 +30,8 @@ export interface StoredChannel extends Omit<Channel, 'stream_icon' | 'epg_channe
 
   // Optional source name (populated during search for display purposes)
   source_name?: string;
+  // Optional source → category display string (populated during search)
+  source_category_display?: string;
 }
 
 // Extended category with channel count

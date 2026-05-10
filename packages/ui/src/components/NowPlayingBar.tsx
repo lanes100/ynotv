@@ -58,6 +58,7 @@ interface NowPlayingBarProps {
   onTimeshiftCatchUp?: () => void;
   onChannelUp?: () => void;
   onChannelDown?: () => void;
+  overlay?: React.ReactNode;
 }
 
 // Format seconds to "H:MM:SS" or "M:SS"
@@ -108,6 +109,7 @@ export function NowPlayingBar({
   onTimeshiftCatchUp,
   onChannelUp,
   onChannelDown,
+  overlay,
 }: NowPlayingBarProps) {
   // scrubMode: 'timeshift' | 'epgcatchup' — local toggle when channel supports both
   const [scrubMode, setScrubMode] = useState<'timeshift' | 'epgcatchup'>('timeshift');
@@ -393,6 +395,12 @@ export function NowPlayingBar({
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
     >
+      {/* Overlay slot — rendered above the bar, e.g. failover group members */}
+      {overlay && (
+        <div className="npb-overlay-slot">
+          {overlay}
+        </div>
+      )}
       {channel ? (
         <>
           {/* Row 1: Channel/VOD info with description */}

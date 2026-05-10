@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useRef, useCallback, memo } from 'react';
 import { useSourceVersion } from '../contexts/SourceVersionContext';
 import { Virtuoso, type VirtuosoHandle } from 'react-virtuoso';
-import { useChannels, useCategories, useAllPrograms } from '../hooks/useChannels';
+import { useChannels, useCategories, useAllPrograms, parseCategoryIds } from '../hooks/useChannels';
 import { useLiveQuery } from '../hooks/useSqliteLiveQuery';
 import { useTimeGrid } from '../hooks/useTimeGrid';
 import { useActiveRecordings } from '../hooks/useActiveRecordings';
@@ -301,9 +301,10 @@ export function ChannelPanel({
   // Cached source name map to avoid repeated Tauri calls
   const { version: sourceVersion } = useSourceVersion();
   const sourceNameMapRef = useRef<Map<string, string>>(new Map());
+  const categoryNameMapRef = useRef<Map<string, string>>(new Map());
   const lastSourceVersionRef = useRef<number>(-1);
 
-  // Fetch source names only when version changes
+  // Fetch source names and category names only when version changes
   useEffect(() => {
     if (lastSourceVersionRef.current === sourceVersion) return;
     if (!includeSourceInSearch || !window.storage) return;
@@ -318,6 +319,13 @@ export function ChannelPanel({
         sourceNameMapRef.current = map;
         lastSourceVersionRef.current = sourceVersion;
       }
+      // Also load category names for source → category display
+      const allCategories = await db.categories.toArray();
+      const catMap = new Map<string, string>();
+      for (const cat of allCategories) {
+        catMap.set(cat.category_id, cat.category_name);
+      }
+      categoryNameMapRef.current = catMap;
     }
 
     fetchSourceNames();
@@ -528,9 +536,15 @@ export function ChannelPanel({
         for (const streamId of uniqueStreamIds) {
           const channel = await db.channels.get(streamId);
           if (channel) {
-            // Add source_name if includeSourceInSearch is enabled (using cached map)
+            // Add source_name and source_category_display if includeSourceInSearch is enabled (using cached maps)
             if (includeSourceInSearch) {
-              channel.source_name = sourceNameMapRef.current.get(channel.source_id) || undefined;
+              const sourceName = sourceNameMapRef.current.get(channel.source_id);
+              channel.source_name = sourceName || undefined;
+              if (sourceName && categoryNameMapRef.current.size > 0) {
+                const catIds = parseCategoryIds(channel.category_ids);
+                const catName = catIds.length > 0 ? (categoryNameMapRef.current.get(catIds[0]) || catIds[0]) : '—';
+                channel.source_category_display = `${sourceName} → ${catName}`;
+              }
             }
             programChannelsMap.set(streamId, channel);
 

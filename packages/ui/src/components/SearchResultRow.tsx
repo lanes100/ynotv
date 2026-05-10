@@ -173,14 +173,14 @@ export const SearchResultRow = memo(function SearchResultRow({
           {channel.channel_num && (
             <span className="guide-channel-number">Ch. {channel.channel_num}</span>
           )}
-          {includeSourceInSearch && channel.source_name && (
+          {includeSourceInSearch && (channel.source_category_display || channel.source_name) && (
             <span className="guide-channel-source" style={{
               fontSize: '0.75rem',
               color: 'rgba(255, 255, 255, 0.5)',
               marginTop: '2px',
               display: 'block'
             }}>
-              {channel.source_name}
+              {channel.source_category_display || channel.source_name}
             </span>
           )}
         </div>

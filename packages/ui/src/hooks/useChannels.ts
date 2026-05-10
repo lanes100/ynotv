@@ -63,6 +63,39 @@ function useSourceNameMap(): Map<string, string> | null {
   return sourceMap;
 }
 
+// Cached category names map to avoid repeated DB calls
+let cachedCategoryNameMap: Map<string, string> | null = null;
+let cachedCategoryVersion = -1;
+
+// Hook to get category name map - cached to avoid repeated DB calls
+function useCategoryNameMap(): Map<string, string> | null {
+  const { version } = useSourceVersion();
+  const [categoryMap, setCategoryMap] = useState<Map<string, string> | null>(cachedCategoryNameMap);
+
+  useEffect(() => {
+    // Return cached version if still valid
+    if (cachedCategoryNameMap && cachedCategoryVersion === version) {
+      setCategoryMap(cachedCategoryNameMap);
+      return;
+    }
+
+    async function fetchCategories() {
+      const allCategories = await db.categories.toArray();
+      const map = new Map<string, string>();
+      for (const cat of allCategories) {
+        map.set(cat.category_id, cat.category_name);
+      }
+      cachedCategoryNameMap = map;
+      cachedCategoryVersion = version;
+      setCategoryMap(map);
+    }
+
+    fetchCategories();
+  }, [version]);
+
+  return categoryMap;
+}
+
 // Hook to get all categories across all sources (filtered by enabled sources and categories)
 // Includes virtual "Favorites" category if any channels are favorited
 export function useCategories() {
@@ -452,7 +485,7 @@ export function useSelectedCategory() {
 }
 
 // Helper to parse category IDs from JSON string or array
-function parseCategoryIds(categoryIdsJson: string | string[] | number[] | undefined): string[] {
+export function parseCategoryIds(categoryIdsJson: string | string[] | number[] | undefined): string[] {
   if (!categoryIdsJson) return [];
   if (Array.isArray(categoryIdsJson)) {
     return categoryIdsJson.map(String);
@@ -481,6 +514,7 @@ export function useChannelSearch(
 ) {
   const enabledSourceIds = useEnabledSources();
   const sourceNameMap = useSourceNameMap();
+  const categoryNameMap = useCategoryNameMap();
 
   const enabledSourceKey = useMemo(
     () => (enabledSourceIds ? Array.from(enabledSourceIds).sort().join(',') : 'loading'),
@@ -600,19 +634,29 @@ export function useChannelSearch(
         );
       }
 
-      // Add source_name to channels if includeSourceInSearch is enabled
+      // Add source_name and source_category_display to channels if includeSourceInSearch is enabled
       if (includeSourceInSearch && sourceNameMap) {
-        filteredChannels = filteredChannels.map(ch => ({
-          ...ch,
-          source_name: sourceNameMap.get(ch.source_id) || undefined
-        }));
+        filteredChannels = filteredChannels.map(ch => {
+          const sourceName = sourceNameMap.get(ch.source_id);
+          let sourceCategoryDisplay: string | undefined;
+          if (sourceName && categoryNameMap) {
+            const catIds = parseCategoryIds(ch.category_ids);
+            const catName = catIds.length > 0 ? (categoryNameMap.get(catIds[0]) || catIds[0]) : '—';
+            sourceCategoryDisplay = `${sourceName} → ${catName}`;
+          }
+          return {
+            ...ch,
+            source_name: sourceName || undefined,
+            source_category_display: sourceCategoryDisplay
+          };
+        });
       }
 
       console.log('[useChannelSearch] Returning', filteredChannels.length, 'channels, first few:', filteredChannels.slice(0, 3).map((c: any) => c.name));
 
       return filteredChannels as StoredChannel[];
     },
-    [query, limit, includeSourceInSearch, order, sourceNameMap, enabledSourceKey, filterKey]
+    [query, limit, includeSourceInSearch, order, sourceNameMap, categoryNameMap, enabledSourceKey, filterKey]
   );
   return channels ?? [];
 }
