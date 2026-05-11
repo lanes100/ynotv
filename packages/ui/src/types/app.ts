@@ -66,7 +66,6 @@ export interface AppSettings {
     epgTitleFontSize?: number;
     epgBodyFontSize?: number;
     shortcuts?: ShortcutsMap;
-    showSidebar?: boolean;
     startupWidth?: number;
     startupHeight?: number;
     dontSaveWindowSizeOnClose?: boolean;

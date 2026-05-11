@@ -67,21 +67,6 @@
   display: none;
 }
 
-/* When sidebar is visible - add padding and adjust width */
-.category-strip.with-sidebar {
-  width: calc(var(--category-strip-content-width, 240px) + 60px);
-  /* 60px sidebar + content */
-  padding-left: 60px;
-  /* Space for collapsed sidebar */
-}
-
-/* Shift right when sidebar is expanded */
-.category-strip.with-sidebar.sidebar-expanded {
-  width: calc(var(--category-strip-content-width, 240px) + 160px);
-  /* 160px expanded sidebar + content */
-  padding-left: 160px;
-}
-
 .category-strip.visible {
   transform: translateX(0);
   opacity: 1;

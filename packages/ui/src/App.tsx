@@ -7,7 +7,7 @@ import './services/tauri-bridge'; // Initialize Tauri bridge and polyfills
 import { checkForUpdates, checkForUpdatesSilent } from './services/updater';
 import { Settings } from './components/Settings';
 import type { SettingsTabId } from './components/settings/SettingsSidebar';
-import { Sidebar, type View } from './components/Sidebar';
+
 import { NowPlayingBar } from './components/NowPlayingBar';
 import { ChannelInfoOverlay } from './components/ChannelInfoOverlay';
 import { FailoverGroupOverlay } from './components/FailoverGroupOverlay';
@@ -104,11 +104,9 @@ function App() {
     channelInfoOverlayOpacity,
     theme,
     shortcuts,
-    showSidebar: showSidebarFromSettings,
     categoriesHidden,
     setTheme,
     setShortcuts,
-    setShowSidebar: setShowSidebarFromSettings,
     setCategoriesHidden,
     setAdvancedSearchScope,
     setAdvancedSearchSourceIds,
@@ -290,7 +288,6 @@ function App() {
     multiviewLayout,
     multiviewExitTabMode: exitTabMode,
     setCategoryId,
-    initialShowSidebar: showSidebarFromSettings,
   });
 
   const {
@@ -299,8 +296,6 @@ function App() {
     editSourceId,
     showSettingsPopup,
     categoriesOpen,
-    sidebarExpanded,
-    showSidebar,
     searchQuery,
     debouncedSearchQuery,
     isSearchMode,
@@ -315,8 +310,6 @@ function App() {
     setEditSourceId,
     setShowSettingsPopup,
     setCategoriesOpen,
-    setSidebarExpanded,
-    setShowSidebar,
     setSearchQuery,
     setIsWatchlistMode,
     setShowControls,
@@ -701,7 +694,6 @@ function App() {
     setActiveView,
     setShowSettingsPopup,
     setCategoriesOpen,
-    setSidebarExpanded,
     setShowControls,
     onChannelChangeFlash: triggerChannelChangeFlash,
   });
@@ -1331,18 +1323,6 @@ function App() {
         onClose={() => setShowAdvancedSearch(false)}
       />
 
-      {/* Sidebar Navigation */}
-      <Sidebar
-        activeView={activeView}
-        onViewChange={setActiveView}
-        visible={showSidebar && (showControls || categoriesOpen || activeView !== 'none')}
-        categoriesOpen={categoriesOpen}
-        onCategoriesToggle={() => setCategoriesOpen((open) => !open)}
-        onCategoriesClose={() => setCategoriesOpen(false)}
-        expanded={sidebarExpanded}
-        onExpandedToggle={() => setSidebarExpanded((exp) => !exp)}
-      />
-
       {/* Category Strip */}
       <CategoryStrip
         selectedCategoryId={categoryId}
@@ -1356,14 +1336,11 @@ function App() {
           handleSelectCategory(catId);
         }}
         visible={categoriesOpen}
-        sidebarExpanded={sidebarExpanded}
-        showSidebar={showSidebar}
         onEditSource={(sourceId) => {
           setSettingsTab('sources');
           setEditSourceId(sourceId);
           setActiveView('settings');
           setCategoriesOpen(false);
-          setSidebarExpanded(false);
         }}
         onClose={() => {
           setCategoriesOpen(false);
@@ -1381,14 +1358,11 @@ function App() {
         categoryId={isSearchMode || isWatchlistMode ? null : categoryId}
         visible={activeView === 'guide'}
         categoryStripOpen={categoriesOpen}
-        sidebarExpanded={sidebarExpanded}
-        showSidebar={showSidebar}
         onPlayChannel={handlePlayChannel}
         onPlayCatchup={handlePlayCatchup}
         onClose={() => {
           setActiveView('none');
           setCategoriesOpen(false);
-          setSidebarExpanded(false);
           Bridge.syncWindow();
         }}
         error={error}

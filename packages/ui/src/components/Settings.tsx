@@ -102,14 +102,12 @@ export function Settings({
   const [uiSettings, setUiSettings] = useState<{
     channelFontSize: number;
     categoryFontSize: number;
-    showSidebar: boolean;
     startupWidth?: number;
     startupHeight?: number;
     dontSaveWindowSizeOnClose?: boolean;
   }>({
     channelFontSize: 14,
     categoryFontSize: 13,
-    showSidebar: false,
   });
 
   // Startup settings state
@@ -231,7 +229,6 @@ export function Settings({
         shortcuts?: ShortcutsMap;
         channelFontSize?: number;
         categoryFontSize?: number;
-        showSidebar?: boolean;
         startupWidth?: number;
         startupHeight?: number;
         dontSaveWindowSizeOnClose?: boolean;
@@ -310,7 +307,6 @@ export function Settings({
       const loadedUiSettings = {
         channelFontSize: settings.channelFontSize ?? 14,
         categoryFontSize: settings.categoryFontSize ?? 13,
-        showSidebar: settings.showSidebar ?? false,
         startupWidth: settings.startupWidth,
         startupHeight: settings.startupHeight,
         dontSaveWindowSizeOnClose: settings.dontSaveWindowSizeOnClose ?? false,
@@ -589,7 +585,6 @@ export function Settings({
   const handleUiSettingsChange = async (newSettings: {
     channelFontSize?: number;
     categoryFontSize?: number;
-    showSidebar?: boolean;
     startupWidth?: number;
     startupHeight?: number;
     dontSaveWindowSizeOnClose?: boolean;

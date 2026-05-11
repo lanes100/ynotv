@@ -5,7 +5,6 @@ interface UITabProps {
   settings: {
     channelFontSize?: number;
     categoryFontSize?: number;
-    showSidebar?: boolean;
     startupWidth?: number;
     startupHeight?: number;
     dontSaveWindowSizeOnClose?: boolean;
@@ -13,7 +12,6 @@ interface UITabProps {
   onSettingsChange: (settings: {
     channelFontSize?: number;
     categoryFontSize?: number;
-    showSidebar?: boolean;
     startupWidth?: number;
     startupHeight?: number;
     dontSaveWindowSizeOnClose?: boolean;
@@ -132,12 +130,10 @@ function WindowSizeSettings({ width, height, onChange }: { width: number; height
 export function UITab({ settings, onSettingsChange }: UITabProps) {
   const [channelFontSize, setChannelFontSize] = useState(settings.channelFontSize || 14);
   const [categoryFontSize, setCategoryFontSize] = useState(settings.categoryFontSize || 13);
-  const [showSidebar, setShowSidebar] = useState(settings.showSidebar ?? false);
 
   useEffect(() => {
     setChannelFontSize(settings.channelFontSize || 14);
     setCategoryFontSize(settings.categoryFontSize || 13);
-    setShowSidebar(settings.showSidebar ?? false);
   }, [settings]);
 
   const handleChannelFontSizeChange = (size: number) => {
@@ -156,49 +152,8 @@ export function UITab({ settings, onSettingsChange }: UITabProps) {
     document.documentElement.style.setProperty('--category-font-size', `${size}px`);
   };
 
-  const handleShowSidebarChange = (show: boolean) => {
-    setShowSidebar(show);
-    onSettingsChange({ ...settings, showSidebar: show });
-  };
-
   return (
     <div className="settings-tab-content">
-      {/* Sidebar Visibility Section */}
-      <div className="settings-section" style={{ paddingBottom: '8px' }}>
-        <div className="section-header">
-          <h3>Sidebar</h3>
-        </div>
-
-        {/* Table-style layout for toggles */}
-        <div style={{ marginTop: '1rem' }}>
-          {/* Show Sidebar Toggle */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              padding: '0.75rem 0',
-              borderBottom: '1px solid rgba(255,255,255,0.08)',
-            }}
-          >
-            <div style={{ flex: 1 }}>
-              <div style={{ color: 'rgba(255,255,255,0.9)', fontSize: '0.95rem' }}>
-                Show Left Sidebar Navigation
-              </div>
-              <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.8rem', marginTop: '0.25rem' }}>
-                Display the sidebar with Guide, Movies, Series, and Settings buttons
-              </div>
-            </div>
-            <input
-              type="checkbox"
-              checked={showSidebar}
-              onChange={(e) => handleShowSidebarChange(e.target.checked)}
-              style={{ cursor: 'pointer', marginLeft: '1rem' }}
-            />
-          </div>
-        </div>
-      </div>
-
       {/* Window Settings Section */}
       <div className="settings-section" style={{ paddingTop: '8px' }}>
         <div className="section-header">

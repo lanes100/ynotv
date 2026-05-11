@@ -88,8 +88,6 @@ interface ChannelPanelProps {
   categoryId: string | null;
   visible: boolean;
   categoryStripOpen: boolean;
-  sidebarExpanded: boolean;
-  showSidebar?: boolean;
   onPlayChannel: (channel: StoredChannel) => void;
   onPlayCatchup?: (channel: StoredChannel, programTitle: string, startTimeMs: number, durationMinutes: number) => void;
   onClose: () => void;
@@ -162,8 +160,6 @@ export function ChannelPanel({
   categoryId,
   visible,
   categoryStripOpen,
-  sidebarExpanded,
-  showSidebar = true,
   onPlayChannel,
   onPlayCatchup,
   onClose,
@@ -1307,12 +1303,12 @@ export function ChannelPanel({
     // Re-run when layout changes (sidebar/category visibility) or when visibility/selection changes
     // Include selectedChannelId to trigger resize when returning to view with a selection
     // Include isWatchlistMode and categoryId to handle special view modes
-  }, [visible, categoryStripOpen, sidebarExpanded, selectedChannel?.stream_id, isWatchlistMode, categoryId, miniMediaBarForEpgPreview, epgView]);
+  }, [visible, categoryStripOpen, selectedChannel?.stream_id, isWatchlistMode, categoryId, miniMediaBarForEpgPreview, epgView]);
 
   return (
     <div
       ref={gridContainerRef}
-      className={`guide-panel ${visible ? 'visible' : 'hidden'} ${categoryStripOpen ? 'with-categories' : ''} ${sidebarExpanded ? 'sidebar-expanded' : ''} ${showSidebar ? 'with-sidebar' : 'no-sidebar'}`}
+      className={`guide-panel ${visible ? 'visible' : 'hidden'} ${categoryStripOpen ? 'with-categories' : ''}`}
     >
       {/* Top Section: Preview & Info */}
       <div className={`guide-top-section ${epgView === 'alternate' ? 'alternate-view' : ''}`}>

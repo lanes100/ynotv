@@ -46,13 +46,11 @@ export interface AppSettings {
   shortcuts: ShortcutsMap;
 
   // UI visibility
-  showSidebar: boolean;
   categoriesHidden: boolean;
 
   // Actions
   setTheme: (theme: ThemeId) => void;
   setShortcuts: (shortcuts: ShortcutsMap) => void;
-  setShowSidebar: (show: boolean) => void;
   setCategoriesHidden: (hidden: boolean) => void;
   setAdvancedSearchScope: (scope: 'channels' | 'epg' | 'both') => void;
   setAdvancedSearchSourceIds: (ids: string[]) => void;
@@ -114,7 +112,6 @@ export function useAppSettings(): AppSettings {
   const [shortcuts, setShortcutsState] = useState<ShortcutsMap>({});
 
   // UI visibility
-  const [showSidebar, setShowSidebar] = useState(false);
   const [categoriesHidden, setCategoriesHiddenState] = useState(false);
 
   // Apply theme effect
@@ -347,11 +344,9 @@ export function useAppSettings(): AppSettings {
     channelInfoOverlayHideDescription,
     theme,
     shortcuts,
-    showSidebar,
     categoriesHidden,
     setTheme,
     setShortcuts,
-    setShowSidebar,
     setCategoriesHidden,
     setAdvancedSearchScope,
     setAdvancedSearchSourceIds,

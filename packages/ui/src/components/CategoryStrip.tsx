@@ -66,8 +66,6 @@ interface CategoryStripProps {
   selectedCategoryId: string | null;
   onSelectCategory: (categoryId: string | null) => void;
   visible: boolean;
-  sidebarExpanded: boolean;
-  showSidebar?: boolean;
   onEditSource?: (sourceId: string) => void;
   onClose?: () => void;
   onShow?: () => void;
@@ -181,7 +179,7 @@ function CustomGroupButton({ group, selectedCategoryId, onSelectCategory, onCont
 
 
 
-export function CategoryStrip({ selectedCategoryId, onSelectCategory, visible, sidebarExpanded, showSidebar = true, onEditSource, onClose, onShow, isLiveTV }: CategoryStripProps) {
+export function CategoryStrip({ selectedCategoryId, onSelectCategory, visible, onEditSource, onClose, onShow, isLiveTV }: CategoryStripProps) {
   const groupedCategories = useCategoriesBySource();
   const [sources, setSources] = useState<Record<string, string>>({});
   const [expandedSources, setExpandedSources] = useState<Record<string, boolean>>({});
@@ -429,7 +427,7 @@ export function CategoryStrip({ selectedCategoryId, onSelectCategory, visible, s
 
   return (
     <>
-      <div className={`category-strip ${visible ? 'visible' : 'hidden'} ${sidebarExpanded ? 'sidebar-expanded' : ''} ${showSidebar ? 'with-sidebar' : 'no-sidebar'}`}>
+      <div className={`category-strip ${visible ? 'visible' : 'hidden'}`}>
         {/* Resizer Handle */}
         <div
           className="category-strip-resizer"

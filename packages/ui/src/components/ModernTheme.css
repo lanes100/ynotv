@@ -18,16 +18,9 @@
     opacity 0.3s ease;
 }
 
-.modern-ui .category-strip.with-sidebar { width: calc(var(--category-strip-content-width, 260px) + 60px); }
-.modern-ui .category-strip.with-sidebar.sidebar-expanded { width: calc(var(--category-strip-content-width, 260px) + 160px); }
-
 /* Modern Guide Panel Padding - Match new widths */
 .modern-ui .guide-panel.with-categories {
   padding-left: var(--category-strip-content-width, 260px);
-}
-
-.modern-ui .guide-panel.with-sidebar.with-categories.sidebar-expanded {
-  padding-left: calc(var(--category-strip-content-width, 260px) + 160px);
 }
 
 /* Modern Category Strip Header */

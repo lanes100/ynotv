@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { SettingsTabId } from '../components/settings/SettingsSidebar';
-import type { View } from '../components/Sidebar';
 import { Bridge } from '../services/tauri-bridge';
+
+type View = 'none' | 'guide' | 'movies' | 'series' | 'dvr' | 'sports' | 'calendar' | 'settings';
 
 // Auto-hide controls after this many milliseconds of inactivity
 const CONTROLS_AUTO_HIDE_MS = 3000;
@@ -13,10 +14,8 @@ export interface NavigationState {
   editSourceId: string | null;
   showSettingsPopup: boolean;
 
-  // Sidebar/Categories state
+  // Categories state
   categoriesOpen: boolean;
-  sidebarExpanded: boolean;
-  showSidebar: boolean;
 
   // Search state
   searchQuery: string;
@@ -41,8 +40,6 @@ export interface NavigationState {
   setEditSourceId: (id: string | null | ((prev: string | null) => string | null)) => void;
   setShowSettingsPopup: (show: boolean | ((prev: boolean) => boolean)) => void;
   setCategoriesOpen: (open: boolean | ((prev: boolean) => boolean)) => void;
-  setSidebarExpanded: (expanded: boolean | ((prev: boolean) => boolean)) => void;
-  setShowSidebar: (show: boolean | ((prev: boolean) => boolean)) => void;
   setSearchQuery: (query: string | ((prev: string) => string)) => void;
   setIsWatchlistMode: (isWatchlist: boolean | ((prev: boolean) => boolean)) => void;
   setShowControls: (show: boolean | ((prev: boolean) => boolean)) => void;
@@ -55,11 +52,10 @@ interface UseNavigationOptions {
   multiviewLayout: import('./useLayoutPersistence').LayoutMode;
   multiviewExitTabMode: () => void;
   setCategoryId: (catId: string | null) => void;
-  initialShowSidebar?: boolean;
 }
 
 export function useNavigation(options: UseNavigationOptions): NavigationState {
-  const { playing, multiviewLayout, multiviewExitTabMode, setCategoryId, initialShowSidebar = false } = options;
+  const { playing, multiviewLayout, multiviewExitTabMode, setCategoryId } = options;
 
   // View state
   const [activeView, setActiveView] = useState<View>('none');
@@ -67,10 +63,8 @@ export function useNavigation(options: UseNavigationOptions): NavigationState {
   const [editSourceId, setEditSourceId] = useState<string | null>(null);
   const [showSettingsPopup, setShowSettingsPopup] = useState(false);
 
-  // Sidebar/Categories state
+  // Categories state
   const [categoriesOpen, setCategoriesOpen] = useState(false);
-  const [sidebarExpanded, setSidebarExpanded] = useState(false);
-  const [showSidebar, setShowSidebar] = useState(initialShowSidebar);
 
   // Search state
   const [searchQuery, setSearchQuery] = useState('');
@@ -188,8 +182,6 @@ export function useNavigation(options: UseNavigationOptions): NavigationState {
     editSourceId,
     showSettingsPopup,
     categoriesOpen,
-    sidebarExpanded,
-    showSidebar,
     searchQuery,
     debouncedSearchQuery,
     isSearchMode,
@@ -204,8 +196,6 @@ export function useNavigation(options: UseNavigationOptions): NavigationState {
     setEditSourceId,
     setShowSettingsPopup,
     setCategoriesOpen,
-    setSidebarExpanded,
-    setShowSidebar,
     setSearchQuery,
     setIsWatchlistMode,
     setShowControls,
