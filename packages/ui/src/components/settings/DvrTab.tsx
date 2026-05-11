@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { getDvrSettings, saveDvrSetting } from '../../db';
 import { open } from '@tauri-apps/plugin-dialog';
+import '../Settings.css';
 
 export function DvrTab() {
     const [storagePath, setStoragePath] = useState('');
