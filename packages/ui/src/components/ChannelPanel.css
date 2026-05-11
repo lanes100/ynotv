@@ -734,6 +734,12 @@
   background: var(--surface-glow, rgba(0, 212, 255, 0.1));
 }
 
+/* Remove horizontal padding on favorite star so it hugs the left edge and logo */
+.guide-channel-info .favorite-btn {
+  padding-left: 0;
+  padding-right: 0;
+}
+
 /* Recording indicator at top right of channel box */
 .channel-recording-indicator {
   position: absolute;

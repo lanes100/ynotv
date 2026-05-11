@@ -722,6 +722,12 @@
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+/* Remove horizontal padding on favorite star so it hugs the left edge and logo */
+.modern-ui .guide-channel-info .favorite-btn {
+  padding-left: 0;
+  padding-right: 0;
+}
+
 .modern-ui .guide-channel-logo {
   width: 42px;
   height: 42px;
