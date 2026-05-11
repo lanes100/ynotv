@@ -43,6 +43,7 @@ export interface StoredCategory extends Category {
   display_order?: number;   // For manual ordering
   parent_id?: number;
   filter_words?: string[];  // Words to filter out from channel names
+  alias?: string;           // User-defined display name override
 }
 
 // Source sync metadata
@@ -435,7 +436,7 @@ class YnotvDatabase extends SqliteDatabase {
     // Each version block runs exactly ONCE. To add new columns in the future,
     // increment DB_VERSION and add a new case (do NOT modify existing cases).
     // ─────────────────────────────────────────────────────────────────────────
-    const DB_VERSION = 7;
+    const DB_VERSION = 8;
     const versionResult = await db.select('PRAGMA user_version') as Array<{ user_version: number }>;
     const currentVersion = versionResult[0]?.user_version ?? 0;
 
@@ -496,6 +497,15 @@ class YnotvDatabase extends SqliteDatabase {
         // v7: Failover Groups — priority-ordered channel backup lists
         console.log('[DB] v7 migration: Adding failover_groups tables');
         // No ALTER TABLE needed — tables created below via CREATE TABLE IF NOT EXISTS
+      }
+
+      if (currentVersion < 8) {
+        // v8: Category alias for user-defined display name overrides
+        console.log('[DB] v8 migration: Adding alias column to categories');
+        const addColumn = async (table: string, col: string, type: string) => {
+          try { await db.execute(`ALTER TABLE ${table} ADD COLUMN ${col} ${type}`); } catch { /* already exists */ }
+        };
+        await addColumn('categories', 'alias', 'TEXT');
       }
 
       if (currentVersion < 2) {
@@ -1141,6 +1151,11 @@ export async function setLastCategory(categoryId: string): Promise<void> {
 /** Update category enabled/disabled state */
 export async function updateCategoryEnabled(categoryId: string, enabled: boolean) {
   await db.categories.update(categoryId, { enabled });
+}
+
+/** Update category alias (user-defined display name override) */
+export async function updateCategoryAlias(categoryId: string, alias: string | undefined) {
+  await db.categories.update(categoryId, { alias: alias || undefined });
 }
 
 /** Update multiple categories' order */

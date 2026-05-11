@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useLiveQuery } from '../hooks/useSqliteLiveQuery';
 import { useCategoriesBySource, type CategoryWithCount, type SourceWithCategories } from '../hooks/useChannels';
-import { db, getWatchlistCount, type CustomGroup, updateCategoryEnabled } from '../db';
+import { db, getWatchlistCount, type CustomGroup, updateCategoryEnabled, updateCategoryAlias } from '../db';
 import type { Source } from '@ynotv/core';
 import { useSourceVersion } from '../contexts/SourceVersionContext';
 import { normalizeBoolean } from '../utils/db-helpers';
@@ -314,6 +314,28 @@ export function CategoryStrip({ selectedCategoryId, onSelectCategory, visible, s
     }
   };
 
+  const handleRenameCategory = (categoryId: string, currentName: string) => {
+    showPrompt(
+      'Rename Category',
+      'Enter a new display name for this category:',
+      async (newName) => {
+        const trimmed = newName.trim();
+        if (trimmed && trimmed !== currentName) {
+          try {
+            await updateCategoryAlias(categoryId, trimmed);
+          } catch (err) {
+            console.error('[CategoryStrip] Failed to rename category:', err);
+          }
+        }
+      },
+      undefined,
+      'Category name...',
+      currentName,
+      'Rename',
+      'Cancel'
+    );
+  };
+
   // ── Drag-to-resize for category sidebar ───────────────────────────────────
   const isResizingCategory = useRef(false);
 
@@ -512,9 +534,9 @@ export function CategoryStrip({ selectedCategoryId, onSelectCategory, visible, s
                     key={category.category_id}
                     className={`category-item nested ${selectedCategoryId === category.category_id ? 'selected' : ''}`}
                     onClick={() => onSelectCategory(category.category_id)}
-                    onContextMenu={(e) => handleCategoryContextMenu(e, category.category_id, category.category_name, group.sourceId, sources[group.sourceId] || 'Source')}
+                    onContextMenu={(e) => handleCategoryContextMenu(e, category.category_id, category.alias || category.category_name, group.sourceId, sources[group.sourceId] || 'Source')}
                   >
-                    <ScrollingText className="category-name">{category.category_name}</ScrollingText>
+                    <ScrollingText className="category-name">{category.alias || category.category_name}</ScrollingText>
                     <span className="category-count">{category.channelCount}</span>
                   </button>
                 ))}
@@ -611,6 +633,7 @@ export function CategoryStrip({ selectedCategoryId, onSelectCategory, visible, s
           onClose={() => setCategoryContextMenu(null)}
           onManageCategories={(id, name) => setManagingCategorySource({ id, name })}
           onHideCategory={handleHideCategory}
+          onRenameCategory={handleRenameCategory}
         />
       )}
 

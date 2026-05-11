@@ -937,7 +937,7 @@ export function useCategoriesBySource(): SourceWithCategories[] {
       // Sort INDIVIDUAL categories inside each source based on user preference
       Object.values(grouped).forEach(cats => {
         if (categorySortOrder === 'alphabetical') {
-          cats.sort((a, b) => a.category_name.localeCompare(b.category_name));
+          cats.sort((a, b) => (a.alias || a.category_name).localeCompare(b.alias || b.category_name));
         } else {
           // Default: use display_order if available, otherwise alphabetical
           cats.sort((a, b) => {
@@ -946,7 +946,7 @@ export function useCategoriesBySource(): SourceWithCategories[] {
             }
             if (a.display_order !== undefined) return -1;
             if (b.display_order !== undefined) return 1;
-            return a.category_name.localeCompare(b.category_name);
+            return (a.alias || a.category_name).localeCompare(b.alias || b.category_name);
           });
         }
       });

@@ -11,6 +11,7 @@ interface CategoryContextMenuProps {
     onClose: () => void;
     onManageCategories?: (sourceId: string, sourceName: string) => void;
     onHideCategory?: (categoryId: string) => void;
+    onRenameCategory?: (categoryId: string, currentName: string) => void;
 }
 
 export function CategoryContextMenu({
@@ -22,6 +23,7 @@ export function CategoryContextMenu({
     onClose,
     onManageCategories,
     onHideCategory,
+    onRenameCategory,
 }: CategoryContextMenuProps) {
     const menuRef = useRef<HTMLDivElement>(null);
     const [adjustedPosition, setAdjustedPosition] = useState(position);
@@ -86,6 +88,11 @@ export function CategoryContextMenu({
             <div className="context-menu-header" style={{ padding: '8px 12px 4px', fontSize: '11px', opacity: 0.6, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                 {categoryName}
             </div>
+            {onRenameCategory && (
+                <div className="context-menu-item" onClick={() => { onRenameCategory(categoryId, categoryName); onClose(); }}>
+                    ✏️ Rename Category
+                </div>
+            )}
             {onManageCategories && (
                 <div className="context-menu-item" onClick={() => { onManageCategories(sourceId, sourceName); onClose(); }}>
                     📋 Manage Categories
