@@ -298,7 +298,7 @@ export function useChannels(categoryId: string | null, sortOrder: 'alphabetical'
           if (a.fav_order != null && b.fav_order != null) return a.fav_order - b.fav_order;
           if (a.fav_order != null) return -1;
           if (b.fav_order != null) return 1;
-          return a.name.localeCompare(b.name);
+          return (a.alias || a.name).localeCompare(b.alias || b.name);
         });
         orderingIsFixed = true;
       } else if (!categoryId) {
@@ -411,7 +411,7 @@ export function useChannels(categoryId: string | null, sortOrder: 'alphabetical'
             if (aNum !== undefined) return -1;
             if (bNum !== undefined) return 1;
           }
-          return a.name.localeCompare(b.name);
+          return (a.alias || a.name).localeCompare(b.alias || b.name);
         });
       }
 
@@ -423,11 +423,11 @@ export function useChannels(categoryId: string | null, sortOrder: 'alphabetical'
           if (aNum !== undefined && bNum !== undefined) return aNum - bNum;
           if (aNum !== undefined) return -1;
           if (bNum !== undefined) return 1;
-          return a.name.localeCompare(b.name);
+          return (a.alias || a.name).localeCompare(b.alias || b.name);
         });
       }
       // Default: alphabetical
-      results = results.sort((a, b) => a.name.localeCompare(b.name));
+      results = results.sort((a, b) => (a.alias || a.name).localeCompare(b.alias || b.name));
 
       return results;
     },

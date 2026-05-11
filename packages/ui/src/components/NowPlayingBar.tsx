@@ -432,8 +432,8 @@ export function NowPlayingBar({
                   </>
                 ) : isCatchup && catchupInfo ? (
                   <>
-                    <span className="npb-channel-name" title={channel.name}>
-                      {channel.name} <span className="npb-catchup-badge" style={{ fontSize: '0.7em', backgroundColor: '#e5a00d', padding: '2px 6px', borderRadius: '4px', verticalAlign: 'middle', marginLeft: '6px' }}>CATCHUP</span>
+                    <span className="npb-channel-name" title={channel.alias || channel.name}>
+                      {channel.alias || channel.name} <span className="npb-catchup-badge" style={{ fontSize: '0.7em', backgroundColor: '#e5a00d', padding: '2px 6px', borderRadius: '4px', verticalAlign: 'middle', marginLeft: '6px' }}>CATCHUP</span>
                     </span>
                     <MetadataBadge streamId={channel.stream_id} variant="detailed" />
                     <span className="npb-program-title" title={catchupInfo.programTitle}>
@@ -442,8 +442,8 @@ export function NowPlayingBar({
                   </>
                 ) : (
                   <>
-                    <span className="npb-channel-name" title={channel.name}>
-                      {channel.name}
+                    <span className="npb-channel-name" title={channel.alias || channel.name}>
+                      {channel.alias || channel.name}
                     </span>
                     <MetadataBadge streamId={channel.stream_id} variant="detailed" />
                     {currentProgram ? (

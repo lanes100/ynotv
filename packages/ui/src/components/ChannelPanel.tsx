@@ -1843,7 +1843,9 @@ export function ChannelPanel({
                       // Sort both arrays alphabetically by channel name (only when alphabetical order is selected)
                       if (searchResultsOrder === 'alphabetical') {
                         const sortByChannelName = (a: typeof liveChannels[0], b: typeof liveChannels[0]) => {
-                          return a.channel.name.localeCompare(b.channel.name, undefined, { sensitivity: 'base' });
+                          const aName = a.channel.alias || a.channel.name;
+                          const bName = b.channel.alias || b.channel.name;
+                          return aName.localeCompare(bName, undefined, { sensitivity: 'base' });
                         };
                         liveChannels.sort(sortByChannelName);
                         upcomingChannels.sort(sortByChannelName);

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { scheduleRecording, detectScheduleConflicts, type DvrSchedule, db } from '../db';
+import { scheduleRecording, detectScheduleConflicts, type DvrSchedule, db, updateChannelAlias } from '../db';
 import type { StoredChannel } from '../db';
 import { StalkerClient } from '@ynotv/local-adapter';
 import { useModal } from './Modal';
@@ -45,7 +45,7 @@ export function ChannelContextMenu({
     const [adjustedPosition, setAdjustedPosition] = useState(position);
     const [showTVMazeModal, setShowTVMazeModal] = useState(false);
     const [showEpgEditor, setShowEpgEditor] = useState(false);
-    const { showSuccess, showError, ModalComponent } = useModal();
+    const { showSuccess, showError, showPrompt, ModalComponent } = useModal();
 
     // Group state
     const [customGroups, setCustomGroups] = useState<{ group_id: string; name: string }[]>([]);
@@ -120,10 +120,14 @@ export function ChannelContextMenu({
         }
     }, [position, currentView]);
 
-    // Close on click outside
+    // Close on click outside (ignore clicks inside modals since they are rendered in portals)
     useEffect(() => {
+        function isInsideModal(target: Node): boolean {
+            const el = target as HTMLElement;
+            return !!el.closest?.('.modal-overlay') || !!el.closest?.('.modal-container');
+        }
         function handleClickOutside(e: MouseEvent) {
-            if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+            if (menuRef.current && !menuRef.current.contains(e.target as Node) && !isInsideModal(e.target as Node)) {
                 onClose();
             }
         }
@@ -303,6 +307,32 @@ export function ChannelContextMenu({
         } finally {
             onClose();
         }
+    }
+
+    function handleRenameChannel() {
+        showPrompt(
+            'Rename Channel',
+            'Enter a new display name for this channel:',
+            async (newName) => {
+                const trimmed = newName.trim();
+                if (trimmed && trimmed !== (channel.alias || channel.name)) {
+                    try {
+                        await updateChannelAlias(channel.stream_id, trimmed);
+                        showSuccess('Channel Renamed', `${channel.name} is now displayed as "${trimmed}"`);
+                    } catch (e: any) {
+                        console.error('Failed to rename channel:', e);
+                        showError('Failed', e?.message || 'Could not rename channel');
+                    }
+                }
+                onClose();
+            },
+            () => onClose(),
+            'Channel name...',
+            channel.alias || channel.name,
+            'Rename',
+            'Cancel',
+            false
+        );
     }
 
     const durationOptions = [5, 15, 30, 60, 90, 120, 180, 240];
@@ -622,6 +652,10 @@ export function ChannelContextMenu({
             <div className="context-menu-separator" />
             <div className="context-menu-item" onClick={() => { setShowEpgEditor(true); }}>
                 ✏️ Edit EPG
+            </div>
+            <div className="context-menu-separator" />
+            <div className="context-menu-item" onClick={handleRenameChannel}>
+                ✏️ Rename Channel
             </div>
             <div className="context-menu-separator" />
             <div className="context-menu-item" onClick={handleHideChannel}>

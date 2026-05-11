@@ -149,13 +149,13 @@ export function WatchlistRow({
                 }}
               />
             ) : (
-              <span className="logo-placeholder">{channel.name.charAt(0)}</span>
+              <span className="logo-placeholder">{(channel.alias || channel.name).charAt(0)}</span>
             )}
           </div>
           <div className="guide-channel-name-container">
-            <span className="guide-channel-name" title={channel.name}>
+            <span className="guide-channel-name" title={channel.alias || channel.name}>
               {isLive && <span className="live-indicator">●</span>}
-              {channel.name}
+              {channel.alias || channel.name}
               {(Boolean(channel.tv_archive) || channel.tv_archive === 1) && (
                 <span style={{ color: '#e5a00d', marginLeft: '4px', fontSize: '1.1em', verticalAlign: 'middle' }}>↺</span>
               )}

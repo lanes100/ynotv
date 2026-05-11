@@ -11,6 +11,7 @@ export interface StoredChannel extends Omit<Channel, 'stream_icon' | 'epg_channe
   fav_order?: number;       // Custom ordering for favorites
   display_order?: number;   // Custom ordering for channels within a category
   enabled?: boolean;        // For showing/hiding channels
+  alias?: string;           // User-defined display name override
 
 
   // For quick lookups
@@ -436,7 +437,7 @@ class YnotvDatabase extends SqliteDatabase {
     // Each version block runs exactly ONCE. To add new columns in the future,
     // increment DB_VERSION and add a new case (do NOT modify existing cases).
     // ─────────────────────────────────────────────────────────────────────────
-    const DB_VERSION = 8;
+    const DB_VERSION = 9;
     const versionResult = await db.select('PRAGMA user_version') as Array<{ user_version: number }>;
     const currentVersion = versionResult[0]?.user_version ?? 0;
 
@@ -506,6 +507,15 @@ class YnotvDatabase extends SqliteDatabase {
           try { await db.execute(`ALTER TABLE ${table} ADD COLUMN ${col} ${type}`); } catch { /* already exists */ }
         };
         await addColumn('categories', 'alias', 'TEXT');
+      }
+
+      if (currentVersion < 9) {
+        // v9: Channel alias for user-defined display name overrides
+        console.log('[DB] v9 migration: Adding alias column to channels');
+        const addColumn = async (table: string, col: string, type: string) => {
+          try { await db.execute(`ALTER TABLE ${table} ADD COLUMN ${col} ${type}`); } catch { /* already exists */ }
+        };
+        await addColumn('channels', 'alias', 'TEXT');
       }
 
       if (currentVersion < 2) {
@@ -1156,6 +1166,11 @@ export async function updateCategoryEnabled(categoryId: string, enabled: boolean
 /** Update category alias (user-defined display name override) */
 export async function updateCategoryAlias(categoryId: string, alias: string | undefined) {
   await db.categories.update(categoryId, { alias: alias || undefined });
+}
+
+/** Update channel alias (user-defined display name override) */
+export async function updateChannelAlias(channelId: string, alias: string | undefined) {
+  await db.channels.update(channelId, { alias: alias || undefined });
 }
 
 /** Update multiple categories' order */

@@ -57,10 +57,14 @@ export function SourceContextMenu({
         }
     }, [position]);
 
-    // Close on click outside
+    // Close on click outside (ignore clicks inside modals since they are rendered in portals)
     useEffect(() => {
+        function isInsideModal(target: Node): boolean {
+            const el = target as HTMLElement;
+            return !!el.closest?.('.modal-overlay') || !!el.closest?.('.modal-container');
+        }
         function handleClickOutside(e: MouseEvent) {
-            if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+            if (menuRef.current && !menuRef.current.contains(e.target as Node) && !isInsideModal(e.target as Node)) {
                 onClose();
             }
         }

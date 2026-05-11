@@ -93,8 +93,8 @@ export function ChannelInfoOverlay({
             />
           )}
           <div className="cio-header-text">
-            <span className="cio-channel-name" title={channel.name}>
-              {channel.name}
+            <span className="cio-channel-name" title={channel.alias || channel.name}>
+              {channel.alias || channel.name}
             </span>
             <MetadataBadge streamId={channel.stream_id} variant="detailed" />
           </div>

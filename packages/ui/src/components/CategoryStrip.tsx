@@ -332,7 +332,8 @@ export function CategoryStrip({ selectedCategoryId, onSelectCategory, visible, s
       'Category name...',
       currentName,
       'Rename',
-      'Cancel'
+      'Cancel',
+      false
     );
   };
 
