@@ -22,8 +22,6 @@ interface SportsHubProps {
   previewEnabled?: boolean;
   onTogglePreview?: () => void;
   onPlayChannel?: (channel: import('../../db').StoredChannel) => void;
-  // Mini media bar for preview
-  miniMediaBarForPreview?: boolean;
   // Playback controls for mini media bar
   onTogglePlay?: () => void;
   isPlaying?: boolean;
@@ -38,7 +36,6 @@ export function SportsHub({
   previewEnabled,
   onTogglePreview,
   onPlayChannel,
-  miniMediaBarForPreview,
   onTogglePlay,
   isPlaying,
   onStop,
@@ -93,8 +90,8 @@ export function SportsHub({
     }
   }, [previewMuted, previewVolume]);
 
-  // Compute mini bar visibility based on hover state (only when miniMediaBarForPreview is enabled)
-  const isMiniBarVisible = miniMediaBarForPreview && (previewHovered || miniBarHovered);
+  // Compute mini bar visibility based on hover state
+  const isMiniBarVisible = previewHovered || miniBarHovered;
 
   // Resize persistence state
   const [previewHeightPx, setPreviewHeightPx] = useState(() => {

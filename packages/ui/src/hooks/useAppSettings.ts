@@ -30,7 +30,6 @@ export interface AppSettings {
   useAdvancedSearchForRegular: boolean;
 
   // LiveTV
-  miniMediaBarForEpgPreview: boolean;
   epgView: 'traditional' | 'alternate';
   channelInfoOverlayEnabled: boolean;
   channelInfoOverlayFontSize: number;
@@ -96,7 +95,6 @@ export function useAppSettings(): AppSettings {
   const [useAdvancedSearchForRegular, setUseAdvancedSearchForRegular] = useState(false);
 
   // LiveTV settings
-  const [miniMediaBarForEpgPreview, setMiniMediaBarForEpgPreview] = useState(true);
   const [epgView, setEpgView] = useState<'traditional' | 'alternate'>('traditional');
   const [channelInfoOverlayEnabled, setChannelInfoOverlayEnabledState] = useState(false);
   const [channelInfoOverlayFontSize, setChannelInfoOverlayFontSizeState] = useState(16);
@@ -160,7 +158,6 @@ export function useAppSettings(): AppSettings {
           setAdvancedSearchSourceIds(result.data.advancedSearchSourceIds ?? []);
           setAdvancedSearchCategoryIds(result.data.advancedSearchCategoryIds ?? []);
           setUseAdvancedSearchForRegular(result.data.useAdvancedSearchForRegular ?? false);
-          setMiniMediaBarForEpgPreview(result.data.miniMediaBarForEpgPreview ?? true);
           setEpgView(result.data.epgView ?? 'traditional');
           setChannelInfoOverlayEnabled(result.data.channelInfoOverlayEnabled ?? false);
           setChannelInfoOverlayFontSizeState(result.data.channelInfoOverlayFontSize ?? 16);
@@ -334,7 +331,6 @@ export function useAppSettings(): AppSettings {
     advancedSearchSourceIds,
     advancedSearchCategoryIds,
     useAdvancedSearchForRegular,
-    miniMediaBarForEpgPreview,
     epgView,
     channelInfoOverlayEnabled,
     channelInfoOverlayFontSize,

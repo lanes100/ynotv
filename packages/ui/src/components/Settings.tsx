@@ -105,9 +105,11 @@ export function Settings({
     startupWidth?: number;
     startupHeight?: number;
     dontSaveWindowSizeOnClose?: boolean;
+    modernUiEnabled?: boolean;
   }>({
     channelFontSize: 14,
     categoryFontSize: 13,
+    modernUiEnabled: true,
   });
 
   // Startup settings state
@@ -127,9 +129,7 @@ export function Settings({
 
   // LiveTV settings state
   const [epgDarkenCurrent, setEpgDarkenCurrent] = useState(false);
-  const [miniMediaBarForEpgPreview, setMiniMediaBarForEpgPreview] = useState(false);
   const [collapseSourceCategoriesOnStartup, setCollapseSourceCategoriesOnStartup] = useState(false);
-  const [modernUiEnabled, setModernUiEnabled] = useState(true);
   const [epgTitleFontSize, setEpgTitleFontSize] = useState(32);
   const [epgBodyFontSize, setEpgBodyFontSize] = useState(16);
   const epgView = useEpgView();
@@ -243,7 +243,6 @@ export function Settings({
         streamWatchdogSeconds?: number;
         streamMaxRetries?: number;
         epgDarkenCurrent?: boolean;
-        miniMediaBarForEpgPreview?: boolean;
         epgView?: 'traditional' | 'alternate';
         collapseSourceCategoriesOnStartup?: boolean;
         modernUiEnabled?: boolean;
@@ -304,18 +303,31 @@ export function Settings({
       }
 
       // Load UI settings
+      const loadedModernUi = settings.modernUiEnabled ?? true;
       const loadedUiSettings = {
         channelFontSize: settings.channelFontSize ?? 14,
         categoryFontSize: settings.categoryFontSize ?? 13,
         startupWidth: settings.startupWidth,
         startupHeight: settings.startupHeight,
         dontSaveWindowSizeOnClose: settings.dontSaveWindowSizeOnClose ?? false,
+        modernUiEnabled: loadedModernUi,
       };
       setUiSettings(loadedUiSettings);
 
       // Apply UI settings immediately
       document.documentElement.style.setProperty('--channel-font-size', `${loadedUiSettings.channelFontSize}px`);
       document.documentElement.style.setProperty('--category-font-size', `${loadedUiSettings.categoryFontSize}px`);
+
+      // Apply modern UI class on load
+      if (loadedModernUi) {
+        document.documentElement.classList.add('modern-ui');
+      } else {
+        document.documentElement.classList.remove('modern-ui');
+      }
+      // Persist default if not already saved
+      if (settings.modernUiEnabled === undefined) {
+        await window.storage.updateSettings({ modernUiEnabled: true });
+      }
 
       // Load startup settings
       setRememberLastChannels(settings.rememberLastChannels ?? false);
@@ -339,28 +351,11 @@ export function Settings({
         document.documentElement.classList.add('epg-darken-current');
       }
 
-      // Load mini media bar setting
-      setMiniMediaBarForEpgPreview(settings.miniMediaBarForEpgPreview ?? false);
-      
       // Load EPG view layout setting
       setEpgView(settings.epgView ?? 'traditional');
       
       // Load collapse source categories setting
       setCollapseSourceCategoriesOnStartup(settings.collapseSourceCategoriesOnStartup ?? false);
-      
-      // Load modern UI setting (default true)
-      const loadedModernUi = settings.modernUiEnabled ?? true;
-      setModernUiEnabled(loadedModernUi);
-      // Apply CSS class on load
-      if (loadedModernUi) {
-        document.documentElement.classList.add('modern-ui');
-      } else {
-        document.documentElement.classList.remove('modern-ui');
-      }
-      // Persist default if not already saved
-      if (settings.modernUiEnabled === undefined) {
-        await window.storage.updateSettings({ modernUiEnabled: true });
-      }
 
       // Load EPG font size settings
       const loadedEpgTitleFontSize = settings.epgTitleFontSize ?? 32;
@@ -454,13 +449,6 @@ export function Settings({
     }
   };
 
-  const handleMiniMediaBarForEpgPreviewChange = async (enabled: boolean) => {
-    setMiniMediaBarForEpgPreview(enabled);
-    if (window.storage) {
-      await window.storage.updateSettings({ miniMediaBarForEpgPreview: enabled });
-    }
-  };
-
   const handleEpgViewChange = async (view: 'traditional' | 'alternate') => {
     setEpgView(view);
     if (window.storage) {
@@ -472,19 +460,6 @@ export function Settings({
     setCollapseSourceCategoriesOnStartup(enabled);
     if (window.storage) {
       await window.storage.updateSettings({ collapseSourceCategoriesOnStartup: enabled });
-    }
-  };
-
-  const handleModernUiEnabledChange = async (enabled: boolean) => {
-    setModernUiEnabled(enabled);
-    // Apply/remove the modern-ui class to the document
-    if (enabled) {
-      document.documentElement.classList.add('modern-ui');
-    } else {
-      document.documentElement.classList.remove('modern-ui');
-    }
-    if (window.storage) {
-      await window.storage.updateSettings({ modernUiEnabled: enabled });
     }
   };
 
@@ -588,9 +563,20 @@ export function Settings({
     startupWidth?: number;
     startupHeight?: number;
     dontSaveWindowSizeOnClose?: boolean;
+    modernUiEnabled?: boolean;
   }) => {
     const updated = { ...uiSettings, ...newSettings };
     setUiSettings(updated);
+
+    // Apply/remove the modern-ui class when modernUiEnabled changes
+    if (newSettings.modernUiEnabled !== undefined) {
+      if (newSettings.modernUiEnabled) {
+        document.documentElement.classList.add('modern-ui');
+      } else {
+        document.documentElement.classList.remove('modern-ui');
+      }
+    }
+
     if (window.storage) {
       await window.storage.updateSettings(newSettings);
 
@@ -796,14 +782,10 @@ export function Settings({
           <LiveTVTab
             epgDarkenCurrent={epgDarkenCurrent}
             onEpgDarkenCurrentChange={handleEpgDarkenCurrentChange}
-            miniMediaBarForEpgPreview={miniMediaBarForEpgPreview}
-            onMiniMediaBarForEpgPreviewChange={handleMiniMediaBarForEpgPreviewChange}
             epgView={epgView}
             onEpgViewChange={handleEpgViewChange}
             collapseSourceCategoriesOnStartup={collapseSourceCategoriesOnStartup}
             onCollapseSourceCategoriesOnStartupChange={handleCollapseSourceCategoriesOnStartupChange}
-            modernUiEnabled={modernUiEnabled}
-            onModernUiEnabledChange={handleModernUiEnabledChange}
             epgTitleFontSize={epgTitleFontSize}
             onEpgTitleFontSizeChange={handleEpgTitleFontSizeChange}
             epgBodyFontSize={epgBodyFontSize}

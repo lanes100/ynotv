@@ -8,6 +8,7 @@ interface UITabProps {
     startupWidth?: number;
     startupHeight?: number;
     dontSaveWindowSizeOnClose?: boolean;
+    modernUiEnabled?: boolean;
   };
   onSettingsChange: (settings: {
     channelFontSize?: number;
@@ -15,6 +16,7 @@ interface UITabProps {
     startupWidth?: number;
     startupHeight?: number;
     dontSaveWindowSizeOnClose?: boolean;
+    modernUiEnabled?: boolean;
   }) => void;
 }
 
@@ -154,6 +156,26 @@ export function UITab({ settings, onSettingsChange }: UITabProps) {
 
   return (
     <div className="settings-tab-content">
+      {/* Modern UI Section */}
+      <div className="settings-section" style={{ paddingTop: '8px' }}>
+        <div className="timeshift-settings">
+          <div className="timeshift-toggle-row">
+            <div className="timeshift-toggle-info">
+              <span className="timeshift-toggle-label">Enable Modern UI Design</span>
+              <span className="timeshift-toggle-sub">When enabled, applies a modern glass-morphism aesthetic with enhanced animations, gradients, and visual effects to the Categories and EPG views. Works best with glass themes.</span>
+            </div>
+            <label className="toggle-switch">
+              <input
+                type="checkbox"
+                checked={settings.modernUiEnabled ?? true}
+                onChange={(e) => onSettingsChange({ ...settings, modernUiEnabled: e.target.checked })}
+              />
+              <span className="toggle-slider" />
+            </label>
+          </div>
+        </div>
+      </div>
+
       {/* Window Settings Section */}
       <div className="settings-section" style={{ paddingTop: '8px' }}>
         <div className="section-header">

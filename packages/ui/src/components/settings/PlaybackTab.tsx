@@ -109,14 +109,7 @@ export function PlaybackTab({
 
       {/* ── Stream Recovery ──────────────────────────────────────── */}
       <div className="settings-section">
-        <div className="section-header">
-          <h3>Stream Recovery</h3>
-        </div>
-        <p className="section-description">
-          Controls how YNOTV detects and recovers from a stalled or disconnected Live TV stream.
-        </p>
-
-        <div className="playback-section">
+        <div className="playback-section" style={{ marginTop: 0 }}>
 
           {/* Watchdog timeout */}
           <div className="retry-setting-row">

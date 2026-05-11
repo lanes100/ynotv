@@ -96,7 +96,6 @@ function App() {
     advancedSearchSourceIds,
     advancedSearchCategoryIds,
     useAdvancedSearchForRegular,
-    miniMediaBarForEpgPreview,
     channelInfoOverlayEnabled,
     channelInfoOverlayFontSize,
     channelInfoOverlayLogoSize,
@@ -1379,7 +1378,6 @@ function App() {
         includeSourceInSearch={includeSourceInSearch}
         searchResultsOrder={searchResultsOrder}
         currentChannel={currentChannel}
-        miniMediaBarForEpgPreview={miniMediaBarForEpgPreview}
         onTogglePlay={handleTogglePlay}
         isPlaying={playing}
         onChannelUp={handleChannelUp}
@@ -1485,7 +1483,6 @@ function App() {
           previewEnabled={sportsPreviewEnabled}
           onTogglePreview={() => setSportsPreviewEnabled(v => !v)}
           onPlayChannel={handlePlayChannel}
-          miniMediaBarForPreview={miniMediaBarForEpgPreview}
           onTogglePlay={handleTogglePlay}
           isPlaying={playing}
           onStop={handleStop}

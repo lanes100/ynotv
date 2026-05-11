@@ -3,14 +3,10 @@ import './PlaybackTab.css'; // Reuse existing tab styles
 interface LiveTVTabProps {
   epgDarkenCurrent: boolean;
   onEpgDarkenCurrentChange: (enabled: boolean) => void;
-  miniMediaBarForEpgPreview: boolean;
-  onMiniMediaBarForEpgPreviewChange: (enabled: boolean) => void;
   epgView: 'traditional' | 'alternate';
   onEpgViewChange: (view: 'traditional' | 'alternate') => void;
   collapseSourceCategoriesOnStartup: boolean;
   onCollapseSourceCategoriesOnStartupChange: (enabled: boolean) => void;
-  modernUiEnabled: boolean;
-  onModernUiEnabledChange: (enabled: boolean) => void;
   epgTitleFontSize: number;
   onEpgTitleFontSizeChange: (size: number) => void;
   epgBodyFontSize: number;
@@ -20,14 +16,10 @@ interface LiveTVTabProps {
 export function LiveTVTab({
   epgDarkenCurrent,
   onEpgDarkenCurrentChange,
-  miniMediaBarForEpgPreview,
-  onMiniMediaBarForEpgPreviewChange,
   epgView,
   onEpgViewChange,
   collapseSourceCategoriesOnStartup,
   onCollapseSourceCategoriesOnStartupChange,
-  modernUiEnabled,
-  onModernUiEnabledChange,
   epgTitleFontSize,
   onEpgTitleFontSizeChange,
   epgBodyFontSize,
@@ -36,14 +28,7 @@ export function LiveTVTab({
   return (
     <div className="settings-tab-content playback-tab-content">
       <div className="settings-section">
-        <div className="section-header">
-          <h3>EPG Display</h3>
-        </div>
-        <p className="section-description">
-          Customize how the Electronic Program Guide (EPG) displays program information.
-        </p>
-
-        <div className="timeshift-settings">
+        <div className="timeshift-settings" style={{ marginTop: 0 }}>
           {/* Enable darker current program block */}
           <div className="timeshift-toggle-row">
             <div className="timeshift-toggle-info">
@@ -186,21 +171,6 @@ export function LiveTVTab({
             </select>
           </div>
 
-          {/* Enable mini media bar for EPG preview */}
-          <div className="timeshift-toggle-row">
-            <div className="timeshift-toggle-info">
-              <span className="timeshift-toggle-label">Mini media bar for EPG Preview</span>
-              <span className="timeshift-toggle-sub">When enabled, a mini play/pause control bar will appear at the bottom of the preview video panel in the LiveTV/EPG view. Requires restart to take effect.</span>
-            </div>
-            <label className="toggle-switch">
-              <input
-                type="checkbox"
-                checked={miniMediaBarForEpgPreview}
-                onChange={(e) => onMiniMediaBarForEpgPreviewChange(e.target.checked)}
-              />
-              <span className="toggle-slider" />
-            </label>
-          </div>
         </div>
       </div>
       {/* Categories Settings */}
@@ -231,33 +201,6 @@ export function LiveTVTab({
         </div>
       </div>
 
-      {/* Modern UI Settings */}
-      <div className="settings-section">
-        <div className="section-header">
-          <h3>Modern UI (Experimental)</h3>
-        </div>
-        <p className="section-description">
-          Enable a modern, sleek glass-morphism design for the LiveTV/EPG interface.
-        </p>
-
-        <div className="timeshift-settings">
-          {/* Enable Modern UI */}
-          <div className="timeshift-toggle-row">
-            <div className="timeshift-toggle-info">
-              <span className="timeshift-toggle-label">Enable Modern UI Design</span>
-              <span className="timeshift-toggle-sub">When enabled, applies a modern glass-morphism aesthetic with enhanced animations, gradients, and visual effects to the Categories and EPG views. Works best with glass themes.</span>
-            </div>
-            <label className="toggle-switch">
-              <input
-                type="checkbox"
-                checked={modernUiEnabled}
-                onChange={(e) => onModernUiEnabledChange(e.target.checked)}
-              />
-              <span className="toggle-slider" />
-            </label>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }

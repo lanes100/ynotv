@@ -108,8 +108,6 @@ interface ChannelPanelProps {
   searchResultsOrder?: 'default' | 'alphabetical';
   // Current playing channel for syncing preview
   currentChannel?: StoredChannel | null;
-  // Mini media bar for EPG preview
-  miniMediaBarForEpgPreview?: boolean;
   onTogglePlay?: () => void;
   isPlaying?: boolean;
   onChannelUp?: () => void;
@@ -177,7 +175,6 @@ export function ChannelPanel({
   includeSourceInSearch,
   searchResultsOrder,
   currentChannel,
-  miniMediaBarForEpgPreview,
   onTogglePlay,
   isPlaying,
   onChannelUp,
@@ -788,8 +785,8 @@ export function ChannelPanel({
   // Track if we have a channel to show
   const hasSelectedChannel = selectedChannel !== null;
 
-  // Compute mini bar visibility based on hover state (only when miniMediaBarForEpgPreview is enabled)
-  const isMiniBarVisible = miniMediaBarForEpgPreview && selectedChannel && (previewHovered || miniBarHovered);
+  // Compute mini bar visibility based on hover state
+  const isMiniBarVisible = selectedChannel && (previewHovered || miniBarHovered);
 
   // Handle Channel Click: Preview vs Fullscreen
   const handleChannelClick = useCallback((channel: StoredChannel) => {
@@ -1303,7 +1300,7 @@ export function ChannelPanel({
     // Re-run when layout changes (sidebar/category visibility) or when visibility/selection changes
     // Include selectedChannelId to trigger resize when returning to view with a selection
     // Include isWatchlistMode and categoryId to handle special view modes
-  }, [visible, categoryStripOpen, selectedChannel?.stream_id, isWatchlistMode, categoryId, miniMediaBarForEpgPreview, epgView]);
+  }, [visible, categoryStripOpen, selectedChannel?.stream_id, isWatchlistMode, categoryId, epgView]);
 
   return (
     <div
