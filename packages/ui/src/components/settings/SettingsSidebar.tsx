@@ -31,7 +31,7 @@ const SETTINGS_TABS: SettingsTab[] = [
   { id: 'tmdb', label: 'TMDB/RPDB' },
   { id: 'subtitles', label: 'Subtitles' },
   { id: 'livetv', label: 'LiveTV' },
-  { id: 'live-view', label: 'Ch Info Overlay' },
+  { id: 'live-view', label: 'Channel Overlay' },
   { id: 'theme', label: 'Theme' },
   { id: 'ui', label: 'UI' },
   { id: 'startup', label: 'Startup' },
