@@ -13,9 +13,7 @@ import { ShortcutsTab } from './settings/ShortcutsTab';
 import { ImportExportTab } from './settings/ImportExportTab';
 import { UITab } from './settings/UITab';
 import { ThemeTab } from './settings/ThemeTab';
-import { DvrTab } from './settings/DvrTab';
 import { StartupTab, type SavedLayoutState } from './settings/StartupTab';
-import { TVCalendarTab } from './settings/TVCalendarTab';
 import { PlaybackTab } from './settings/PlaybackTab';
 import { CacheTab } from './settings/CacheTab';
 import { AboutTab } from './settings/AboutTab';
@@ -767,8 +765,6 @@ export function Settings({
             onThemeChange={onThemeChange || (() => { })}
           />
         );
-      case 'dvr':
-        return <DvrTab />;
       case 'startup':
         return (
           <StartupTab
@@ -779,8 +775,6 @@ export function Settings({
             onReopenLastOnStartupChange={handleReopenLastOnStartupChange}
           />
         );
-      case 'tv-calendar':
-        return <TVCalendarTab />;
       case 'playback':
         return (
           <PlaybackTab

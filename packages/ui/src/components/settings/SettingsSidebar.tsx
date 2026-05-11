@@ -12,9 +12,7 @@ export type SettingsTabId =
   | 'export-import'
   | 'ui'
   | 'theme'
-  | 'dvr'
   | 'startup'
-  | 'tv-calendar'
   | 'playback'
   | 'cache'
   | 'livetv'
@@ -57,14 +55,12 @@ const SETTINGS_CATEGORIES: SettingsCategory[] = [
       { id: 'theme', label: 'Theme' },
       { id: 'ui', label: 'UI' },
       { id: 'startup', label: 'Startup' },
-      { id: 'tv-calendar', label: 'TV Calendar' },
       { id: 'playback', label: 'Playback' },
       { id: 'cache', label: 'Cache' },
       { id: 'security', label: 'Security' },
       { id: 'debug', label: 'Debug' },
       { id: 'shortcuts', label: 'Shortcuts' },
       { id: 'export-import', label: 'Export / Import' },
-      { id: 'dvr', label: 'DVR' },
       { id: 'about', label: 'About' },
     ],
   },
