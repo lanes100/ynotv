@@ -245,9 +245,9 @@ export function useCategoriesForSource(sourceId: string | null) {
 }
 
 // Hook to get channels for a category (or all if categoryId is null)
-// sortOrder: 'alphabetical' (default) or 'number' (by channel_num from provider)
+// sortOrder: 'alphabetical' (default), 'number' (by channel_num from provider), or 'provider' (M3U file order)
 // Filters out channels from disabled sources
-export function useChannels(categoryId: string | null, sortOrder: 'alphabetical' | 'number' = 'alphabetical', options?: { skip?: boolean }) {
+export function useChannels(categoryId: string | null, sortOrder: 'alphabetical' | 'number' | 'provider' = 'alphabetical', options?: { skip?: boolean }) {
   const enabledSourceIds = useEnabledSources();
   const enabledSourceKey = useMemo(
     () => (enabledSourceIds ? Array.from(enabledSourceIds).sort().join(',') : 'loading'),
@@ -404,6 +404,14 @@ export function useChannels(categoryId: string | null, sortOrder: 'alphabetical'
           if (aHas) return -1; // manually ordered items first
           if (bHas) return 1;
           // Both unordered — fall back to sortOrder
+          if (sortOrder === 'provider') {
+            const aOrder = a.provider_order;
+            const bOrder = b.provider_order;
+            if (aOrder !== undefined && bOrder !== undefined) return aOrder - bOrder;
+            if (aOrder !== undefined) return -1;
+            if (bOrder !== undefined) return 1;
+            return 0;
+          }
           if (sortOrder === 'number') {
             const aNum = a.channel_num;
             const bNum = b.channel_num;
@@ -416,6 +424,16 @@ export function useChannels(categoryId: string | null, sortOrder: 'alphabetical'
       }
 
       // No manual ordering — use sortOrder preference
+      if (sortOrder === 'provider') {
+        return results.sort((a, b) => {
+          const aOrder = a.provider_order;
+          const bOrder = b.provider_order;
+          if (aOrder !== undefined && bOrder !== undefined) return aOrder - bOrder;
+          if (aOrder !== undefined) return -1;
+          if (bOrder !== undefined) return 1;
+          return 0;
+        });
+      }
       if (sortOrder === 'number') {
         return results.sort((a, b) => {
           const aNum = a.channel_num;

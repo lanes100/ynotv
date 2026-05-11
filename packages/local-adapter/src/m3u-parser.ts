@@ -188,6 +188,7 @@ export function parseM3U(content: string, sourceId: string): M3UParseResult {
         direct_url: line,
         source_id: sourceId,
         tv_archive: currentMetadata.tvArchive ? 1 : 0,
+        provider_order: channelCounter - 1, // 0-based position in M3U file
         ...(currentMetadata.tvgChno !== null && { channel_num: currentMetadata.tvgChno }),
       };
 

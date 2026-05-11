@@ -10,6 +10,7 @@ export interface StoredChannel extends Omit<Channel, 'stream_icon' | 'epg_channe
   is_favorite?: boolean;    // For favorites feature
   fav_order?: number;       // Custom ordering for favorites
   display_order?: number;   // Custom ordering for channels within a category
+  provider_order?: number;  // Position in provider response / M3U file (0-based)
   enabled?: boolean;        // For showing/hiding channels
   alias?: string;           // User-defined display name override
 
@@ -412,14 +413,15 @@ class YnotvDatabase extends SqliteDatabase {
     }
 
     await db.execute(`CREATE TABLE IF NOT EXISTS channels (
-        stream_id TEXT PRIMARY KEY, 
-        source_id TEXT, 
-        category_ids TEXT, 
-        name TEXT, 
+        stream_id TEXT PRIMARY KEY,
+        source_id TEXT,
+        category_ids TEXT,
+        name TEXT,
         channel_num INTEGER,
         is_favorite BOOLEAN,
         enabled BOOLEAN,
         num INTEGER,
+        provider_order INTEGER,
         stream_type TEXT,
         stream_icon TEXT,
         epg_channel_id TEXT,
@@ -437,7 +439,7 @@ class YnotvDatabase extends SqliteDatabase {
     // Each version block runs exactly ONCE. To add new columns in the future,
     // increment DB_VERSION and add a new case (do NOT modify existing cases).
     // ─────────────────────────────────────────────────────────────────────────
-    const DB_VERSION = 9;
+    const DB_VERSION = 10;
     const versionResult = await db.select('PRAGMA user_version') as Array<{ user_version: number }>;
     const currentVersion = versionResult[0]?.user_version ?? 0;
 
@@ -516,6 +518,15 @@ class YnotvDatabase extends SqliteDatabase {
           try { await db.execute(`ALTER TABLE ${table} ADD COLUMN ${col} ${type}`); } catch { /* already exists */ }
         };
         await addColumn('channels', 'alias', 'TEXT');
+      }
+
+      if (currentVersion < 10) {
+        // v10: provider_order for preserving M3U/provider channel order
+        console.log('[DB] v10 migration: Adding provider_order column to channels');
+        const addColumn = async (table: string, col: string, type: string) => {
+          try { await db.execute(`ALTER TABLE ${table} ADD COLUMN ${col} ${type}`); } catch { /* already exists */ }
+        };
+        await addColumn('channels', 'provider_order', 'INTEGER');
       }
 
       if (currentVersion < 2) {

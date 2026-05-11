@@ -18,7 +18,7 @@ interface ChannelManagerProps {
     sourceId: string;
     onClose: () => void;
     onChange?: () => void;
-    sortOrder?: 'alphabetical' | 'number';
+    sortOrder?: 'alphabetical' | 'number' | 'provider';
 }
 
 

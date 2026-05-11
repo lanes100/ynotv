@@ -270,7 +270,7 @@ export class XtreamClient {
 
     const data = await this.fetchJson<XtreamStream[]>(url);
 
-    return data.map(stream => ({
+    return data.map((stream, index) => ({
       stream_id: `${this.sourceId}_${stream.stream_id}`,
       name: stream.name,
       stream_icon: stream.stream_icon || '',
@@ -280,6 +280,7 @@ export class XtreamClient {
       source_id: this.sourceId,
       tv_archive: stream.tv_archive === 1,
       channel_num: stream.num,
+      provider_order: index,
     }));
   }
 

@@ -186,7 +186,7 @@ export function useAutoSync(callbacks: AutoSyncSettings = {}) {
 
                 // Apply stored settings via callbacks
                 if (settingsResult.data?.channelSortOrder) {
-                    setChannelSortOrder(settingsResult.data.channelSortOrder as 'alphabetical' | 'number');
+                    setChannelSortOrder(settingsResult.data.channelSortOrder as 'alphabetical' | 'number' | 'provider');
                 }
                 if (settingsResult.data?.categorySortOrder) {
                     categorySortRef.current(settingsResult.data.categorySortOrder as 'default' | 'alphabetical');

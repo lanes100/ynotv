@@ -49,8 +49,8 @@ interface UIState {
   setSyncStatusMessage: (msg: string | null) => void;
 
   // Channel display settings
-  channelSortOrder: 'alphabetical' | 'number';
-  setChannelSortOrder: (value: 'alphabetical' | 'number') => void;
+  channelSortOrder: 'alphabetical' | 'number' | 'provider';
+  setChannelSortOrder: (value: 'alphabetical' | 'number' | 'provider') => void;
   categorySortOrder: 'default' | 'alphabetical';
   setCategorySortOrder: (value: 'default' | 'alphabetical') => void;
   epgView: 'traditional' | 'alternate';

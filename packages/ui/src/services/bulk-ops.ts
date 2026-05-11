@@ -35,6 +35,7 @@ export interface BulkChannel {
   category_ids?: string; // JSON array as string
   name: string;
   channel_num?: number;
+  provider_order?: number;
   is_favorite?: boolean;
   enabled?: boolean;
   stream_type?: string;

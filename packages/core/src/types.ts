@@ -72,6 +72,7 @@ export interface Channel {
   tv_archive?: boolean | number;   // Has catchup/timeshift
   is_adult?: boolean;
   channel_num?: number;   // Channel order (Xtream num / M3U tvg-chno)
+  provider_order?: number; // Position in provider response / M3U file (0-based)
 }
 
 // =============================================================================

@@ -1483,6 +1483,7 @@ async function _doSyncSourceImpl(source: Source, onProgress?: (msg: string) => v
           existing.name !== channel.name ||
           existing.direct_url !== channel.direct_url ||
           existing.channel_num !== channel.channel_num ||
+          existing.provider_order !== channel.provider_order ||
           existing.epg_channel_id !== channel.epg_channel_id ||
           categoriesChanged;
 
@@ -1539,6 +1540,7 @@ async function _doSyncSourceImpl(source: Source, onProgress?: (msg: string) => v
         : (ch.category_ids ?? '[]'),
       name: ch.name ?? 'Unknown Channel',
       channel_num: ch.channel_num ?? 0,
+      provider_order: ch.provider_order ?? null,
       is_favorite: ch.is_favorite ?? false,
       enabled: ch.enabled ?? true,
       stream_type: ch.stream_type ?? null,

@@ -566,6 +566,7 @@ export class StalkerClient {
             // Process all channels
             const allChannels: Channel[] = [];
             const seenChannelIds = new Set<string>();
+            let providerOrder = 0;
 
             for (const ch of channelsData) {
                 if (seenChannelIds.has(ch.id)) continue;
@@ -605,7 +606,9 @@ export class StalkerClient {
                     direct_url: url,
                     source_id: this.sourceId,
                     epg_channel_id: ch.xmltv_id,
+                    provider_order: providerOrder,
                 };
+                providerOrder++;
 
                 allChannels.push(channel);
             }

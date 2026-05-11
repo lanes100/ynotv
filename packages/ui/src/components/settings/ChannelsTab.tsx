@@ -2,8 +2,8 @@ import { useSetChannelSortOrder, useSetCategorySortOrder } from '../../stores/ui
 import './PlaybackTab.css'; // Reuse existing tab styles for toggle
 
 interface ChannelsTabProps {
-  channelSortOrder: 'alphabetical' | 'number';
-  onChannelSortOrderChange: (order: 'alphabetical' | 'number') => void;
+  channelSortOrder: 'alphabetical' | 'number' | 'provider';
+  onChannelSortOrderChange: (order: 'alphabetical' | 'number' | 'provider') => void;
   categorySortOrder: 'default' | 'alphabetical';
   onCategorySortOrderChange: (order: 'default' | 'alphabetical') => void;
   includeSourceInSearch: boolean;
@@ -46,7 +46,7 @@ export function ChannelsTab({
   const setChannelSortOrder = useSetChannelSortOrder();
   const setCategorySortOrder = useSetCategorySortOrder();
 
-  async function handleSortOrderChange(order: 'alphabetical' | 'number') {
+  async function handleSortOrderChange(order: 'alphabetical' | 'number' | 'provider') {
     onChannelSortOrderChange(order);
     setChannelSortOrder(order); // Update global store immediately
     if (!window.storage) return;
@@ -81,10 +81,11 @@ export function ChannelsTab({
                 <label>Sort Order</label>
                 <select
                   value={channelSortOrder}
-                  onChange={(e) => handleSortOrderChange(e.target.value as 'alphabetical' | 'number')}
+                  onChange={(e) => handleSortOrderChange(e.target.value as 'alphabetical' | 'number' | 'provider')}
                 >
                   <option value="alphabetical">Alphabetical (A-Z)</option>
                   <option value="number">Channel Number</option>
+                  <option value="provider">Provider</option>
                 </select>
               </div>
             </div>
@@ -92,6 +93,8 @@ export function ChannelsTab({
             <p className="form-hint" style={{ marginTop: '0.75rem' }}>
               "Channel Number" uses the order from your provider (Xtream num or M3U tvg-chno).
               Channels without a number will appear at the end, sorted alphabetically.
+              <br />
+              "Provider" preserves the order channels appear in the M3U file or provider response.
             </p>
           </div>
 

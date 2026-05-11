@@ -14,7 +14,7 @@ import type { RecordingInfo } from '../hooks/useActiveRecordings';
 interface ChannelRowProps {
   channel: StoredChannel;
   index: number;
-  sortOrder: 'alphabetical' | 'number';
+  sortOrder: 'alphabetical' | 'number' | 'provider';
   programs: StoredProgram[];
   windowStart: Date;
   windowEnd: Date;

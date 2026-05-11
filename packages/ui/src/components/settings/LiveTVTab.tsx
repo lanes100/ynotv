@@ -18,8 +18,8 @@ interface LiveTVTabProps {
   categoryFontSize: number;
   onCategoryFontSizeChange: (size: number) => void;
   // Sort Order props (from ChannelsTab)
-  channelSortOrder: 'alphabetical' | 'number';
-  onChannelSortOrderChange: (order: 'alphabetical' | 'number') => void;
+  channelSortOrder: 'alphabetical' | 'number' | 'provider';
+  onChannelSortOrderChange: (order: 'alphabetical' | 'number' | 'provider') => void;
   categorySortOrder: 'default' | 'alphabetical';
   onCategorySortOrderChange: (order: 'default' | 'alphabetical') => void;
   includeSourceInSearch: boolean;

@@ -35,7 +35,7 @@ const DEFAULT_CHANNEL_COLUMN_WIDTH = 264;
 // Memoized Virtuoso row component to prevent unnecessary re-renders
 // This must be defined OUTSIDE the ChannelPanel component
 interface ChannelRowData {
-  channelSortOrder: 'alphabetical' | 'number';
+  channelSortOrder: 'alphabetical' | 'number' | 'provider';
   programs: Map<string, StoredProgram[]>;
   windowStart: Date;
   windowEnd: Date;

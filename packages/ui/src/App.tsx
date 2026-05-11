@@ -742,7 +742,7 @@ function App() {
           }
           // Apply other settings
           if (settingsResult.data.channelSortOrder) {
-            setChannelSortOrder(settingsResult.data.channelSortOrder as 'alphabetical' | 'number');
+            setChannelSortOrder(settingsResult.data.channelSortOrder as 'alphabetical' | 'number' | 'provider');
           }
           if (settingsResult.data.categorySortOrder) {
             setCategorySortOrder(settingsResult.data.categorySortOrder as 'default' | 'alphabetical');
