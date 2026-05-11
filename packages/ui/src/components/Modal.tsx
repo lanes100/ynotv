@@ -17,6 +17,7 @@ interface ModalProps {
     showInput?: boolean;
     inputPlaceholder?: string;
     initialValue?: string;
+    closeOnOverlayClick?: boolean;
 }
 
 export function Modal({
@@ -32,6 +33,7 @@ export function Modal({
     showInput = false,
     inputPlaceholder = '',
     initialValue = '',
+    closeOnOverlayClick = true,
 }: ModalProps) {
     const [inputValue, setInputValue] = useState(initialValue);
 
@@ -83,7 +85,7 @@ export function Modal({
     const icon = getIconForType(type);
 
     return createPortal(
-        <div className="modal-overlay" onClick={handleClose}>
+        <div className="modal-overlay" onClick={closeOnOverlayClick ? handleClose : undefined}>
             <div className={`modal-container modal-type-${type}`} onClick={(e) => e.stopPropagation()}>
                 <div className="modal-header">
                     <div className={`modal-icon modal-icon-${type}`}>
@@ -193,6 +195,7 @@ interface ModalState {
     showInput?: boolean;
     inputPlaceholder?: string;
     initialValue?: string;
+    closeOnOverlayClick?: boolean;
     onConfirm?: (value?: string) => void;
     onCancel?: () => void;
 }
@@ -275,7 +278,8 @@ export function useModal() {
         inputPlaceholder = '',
         initialValue = '',
         confirmText = 'OK',
-        cancelText = 'Cancel'
+        cancelText = 'Cancel',
+        closeOnOverlayClick = true
     ) => {
         setState({
             ...initialState,
@@ -288,6 +292,7 @@ export function useModal() {
             initialValue,
             confirmText,
             cancelText,
+            closeOnOverlayClick,
             onConfirm: (val) => onConfirm(val || ''),
             onCancel,
         });
@@ -308,6 +313,7 @@ export function useModal() {
             showInput={state.showInput}
             inputPlaceholder={state.inputPlaceholder}
             initialValue={state.initialValue}
+            closeOnOverlayClick={state.closeOnOverlayClick}
             onConfirm={state.onConfirm}
             onCancel={state.onCancel}
             onClose={closeModal}

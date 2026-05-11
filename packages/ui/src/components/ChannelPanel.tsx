@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useRef, useCallback, memo } from 'react';
 import { useSourceVersion } from '../contexts/SourceVersionContext';
 import { Virtuoso, type VirtuosoHandle } from 'react-virtuoso';
-import { useChannels, useCategories, useAllPrograms } from '../hooks/useChannels';
+import { useChannels, useCategories, useAllPrograms, parseCategoryIds } from '../hooks/useChannels';
 import { useLiveQuery } from '../hooks/useSqliteLiveQuery';
 import { useTimeGrid } from '../hooks/useTimeGrid';
 import { useActiveRecordings } from '../hooks/useActiveRecordings';
@@ -35,7 +35,7 @@ const DEFAULT_CHANNEL_COLUMN_WIDTH = 264;
 // Memoized Virtuoso row component to prevent unnecessary re-renders
 // This must be defined OUTSIDE the ChannelPanel component
 interface ChannelRowData {
-  channelSortOrder: 'alphabetical' | 'number';
+  channelSortOrder: 'alphabetical' | 'number' | 'provider';
   programs: Map<string, StoredProgram[]>;
   windowStart: Date;
   windowEnd: Date;
@@ -88,8 +88,6 @@ interface ChannelPanelProps {
   categoryId: string | null;
   visible: boolean;
   categoryStripOpen: boolean;
-  sidebarExpanded: boolean;
-  showSidebar?: boolean;
   onPlayChannel: (channel: StoredChannel) => void;
   onPlayCatchup?: (channel: StoredChannel, programTitle: string, startTimeMs: number, durationMinutes: number) => void;
   onClose: () => void;
@@ -110,8 +108,6 @@ interface ChannelPanelProps {
   searchResultsOrder?: 'default' | 'alphabetical';
   // Current playing channel for syncing preview
   currentChannel?: StoredChannel | null;
-  // Mini media bar for EPG preview
-  miniMediaBarForEpgPreview?: boolean;
   onTogglePlay?: () => void;
   isPlaying?: boolean;
   onChannelUp?: () => void;
@@ -162,8 +158,6 @@ export function ChannelPanel({
   categoryId,
   visible,
   categoryStripOpen,
-  sidebarExpanded,
-  showSidebar = true,
   onPlayChannel,
   onPlayCatchup,
   onClose,
@@ -181,7 +175,6 @@ export function ChannelPanel({
   includeSourceInSearch,
   searchResultsOrder,
   currentChannel,
-  miniMediaBarForEpgPreview,
   onTogglePlay,
   isPlaying,
   onChannelUp,
@@ -301,9 +294,10 @@ export function ChannelPanel({
   // Cached source name map to avoid repeated Tauri calls
   const { version: sourceVersion } = useSourceVersion();
   const sourceNameMapRef = useRef<Map<string, string>>(new Map());
+  const categoryNameMapRef = useRef<Map<string, string>>(new Map());
   const lastSourceVersionRef = useRef<number>(-1);
 
-  // Fetch source names only when version changes
+  // Fetch source names and category names only when version changes
   useEffect(() => {
     if (lastSourceVersionRef.current === sourceVersion) return;
     if (!includeSourceInSearch || !window.storage) return;
@@ -318,6 +312,13 @@ export function ChannelPanel({
         sourceNameMapRef.current = map;
         lastSourceVersionRef.current = sourceVersion;
       }
+      // Also load category names for source → category display
+      const allCategories = await db.categories.toArray();
+      const catMap = new Map<string, string>();
+      for (const cat of allCategories) {
+        catMap.set(cat.category_id, cat.category_name);
+      }
+      categoryNameMapRef.current = catMap;
     }
 
     fetchSourceNames();
@@ -528,9 +529,15 @@ export function ChannelPanel({
         for (const streamId of uniqueStreamIds) {
           const channel = await db.channels.get(streamId);
           if (channel) {
-            // Add source_name if includeSourceInSearch is enabled (using cached map)
+            // Add source_name and source_category_display if includeSourceInSearch is enabled (using cached maps)
             if (includeSourceInSearch) {
-              channel.source_name = sourceNameMapRef.current.get(channel.source_id) || undefined;
+              const sourceName = sourceNameMapRef.current.get(channel.source_id);
+              channel.source_name = sourceName || undefined;
+              if (sourceName && categoryNameMapRef.current.size > 0) {
+                const catIds = parseCategoryIds(channel.category_ids);
+                const catName = catIds.length > 0 ? (categoryNameMapRef.current.get(catIds[0]) || catIds[0]) : '—';
+                channel.source_category_display = `${sourceName} → ${catName}`;
+              }
             }
             programChannelsMap.set(streamId, channel);
 
@@ -778,8 +785,8 @@ export function ChannelPanel({
   // Track if we have a channel to show
   const hasSelectedChannel = selectedChannel !== null;
 
-  // Compute mini bar visibility based on hover state (only when miniMediaBarForEpgPreview is enabled)
-  const isMiniBarVisible = miniMediaBarForEpgPreview && selectedChannel && (previewHovered || miniBarHovered);
+  // Compute mini bar visibility based on hover state
+  const isMiniBarVisible = selectedChannel && (previewHovered || miniBarHovered);
 
   // Handle Channel Click: Preview vs Fullscreen
   const handleChannelClick = useCallback((channel: StoredChannel) => {
@@ -1293,12 +1300,12 @@ export function ChannelPanel({
     // Re-run when layout changes (sidebar/category visibility) or when visibility/selection changes
     // Include selectedChannelId to trigger resize when returning to view with a selection
     // Include isWatchlistMode and categoryId to handle special view modes
-  }, [visible, categoryStripOpen, sidebarExpanded, selectedChannel?.stream_id, isWatchlistMode, categoryId, miniMediaBarForEpgPreview, epgView]);
+  }, [visible, categoryStripOpen, selectedChannel?.stream_id, isWatchlistMode, categoryId, epgView]);
 
   return (
     <div
       ref={gridContainerRef}
-      className={`guide-panel ${visible ? 'visible' : 'hidden'} ${categoryStripOpen ? 'with-categories' : ''} ${sidebarExpanded ? 'sidebar-expanded' : ''} ${showSidebar ? 'with-sidebar' : 'no-sidebar'}`}
+      className={`guide-panel ${visible ? 'visible' : 'hidden'} ${categoryStripOpen ? 'with-categories' : ''}`}
     >
       {/* Top Section: Preview & Info */}
       <div className={`guide-top-section ${epgView === 'alternate' ? 'alternate-view' : ''}`}>
@@ -1829,7 +1836,9 @@ export function ChannelPanel({
                       // Sort both arrays alphabetically by channel name (only when alphabetical order is selected)
                       if (searchResultsOrder === 'alphabetical') {
                         const sortByChannelName = (a: typeof liveChannels[0], b: typeof liveChannels[0]) => {
-                          return a.channel.name.localeCompare(b.channel.name, undefined, { sensitivity: 'base' });
+                          const aName = a.channel.alias || a.channel.name;
+                          const bName = b.channel.alias || b.channel.name;
+                          return aName.localeCompare(bName, undefined, { sensitivity: 'base' });
                         };
                         liveChannels.sort(sortByChannelName);
                         upcomingChannels.sort(sortByChannelName);

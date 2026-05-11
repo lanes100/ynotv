@@ -160,12 +160,12 @@ export const SearchResultRow = memo(function SearchResultRow({
               }}
             />
           ) : (
-            <span className="logo-placeholder">{channel.name.charAt(0)}</span>
+            <span className="logo-placeholder">{(channel.alias || channel.name).charAt(0)}</span>
           )}
         </div>
         <div className="guide-channel-name-container">
-          <span className="guide-channel-name" title={channel.name}>
-            {channel.name}
+          <span className="guide-channel-name" title={channel.alias || channel.name}>
+            {channel.alias || channel.name}
             {(Boolean(channel.tv_archive) || channel.tv_archive === 1) && (
               <span style={{ color: '#e5a00d', marginLeft: '4px', fontSize: '1.1em', verticalAlign: 'middle' }}>↺</span>
             )}
@@ -173,14 +173,14 @@ export const SearchResultRow = memo(function SearchResultRow({
           {channel.channel_num && (
             <span className="guide-channel-number">Ch. {channel.channel_num}</span>
           )}
-          {includeSourceInSearch && channel.source_name && (
+          {includeSourceInSearch && (channel.source_category_display || channel.source_name) && (
             <span className="guide-channel-source" style={{
               fontSize: '0.75rem',
               color: 'rgba(255, 255, 255, 0.5)',
               marginTop: '2px',
               display: 'block'
             }}>
-              {channel.source_name}
+              {channel.source_category_display || channel.source_name}
             </span>
           )}
         </div>

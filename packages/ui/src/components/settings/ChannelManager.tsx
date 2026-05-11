@@ -18,7 +18,7 @@ interface ChannelManagerProps {
     sourceId: string;
     onClose: () => void;
     onChange?: () => void;
-    sortOrder?: 'alphabetical' | 'number';
+    sortOrder?: 'alphabetical' | 'number' | 'provider';
 }
 
 
@@ -290,18 +290,16 @@ export function ChannelManager({ categoryId, categoryName, sourceId, onClose, on
         try {
             isSavingRef.current = true;
 
-            // 1. Prepare items for SQLite bulkPut
-            const channelsToUpdate: StoredChannel[] = channels.map((ch, i) => ({
-                ...ch,
-                enabled: ch.enabled !== false,
-                is_favorite: ch.is_favorite ?? false,
-                display_order: i,
-            }));
-
-            // 2. Perform fast bulk replacement natively
-            if (channelsToUpdate.length > 0) {
-                await db.channels.bulkPut(channelsToUpdate);
-            }
+            // 1. Update each channel individually to avoid REPLACE INTO.
+            // REPLACE INTO deletes the row first, which cascades into
+            // failover_group_members and wipes out failover group memberships.
+            const updatePromises = channels.map((ch, i) =>
+                db.channels.update(ch.stream_id, {
+                    enabled: ch.enabled !== false,
+                    display_order: i,
+                })
+            );
+            await Promise.all(updatePromises);
 
             // 3. Perform atomic operation for category filter words
             await db.categories.update(categoryId, {

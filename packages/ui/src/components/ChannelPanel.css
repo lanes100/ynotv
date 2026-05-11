@@ -31,29 +31,9 @@
   will-change: auto;
 }
 
-/* When sidebar is visible - add padding */
-.guide-panel.with-sidebar {
-  padding-left: 70px;
-}
-
-/* With categories visible (no sidebar) */
+/* With categories visible */
 .guide-panel.with-categories {
   padding-left: var(--category-strip-content-width, 240px);
-}
-
-/* With sidebar expanded */
-.guide-panel.with-sidebar.sidebar-expanded {
-  padding-left: 160px;
-}
-
-/* With categories AND sidebar */
-.guide-panel.with-sidebar.with-categories {
-  padding-left: calc(var(--category-strip-content-width, 240px) + 60px);
-}
-
-/* With categories AND sidebar expanded */
-.guide-panel.with-sidebar.with-categories.sidebar-expanded {
-  padding-left: calc(var(--category-strip-content-width, 240px) + 160px);
 }
 
 
@@ -732,6 +712,12 @@
 
 .guide-channel-info:active {
   background: var(--surface-glow, rgba(0, 212, 255, 0.1));
+}
+
+/* Remove horizontal padding on favorite star so it hugs the left edge and logo */
+.guide-channel-info .favorite-btn {
+  padding-left: 0;
+  padding-right: 0;
 }
 
 /* Recording indicator at top right of channel box */

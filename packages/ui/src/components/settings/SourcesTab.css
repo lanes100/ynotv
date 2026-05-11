@@ -147,6 +147,42 @@
     color: #ff6b64;
 }
 
+.test-btn {
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.8);
+    min-width: 48px;
+}
+
+.test-btn:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.18);
+    border-color: rgba(255, 255, 255, 0.35);
+    color: white;
+}
+
+.test-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.test-success {
+    border-color: rgba(52, 199, 89, 0.5) !important;
+    background: rgba(52, 199, 89, 0.15) !important;
+    color: #34c759 !important;
+}
+
+.test-error {
+    border-color: rgba(255, 59, 48, 0.5) !important;
+    background: rgba(255, 59, 48, 0.15) !important;
+    color: #ff3b30 !important;
+}
+
 .add-backup-btn {
     width: 100%;
     padding: 10px;
@@ -195,6 +231,13 @@
     background: rgba(0, 0, 0, 0.3);
     box-shadow: 0 0 0 1px var(--accent-primary, #00d4ff),
         0 0 10px var(--accent-glow, rgba(0, 212, 255, 0.3));
+}
+
+.backup-textarea {
+    resize: vertical;
+    min-height: 80px;
+    font-family: monospace;
+    line-height: 1.4;
 }
 
 .backup-input-actions {

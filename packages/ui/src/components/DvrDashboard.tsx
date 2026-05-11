@@ -13,6 +13,7 @@ import {
 } from '../db';
 import { dbEvents } from '../db/sqlite-adapter';
 import { useModal } from './Modal';
+import { DvrTab } from './settings/DvrTab';
 import './DvrDashboard.css';
 
 interface DvrDashboardProps {
@@ -20,10 +21,10 @@ interface DvrDashboardProps {
     onClose: () => void;
 }
 
-type DvrTab = 'scheduled' | 'recorded';
+type DvrDashboardTab = 'scheduled' | 'recorded' | 'settings';
 
 export function DvrDashboard({ onPlay, onClose }: DvrDashboardProps) {
-    const [activeTab, setActiveTab] = useState<DvrTab>('scheduled');
+    const [activeTab, setActiveTab] = useState<DvrDashboardTab>('scheduled');
     const [scheduled, setScheduled] = useState<DvrSchedule[]>([]);
     const [recorded, setRecorded] = useState<DvrRecording[]>([]);
     const [activeRecordings, setActiveRecordings] = useState<RecordingProgress[]>([]);
@@ -282,6 +283,19 @@ export function DvrDashboard({ onPlay, onClose }: DvrDashboardProps) {
                         <span className="dvr-nav-label">Recordings</span>
                         {recorded.length > 0 && <span className="dvr-nav-badge">{recorded.length}</span>}
                     </button>
+
+                    <button
+                        className={`dvr-nav-item ${activeTab === 'settings' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('settings')}
+                    >
+                        <span className="dvr-nav-icon">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <circle cx="12" cy="12" r="3" />
+                                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                            </svg>
+                        </span>
+                        <span className="dvr-nav-label">Settings</span>
+                    </button>
                 </nav>
 
                 <div className="dvr-sidebar-footer">
@@ -304,7 +318,7 @@ export function DvrDashboard({ onPlay, onClose }: DvrDashboardProps) {
             <main className="dvr-main">
                 <header className="dvr-main-header">
                     <h1 className="dvr-main-title">
-                        {activeTab === 'scheduled' ? 'Scheduled Recordings' : 'Your Recordings'}
+                        {activeTab === 'scheduled' ? 'Scheduled Recordings' : activeTab === 'recorded' ? 'Your Recordings' : 'DVR Settings'}
                     </h1>
                 </header>
 
@@ -325,13 +339,15 @@ export function DvrDashboard({ onPlay, onClose }: DvrDashboardProps) {
                             formatElapsed={formatElapsed}
                             getRecordingProgress={getRecordingProgress}
                         />
-                    ) : (
+                    ) : activeTab === 'recorded' ? (
                         <RecordedTab
                             recorded={recorded}
                             onPlay={onPlay}
                             onDelete={handleDelete}
                             formatDateTime={formatDateTime}
                         />
+                    ) : (
+                        <DvrTab />
                     )}
                 </div>
             </main>

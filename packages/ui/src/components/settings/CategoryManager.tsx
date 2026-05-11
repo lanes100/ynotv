@@ -176,15 +176,16 @@ export function CategoryManager({ sourceId, sourceName, onClose, onChange }: Cat
             // Mark that we're saving to prevent useEffect from resetting state
             isSavingRef.current = true;
 
-            // Save ALL categories with their current state using fast bulkPut
-            const categoriesToUpdate = categories.map((cat, i) => ({
-                ...cat,
+            // Save category toggles and display order using targeted batch updates.
+            // Avoids REPLACE INTO which can wipe filter_words and trigger FK cascades.
+            const updates = categories.map((cat, i) => ({
+                categoryId: cat.category_id,
                 enabled: cat.enabled ?? true,
-                display_order: i
+                displayOrder: i,
             }));
 
-            if (categoriesToUpdate.length > 0) {
-                await db.categories.bulkPut(categoriesToUpdate);
+            if (updates.length > 0) {
+                await updateCategoriesBatch(updates);
             }
 
             // Wait for database to commit

@@ -58,6 +58,7 @@ interface NowPlayingBarProps {
   onTimeshiftCatchUp?: () => void;
   onChannelUp?: () => void;
   onChannelDown?: () => void;
+  overlay?: React.ReactNode;
 }
 
 // Format seconds to "H:MM:SS" or "M:SS"
@@ -108,6 +109,7 @@ export function NowPlayingBar({
   onTimeshiftCatchUp,
   onChannelUp,
   onChannelDown,
+  overlay,
 }: NowPlayingBarProps) {
   // scrubMode: 'timeshift' | 'epgcatchup' — local toggle when channel supports both
   const [scrubMode, setScrubMode] = useState<'timeshift' | 'epgcatchup'>('timeshift');
@@ -393,6 +395,12 @@ export function NowPlayingBar({
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
     >
+      {/* Overlay slot — rendered above the bar, e.g. failover group members */}
+      {overlay && (
+        <div className="npb-overlay-slot">
+          {overlay}
+        </div>
+      )}
       {channel ? (
         <>
           {/* Row 1: Channel/VOD info with description */}
@@ -424,8 +432,8 @@ export function NowPlayingBar({
                   </>
                 ) : isCatchup && catchupInfo ? (
                   <>
-                    <span className="npb-channel-name" title={channel.name}>
-                      {channel.name} <span className="npb-catchup-badge" style={{ fontSize: '0.7em', backgroundColor: '#e5a00d', padding: '2px 6px', borderRadius: '4px', verticalAlign: 'middle', marginLeft: '6px' }}>CATCHUP</span>
+                    <span className="npb-channel-name" title={channel.alias || channel.name}>
+                      {channel.alias || channel.name} <span className="npb-catchup-badge" style={{ fontSize: '0.7em', backgroundColor: '#e5a00d', padding: '2px 6px', borderRadius: '4px', verticalAlign: 'middle', marginLeft: '6px' }}>CATCHUP</span>
                     </span>
                     <MetadataBadge streamId={channel.stream_id} variant="detailed" />
                     <span className="npb-program-title" title={catchupInfo.programTitle}>
@@ -434,8 +442,8 @@ export function NowPlayingBar({
                   </>
                 ) : (
                   <>
-                    <span className="npb-channel-name" title={channel.name}>
-                      {channel.name}
+                    <span className="npb-channel-name" title={channel.alias || channel.name}>
+                      {channel.alias || channel.name}
                     </span>
                     <MetadataBadge streamId={channel.stream_id} variant="detailed" />
                     {currentProgram ? (

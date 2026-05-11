@@ -14,7 +14,7 @@ import type { RecordingInfo } from '../hooks/useActiveRecordings';
 interface ChannelRowProps {
   channel: StoredChannel;
   index: number;
-  sortOrder: 'alphabetical' | 'number';
+  sortOrder: 'alphabetical' | 'number' | 'provider';
   programs: StoredProgram[];
   windowStart: Date;
   windowEnd: Date;
@@ -138,12 +138,12 @@ export const ChannelRow = memo(function ChannelRow({
               }}
             />
           ) : (
-            <span className="logo-placeholder">{channel.name.charAt(0)}</span>
+            <span className="logo-placeholder">{(channel.alias || channel.name).charAt(0)}</span>
           )}
         </div>
         <div className="guide-channel-name-container">
-          <span className="guide-channel-name" title={channel.name}>
-            {channel.name}
+          <span className="guide-channel-name" title={channel.alias || channel.name}>
+            {channel.alias || channel.name}
             {(Boolean(channel.tv_archive) || channel.tv_archive === 1) && (
               <span style={{ color: '#e5a00d', marginLeft: '4px', fontSize: '1.1em', verticalAlign: 'middle' }}>↺</span>
             )}

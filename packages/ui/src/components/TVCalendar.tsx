@@ -203,8 +203,8 @@ export function TVCalendar({ onClose, onPlayChannel }: Props) {
 
   function openSettings() {
     console.log('[TVCalendar] Opening settings...');
-    // Dispatch custom event to open settings with TV Calendar tab
-    const event = new CustomEvent('open-settings', { detail: { tab: 'tv-calendar' } });
+    // Dispatch custom event to open settings
+    const event = new CustomEvent('open-settings', { detail: { tab: 'sources' } });
     console.log('[TVCalendar] Dispatching event:', event);
     window.dispatchEvent(event);
     onClose();

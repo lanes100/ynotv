@@ -118,7 +118,7 @@ pub async fn sync_xtream_source(
 
     // Map to BulkChannel
     let mut bulk_channels = Vec::with_capacity(xtream_streams.len());
-    for stream in xtream_streams {
+    for (index, stream) in xtream_streams.into_iter().enumerate() {
         let stream_id_str = match &stream.stream_id {
             serde_json::Value::String(s) => s.clone(),
             serde_json::Value::Number(n) => n.to_string(),
@@ -158,6 +158,7 @@ pub async fn sync_xtream_source(
             category_ids: category_ids_json,
             name: stream.name,
             channel_num,
+            provider_order: Some(index as i32),
             is_favorite: None, // Uses COALESCE in SQL natively!
             enabled: None,     // Uses COALESCE!
             stream_type: stream.stream_type,
@@ -233,8 +234,21 @@ fn generate_stable_stream_id(source_id: &str, tvg_id: &str, url: &str, seen_ids:
 
         let url_hash = stable_hash(url);
         let unique_id = format!("{}_{}", base_id, url_hash);
-        seen_ids.insert(unique_id.clone());
-        return unique_id;
+        if !seen_ids.contains(&unique_id) {
+            seen_ids.insert(unique_id.clone());
+            return unique_id;
+        }
+
+        // If both tvg-id and URL collide, keep incrementing until unique.
+        let mut counter = 1;
+        loop {
+            let final_id = format!("{}_{}", unique_id, counter);
+            if !seen_ids.contains(&final_id) {
+                seen_ids.insert(final_id.clone());
+                return final_id;
+            }
+            counter += 1;
+        }
     }
 
     let url_hash = stable_hash(url);
@@ -451,6 +465,7 @@ pub async fn sync_m3u_source(
                     category_ids: if category_ids.is_empty() { Some("[]".to_string()) } else { Some(format!("[\"{}\"]", category_ids[0])) },
                     name: if !display_name.is_empty() { display_name } else { tvg_name.clone() },
                     channel_num: tvg_chno,
+                    provider_order: Some(channel_counter - 1),
                     is_favorite: None,
                     enabled: None,
                     stream_type: Some("live".to_string()),

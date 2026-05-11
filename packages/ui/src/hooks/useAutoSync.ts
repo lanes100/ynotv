@@ -12,7 +12,6 @@ import {
 interface AutoSyncSettings {
     onShortcutsLoaded?: (shortcuts: Record<string, string>) => void;
     onThemeLoaded?: (theme: string) => void;
-    onSidebarVisibilityLoaded?: (visible: boolean) => void;
     onFontSizeLoaded?: (channelSize?: number, categorySize?: number) => void;
 }
 
@@ -187,7 +186,7 @@ export function useAutoSync(callbacks: AutoSyncSettings = {}) {
 
                 // Apply stored settings via callbacks
                 if (settingsResult.data?.channelSortOrder) {
-                    setChannelSortOrder(settingsResult.data.channelSortOrder as 'alphabetical' | 'number');
+                    setChannelSortOrder(settingsResult.data.channelSortOrder as 'alphabetical' | 'number' | 'provider');
                 }
                 if (settingsResult.data?.categorySortOrder) {
                     categorySortRef.current(settingsResult.data.categorySortOrder as 'default' | 'alphabetical');
@@ -197,9 +196,6 @@ export function useAutoSync(callbacks: AutoSyncSettings = {}) {
                 }
                 if (settingsResult.data?.theme) {
                     callbacks.onThemeLoaded?.(settingsResult.data.theme);
-                }
-                if (settingsResult.data?.showSidebar !== undefined) {
-                    callbacks.onSidebarVisibilityLoaded?.(settingsResult.data.showSidebar);
                 }
                 if (settingsResult.data?.channelFontSize || settingsResult.data?.categoryFontSize) {
                     callbacks.onFontSizeLoaded?.(

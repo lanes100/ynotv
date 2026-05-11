@@ -587,8 +587,18 @@ export class SqliteTable<T, TKey> {
                 }
             }
 
-            const sql = `INSERT OR REPLACE INTO ${this.tableName} (${columns}) VALUES ${rowPlaceholders.join(',')}`;
-            await db.execute(sql, allValues);
+            // Use INSERT ... ON CONFLICT DO UPDATE instead of REPLACE INTO.
+            // REPLACE INTO deletes the old row first, which triggers ON DELETE CASCADE
+            // on foreign keys (e.g. failover_group_members). Upsert updates in-place.
+            const nonPkColumns = keys.filter(k => k !== this.primaryKey);
+            if (nonPkColumns.length === 0) {
+                const sql = `INSERT OR IGNORE INTO ${this.tableName} (${columns}) VALUES ${rowPlaceholders.join(',')}`;
+                await db.execute(sql, allValues);
+            } else {
+                const updateClause = nonPkColumns.map(c => `${c} = excluded.${c}`).join(', ');
+                const sql = `INSERT INTO ${this.tableName} (${columns}) VALUES ${rowPlaceholders.join(',')} ON CONFLICT(${this.primaryKey}) DO UPDATE SET ${updateClause}`;
+                await db.execute(sql, allValues);
+            }
         }
     }
 

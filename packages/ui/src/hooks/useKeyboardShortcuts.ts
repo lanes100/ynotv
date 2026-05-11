@@ -14,7 +14,7 @@ import type { ShortcutAction, ShortcutsMap } from '../types/app';
 import { DEFAULT_SHORTCUTS } from '../constants/shortcuts';
 import type { StoredChannel } from '../db';
 import type { LayoutMode } from './useMultiview';
-import type { View } from '../components/Sidebar';
+type View = 'none' | 'guide' | 'movies' | 'series' | 'dvr' | 'sports' | 'calendar' | 'settings';
 
 export interface UseKeyboardShortcutsOptions {
     // --- Current state values (accessed via latest ref pattern) ---
@@ -43,7 +43,6 @@ export interface UseKeyboardShortcutsOptions {
     setActiveView: React.Dispatch<React.SetStateAction<View>>;
     setShowSettingsPopup: React.Dispatch<React.SetStateAction<boolean>>;
     setCategoriesOpen: React.Dispatch<React.SetStateAction<boolean>>;
-    setSidebarExpanded: React.Dispatch<React.SetStateAction<boolean>>;
     setShowControls: React.Dispatch<React.SetStateAction<boolean>>;
 
     // --- Channel info overlay flash ---
@@ -98,7 +97,6 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions): void
                 setActiveView,
                 setShowSettingsPopup,
                 setCategoriesOpen,
-                setSidebarExpanded,
                 setShowControls,
                 onChannelChangeFlash,
             } = latestRefs.current;
@@ -189,7 +187,6 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions): void
                     setActiveView('none');
                 }
                 setCategoriesOpen(false);
-                setSidebarExpanded(false);
                 setShowControls(false);
             } else if (matches('seekForward', e.key)) {
                 e.preventDefault();

@@ -7,9 +7,10 @@ import './services/tauri-bridge'; // Initialize Tauri bridge and polyfills
 import { checkForUpdates, checkForUpdatesSilent } from './services/updater';
 import { Settings } from './components/Settings';
 import type { SettingsTabId } from './components/settings/SettingsSidebar';
-import { Sidebar, type View } from './components/Sidebar';
+
 import { NowPlayingBar } from './components/NowPlayingBar';
 import { ChannelInfoOverlay } from './components/ChannelInfoOverlay';
+import { FailoverGroupOverlay } from './components/FailoverGroupOverlay';
 import { TrackSelectionModal } from './components/TrackSelectionModal';
 import { SubtitleControlModal } from './components/SubtitleControlModal';
 import { CategoryStrip } from './components/CategoryStrip';
@@ -35,6 +36,8 @@ import {
   useSetVodSyncing,
   useSetSyncStatusMessage,
   useSetChannelSortOrder,
+  useSetChannelSortOrderMigrated,
+  useChannelSortOrderMigrated,
   useSetCategorySortOrder,
   useEpgView,
   useSetEpgView
@@ -95,7 +98,6 @@ function App() {
     advancedSearchSourceIds,
     advancedSearchCategoryIds,
     useAdvancedSearchForRegular,
-    miniMediaBarForEpgPreview,
     channelInfoOverlayEnabled,
     channelInfoOverlayFontSize,
     channelInfoOverlayLogoSize,
@@ -103,11 +105,9 @@ function App() {
     channelInfoOverlayOpacity,
     theme,
     shortcuts,
-    showSidebar: showSidebarFromSettings,
     categoriesHidden,
     setTheme,
     setShortcuts,
-    setShowSidebar: setShowSidebarFromSettings,
     setCategoriesHidden,
     setAdvancedSearchScope,
     setAdvancedSearchSourceIds,
@@ -289,7 +289,6 @@ function App() {
     multiviewLayout,
     multiviewExitTabMode: exitTabMode,
     setCategoryId,
-    initialShowSidebar: showSidebarFromSettings,
   });
 
   const {
@@ -298,8 +297,6 @@ function App() {
     editSourceId,
     showSettingsPopup,
     categoriesOpen,
-    sidebarExpanded,
-    showSidebar,
     searchQuery,
     debouncedSearchQuery,
     isSearchMode,
@@ -314,8 +311,6 @@ function App() {
     setEditSourceId,
     setShowSettingsPopup,
     setCategoriesOpen,
-    setSidebarExpanded,
-    setShowSidebar,
     setSearchQuery,
     setIsWatchlistMode,
     setShowControls,
@@ -350,6 +345,16 @@ function App() {
     if (activeView === 'guide' || activeView === 'sports') return false;
     return showControls || channelChangeFlash;
   }, [channelInfoOverlayEnabled, currentChannel, showControls, channelChangeFlash, activeView]);
+
+  // Failover group overlay visibility: same conditions as NowPlayingBar
+  const isFailoverGroupOverlayVisible = useMemo(() => {
+    if (!currentChannel) return false;
+    const isVod = currentChannel.stream_id === 'vod' || currentChannel.stream_id?.startsWith('recording_');
+    if (isVod) return false;
+    // Don't show when in LiveTV guide or Sports views
+    if (activeView === 'guide' || activeView === 'sports') return false;
+    return showControls;
+  }, [currentChannel, showControls, activeView]);
 
   // ==========================================================================
   // Watchlist State (from useWatchlist)
@@ -402,6 +407,8 @@ function App() {
   const setVodSyncing = useSetVodSyncing();
   const setSyncStatusMessage = useSetSyncStatusMessage();
   const setChannelSortOrder = useSetChannelSortOrder();
+  const setChannelSortOrderMigrated = useSetChannelSortOrderMigrated();
+  const channelSortOrderMigrated = useChannelSortOrderMigrated();
   const setCategorySortOrder = useSetCategorySortOrder();
   const setEpgView = useSetEpgView();
   const epgView = useEpgView();
@@ -690,7 +697,6 @@ function App() {
     setActiveView,
     setShowSettingsPopup,
     setCategoriesOpen,
-    setSidebarExpanded,
     setShowControls,
     onChannelChangeFlash: triggerChannelChangeFlash,
   });
@@ -740,7 +746,12 @@ function App() {
           }
           // Apply other settings
           if (settingsResult.data.channelSortOrder) {
-            setChannelSortOrder(settingsResult.data.channelSortOrder as 'alphabetical' | 'number');
+            setChannelSortOrder(settingsResult.data.channelSortOrder as 'alphabetical' | 'number' | 'provider');
+          } else if (!channelSortOrderMigrated) {
+            // Migrate users who never explicitly chose a sort order to the new default
+            setChannelSortOrder('provider');
+            await window.storage.updateSettings({ channelSortOrder: 'provider' });
+            setChannelSortOrderMigrated(true);
           }
           if (settingsResult.data.categorySortOrder) {
             setCategorySortOrder(settingsResult.data.categorySortOrder as 'default' | 'alphabetical');
@@ -1240,6 +1251,13 @@ function App() {
         }}
         onChannelUp={handleChannelUp}
         onChannelDown={handleChannelDown}
+        overlay={
+          <FailoverGroupOverlay
+            currentChannel={currentChannel}
+            visible={isFailoverGroupOverlayVisible}
+            onChannelClick={handlePlayChannel}
+          />
+        }
       />
 
       {/* Channel Info Overlay */}
@@ -1258,6 +1276,7 @@ function App() {
           onStop={stopSlot}
           onSetProperty={setSlotProperty}
           onReposition={repositionSecondarySlots}
+          onSwitchLayout={switchLayout}
         />
       )}
 
@@ -1313,18 +1332,6 @@ function App() {
         onClose={() => setShowAdvancedSearch(false)}
       />
 
-      {/* Sidebar Navigation */}
-      <Sidebar
-        activeView={activeView}
-        onViewChange={setActiveView}
-        visible={showSidebar && (showControls || categoriesOpen || activeView !== 'none')}
-        categoriesOpen={categoriesOpen}
-        onCategoriesToggle={() => setCategoriesOpen((open) => !open)}
-        onCategoriesClose={() => setCategoriesOpen(false)}
-        expanded={sidebarExpanded}
-        onExpandedToggle={() => setSidebarExpanded((exp) => !exp)}
-      />
-
       {/* Category Strip */}
       <CategoryStrip
         selectedCategoryId={categoryId}
@@ -1338,14 +1345,11 @@ function App() {
           handleSelectCategory(catId);
         }}
         visible={categoriesOpen}
-        sidebarExpanded={sidebarExpanded}
-        showSidebar={showSidebar}
         onEditSource={(sourceId) => {
           setSettingsTab('sources');
           setEditSourceId(sourceId);
           setActiveView('settings');
           setCategoriesOpen(false);
-          setSidebarExpanded(false);
         }}
         onClose={() => {
           setCategoriesOpen(false);
@@ -1363,14 +1367,11 @@ function App() {
         categoryId={isSearchMode || isWatchlistMode ? null : categoryId}
         visible={activeView === 'guide'}
         categoryStripOpen={categoriesOpen}
-        sidebarExpanded={sidebarExpanded}
-        showSidebar={showSidebar}
         onPlayChannel={handlePlayChannel}
         onPlayCatchup={handlePlayCatchup}
         onClose={() => {
           setActiveView('none');
           setCategoriesOpen(false);
-          setSidebarExpanded(false);
           Bridge.syncWindow();
         }}
         error={error}
@@ -1387,7 +1388,6 @@ function App() {
         includeSourceInSearch={includeSourceInSearch}
         searchResultsOrder={searchResultsOrder}
         currentChannel={currentChannel}
-        miniMediaBarForEpgPreview={miniMediaBarForEpgPreview}
         onTogglePlay={handleTogglePlay}
         isPlaying={playing}
         onChannelUp={handleChannelUp}
@@ -1493,7 +1493,6 @@ function App() {
           previewEnabled={sportsPreviewEnabled}
           onTogglePreview={() => setSportsPreviewEnabled(v => !v)}
           onPlayChannel={handlePlayChannel}
-          miniMediaBarForPreview={miniMediaBarForEpgPreview}
           onTogglePlay={handleTogglePlay}
           isPlaying={playing}
           onStop={handleStop}

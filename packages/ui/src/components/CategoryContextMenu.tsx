@@ -2,27 +2,29 @@ import { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
 import './ProgramContextMenu.css';
 
-interface SourceContextMenuProps {
+interface CategoryContextMenuProps {
+    categoryId: string;
+    categoryName: string;
     sourceId: string;
     sourceName: string;
     position: { x: number; y: number };
     onClose: () => void;
     onManageCategories?: (sourceId: string, sourceName: string) => void;
-    onManageVodCategories?: (sourceId: string, sourceName: string) => void;
-    onEditSource?: (sourceId: string) => void;
-    onEditEpg?: (sourceId: string, sourceName: string) => void;
+    onHideCategory?: (categoryId: string) => void;
+    onRenameCategory?: (categoryId: string, currentName: string) => void;
 }
 
-export function SourceContextMenu({
+export function CategoryContextMenu({
+    categoryId,
+    categoryName,
     sourceId,
     sourceName,
     position,
     onClose,
     onManageCategories,
-    onManageVodCategories,
-    onEditSource,
-    onEditEpg,
-}: SourceContextMenuProps) {
+    onHideCategory,
+    onRenameCategory,
+}: CategoryContextMenuProps) {
     const menuRef = useRef<HTMLDivElement>(null);
     const [adjustedPosition, setAdjustedPosition] = useState(position);
 
@@ -88,26 +90,21 @@ export function SourceContextMenu({
             style={{ left: `${adjustedPosition.x}px`, top: `${adjustedPosition.y}px` }}
         >
             <div className="context-menu-header" style={{ padding: '8px 12px 4px', fontSize: '11px', opacity: 0.6, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                {sourceName}
+                {categoryName}
             </div>
+            {onRenameCategory && (
+                <div className="context-menu-item" onClick={() => { onRenameCategory(categoryId, categoryName); onClose(); }}>
+                    ✏️ Rename Category
+                </div>
+            )}
             {onManageCategories && (
                 <div className="context-menu-item" onClick={() => { onManageCategories(sourceId, sourceName); onClose(); }}>
                     📋 Manage Categories
                 </div>
             )}
-            {onManageVodCategories && (
-                <div className="context-menu-item" onClick={() => { onManageVodCategories(sourceId, sourceName); onClose(); }}>
-                    Manage VOD Categories
-                </div>
-            )}
-            {onEditSource && (
-                <div className="context-menu-item" onClick={() => { onEditSource(sourceId); onClose(); }}>
-                    ⚙️ Edit Source
-                </div>
-            )}
-            {onEditEpg && (
-                <div className="context-menu-item" onClick={() => { onEditEpg(sourceId, sourceName); onClose(); }}>
-                    ✏️ Edit EPG
+            {onHideCategory && (
+                <div className="context-menu-item" onClick={() => { onHideCategory(categoryId); onClose(); }}>
+                    🚫 Hide Category
                 </div>
             )}
         </div>,

@@ -63,6 +63,39 @@ function useSourceNameMap(): Map<string, string> | null {
   return sourceMap;
 }
 
+// Cached category names map to avoid repeated DB calls
+let cachedCategoryNameMap: Map<string, string> | null = null;
+let cachedCategoryVersion = -1;
+
+// Hook to get category name map - cached to avoid repeated DB calls
+function useCategoryNameMap(): Map<string, string> | null {
+  const { version } = useSourceVersion();
+  const [categoryMap, setCategoryMap] = useState<Map<string, string> | null>(cachedCategoryNameMap);
+
+  useEffect(() => {
+    // Return cached version if still valid
+    if (cachedCategoryNameMap && cachedCategoryVersion === version) {
+      setCategoryMap(cachedCategoryNameMap);
+      return;
+    }
+
+    async function fetchCategories() {
+      const allCategories = await db.categories.toArray();
+      const map = new Map<string, string>();
+      for (const cat of allCategories) {
+        map.set(cat.category_id, cat.category_name);
+      }
+      cachedCategoryNameMap = map;
+      cachedCategoryVersion = version;
+      setCategoryMap(map);
+    }
+
+    fetchCategories();
+  }, [version]);
+
+  return categoryMap;
+}
+
 // Hook to get all categories across all sources (filtered by enabled sources and categories)
 // Includes virtual "Favorites" category if any channels are favorited
 export function useCategories() {
@@ -212,9 +245,9 @@ export function useCategoriesForSource(sourceId: string | null) {
 }
 
 // Hook to get channels for a category (or all if categoryId is null)
-// sortOrder: 'alphabetical' (default) or 'number' (by channel_num from provider)
+// sortOrder: 'alphabetical' (default), 'number' (by channel_num from provider), or 'provider' (M3U file order)
 // Filters out channels from disabled sources
-export function useChannels(categoryId: string | null, sortOrder: 'alphabetical' | 'number' = 'alphabetical', options?: { skip?: boolean }) {
+export function useChannels(categoryId: string | null, sortOrder: 'alphabetical' | 'number' | 'provider' = 'alphabetical', options?: { skip?: boolean }) {
   const enabledSourceIds = useEnabledSources();
   const enabledSourceKey = useMemo(
     () => (enabledSourceIds ? Array.from(enabledSourceIds).sort().join(',') : 'loading'),
@@ -265,7 +298,7 @@ export function useChannels(categoryId: string | null, sortOrder: 'alphabetical'
           if (a.fav_order != null && b.fav_order != null) return a.fav_order - b.fav_order;
           if (a.fav_order != null) return -1;
           if (b.fav_order != null) return 1;
-          return a.name.localeCompare(b.name);
+          return (a.alias || a.name).localeCompare(b.alias || b.name);
         });
         orderingIsFixed = true;
       } else if (!categoryId) {
@@ -371,6 +404,14 @@ export function useChannels(categoryId: string | null, sortOrder: 'alphabetical'
           if (aHas) return -1; // manually ordered items first
           if (bHas) return 1;
           // Both unordered — fall back to sortOrder
+          if (sortOrder === 'provider') {
+            const aOrder = a.provider_order;
+            const bOrder = b.provider_order;
+            if (aOrder !== undefined && bOrder !== undefined) return aOrder - bOrder;
+            if (aOrder !== undefined) return -1;
+            if (bOrder !== undefined) return 1;
+            return 0;
+          }
           if (sortOrder === 'number') {
             const aNum = a.channel_num;
             const bNum = b.channel_num;
@@ -378,11 +419,21 @@ export function useChannels(categoryId: string | null, sortOrder: 'alphabetical'
             if (aNum !== undefined) return -1;
             if (bNum !== undefined) return 1;
           }
-          return a.name.localeCompare(b.name);
+          return (a.alias || a.name).localeCompare(b.alias || b.name);
         });
       }
 
       // No manual ordering — use sortOrder preference
+      if (sortOrder === 'provider') {
+        return results.sort((a, b) => {
+          const aOrder = a.provider_order;
+          const bOrder = b.provider_order;
+          if (aOrder !== undefined && bOrder !== undefined) return aOrder - bOrder;
+          if (aOrder !== undefined) return -1;
+          if (bOrder !== undefined) return 1;
+          return 0;
+        });
+      }
       if (sortOrder === 'number') {
         return results.sort((a, b) => {
           const aNum = a.channel_num;
@@ -390,11 +441,11 @@ export function useChannels(categoryId: string | null, sortOrder: 'alphabetical'
           if (aNum !== undefined && bNum !== undefined) return aNum - bNum;
           if (aNum !== undefined) return -1;
           if (bNum !== undefined) return 1;
-          return a.name.localeCompare(b.name);
+          return (a.alias || a.name).localeCompare(b.alias || b.name);
         });
       }
       // Default: alphabetical
-      results = results.sort((a, b) => a.name.localeCompare(b.name));
+      results = results.sort((a, b) => (a.alias || a.name).localeCompare(b.alias || b.name));
 
       return results;
     },
@@ -452,7 +503,7 @@ export function useSelectedCategory() {
 }
 
 // Helper to parse category IDs from JSON string or array
-function parseCategoryIds(categoryIdsJson: string | string[] | number[] | undefined): string[] {
+export function parseCategoryIds(categoryIdsJson: string | string[] | number[] | undefined): string[] {
   if (!categoryIdsJson) return [];
   if (Array.isArray(categoryIdsJson)) {
     return categoryIdsJson.map(String);
@@ -481,6 +532,7 @@ export function useChannelSearch(
 ) {
   const enabledSourceIds = useEnabledSources();
   const sourceNameMap = useSourceNameMap();
+  const categoryNameMap = useCategoryNameMap();
 
   const enabledSourceKey = useMemo(
     () => (enabledSourceIds ? Array.from(enabledSourceIds).sort().join(',') : 'loading'),
@@ -600,19 +652,29 @@ export function useChannelSearch(
         );
       }
 
-      // Add source_name to channels if includeSourceInSearch is enabled
+      // Add source_name and source_category_display to channels if includeSourceInSearch is enabled
       if (includeSourceInSearch && sourceNameMap) {
-        filteredChannels = filteredChannels.map(ch => ({
-          ...ch,
-          source_name: sourceNameMap.get(ch.source_id) || undefined
-        }));
+        filteredChannels = filteredChannels.map(ch => {
+          const sourceName = sourceNameMap.get(ch.source_id);
+          let sourceCategoryDisplay: string | undefined;
+          if (sourceName && categoryNameMap) {
+            const catIds = parseCategoryIds(ch.category_ids);
+            const catName = catIds.length > 0 ? (categoryNameMap.get(catIds[0]) || catIds[0]) : '—';
+            sourceCategoryDisplay = `${sourceName} → ${catName}`;
+          }
+          return {
+            ...ch,
+            source_name: sourceName || undefined,
+            source_category_display: sourceCategoryDisplay
+          };
+        });
       }
 
       console.log('[useChannelSearch] Returning', filteredChannels.length, 'channels, first few:', filteredChannels.slice(0, 3).map((c: any) => c.name));
 
       return filteredChannels as StoredChannel[];
     },
-    [query, limit, includeSourceInSearch, order, sourceNameMap, enabledSourceKey, filterKey]
+    [query, limit, includeSourceInSearch, order, sourceNameMap, categoryNameMap, enabledSourceKey, filterKey]
   );
   return channels ?? [];
 }
@@ -893,7 +955,7 @@ export function useCategoriesBySource(): SourceWithCategories[] {
       // Sort INDIVIDUAL categories inside each source based on user preference
       Object.values(grouped).forEach(cats => {
         if (categorySortOrder === 'alphabetical') {
-          cats.sort((a, b) => a.category_name.localeCompare(b.category_name));
+          cats.sort((a, b) => (a.alias || a.category_name).localeCompare(b.alias || b.category_name));
         } else {
           // Default: use display_order if available, otherwise alphabetical
           cats.sort((a, b) => {
@@ -902,7 +964,7 @@ export function useCategoriesBySource(): SourceWithCategories[] {
             }
             if (a.display_order !== undefined) return -1;
             if (b.display_order !== undefined) return 1;
-            return a.category_name.localeCompare(b.category_name);
+            return (a.alias || a.category_name).localeCompare(b.alias || b.category_name);
           });
         }
       });

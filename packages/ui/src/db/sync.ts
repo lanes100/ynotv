@@ -1095,8 +1095,53 @@ export async function isVodStale(sourceId: string, refreshHours: number = DEFAUL
   return Date.now() - new Date(meta.vod_last_synced).getTime() > staleMs;
 }
 
-// Sync a single source - fetches data and stores in SQLite
+// Exported sync wrapper with backup URL failover support
 export async function syncSource(source: Source, onProgress?: (msg: string) => void): Promise<SyncResult> {
+  // Try primary URL first
+  const result = await _doSyncSourceImpl(source, onProgress);
+  if (result.success) return result;
+
+  // If primary failed and we have backup URLs, try them in order
+  if (source.backup_urls && source.backup_urls.length > 0) {
+    for (const backupUrl of source.backup_urls) {
+      const trimmedUrl = backupUrl.trim();
+      if (!trimmedUrl) continue;
+
+      debugLog(`Primary URL failed. Trying backup URL: ${trimmedUrl}`, 'sync');
+      onProgress?.(`Primary URL failed. Trying backup: ${trimmedUrl}...`);
+
+      const backupSource: Source = { ...source, url: trimmedUrl };
+      const backupResult = await _doSyncSourceImpl(backupSource, onProgress);
+
+      if (backupResult.success) {
+        // Swap: working backup becomes primary, old primary moves to backup list
+        const newBackups = source.backup_urls.filter(u => u !== backupUrl);
+        newBackups.unshift(source.url);
+        const updatedSource: Source = {
+          ...source,
+          url: trimmedUrl,
+          backup_urls: newBackups,
+        };
+
+        try {
+          if (window.storage) {
+            await window.storage.saveSource(updatedSource);
+            debugLog(`Backup URL succeeded. Swapped primary to ${trimmedUrl} and moved old primary to backups.`, 'sync');
+          }
+        } catch (saveErr) {
+          debugLog(`Failed to save updated source after backup swap: ${saveErr}`, 'sync');
+        }
+
+        return backupResult;
+      }
+    }
+  }
+
+  return result;
+}
+
+// Internal sync implementation
+async function _doSyncSourceImpl(source: Source, onProgress?: (msg: string) => void): Promise<SyncResult> {
   debugLog(`Starting sync for source: ${source.name} (${source.type})`, 'sync');
   onProgress?.(`Starting sync for ${source.name}...`);
   const startTime = performance.now();
@@ -1113,7 +1158,7 @@ export async function syncSource(source: Source, onProgress?: (msg: string) => v
     const existingCategories = await db.categories.where('source_id').equals(source.id).toArray();
     const categorySettingsMap = new Map(existingCategories.map(c => [
       c.category_id,
-      { enabled: c.enabled, display_order: c.display_order }
+      { enabled: c.enabled, display_order: c.display_order, filter_words: c.filter_words }
     ]));
     const existingCategoryIds = new Set(existingCategories.map(c => c.category_id));
 
@@ -1403,7 +1448,8 @@ export async function syncSource(source: Source, onProgress?: (msg: string) => v
           return {
             ...cat,
             enabled: settings.enabled,
-            display_order: settings.display_order
+            display_order: settings.display_order,
+            filter_words: settings.filter_words,
           };
         }
         return cat;
@@ -1438,6 +1484,7 @@ export async function syncSource(source: Source, onProgress?: (msg: string) => v
           existing.name !== channel.name ||
           existing.direct_url !== channel.direct_url ||
           existing.channel_num !== channel.channel_num ||
+          existing.provider_order !== channel.provider_order ||
           existing.epg_channel_id !== channel.epg_channel_id ||
           categoriesChanged;
 
@@ -1457,7 +1504,7 @@ export async function syncSource(source: Source, onProgress?: (msg: string) => v
     // Find new and existing categories
     const newCategoryIds = new Set(categories.map(c => c.category_id));
     const categoriesToAdd: Category[] = [];
-    const categoriesToUpdate: (Category & { enabled?: boolean; display_order?: number })[] = [];
+    const categoriesToUpdate: (Category & { enabled?: boolean; display_order?: number; filter_words?: string[] })[] = [];
 
     for (const cat of categories) {
       const existing = existingCategories.find(c => c.category_id === cat.category_id);
@@ -1470,6 +1517,7 @@ export async function syncSource(source: Source, onProgress?: (msg: string) => v
           ...cat,
           enabled: existing.enabled,
           display_order: existing.display_order,
+          filter_words: existing.filter_words,
         });
       }
     }
@@ -1494,6 +1542,7 @@ export async function syncSource(source: Source, onProgress?: (msg: string) => v
         : (ch.category_ids ?? '[]'),
       name: ch.name ?? 'Unknown Channel',
       channel_num: ch.channel_num ?? 0,
+      provider_order: ch.provider_order ?? null,
       is_favorite: ch.is_favorite ?? false,
       enabled: ch.enabled ?? true,
       stream_type: ch.stream_type ?? null,
@@ -1993,6 +2042,10 @@ export async function syncVodMovies(
     }
   } catch (err) {
     console.warn('[VOD Movies] Fetch failed, keeping existing data:', err);
+    // If backup URLs are configured, throw so the caller can try backups
+    if (source.backup_urls && source.backup_urls.length > 0) {
+      throw err;
+    }
     return { count: 0, categoryCount: 0, skipped: true };
   }
 
@@ -2208,6 +2261,10 @@ export async function syncVodSeries(
     }
   } catch (err) {
     console.warn('[VOD Series] Fetch failed, keeping existing data:', err);
+    // If backup URLs are configured, throw so the caller can try backups
+    if (source.backup_urls && source.backup_urls.length > 0) {
+      throw err;
+    }
     return { count: 0, categoryCount: 0, skipped: true };
   }
 
@@ -2399,8 +2456,51 @@ export async function syncSeriesEpisodes(source: Source, seriesId: string): Prom
   return storedEpisodes.length;
 }
 
-// Sync all VOD content for a source
+// Exported VOD sync wrapper with backup URL failover support
 export async function syncVodForSource(source: Source): Promise<VodSyncResult> {
+  const result = await _doSyncVodForSource(source);
+  if (result.success) return result;
+
+  // If primary failed and we have backup URLs, try them in order
+  if (source.backup_urls && source.backup_urls.length > 0) {
+    for (const backupUrl of source.backup_urls) {
+      const trimmedUrl = backupUrl.trim();
+      if (!trimmedUrl) continue;
+
+      debugLog(`VOD primary URL failed. Trying backup URL: ${trimmedUrl}`, 'vod');
+
+      const backupSource: Source = { ...source, url: trimmedUrl };
+      const backupResult = await _doSyncVodForSource(backupSource);
+
+      if (backupResult.success) {
+        // Swap: working backup becomes primary, old primary moves to backup list
+        const newBackups = source.backup_urls.filter(u => u !== backupUrl);
+        newBackups.unshift(source.url);
+        const updatedSource: Source = {
+          ...source,
+          url: trimmedUrl,
+          backup_urls: newBackups,
+        };
+
+        try {
+          if (window.storage) {
+            await window.storage.saveSource(updatedSource);
+            debugLog(`VOD backup URL succeeded. Swapped primary to ${trimmedUrl} and moved old primary to backups.`, 'vod');
+          }
+        } catch (saveErr) {
+          debugLog(`Failed to save updated source after VOD backup swap: ${saveErr}`, 'vod');
+        }
+
+        return backupResult;
+      }
+    }
+  }
+
+  return result;
+}
+
+// Internal VOD sync implementation
+async function _doSyncVodForSource(source: Source): Promise<VodSyncResult> {
   try {
     // For Stalker sources, create a shared client to avoid token conflicts
     // from parallel handshakes invalidating each other's tokens
