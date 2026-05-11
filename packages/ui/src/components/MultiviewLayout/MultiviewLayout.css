@@ -19,9 +19,9 @@
     position: absolute;
     bottom: 124px;
     right: 12px;
-    width: 490px;
-    height: 276px;
-    /* 16:9 aspect ratio */
+    width: 480px;
+    height: 306px;
+    /* 270px video (16:9) + 36px controls */
     border-radius: 10px;
     overflow: hidden;
     border: 1.5px solid rgba(255, 255, 255, 0.18);
@@ -33,6 +33,75 @@
 
 .layout-pip-overlay:active {
     cursor: grabbing;
+}
+
+/* Hide hover badge in PiP (controls already show the name) */
+.layout-pip-overlay .multiview-cell-badge {
+    display: none;
+}
+
+/* Close button (top-right) */
+.layout-pip-close {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 26px;
+    height: 26px;
+    border-radius: 6px;
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: rgba(255, 255, 255, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 10;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+    pointer-events: all;
+}
+
+.layout-pip-close:hover {
+    background: rgba(255, 50, 50, 0.7);
+    color: #fff;
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+/* Resize handle (bottom-left) */
+.layout-pip-resize {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 24px;
+    height: 24px;
+    cursor: nesw-resize;
+    z-index: 10;
+    pointer-events: all;
+    opacity: 0;
+    transition: opacity 0.15s;
+}
+
+.layout-pip-resize::before {
+    content: '';
+    position: absolute;
+    bottom: 4px;
+    left: 4px;
+    width: 10px;
+    height: 10px;
+    background: linear-gradient(
+        135deg,
+        transparent 40%,
+        rgba(255, 255, 255, 0.5) 40%,
+        rgba(255, 255, 255, 0.5) 45%,
+        transparent 45%,
+        transparent 55%,
+        rgba(255, 255, 255, 0.5) 55%,
+        rgba(255, 255, 255, 0.5) 60%,
+        transparent 60%
+    );
+}
+
+.layout-pip-overlay:hover .layout-pip-resize {
+    opacity: 1;
 }
 
 /* ── 2x2 GRID ───────────────────────────── */

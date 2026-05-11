@@ -1267,6 +1267,7 @@ function App() {
           onStop={stopSlot}
           onSetProperty={setSlotProperty}
           onReposition={repositionSecondarySlots}
+          onSwitchLayout={switchLayout}
         />
       )}
 

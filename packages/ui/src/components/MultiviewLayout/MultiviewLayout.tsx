@@ -2,6 +2,7 @@ import { useRef } from 'react';
 import { MultiviewCell } from '../MultiviewCell/MultiviewCell';
 import { ViewerSlot } from '../../hooks/useMultiview';
 import { useDraggable } from '../../hooks/useDraggable';
+import { useResizable } from '../../hooks/useResizable';
 import './MultiviewLayout.css';
 
 interface MultiviewLayoutProps {
@@ -11,6 +12,7 @@ interface MultiviewLayoutProps {
     onStop: (slotId: 2 | 3 | 4) => void;
     onSetProperty: (slotId: 2 | 3 | 4, property: string, value: any) => void;
     onReposition: () => void;
+    onSwitchLayout?: (layout: 'main' | 'pip' | '2x2' | 'bigbottom') => void;
 }
 
 export function MultiviewLayout({
@@ -20,14 +22,19 @@ export function MultiviewLayout({
     onStop,
     onSetProperty,
     onReposition,
+    onSwitchLayout,
 }: MultiviewLayoutProps) {
     const slot2 = slots.find(s => s.id === 2)!;
     const slot3 = slots.find(s => s.id === 3)!;
     const slot4 = slots.find(s => s.id === 4)!;
     const pipDragRef = useRef<HTMLDivElement>(null);
+    const pipResizeRef = useRef<HTMLDivElement>(null);
     useDraggable(pipDragRef, () => {
         onReposition();
     });
+    useResizable(pipResizeRef, pipDragRef, () => {
+        onReposition();
+    }, 16 / 9, 36);
 
     const cell = (slot: ViewerSlot) => (
         <MultiviewCell
@@ -52,7 +59,21 @@ export function MultiviewLayout({
         return (
             <div className="layout-pip-container">
                 <div className="layout-pip-overlay" ref={pipDragRef}>
+                    <button
+                        className="layout-pip-close"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onSwitchLayout?.('main');
+                        }}
+                        title="Close and return to Main View"
+                    >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                            <line x1="18" y1="6" x2="6" y2="18" />
+                            <line x1="6" y1="6" x2="18" y2="18" />
+                        </svg>
+                    </button>
                     {cell(slot2)}
+                    <div className="layout-pip-resize" ref={pipResizeRef} title="Drag to resize" />
                 </div>
             </div>
         );
