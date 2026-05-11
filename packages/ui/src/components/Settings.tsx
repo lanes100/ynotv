@@ -5,8 +5,6 @@ import { SettingsSidebar, type SettingsTabId } from './settings/SettingsSidebar'
 import { SourcesTab } from './settings/SourcesTab';
 import { TmdbTab } from './settings/TmdbTab';
 import { DataRefreshTab } from './settings/DataRefreshTab';
-import { ChannelsTab } from './settings/ChannelsTab';
-
 import { SecurityTab } from './settings/SecurityTab';
 import { DebugTab } from './settings/DebugTab';
 import { ShortcutsTab } from './settings/ShortcutsTab';
@@ -100,17 +98,19 @@ export function Settings({
 
   // UI state
   const [uiSettings, setUiSettings] = useState<{
-    channelFontSize: number;
-    categoryFontSize: number;
     startupWidth?: number;
     startupHeight?: number;
     dontSaveWindowSizeOnClose?: boolean;
     modernUiEnabled?: boolean;
+    collapseSourceCategoriesOnStartup?: boolean;
   }>({
-    channelFontSize: 14,
-    categoryFontSize: 13,
     modernUiEnabled: true,
+    collapseSourceCategoriesOnStartup: false,
   });
+
+  // Font size state (moved to LiveTV tab)
+  const [channelFontSize, setChannelFontSize] = useState(14);
+  const [categoryFontSize, setCategoryFontSize] = useState(13);
 
   // Startup settings state
   const [rememberLastChannels, setRememberLastChannels] = useState(false);
@@ -129,7 +129,6 @@ export function Settings({
 
   // LiveTV settings state
   const [epgDarkenCurrent, setEpgDarkenCurrent] = useState(false);
-  const [collapseSourceCategoriesOnStartup, setCollapseSourceCategoriesOnStartup] = useState(false);
   const [epgTitleFontSize, setEpgTitleFontSize] = useState(32);
   const [epgBodyFontSize, setEpgBodyFontSize] = useState(16);
   const epgView = useEpgView();
@@ -305,18 +304,21 @@ export function Settings({
       // Load UI settings
       const loadedModernUi = settings.modernUiEnabled ?? true;
       const loadedUiSettings = {
-        channelFontSize: settings.channelFontSize ?? 14,
-        categoryFontSize: settings.categoryFontSize ?? 13,
         startupWidth: settings.startupWidth,
         startupHeight: settings.startupHeight,
         dontSaveWindowSizeOnClose: settings.dontSaveWindowSizeOnClose ?? false,
         modernUiEnabled: loadedModernUi,
+        collapseSourceCategoriesOnStartup: settings.collapseSourceCategoriesOnStartup ?? false,
       };
       setUiSettings(loadedUiSettings);
 
-      // Apply UI settings immediately
-      document.documentElement.style.setProperty('--channel-font-size', `${loadedUiSettings.channelFontSize}px`);
-      document.documentElement.style.setProperty('--category-font-size', `${loadedUiSettings.categoryFontSize}px`);
+      // Load font size settings (moved to LiveTV tab)
+      const loadedChannelFontSize = settings.channelFontSize ?? 14;
+      const loadedCategoryFontSize = settings.categoryFontSize ?? 13;
+      setChannelFontSize(loadedChannelFontSize);
+      setCategoryFontSize(loadedCategoryFontSize);
+      document.documentElement.style.setProperty('--channel-font-size', `${loadedChannelFontSize}px`);
+      document.documentElement.style.setProperty('--category-font-size', `${loadedCategoryFontSize}px`);
 
       // Apply modern UI class on load
       if (loadedModernUi) {
@@ -353,9 +355,6 @@ export function Settings({
 
       // Load EPG view layout setting
       setEpgView(settings.epgView ?? 'traditional');
-      
-      // Load collapse source categories setting
-      setCollapseSourceCategoriesOnStartup(settings.collapseSourceCategoriesOnStartup ?? false);
 
       // Load EPG font size settings
       const loadedEpgTitleFontSize = settings.epgTitleFontSize ?? 32;
@@ -456,13 +455,6 @@ export function Settings({
     }
   };
 
-  const handleCollapseSourceCategoriesOnStartupChange = async (enabled: boolean) => {
-    setCollapseSourceCategoriesOnStartup(enabled);
-    if (window.storage) {
-      await window.storage.updateSettings({ collapseSourceCategoriesOnStartup: enabled });
-    }
-  };
-
   const handleEpgTitleFontSizeChange = async (size: number) => {
     setEpgTitleFontSize(size);
     document.documentElement.style.setProperty('--epg-title-font-size', `${size}px`);
@@ -558,12 +550,11 @@ export function Settings({
   };
 
   const handleUiSettingsChange = async (newSettings: {
-    channelFontSize?: number;
-    categoryFontSize?: number;
     startupWidth?: number;
     startupHeight?: number;
     dontSaveWindowSizeOnClose?: boolean;
     modernUiEnabled?: boolean;
+    collapseSourceCategoriesOnStartup?: boolean;
   }) => {
     const updated = { ...uiSettings, ...newSettings };
     setUiSettings(updated);
@@ -589,6 +580,22 @@ export function Settings({
       } catch (e) {
         console.error('Failed to save settings to localStorage', e);
       }
+    }
+  };
+
+  const handleChannelFontSizeChange = async (size: number) => {
+    setChannelFontSize(size);
+    document.documentElement.style.setProperty('--channel-font-size', `${size}px`);
+    if (window.storage) {
+      await window.storage.updateSettings({ channelFontSize: size });
+    }
+  };
+
+  const handleCategoryFontSizeChange = async (size: number) => {
+    setCategoryFontSize(size);
+    document.documentElement.style.setProperty('--category-font-size', `${size}px`);
+    if (window.storage) {
+      await window.storage.updateSettings({ categoryFontSize: size });
     }
   };
 
@@ -687,22 +694,6 @@ export function Settings({
             onSettingsChange={handleSubtitleSettingsChange}
           />
         );
-      case 'channels':
-        return (
-          <ChannelsTab
-            channelSortOrder={channelSortOrder}
-            onChannelSortOrderChange={setChannelSortOrder}
-            categorySortOrder={categorySortOrder}
-            onCategorySortOrderChange={handleCategorySortOrderChange}
-            includeSourceInSearch={includeSourceInSearch}
-            onIncludeSourceInSearchChange={handleIncludeSourceInSearchChange}
-            maxSearchResults={maxSearchResults}
-            onMaxSearchResultsChange={handleMaxSearchResultsChange}
-            searchResultsOrder={searchResultsOrder}
-            onSearchResultsOrderChange={handleSearchResultsOrderChange}
-          />
-        );
-
       case 'security':
         return (
           <SecurityTab
@@ -784,12 +775,24 @@ export function Settings({
             onEpgDarkenCurrentChange={handleEpgDarkenCurrentChange}
             epgView={epgView}
             onEpgViewChange={handleEpgViewChange}
-            collapseSourceCategoriesOnStartup={collapseSourceCategoriesOnStartup}
-            onCollapseSourceCategoriesOnStartupChange={handleCollapseSourceCategoriesOnStartupChange}
             epgTitleFontSize={epgTitleFontSize}
             onEpgTitleFontSizeChange={handleEpgTitleFontSizeChange}
             epgBodyFontSize={epgBodyFontSize}
             onEpgBodyFontSizeChange={handleEpgBodyFontSizeChange}
+            channelFontSize={channelFontSize}
+            onChannelFontSizeChange={handleChannelFontSizeChange}
+            categoryFontSize={categoryFontSize}
+            onCategoryFontSizeChange={handleCategoryFontSizeChange}
+            channelSortOrder={channelSortOrder}
+            onChannelSortOrderChange={setChannelSortOrder}
+            categorySortOrder={categorySortOrder}
+            onCategorySortOrderChange={handleCategorySortOrderChange}
+            includeSourceInSearch={includeSourceInSearch}
+            onIncludeSourceInSearchChange={handleIncludeSourceInSearchChange}
+            maxSearchResults={maxSearchResults}
+            onMaxSearchResultsChange={handleMaxSearchResultsChange}
+            searchResultsOrder={searchResultsOrder}
+            onSearchResultsOrderChange={handleSearchResultsOrderChange}
           />
         );
       case 'live-view':

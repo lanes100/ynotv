@@ -3,20 +3,18 @@ import { getCurrentWindow } from '@tauri-apps/api/window';
 
 interface UITabProps {
   settings: {
-    channelFontSize?: number;
-    categoryFontSize?: number;
     startupWidth?: number;
     startupHeight?: number;
     dontSaveWindowSizeOnClose?: boolean;
     modernUiEnabled?: boolean;
+    collapseSourceCategoriesOnStartup?: boolean;
   };
   onSettingsChange: (settings: {
-    channelFontSize?: number;
-    categoryFontSize?: number;
     startupWidth?: number;
     startupHeight?: number;
     dontSaveWindowSizeOnClose?: boolean;
     modernUiEnabled?: boolean;
+    collapseSourceCategoriesOnStartup?: boolean;
   }) => void;
 }
 
@@ -130,45 +128,94 @@ function WindowSizeSettings({ width, height, onChange }: { width: number; height
 }
 
 export function UITab({ settings, onSettingsChange }: UITabProps) {
-  const [channelFontSize, setChannelFontSize] = useState(settings.channelFontSize || 14);
-  const [categoryFontSize, setCategoryFontSize] = useState(settings.categoryFontSize || 13);
-
-  useEffect(() => {
-    setChannelFontSize(settings.channelFontSize || 14);
-    setCategoryFontSize(settings.categoryFontSize || 13);
-  }, [settings]);
-
-  const handleChannelFontSizeChange = (size: number) => {
-    setChannelFontSize(size);
-    onSettingsChange({ ...settings, channelFontSize: size });
-
-    // Apply immediately
-    document.documentElement.style.setProperty('--channel-font-size', `${size}px`);
-  };
-
-  const handleCategoryFontSizeChange = (size: number) => {
-    setCategoryFontSize(size);
-    onSettingsChange({ ...settings, categoryFontSize: size });
-
-    // Apply immediately
-    document.documentElement.style.setProperty('--category-font-size', `${size}px`);
-  };
+  const [showModernUiTooltip, setShowModernUiTooltip] = useState(false);
+  const [showCollapseTooltip, setShowCollapseTooltip] = useState(false);
 
   return (
     <div className="settings-tab-content">
       {/* Modern UI Section */}
       <div className="settings-section" style={{ paddingTop: '8px' }}>
         <div className="timeshift-settings">
-          <div className="timeshift-toggle-row">
+          <div className="timeshift-toggle-row" style={{ position: 'relative' }}>
             <div className="timeshift-toggle-info">
-              <span className="timeshift-toggle-label">Enable Modern UI Design</span>
-              <span className="timeshift-toggle-sub">When enabled, applies a modern glass-morphism aesthetic with enhanced animations, gradients, and visual effects to the Categories and EPG views. Works best with glass themes.</span>
+              <span className="timeshift-toggle-label" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                Enable Modern UI Design
+                <span
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: '16px',
+                    height: '16px',
+                    borderRadius: '50%',
+                    background: 'rgba(255,255,255,0.15)',
+                    color: 'rgba(255,255,255,0.7)',
+                    fontSize: '0.7rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    userSelect: 'none',
+                  }}
+                  onMouseEnter={() => setShowModernUiTooltip(true)}
+                  onMouseLeave={() => setShowModernUiTooltip(false)}
+                  onClick={() => setShowModernUiTooltip((prev) => !prev)}
+                >
+                  ?
+                </span>
+              </span>
+              {showModernUiTooltip && (
+                <span className="timeshift-toggle-sub" style={{ marginTop: '4px' }}>
+                  When enabled, applies a modern glass-morphism aesthetic with enhanced animations, gradients, and visual effects to the Categories and EPG views. Works best with glass themes.
+                </span>
+              )}
             </div>
             <label className="toggle-switch">
               <input
                 type="checkbox"
                 checked={settings.modernUiEnabled ?? true}
                 onChange={(e) => onSettingsChange({ ...settings, modernUiEnabled: e.target.checked })}
+              />
+              <span className="toggle-slider" />
+            </label>
+          </div>
+
+          {/* Collapse Source Categories on Startup */}
+          <div className="timeshift-toggle-row">
+            <div className="timeshift-toggle-info">
+              <span className="timeshift-toggle-label" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                Collapse Source Categories on Startup
+                <span
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: '16px',
+                    height: '16px',
+                    borderRadius: '50%',
+                    background: 'rgba(255,255,255,0.15)',
+                    color: 'rgba(255,255,255,0.7)',
+                    fontSize: '0.7rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    userSelect: 'none',
+                  }}
+                  onMouseEnter={() => setShowCollapseTooltip(true)}
+                  onMouseLeave={() => setShowCollapseTooltip(false)}
+                  onClick={() => setShowCollapseTooltip((prev) => !prev)}
+                >
+                  ?
+                </span>
+              </span>
+              {showCollapseTooltip && (
+                <span className="timeshift-toggle-sub" style={{ marginTop: '4px' }}>
+                  When enabled, source categories will be collapsed by default when the LiveTV Categories view loads.
+                </span>
+              )}
+            </div>
+            <label className="toggle-switch">
+              <input
+                type="checkbox"
+                checked={settings.collapseSourceCategoriesOnStartup ?? false}
+                onChange={(e) => onSettingsChange({ ...settings, collapseSourceCategoriesOnStartup: e.target.checked })}
               />
               <span className="toggle-slider" />
             </label>
@@ -221,72 +268,6 @@ export function UITab({ settings, onSettingsChange }: UITabProps) {
         </div>
       </div>
 
-      {/* Font Size Section */}
-      <div className="settings-section" style={{ paddingTop: '8px' }}>
-        <div className="section-header">
-          <h3>Font Size</h3>
-        </div>
-
-        <p className="section-description" style={{ marginBottom: '12px' }}>
-          Adjust the font size for channel names and category labels to improve readability.
-        </p>
-
-        {/* Channel Font Size */}
-        <div className="form-group" style={{ marginBottom: '16px' }}>
-          <label style={{ display: 'block', marginBottom: '0.5rem', color: 'rgba(255,255,255,0.9)' }}>Channel Font Size</label>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <input
-              type="range"
-              min="10"
-              max="24"
-              value={channelFontSize}
-              onChange={(e) => handleChannelFontSizeChange(parseInt(e.target.value))}
-              style={{ flex: 1 }}
-            />
-            <span style={{ minWidth: '3rem', textAlign: 'right', color: 'rgba(255,255,255,0.8)' }}>
-              {channelFontSize}px
-            </span>
-          </div>
-          <p className="form-hint" style={{ marginTop: '0.5rem' }}>
-            Preview: <span style={{ fontSize: `${channelFontSize}px`, color: '#00d4ff' }}>Channel Name Example</span>
-          </p>
-        </div>
-
-        {/* Category Font Size */}
-        <div className="form-group" style={{ marginBottom: '12px' }}>
-          <label style={{ display: 'block', marginBottom: '0.5rem', color: 'rgba(255,255,255,0.9)' }}>Category Font Size</label>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <input
-              type="range"
-              min="10"
-              max="24"
-              value={categoryFontSize}
-              onChange={(e) => handleCategoryFontSizeChange(parseInt(e.target.value))}
-              style={{ flex: 1 }}
-            />
-            <span style={{ minWidth: '3rem', textAlign: 'right', color: 'rgba(255,255,255,0.8)' }}>
-              {categoryFontSize}px
-            </span>
-          </div>
-          <p className="form-hint" style={{ marginTop: '0.5rem' }}>
-            Preview: <span style={{ fontSize: `${categoryFontSize}px`, color: '#00d4ff' }}>Category Name Example</span>
-          </p>
-        </div>
-
-        {/* Reset Button */}
-        <div style={{ marginTop: '16px' }}>
-          <button
-            className="sync-btn"
-            onClick={() => {
-              handleChannelFontSizeChange(14);
-              handleCategoryFontSizeChange(14);
-            }}
-            style={{ maxWidth: '200px' }}
-          >
-            Reset to Default
-          </button>
-        </div>
-      </div>
     </div>
   );
 }

@@ -5,7 +5,6 @@ export type SettingsTabId =
   | 'tmdb'
   | 'refresh'
   | 'subtitles'
-  | 'channels'
   | 'security'
   | 'debug'
   | 'shortcuts'
@@ -31,7 +30,6 @@ const SETTINGS_TABS: SettingsTab[] = [
   { id: 'refresh', label: 'Data Refresh' },
   { id: 'tmdb', label: 'TMDB/RPDB' },
   { id: 'subtitles', label: 'Subtitles' },
-  { id: 'channels', label: 'Channels' },
   { id: 'livetv', label: 'LiveTV' },
   { id: 'live-view', label: 'Live View' },
   { id: 'theme', label: 'Theme' },
