@@ -19,7 +19,6 @@ import { CacheTab } from './settings/CacheTab';
 import { AboutTab } from './settings/AboutTab';
 import { LiveTVTab } from './settings/LiveTVTab';
 import { LiveViewTab } from './settings/LiveViewTab';
-import { FailoverTab } from './settings/FailoverTab';
 import { SubtitlesTab, type SubtitleSettings } from './settings/SubtitlesTab';
 import type { ShortcutsMap, ThemeId } from '../types/app';
 import './Settings.css';
@@ -833,8 +832,6 @@ export function Settings({
             onChannelInfoOverlayHideDescriptionChange={handleChannelInfoOverlayHideDescriptionChange}
           />
         );
-      case 'failover':
-        return <FailoverTab />;
       case 'about':
         return <AboutTab />;
       default:
