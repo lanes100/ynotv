@@ -1158,7 +1158,7 @@ async function _doSyncSourceImpl(source: Source, onProgress?: (msg: string) => v
     const existingCategories = await db.categories.where('source_id').equals(source.id).toArray();
     const categorySettingsMap = new Map(existingCategories.map(c => [
       c.category_id,
-      { enabled: c.enabled, display_order: c.display_order }
+      { enabled: c.enabled, display_order: c.display_order, filter_words: c.filter_words }
     ]));
     const existingCategoryIds = new Set(existingCategories.map(c => c.category_id));
 
@@ -1448,7 +1448,8 @@ async function _doSyncSourceImpl(source: Source, onProgress?: (msg: string) => v
           return {
             ...cat,
             enabled: settings.enabled,
-            display_order: settings.display_order
+            display_order: settings.display_order,
+            filter_words: settings.filter_words,
           };
         }
         return cat;
@@ -1503,7 +1504,7 @@ async function _doSyncSourceImpl(source: Source, onProgress?: (msg: string) => v
     // Find new and existing categories
     const newCategoryIds = new Set(categories.map(c => c.category_id));
     const categoriesToAdd: Category[] = [];
-    const categoriesToUpdate: (Category & { enabled?: boolean; display_order?: number })[] = [];
+    const categoriesToUpdate: (Category & { enabled?: boolean; display_order?: number; filter_words?: string[] })[] = [];
 
     for (const cat of categories) {
       const existing = existingCategories.find(c => c.category_id === cat.category_id);
@@ -1516,6 +1517,7 @@ async function _doSyncSourceImpl(source: Source, onProgress?: (msg: string) => v
           ...cat,
           enabled: existing.enabled,
           display_order: existing.display_order,
+          filter_words: existing.filter_words,
         });
       }
     }

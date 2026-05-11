@@ -398,7 +398,7 @@ fn bulk_upsert_categories_inner(
             enabled = COALESCE(excluded.enabled, categories.enabled),
             display_order = COALESCE(excluded.display_order, categories.display_order),
             channel_count = excluded.channel_count,
-            filter_words = excluded.filter_words",
+            filter_words = COALESCE(excluded.filter_words, categories.filter_words)",
     )?;
 
     let mut inserted = 0;

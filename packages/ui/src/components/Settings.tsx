@@ -87,7 +87,7 @@ export function Settings({
   const [logRetentionDays, setLogRetentionDays] = useState(7);
 
   // Channel display state
-  const [channelSortOrder, setChannelSortOrder] = useState<'alphabetical' | 'number' | 'provider'>('alphabetical');
+  const [channelSortOrder, setChannelSortOrder] = useState<'alphabetical' | 'number' | 'provider'>('provider');
   const [categorySortOrder, setCategorySortOrder] = useState<'default' | 'alphabetical'>('default');
   const [includeSourceInSearch, setIncludeSourceInSearch] = useState(false);
   const [maxSearchResults, setMaxSearchResults] = useState(200);
@@ -290,7 +290,7 @@ export function Settings({
       setLogRetentionDays(settings.logRetentionDays ?? 7);
 
       // Load channel display settings
-      setChannelSortOrder(settings.channelSortOrder ?? 'alphabetical');
+      setChannelSortOrder(settings.channelSortOrder ?? 'provider');
       setCategorySortOrder(settings.categorySortOrder ?? 'default');
       setIncludeSourceInSearch(settings.includeSourceInSearch ?? false);
       setMaxSearchResults(settings.maxSearchResults ?? 200);

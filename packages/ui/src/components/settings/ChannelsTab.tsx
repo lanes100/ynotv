@@ -83,18 +83,20 @@ export function ChannelsTab({
                   value={channelSortOrder}
                   onChange={(e) => handleSortOrderChange(e.target.value as 'alphabetical' | 'number' | 'provider')}
                 >
+                  <option value="provider">Provider</option>
                   <option value="alphabetical">Alphabetical (A-Z)</option>
                   <option value="number">Channel Number</option>
-                  <option value="provider">Provider</option>
                 </select>
               </div>
             </div>
 
             <p className="form-hint" style={{ marginTop: '0.75rem' }}>
+              "Provider" preserves the order channels appear in the M3U file or provider response.
+              <br />
+              "Alphabetical" sorts all channels A-Z.
+              <br />
               "Channel Number" uses the order from your provider (Xtream num or M3U tvg-chno).
               Channels without a number will appear at the end, sorted alphabetically.
-              <br />
-              "Provider" preserves the order channels appear in the M3U file or provider response.
             </p>
           </div>
 

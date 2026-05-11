@@ -36,6 +36,8 @@ import {
   useSetVodSyncing,
   useSetSyncStatusMessage,
   useSetChannelSortOrder,
+  useSetChannelSortOrderMigrated,
+  useChannelSortOrderMigrated,
   useSetCategorySortOrder,
   useEpgView,
   useSetEpgView
@@ -405,6 +407,8 @@ function App() {
   const setVodSyncing = useSetVodSyncing();
   const setSyncStatusMessage = useSetSyncStatusMessage();
   const setChannelSortOrder = useSetChannelSortOrder();
+  const setChannelSortOrderMigrated = useSetChannelSortOrderMigrated();
+  const channelSortOrderMigrated = useChannelSortOrderMigrated();
   const setCategorySortOrder = useSetCategorySortOrder();
   const setEpgView = useSetEpgView();
   const epgView = useEpgView();
@@ -743,6 +747,11 @@ function App() {
           // Apply other settings
           if (settingsResult.data.channelSortOrder) {
             setChannelSortOrder(settingsResult.data.channelSortOrder as 'alphabetical' | 'number' | 'provider');
+          } else if (!channelSortOrderMigrated) {
+            // Migrate users who never explicitly chose a sort order to the new default
+            setChannelSortOrder('provider');
+            await window.storage.updateSettings({ channelSortOrder: 'provider' });
+            setChannelSortOrderMigrated(true);
           }
           if (settingsResult.data.categorySortOrder) {
             setCategorySortOrder(settingsResult.data.categorySortOrder as 'default' | 'alphabetical');
