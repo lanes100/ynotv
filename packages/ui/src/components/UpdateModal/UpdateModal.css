@@ -197,9 +197,77 @@
   padding: 12px;
   font-size: 0.875rem;
   color: rgba(255, 255, 255, 0.8);
-  max-height: 120px;
+  max-height: 160px;
   overflow-y: auto;
-  white-space: pre-wrap;
+}
+
+.update-notes-content h1,
+.update-notes-content h2 {
+  margin: 0 0 8px 0;
+  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.update-notes-content h3,
+.update-notes-content h4,
+.update-notes-content h5,
+.update-notes-content h6 {
+  margin: 12px 0 6px 0;
+  font-size: 0.875rem;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.update-notes-content p {
+  margin: 0 0 8px 0;
+}
+
+.update-notes-content ul,
+.update-notes-content ol {
+  margin: 0 0 12px 0;
+  padding-left: 18px;
+}
+
+.update-notes-content li {
+  margin-bottom: 4px;
+}
+
+.update-notes-content li:last-child {
+  margin-bottom: 0;
+}
+
+.update-notes-content strong {
+  color: rgba(255, 255, 255, 0.95);
+  font-weight: 600;
+}
+
+.update-notes-content code {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.75rem;
+}
+
+.update-notes-content hr {
+  border: 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  margin: 12px 0;
+}
+
+.update-notes-content a {
+  color: #4fc1ff;
+  text-decoration: none;
+}
+
+.update-notes-content a:hover {
+  text-decoration: underline;
+}
+
+.update-notes-content blockquote {
+  margin: 0 0 8px 0;
+  padding-left: 10px;
+  border-left: 3px solid rgba(255, 255, 255, 0.15);
+  color: rgba(255, 255, 255, 0.6);
 }
 
 .update-modal-actions {

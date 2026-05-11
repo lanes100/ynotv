@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { check, Update, DownloadEvent } from '@tauri-apps/plugin-updater';
 import { relaunch } from '@tauri-apps/plugin-process';
 import { getVersion } from '@tauri-apps/api/app';
+import ReactMarkdown from 'react-markdown';
 import './UpdateModal.css';
 
 interface UpdateModalProps {
@@ -136,7 +137,9 @@ export function UpdateModal({ isOpen, onClose }: UpdateModalProps) {
               {update.body && (
                 <div className="update-modal-notes">
                   <h4>What's New:</h4>
-                  <div className="update-notes-content">{update.body}</div>
+                  <div className="update-notes-content">
+                    <ReactMarkdown>{update.body}</ReactMarkdown>
+                  </div>
                 </div>
               )}
               <div className="update-modal-actions">

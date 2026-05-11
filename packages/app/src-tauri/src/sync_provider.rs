@@ -233,8 +233,21 @@ fn generate_stable_stream_id(source_id: &str, tvg_id: &str, url: &str, seen_ids:
 
         let url_hash = stable_hash(url);
         let unique_id = format!("{}_{}", base_id, url_hash);
-        seen_ids.insert(unique_id.clone());
-        return unique_id;
+        if !seen_ids.contains(&unique_id) {
+            seen_ids.insert(unique_id.clone());
+            return unique_id;
+        }
+
+        // If both tvg-id and URL collide, keep incrementing until unique.
+        let mut counter = 1;
+        loop {
+            let final_id = format!("{}_{}", unique_id, counter);
+            if !seen_ids.contains(&final_id) {
+                seen_ids.insert(final_id.clone());
+                return final_id;
+            }
+            counter += 1;
+        }
     }
 
     let url_hash = stable_hash(url);

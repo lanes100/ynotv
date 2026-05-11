@@ -4,7 +4,6 @@ import './TVCalendarTab.css';
 import { db, addTvEpisodeToWatchlist, clearAutoAddedEpisodesForShow, type AutoAddEpisode } from '../../db';
 
 export function TVCalendarTab() {
-  const [tvCalendarEnabled, setTvCalendarEnabled] = useState(true);
   const [autoSyncEnabled, setAutoSyncEnabled] = useState(true);
   const [syncStatus, setSyncStatus] = useState<string>('');
   const [loading, setLoading] = useState(false);
@@ -17,15 +16,7 @@ export function TVCalendarTab() {
     if (!window.storage) return;
     const result = await window.storage.getSettings();
     if (result.data) {
-      setTvCalendarEnabled(result.data.tvCalendarEnabled ?? true);
       setAutoSyncEnabled(result.data.tvCalendarAutoSync ?? true);
-    }
-  }
-
-  async function handleToggleEnabled(value: boolean) {
-    setTvCalendarEnabled(value);
-    if (window.storage) {
-      await window.storage.updateSettings({ tvCalendarEnabled: value });
     }
   }
 
@@ -94,21 +85,6 @@ export function TVCalendarTab() {
 
         <div className="tvcal-settings-option">
           <div className="tvcal-option-label">
-            <span>Enable TV Calendar</span>
-            <small>Show the TV Calendar in the sidebar navigation</small>
-          </div>
-          <label className="tvcal-toggle-switch">
-            <input
-              type="checkbox"
-              checked={tvCalendarEnabled}
-              onChange={(e) => handleToggleEnabled(e.target.checked)}
-            />
-            <span className="tvcal-toggle-slider"></span>
-          </label>
-        </div>
-
-        <div className="tvcal-settings-option">
-          <div className="tvcal-option-label">
             <span>Auto-sync episodes</span>
             <small>Automatically refresh episode data every 24 hours for running shows</small>
           </div>
@@ -117,7 +93,6 @@ export function TVCalendarTab() {
               type="checkbox"
               checked={autoSyncEnabled}
               onChange={(e) => handleToggleAutoSync(e.target.checked)}
-              disabled={!tvCalendarEnabled}
             />
             <span className="tvcal-toggle-slider"></span>
           </label>
@@ -131,7 +106,7 @@ export function TVCalendarTab() {
           <button
             className="tvcal-sync-btn"
             onClick={handleManualSync}
-            disabled={loading || !tvCalendarEnabled}
+            disabled={loading}
           >
             {loading ? 'Syncing...' : 'Sync Now'}
           </button>

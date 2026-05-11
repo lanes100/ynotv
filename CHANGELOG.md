@@ -1,5 +1,25 @@
   # Changelog
   
+## v1.6.9
+
+### Added
+
+- **Backup DNS per source** — A backup DNS option is now available in Source settings. If the primary source URL becomes unreachable or fails during a sync, the app will automatically fall back to user-configured backup URLs. Backup URLs can be validated at any time using the `Test` button.
+
+- **Failover group overlay** — A new overlay is displayed in the main view when the active channel belongs to a Failover group. The overlay shows all channels in the group alongside the currently playing channel, and allows switching to any group member with a single click.
+
+- **Picture-in-Picture resizing** — The PiP window can now be resized by dragging from its bottom-left corner.
+
+- **Category context menu** — Right-clicking a category in the sidebar now presents the following options: `Rename Category`, `Manage Categories`, and `Hide Category`.
+
+- **Rename channel** — Channels can now be renamed directly via the right-click context menu.
+
+- **Settings menu declutter** — The settings menu has been reorganised for a cleaner, less cluttered layout.
+
+### Fixed
+
+- **M3U playlists with uncategorised channels not appearing in Live TV** — Channels in M3U playlists that have no assigned category will now be grouped under an `Uncategorized` category and displayed correctly in Live TV.
+
 ## v1.6.8
 
 ### Added

@@ -54,8 +54,20 @@ function generateStableStreamId(
     // This handles cases like multiple ESPN backup channels with same tvg-id
     const urlHash = stableHash(url);
     const uniqueId = `${baseId}_${urlHash}`;
-    seenIds.add(uniqueId);
-    return uniqueId;
+    if (!seenIds.has(uniqueId)) {
+      seenIds.add(uniqueId);
+      return uniqueId;
+    }
+
+    // If both tvg-id and URL are duplicated, keep incrementing until unique.
+    let counter = 1;
+    let finalId = `${uniqueId}_${counter}`;
+    while (seenIds.has(finalId)) {
+      counter++;
+      finalId = `${uniqueId}_${counter}`;
+    }
+    seenIds.add(finalId);
+    return finalId;
   }
 
   // No tvg-id - use URL hash for stable ID
