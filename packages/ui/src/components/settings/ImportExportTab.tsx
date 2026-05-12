@@ -69,7 +69,7 @@ export function ImportExportTab() {
                 </div>
                 <p className="section-description">
                     Export your configuration to a JSON file to transfer between devices or create backups.
-                    Includes Sources, Settings, Favorites, and Category customizations.
+                    Includes Sources, Settings, Favorites, Category/Channel customizations, Watchlist, DVR schedules, Failover groups, VOD history, and EPG overrides.
                 </p>
 
                 {status && (
