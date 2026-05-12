@@ -87,12 +87,13 @@ Currently dragging the window with multiview on will cause video to bug, press a
 
 ### Prerequisites
 
-- Node.js 20.x or higher
-- pnpm 10.x or higher — install with `npm install -g pnpm`
-- Rust (latest stable) — required for the Tauri backend
-- Git
+- **Node.js** 20.x or higher
+- **pnpm** 9.x or higher — install with `npm install -g pnpm` (the project specifies `9.1.0` via the `packageManager` field; if you have [corepack](https://nodejs.org/api/corepack.html) enabled, the correct version is used automatically)
+- **Rust** (latest stable) — required for the Tauri backend. Install via [rustup](https://rustup.rs/)
+- **Git**
 
 **Windows additional requirements:**
+- [Microsoft Edge WebView2](https://developer.microsoft.com/en-us/microsoft-edge/webview2/) — required for Tauri's rendering engine
 - Visual Studio 2022 with C++ build tools
 - Windows 10 SDK
 
@@ -111,13 +112,16 @@ cd ynotv
 pnpm install
 ```
 
-**3. Download mpv and FFmpeg sidecars**
+**3. Download mpv sidecar**
+
+FFmpeg is downloaded automatically during the build step, but mpv (and yt-dlp) must be downloaded manually first:
 
 ```bash
-# Download mpv binaries
 bash scripts/download-mpv-tauri.sh
+```
 
-# Download FFmpeg binaries
+*(Optional)* If you also want to pre-download FFmpeg manually:
+```bash
 cd packages/app
 node scripts/download-ffmpeg.js
 cd ../..
@@ -126,8 +130,10 @@ cd ../..
 **4. Run in development mode**
 
 ```bash
-pnpm tauri dev
+pnpm dev
 ```
+
+This starts both the Vite UI dev server and the Tauri app concurrently.
 
 **5. Build for production**
 
@@ -193,10 +199,13 @@ All shortcuts are fully customizable in Settings > Shortcuts.
 | Action | Default |
 |---|---|
 | Play / Pause | `Space` |
-| Mute / Unmute | `M` |
 | Seek Forward | `Right Arrow` |
 | Seek Backward | `Left Arrow` |
+| Mute / Unmute | `M` |
+| Select Subtitle (Modal) | `J` |
+| Select Audio Track (Modal) | `A` |
 | Toggle Fullscreen | `F` |
+| Replay Last Stream | `Q` |
 
 ### Navigation
 
@@ -209,32 +218,26 @@ All shortcuts are fully customizable in Settings > Shortcuts.
 
 | Action | Default |
 |---|---|
-| Toggle Live TV | `L` |
-| Toggle EPG Guide | `G` |
+| Toggle Live TV (Guide + Categories) | `L` |
+| Toggle Guide | `G` |
 | Toggle Categories | `C` |
-| Toggle TV Calendar | `T` |
 | Toggle DVR | `R` |
-| Toggle Sports Hub | `U` |
+| Toggle Sports | `U` |
+| Toggle TV Calendar | `T` |
 | Toggle Settings | `,` |
-| Toggle Playback Stats | `I` |
+| Show / Hide Stats | `I` |
 | Focus Search | `S` |
+| Toggle EPG View Layout | `E` |
 | Close / Back | `Esc` |
 
-### Layout Modes
-
-| Layout | Default |
-|---|---|
-| Single main view | `1` |
-| Picture-in-picture | `2` |
-| Main + bottom bar | `3` |
-| 2x2 grid multiview | `4` |
-
-### Audio and Subtitles
+### Layout
 
 | Action | Default |
 |---|---|
-| Audio track selection | `A` |
-| Subtitle track selection | `J` |
+| Layout: Main View | `1` |
+| Layout: Picture in Picture | `2` |
+| Layout: Big + Bottom Bar | `3` |
+| Layout: 2×2 Grid | `4` |
 
 ---
 
