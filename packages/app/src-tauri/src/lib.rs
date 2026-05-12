@@ -1416,6 +1416,19 @@ async fn parse_epg_file(
         .map_err(|e| format!("Parse EPG file failed: {}", e))
 }
 
+/// Stream parse EPG for multiple sources with a single download
+#[tauri::command]
+async fn stream_parse_epg_multi(
+    app: AppHandle,
+    state: tauri::State<'_, DvrState>,
+    epg_url: String,
+    source_configs: Vec<epg_streaming::SourceEpgConfig>,
+) -> Result<Vec<epg_streaming::EpgParseResult>, String> {
+    epg_streaming::stream_parse_epg_multi(app, &state.db, epg_url, source_configs)
+        .await
+        .map_err(|e| format!("Stream parse EPG multi failed: {}", e))
+}
+
 // =============================================================================
 // TMDB Cache State (managed, lives for the app lifetime)
 // =============================================================================
@@ -2319,6 +2332,7 @@ pub fn run() {
             health_check,
             // Streaming EPG commands
             stream_parse_epg,
+            stream_parse_epg_multi,
             parse_epg_file,
             // DVR commands
             init_dvr,

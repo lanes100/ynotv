@@ -898,10 +898,9 @@ export async function syncAllStaleGlobalEpgLinks(
 
 // ─── Standalone Global EPG Sync ──────────────────────────────────────────────
 /**
- * Sync a global EPG link standalone using the Rust streaming parser.
- * Downloads and parses the EPG via Rust (same path as Additional EPG waterfall).
- * Applies to all linked sources — each source only receives programs for channels
- * that don't already have EPG.
+ * Sync a global EPG link standalone using the Rust multi-source streaming parser.
+ * Downloads the EPG ONCE and applies it to all linked sources in a single Rust call.
+ * Each source only receives programmes for channels that don't already have EPG.
  * @returns total programs inserted across all linked sources
  */
 export async function syncGlobalEpgLinkStandalone(
@@ -919,10 +918,11 @@ export async function syncGlobalEpgLinkStandalone(
     return 0;
   }
 
-  console.log(`[Global EPG] Starting standalone sync for: ${epgLink.name}`);
+  console.log(`[Global EPG] Starting standalone multi-source sync for: ${epgLink.name}`);
   debugLog(`Standalone sync for global EPG: ${epgLink.name} (${url.substring(0, 80)}...)`, 'epg');
+  onProgress?.(`Preparing ${epgLink.sourceIds.length} source(s)...`);
 
-  // Fetch all sources from storage so we can pass source-specific settings to Rust
+  // Fetch all sources from storage
   const sourcesResult = await window.storage.getSources();
   const allSources = sourcesResult.data || [];
   const sourceMap = new Map(allSources.map(s => [s.id, s]));
@@ -930,40 +930,31 @@ export async function syncGlobalEpgLinkStandalone(
   // Load user-applied EPG channel ID overrides (shared across all sources)
   const epgOverrideMap = await loadEpgChannelOverrideMap();
 
-  let totalInserted = 0;
-  const perSourceCounts: Record<string, number> = {};
+  // Build per-source channel mappings (only channels that still need EPG)
+  const sourceConfigs: import('../services/epg-streaming').SourceEpgConfig[] = [];
 
-  for (let i = 0; i < epgLink.sourceIds.length; i++) {
-    const sourceId = epgLink.sourceIds[i];
+  for (const sourceId of epgLink.sourceIds) {
     const source = sourceMap.get(sourceId);
-    onProgress?.(`Applying EPG to source ${i + 1}/${epgLink.sourceIds.length}...`);
-
     if (!source) {
       debugLog(`Source ${sourceId} not found in storage, skipping`, 'epg');
       continue;
     }
 
-    // Get channels for this source
     const sourceChannels = await db.channels.where('source_id').equals(sourceId).toArray();
     if (sourceChannels.length === 0) {
       debugLog(`Source ${sourceId} has no channels, skipping`, 'epg');
       continue;
     }
 
-    // Find channels that currently have no programs
     const channelsWithPrograms = await getStreamIdsWithPrograms(sourceId);
     const channelsNeedingEpg = sourceChannels.filter(ch => !channelsWithPrograms.has(ch.stream_id));
 
     if (channelsNeedingEpg.length === 0) {
       console.log(`[Global EPG] Source ${sourceId}: all channels already have EPG`);
       debugLog(`Source ${sourceId}: all ${sourceChannels.length} channels already have EPG`, 'epg');
-      perSourceCounts[sourceId] = 0;
       continue;
     }
 
-    console.log(`[Global EPG] Source ${sourceId}: ${channelsNeedingEpg.length}/${sourceChannels.length} channels need EPG`);
-
-    // Build channel mappings in the format the Rust parser expects
     const channelMappings = channelsNeedingEpg
       .filter((ch) => epgOverrideMap.has(ch.stream_id) || ch.epg_channel_id || ch.name)
       .map((ch) => ({
@@ -974,71 +965,94 @@ export async function syncGlobalEpgLinkStandalone(
 
     if (channelMappings.length === 0) {
       debugLog(`Source ${sourceId}: no channels have EPG IDs`, 'epg');
-      perSourceCounts[sourceId] = 0;
       continue;
     }
 
-    console.log(`[Global EPG] Source ${sourceId}: Built ${channelMappings.length} channel mappings`);
+    console.log(`[Global EPG] Source ${sourceId}: ${channelMappings.length} channel mappings prepared`);
 
-    try {
-      // Use Rust streaming parser — handles download, decompression, parsing, and insertion natively
-      const result = await epgStreaming.streamParseEpg(
-        sourceId,
-        source.name || sourceId,
-        url,
-        channelMappings,
-        undefined,
-        source.advanced_epg_matching ?? false,
-        source.epg_timeshift_hours ?? 0,
-        false // clearExisting = false (gap-fill only)
-      );
+    sourceConfigs.push({
+      sourceId,
+      sourceName: source.name || sourceId,
+      channelMappings,
+      advancedEpgMatching: source.advanced_epg_matching ?? false,
+      timeshiftHours: source.epg_timeshift_hours ?? 0,
+      clearExisting: false,
+    });
+  }
 
-      console.log(`[Global EPG] Source ${sourceId}: Rust parser inserted ${result.inserted_programs} programs`);
-      debugLog(`Source ${sourceId}: inserted ${result.inserted_programs} programs`, 'epg');
+  if (sourceConfigs.length === 0) {
+    console.log(`[Global EPG] No sources need EPG from ${epgLink.name}`);
+    // Mark as synced so we don't retry every 10 min, but only for 30 min freshness window
+    await updateGlobalEpgLastSynced(epgLink.id, 0, {});
+    return 0;
+  }
 
+  onProgress?.(`Applying EPG to ${sourceConfigs.length} source(s) via Rust...`);
+
+  let totalInserted = 0;
+  const perSourceCounts: Record<string, number> = {};
+  let syncSucceeded = false;
+
+  try {
+    const results = await epgStreaming.streamParseEpgMulti(url, sourceConfigs);
+    syncSucceeded = true;
+
+    for (const result of results) {
       totalInserted += result.inserted_programs;
-      perSourceCounts[sourceId] = result.inserted_programs;
+      perSourceCounts[result.source_id] = result.inserted_programs;
+      console.log(`[Global EPG] Source ${result.source_id}: ${result.inserted_programs} programs inserted`);
 
-      // Notify UI of new programs
       if (result.inserted_programs > 0) {
         dbEvents.notify('programs', 'add');
       }
-    } catch (err) {
-      const errMsg = err instanceof Error ? err.message : String(err);
-      console.error(`[Global EPG] Rust parser failed for source ${sourceId}: ${errMsg}`);
-      debugLog(`Rust parser failed for source ${sourceId}: ${errMsg}`, 'epg');
-      perSourceCounts[sourceId] = 0;
     }
+  } catch (err) {
+    const errMsg = err instanceof Error ? err.message : String(err);
+    console.error(`[Global EPG] Multi-source Rust parser failed: ${errMsg}`);
+    debugLog(`Multi-source Rust parser failed: ${errMsg}`, 'epg');
+    // DO NOT update lastSynced on failure — keep it stale for retry
   }
 
-  // Update lastSynced and lastSyncResult in settings
-  if (window.storage) {
-    try {
-      const settingsResult = await window.storage.getSettings();
-      const existingLinks = settingsResult.data?.globalEpgLinks || [];
-      const updatedLinks = existingLinks.map((link: GlobalEpgLink) =>
-        link.id === epgLink.id
-          ? {
-              ...link,
-              lastSynced: Date.now(),
-              lastSyncResult: {
-                timestamp: Date.now(),
-                totalInserted,
-                perSource: perSourceCounts,
-              },
-            }
-          : link
-      );
-      await window.storage.updateSettings({ globalEpgLinks: updatedLinks });
-      console.log(`[Global EPG] Updated lastSynced and result for ${epgLink.name}`);
-    } catch (err) {
-      console.warn(`[Global EPG] Failed to update lastSynced:`, err);
-    }
+  // Only mark as synced if the Rust call succeeded (even if 0 programmes inserted)
+  if (syncSucceeded) {
+    await updateGlobalEpgLastSynced(epgLink.id, totalInserted, perSourceCounts);
   }
 
   console.log(`[Global EPG] Standalone sync complete for ${epgLink.name}: ${totalInserted} total programs inserted`);
-  debugLog(`Standalone sync complete: ${totalInserted} programs across ${epgLink.sourceIds.length} sources`, 'epg');
+  debugLog(`Standalone sync complete: ${totalInserted} programs across ${sourceConfigs.length} sources`, 'epg');
   return totalInserted;
+}
+
+/**
+ * Update lastSynced and lastSyncResult for a global EPG link.
+ */
+async function updateGlobalEpgLastSynced(
+  epgLinkId: string,
+  totalInserted: number,
+  perSourceCounts: Record<string, number>
+): Promise<void> {
+  if (!window.storage) return;
+  try {
+    const settingsResult = await window.storage.getSettings();
+    const existingLinks = settingsResult.data?.globalEpgLinks || [];
+    const updatedLinks = existingLinks.map((link: GlobalEpgLink) =>
+      link.id === epgLinkId
+        ? {
+            ...link,
+            lastSynced: Date.now(),
+            lastSyncResult: {
+              timestamp: Date.now(),
+              totalInserted,
+              perSource: perSourceCounts,
+            },
+          }
+        : link
+    );
+    await window.storage.updateSettings({ globalEpgLinks: updatedLinks });
+    console.log(`[Global EPG] Updated lastSynced for link ${epgLinkId}`);
+  } catch (err) {
+    console.warn(`[Global EPG] Failed to update lastSynced:`, err);
+  }
 }
 
 // How recently a global EPG must have been synced to be considered fresh (ms)
