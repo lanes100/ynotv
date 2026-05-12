@@ -53,6 +53,20 @@ export interface SavedLayoutState {
     slots: SavedSlotState[];
 }
 
+export interface GlobalEpgLink {
+    id: string;
+    name: string;
+    url: string;
+    sourceIds: string[];
+    lastSynced?: number; // Unix timestamp ms
+    display_order?: number; // Lower = higher priority in waterfall
+    lastSyncResult?: {
+        timestamp: number;
+        totalInserted: number;
+        perSource: Record<string, number>; // sourceId -> count
+    };
+}
+
 export interface AppSettings {
     theme?: ThemeId;
     language?: string;
@@ -77,6 +91,8 @@ export interface AppSettings {
     advancedSearchSourceIds?: string[];
     advancedSearchCategoryIds?: string[];
     useAdvancedSearchForRegular?: boolean;
+    // Global EPG links that can be shared across multiple sources
+    globalEpgLinks?: GlobalEpgLink[];
     [key: string]: any;
 }
 

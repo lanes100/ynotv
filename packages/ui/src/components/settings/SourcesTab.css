@@ -370,3 +370,342 @@
 .drag-handle:active {
     cursor: grabbing;
 }
+
+/* ─── Modern Global EPG Cards ─────────────────────────────────────────────── */
+
+.epg-links-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.epg-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 12px;
+    padding: 16px 18px;
+    transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.epg-card:hover {
+    background: rgba(255, 255, 255, 0.07);
+    border-color: rgba(255, 255, 255, 0.1);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+}
+
+.epg-card.syncing {
+    border-color: rgba(0, 212, 255, 0.3);
+    box-shadow: 0 0 20px rgba(0, 212, 255, 0.08);
+}
+
+.epg-card.syncing::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, rgba(0, 212, 255, 0.6), transparent);
+    animation: epg-shimmer 1.5s ease-in-out infinite;
+}
+
+@keyframes epg-shimmer {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+}
+
+/* Priority badge */
+.epg-priority {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 28px;
+    height: 28px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.5);
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+/* Content area */
+.epg-card-content {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.epg-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.epg-card-name {
+    font-size: 1rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.95);
+    letter-spacing: -0.2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.epg-status {
+    font-size: 0.7rem;
+    font-weight: 500;
+    padding: 3px 10px;
+    border-radius: 20px;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.epg-status.synced {
+    background: rgba(52, 199, 89, 0.12);
+    color: #34c759;
+    border: 1px solid rgba(52, 199, 89, 0.2);
+}
+
+.epg-status.never {
+    background: rgba(255, 255, 255, 0.05);
+    color: rgba(255, 255, 255, 0.35);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Source pills */
+.epg-card-sources {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.epg-source-pill {
+    font-size: 0.72rem;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.65);
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 3px 10px;
+    border-radius: 20px;
+    white-space: nowrap;
+}
+
+/* Results bar */
+.epg-card-results {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 8px 12px;
+    background: rgba(0, 212, 255, 0.06);
+    border: 1px solid rgba(0, 212, 255, 0.12);
+    border-radius: 8px;
+    margin-top: 2px;
+}
+
+.epg-results-total {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: rgba(0, 212, 255, 0.9);
+}
+
+.epg-results-breakdown {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 16px;
+}
+
+.epg-results-item {
+    font-size: 0.72rem;
+    color: rgba(255, 255, 255, 0.55);
+}
+
+/* Actions row */
+.epg-card-actions {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.epg-action-divider {
+    width: 1px;
+    height: 22px;
+    background: rgba(255, 255, 255, 0.1);
+    margin: 0 2px;
+}
+
+/* Reorder buttons */
+.epg-reorder-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 6px;
+    color: rgba(255, 255, 255, 0.5);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    flex-shrink: 0;
+}
+
+.epg-reorder-btn:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.85);
+    border-color: rgba(255, 255, 255, 0.18);
+}
+
+.epg-reorder-btn:disabled {
+    opacity: 0.25;
+    cursor: not-allowed;
+}
+
+/* Sync button */
+.epg-sync-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: rgba(0, 212, 255, 0.1);
+    border: 1px solid rgba(0, 212, 255, 0.25);
+    border-radius: 8px;
+    color: rgba(0, 212, 255, 0.9);
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+.epg-sync-btn:hover:not(:disabled) {
+    background: rgba(0, 212, 255, 0.18);
+    border-color: rgba(0, 212, 255, 0.4);
+    color: #00d4ff;
+}
+
+.epg-sync-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Icon buttons */
+.epg-icon-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    color: rgba(255, 255, 255, 0.6);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    flex-shrink: 0;
+}
+
+.epg-icon-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.9);
+    border-color: rgba(255, 255, 255, 0.15);
+}
+
+.epg-icon-btn.delete:hover {
+    background: rgba(255, 59, 48, 0.12);
+    color: #ff3b30;
+    border-color: rgba(255, 59, 48, 0.2);
+}
+
+/* Spin animation */
+.epg-spin {
+    animation: epg-spin 1s linear infinite;
+}
+
+@keyframes epg-spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* ─── Tooltip ─────────────────────────────────────────────────────────────── */
+
+.epg-tooltip {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.epg-tooltip-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 0.7rem;
+    font-weight: 700;
+    cursor: help;
+    transition: all 0.15s ease;
+}
+
+.epg-tooltip:hover .epg-tooltip-icon {
+    background: rgba(0, 212, 255, 0.12);
+    border-color: rgba(0, 212, 255, 0.3);
+    color: rgba(0, 212, 255, 0.9);
+}
+
+.epg-tooltip-content {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    width: 320px;
+    padding: 12px 14px;
+    background: rgba(20, 20, 28, 0.98);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 0.82rem;
+    line-height: 1.5;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.15s ease, visibility 0.15s ease;
+    z-index: 100;
+    pointer-events: none;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+}
+
+.epg-tooltip-content::before {
+    content: '';
+    position: absolute;
+    bottom: 100%;
+    left: 8px;
+    border: 6px solid transparent;
+    border-bottom-color: rgba(20, 20, 28, 0.98);
+}
+
+.epg-tooltip:hover .epg-tooltip-content {
+    opacity: 1;
+    visibility: visible;
+}

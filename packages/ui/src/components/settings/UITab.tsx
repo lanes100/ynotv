@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getCurrentWindow } from '@tauri-apps/api/window';
+import './SourcesTab.css'; // Import shared tooltip styles
 
 interface UITabProps {
   settings: {
@@ -128,9 +129,6 @@ function WindowSizeSettings({ width, height, onChange }: { width: number; height
 }
 
 export function UITab({ settings, onSettingsChange }: UITabProps) {
-  const [showModernUiTooltip, setShowModernUiTooltip] = useState(false);
-  const [showCollapseTooltip, setShowCollapseTooltip] = useState(false);
-
   return (
     <div className="settings-tab-content">
       {/* Modern UI Section */}
@@ -138,35 +136,15 @@ export function UITab({ settings, onSettingsChange }: UITabProps) {
         <div className="timeshift-settings">
           <div className="timeshift-toggle-row" style={{ position: 'relative' }}>
             <div className="timeshift-toggle-info">
-              <span className="timeshift-toggle-label" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span className="timeshift-toggle-label" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 Enable Modern UI Design
-                <span
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    width: '16px',
-                    height: '16px',
-                    borderRadius: '50%',
-                    background: 'rgba(255,255,255,0.15)',
-                    color: 'rgba(255,255,255,0.7)',
-                    fontSize: '0.7rem',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    userSelect: 'none',
-                  }}
-                  onMouseEnter={() => setShowModernUiTooltip(true)}
-                  onMouseLeave={() => setShowModernUiTooltip(false)}
-                  onClick={() => setShowModernUiTooltip((prev) => !prev)}
-                >
-                  ?
-                </span>
+                <div className="epg-tooltip">
+                  <span className="epg-tooltip-icon">?</span>
+                  <div className="epg-tooltip-content">
+                    When enabled, applies a modern glass-morphism aesthetic with enhanced animations, gradients, and visual effects to the Categories and EPG views. Works best with glass themes.
+                  </div>
+                </div>
               </span>
-              {showModernUiTooltip && (
-                <span className="timeshift-toggle-sub" style={{ marginTop: '4px' }}>
-                  When enabled, applies a modern glass-morphism aesthetic with enhanced animations, gradients, and visual effects to the Categories and EPG views. Works best with glass themes.
-                </span>
-              )}
             </div>
             <label className="toggle-switch">
               <input
@@ -181,35 +159,15 @@ export function UITab({ settings, onSettingsChange }: UITabProps) {
           {/* Collapse Source Categories on Startup */}
           <div className="timeshift-toggle-row">
             <div className="timeshift-toggle-info">
-              <span className="timeshift-toggle-label" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span className="timeshift-toggle-label" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 Collapse Source Categories on Startup
-                <span
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    width: '16px',
-                    height: '16px',
-                    borderRadius: '50%',
-                    background: 'rgba(255,255,255,0.15)',
-                    color: 'rgba(255,255,255,0.7)',
-                    fontSize: '0.7rem',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    userSelect: 'none',
-                  }}
-                  onMouseEnter={() => setShowCollapseTooltip(true)}
-                  onMouseLeave={() => setShowCollapseTooltip(false)}
-                  onClick={() => setShowCollapseTooltip((prev) => !prev)}
-                >
-                  ?
-                </span>
+                <div className="epg-tooltip">
+                  <span className="epg-tooltip-icon">?</span>
+                  <div className="epg-tooltip-content">
+                    When enabled, source categories will be collapsed by default when the LiveTV Categories view loads.
+                  </div>
+                </div>
               </span>
-              {showCollapseTooltip && (
-                <span className="timeshift-toggle-sub" style={{ marginTop: '4px' }}>
-                  When enabled, source categories will be collapsed by default when the LiveTV Categories view loads.
-                </span>
-              )}
             </div>
             <label className="toggle-switch">
               <input

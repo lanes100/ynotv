@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { syncSource, syncVodForSource, isEpgStale, isVodStale } from '../db/sync';
+import { syncSource, syncVodForSource, isEpgStale, isVodStale, syncAllStaleGlobalEpgLinks } from '../db/sync';
 import { bulkOps } from '../services/bulk-ops';
 import {
     useSetChannelSyncing,
@@ -150,6 +150,14 @@ export function useAutoSync(callbacks: AutoSyncSettings = {}) {
                     }
                 }
 
+                // Post-sync: apply stale global EPG links
+                try {
+                    settersRef.current.setSyncStatusMessage('Updating global EPG links...');
+                    await syncAllStaleGlobalEpgLinks((msg) => settersRef.current.setSyncStatusMessage(msg));
+                } catch (err) {
+                    console.error('[AutoSync] Post-sync global EPG failed:', err);
+                }
+
                 if (hasSynced) {
                     console.log('[AutoSync] Periodic sync completed');
                 }
@@ -252,6 +260,14 @@ export function useAutoSync(callbacks: AutoSyncSettings = {}) {
                         }
                         settersRef.current.setSyncStatusMessage(null);
                     }
+                }
+
+                // Post-sync: apply stale global EPG links
+                try {
+                    settersRef.current.setSyncStatusMessage('Updating global EPG links...');
+                    await syncAllStaleGlobalEpgLinks((msg) => settersRef.current.setSyncStatusMessage(msg));
+                } catch (err) {
+                    console.error('[AutoSync] Initial post-sync global EPG failed:', err);
                 }
 
                 // ── Start periodic checking ─────────────────────────────────────────

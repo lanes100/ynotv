@@ -1,7 +1,7 @@
 import { useState, useRef, useMemo, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import type { Source } from '@ynotv/core';
-import { syncAllSources, syncAllVod, syncSource, syncVodForSource, markSourceDeleted, type SyncResult, type VodSyncResult } from '../../db/sync';
+import type { Source, Channel } from '@ynotv/core';
+import { syncAllSources, syncAllVod, syncSource, syncVodForSource, markSourceDeleted, syncGlobalEpgLinkStandalone, applyGlobalEpgToSource, type SyncResult, type VodSyncResult } from '../../db/sync';
 import { clearSourceData, clearVodData, db } from '../../db';
 import { dbEvents } from '../../db/sqlite-adapter';
 import { useSyncStatus } from '../../hooks/useChannels';
@@ -17,6 +17,7 @@ import { parseM3U, XtreamClient, StalkerClient } from '@ynotv/local-adapter';
 import { CategoryManager } from './CategoryManager';
 import './SourcesTab.css';
 import { useSourceVersion } from '../../contexts/SourceVersionContext';
+import type { GlobalEpgLink } from '../../types/app';
 
 interface SourcesTabProps {
   sources: Source[];
@@ -165,7 +166,42 @@ export function SourcesTab({ sources, isEncryptionAvailable, onSourcesChange, ed
   // Backup delete confirmation modal state
   const [deleteBackupConfirm, setDeleteBackupConfirm] = useState<{ type: 'stalker' | 'xtream'; index: number } | null>(null);
 
+  // Sub-tab state: 'source' | 'epg'
+  const [activeSubTab, setActiveSubTab] = useState<'source' | 'epg'>('source');
+
+  // Global EPG links state
+  const [globalEpgLinks, setGlobalEpgLinks] = useState<GlobalEpgLink[]>([]);
+  const [showAddEpgForm, setShowAddEpgForm] = useState(false);
+  const [editingEpgId, setEditingEpgId] = useState<string | null>(null);
+  const [epgFormData, setEpgFormData] = useState({ name: '', url: '', sourceIds: [] as string[] });
+  const [epgFormError, setEpgFormError] = useState<string | null>(null);
+  const [deleteEpgConfirm, setDeleteEpgConfirm] = useState<GlobalEpgLink | null>(null);
+  const [syncingEpgId, setSyncingEpgId] = useState<string | null>(null);
+  const [syncingAllEpg, setSyncingAllEpg] = useState(false);
+
+  // Load global EPG links from settings
+  async function loadGlobalEpgLinks() {
+    if (!window.storage) return;
+    const result = await window.storage.getSettings();
+    if (result.data?.globalEpgLinks) {
+      setGlobalEpgLinks(result.data.globalEpgLinks);
+    }
+  }
+
+  useEffect(() => {
+    loadGlobalEpgLinks();
+  }, []);
+
   const hasVodSource = sources.some(s => s.type === 'xtream' || s.type === 'stalker');
+
+  // Sorted global EPG links for rendering (lower display_order = higher priority)
+  const sortedEpgLinks = useMemo(() => {
+    return [...globalEpgLinks].sort((a, b) => {
+      const orderA = a.display_order ?? Number.MAX_SAFE_INTEGER;
+      const orderB = b.display_order ?? Number.MAX_SAFE_INTEGER;
+      return orderA - orderB;
+    });
+  }, [globalEpgLinks]);
 
   // Handle auto-opening edit form when requested
   useEffect(() => {
@@ -711,6 +747,8 @@ export function SourcesTab({ sources, isEncryptionAvailable, onSourcesChange, ed
     } finally {
       setSyncing(false);
       setSyncStatusMsg(null);
+      // Refresh global EPG links to pick up post-sync results
+      await loadGlobalEpgLinks();
     }
   }
 
@@ -751,6 +789,21 @@ export function SourcesTab({ sources, isEncryptionAvailable, onSourcesChange, ed
       } else {
         console.error(`Source ${source.name} sync failed:`, result.error);
       }
+
+      // Post-sync: apply global EPG links (primary EPG just cleared everything)
+      try {
+        setSyncStatusMsg('Updating global EPG...');
+        const channels = await db.channels.where('source_id').equals(sourceId).toArray() as Channel[];
+        const globalCount = await applyGlobalEpgToSource(source, channels, (msg) => setSyncStatusMsg(msg));
+        if (globalCount > 0) {
+          console.log(`Source ${source.name}: ${globalCount} programs from global EPG`);
+        }
+        // Refresh global EPG links state so cards show updated lastSyncResult
+        await loadGlobalEpgLinks();
+      } catch (epgErr) {
+        console.error(`Source ${source.name}: global EPG apply failed:`, epgErr);
+      }
+
       onSourcesChange(); // Refresh to show updated counts
       incrementVersion(); // Trigger category refresh
     } catch (err) {
@@ -794,6 +847,171 @@ export function SourcesTab({ sources, isEncryptionAvailable, onSourcesChange, ed
 
     // Trigger parent refresh
     onSourcesChange();
+  }
+
+  // --- Global EPG Handlers ---
+  function handleAddEpg() {
+    setEpgFormData({ name: '', url: '', sourceIds: [] });
+    setEditingEpgId(null);
+    setShowAddEpgForm(true);
+    setEpgFormError(null);
+  }
+
+  function handleEditEpg(epg: GlobalEpgLink) {
+    setEpgFormData({ name: epg.name, url: epg.url, sourceIds: [...epg.sourceIds] });
+    setEditingEpgId(epg.id);
+    setShowAddEpgForm(true);
+    setEpgFormError(null);
+  }
+
+  function handleDeleteEpgClick(epg: GlobalEpgLink) {
+    setDeleteEpgConfirm(epg);
+  }
+
+  async function confirmDeleteEpg() {
+    if (!deleteEpgConfirm || !window.storage) return;
+    const newLinks = globalEpgLinks.filter(e => e.id !== deleteEpgConfirm.id);
+    setGlobalEpgLinks(newLinks);
+    setDeleteEpgConfirm(null);
+    await window.storage.updateSettings({ globalEpgLinks: newLinks });
+  }
+
+  function handleCancelEpg() {
+    setShowAddEpgForm(false);
+    setEpgFormData({ name: '', url: '', sourceIds: [] });
+    setEditingEpgId(null);
+    setEpgFormError(null);
+  }
+
+  async function handleSubmitEpg(e: React.FormEvent) {
+    e.preventDefault();
+    if (!window.storage) return;
+
+    if (!epgFormData.name.trim()) {
+      setEpgFormError('Name is required');
+      return;
+    }
+    if (!epgFormData.url.trim()) {
+      setEpgFormError('EPG URL is required');
+      return;
+    }
+    if (epgFormData.sourceIds.length === 0) {
+      setEpgFormError('Select at least one source');
+      return;
+    }
+
+    const linkId = editingEpgId || crypto.randomUUID();
+    const newLink: GlobalEpgLink = {
+      id: linkId,
+      name: epgFormData.name.trim(),
+      url: epgFormData.url.trim(),
+      sourceIds: epgFormData.sourceIds,
+    };
+
+    const newLinks = editingEpgId
+      ? globalEpgLinks.map(e => (e.id === editingEpgId ? newLink : e))
+      : [...globalEpgLinks, newLink];
+
+    setGlobalEpgLinks(newLinks);
+    setShowAddEpgForm(false);
+    setEpgFormData({ name: '', url: '', sourceIds: [] });
+    setEditingEpgId(null);
+    setEpgFormError(null);
+    await window.storage.updateSettings({ globalEpgLinks: newLinks });
+  }
+
+  function toggleEpgSourceId(sourceId: string) {
+    setEpgFormData(prev => ({
+      ...prev,
+      sourceIds: prev.sourceIds.includes(sourceId)
+        ? prev.sourceIds.filter(id => id !== sourceId)
+        : [...prev.sourceIds, sourceId],
+    }));
+  }
+
+  async function moveEpgUp(index: number) {
+    if (index <= 0 || !window.storage) return;
+    const newLinks = [...globalEpgLinks];
+    const currentOrder = newLinks[index].display_order ?? index;
+    const prevOrder = newLinks[index - 1].display_order ?? (index - 1);
+    // Swap display_order values
+    newLinks[index] = { ...newLinks[index], display_order: prevOrder };
+    newLinks[index - 1] = { ...newLinks[index - 1], display_order: currentOrder };
+    setGlobalEpgLinks(newLinks);
+    await window.storage.updateSettings({ globalEpgLinks: newLinks });
+  }
+
+  async function moveEpgDown(index: number) {
+    if (index >= globalEpgLinks.length - 1 || !window.storage) return;
+    const newLinks = [...globalEpgLinks];
+    const currentOrder = newLinks[index].display_order ?? index;
+    const nextOrder = newLinks[index + 1].display_order ?? (index + 1);
+    // Swap display_order values
+    newLinks[index] = { ...newLinks[index], display_order: nextOrder };
+    newLinks[index + 1] = { ...newLinks[index + 1], display_order: currentOrder };
+    setGlobalEpgLinks(newLinks);
+    await window.storage.updateSettings({ globalEpgLinks: newLinks });
+  }
+
+  async function handleSyncEpg(epg: GlobalEpgLink) {
+    if (syncingEpgId || syncingAllEpg) return;
+    setSyncingEpgId(epg.id);
+    try {
+      const count = await syncGlobalEpgLinkStandalone(epg, (msg) => {
+        console.log(`[Global EPG] ${epg.name}: ${msg}`);
+      });
+      // Refresh lastSynced and results from settings
+      if (window.storage) {
+        const result = await window.storage.getSettings();
+        if (result.data?.globalEpgLinks) {
+          setGlobalEpgLinks(result.data.globalEpgLinks);
+        }
+      }
+      console.log(`[Global EPG] Synced ${epg.name}: ${count} programs inserted`);
+    } catch (err) {
+      console.error(`[Global EPG] Failed to sync ${epg.name}:`, err);
+    } finally {
+      setSyncingEpgId(null);
+    }
+  }
+
+  async function handleSyncAllEpg() {
+    if (syncingEpgId || syncingAllEpg || globalEpgLinks.length === 0) return;
+    setSyncingAllEpg(true);
+    try {
+      for (const epg of globalEpgLinks) {
+        setSyncingEpgId(epg.id);
+        try {
+          const count = await syncGlobalEpgLinkStandalone(epg);
+          console.log(`[Global EPG] Synced ${epg.name}: ${count} programs inserted`);
+        } catch (err) {
+          console.error(`[Global EPG] Failed to sync ${epg.name}:`, err);
+        }
+      }
+      // Refresh lastSynced from settings
+      if (window.storage) {
+        const result = await window.storage.getSettings();
+        if (result.data?.globalEpgLinks) {
+          setGlobalEpgLinks(result.data.globalEpgLinks);
+        }
+      }
+    } finally {
+      setSyncingEpgId(null);
+      setSyncingAllEpg(false);
+    }
+  }
+
+  // Format time since last sync
+  function formatLastSynced(timestamp?: number): string {
+    if (!timestamp) return 'Never synced';
+    const diffMs = Date.now() - timestamp;
+    const diffMins = Math.floor(diffMs / 60000);
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins} min ago`;
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours < 24) return `${diffHours} hour${diffHours !== 1 ? 's' : ''} ago`;
+    const diffDays = Math.floor(diffHours / 24);
+    return `${diffDays} day${diffDays !== 1 ? 's' : ''} ago`;
   }
 
   // --- Drag and Drop Handlers ---
@@ -863,28 +1081,68 @@ export function SourcesTab({ sources, isEncryptionAvailable, onSourcesChange, ed
 
   return (
     <div className="settings-tab-content">
-      {/* Sources List */}
-      <div className="settings-section">
-        <div className="section-header">
-          <h3>Sources</h3>
-          <div className="section-actions">
-            <button
-              className="sync-btn"
-              onClick={handleSync}
-              disabled={syncing || sources.length === 0}
-              style={{ minWidth: '140px' }}
-            >
-              {syncing ? (syncStatusMsg || 'Syncing...') : 'Sync Channels'}
-            </button>
-            <button
-              className="sync-btn"
-              onClick={handleVodSync}
-              disabled={vodSyncing || !hasVodSource}
-            >
-              {vodSyncing ? 'Syncing...' : 'Sync Movies & Series'}
-            </button>
-            <button className="add-btn" onClick={handleAdd}>+ Add Source</button>
-          </div>
+      {/* Sub-tabs */}
+      <div className="sub-tabs" style={{ display: 'flex', gap: '2px', marginBottom: '16px', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+        <button
+          className={`sub-tab-btn ${activeSubTab === 'source' ? 'active' : ''}`}
+          onClick={() => setActiveSubTab('source')}
+          style={{
+            padding: '10px 20px',
+            background: activeSubTab === 'source' ? 'rgba(255,255,255,0.08)' : 'transparent',
+            border: 'none',
+            borderBottom: activeSubTab === 'source' ? '2px solid var(--accent-primary, #00d4ff)' : '2px solid transparent',
+            color: activeSubTab === 'source' ? 'white' : 'rgba(255,255,255,0.6)',
+            cursor: 'pointer',
+            fontSize: '0.9rem',
+            fontWeight: 500,
+            transition: 'all 0.2s ease',
+          }}
+        >
+          Playlist
+        </button>
+        <button
+          className={`sub-tab-btn ${activeSubTab === 'epg' ? 'active' : ''}`}
+          onClick={() => setActiveSubTab('epg')}
+          style={{
+            padding: '10px 20px',
+            background: activeSubTab === 'epg' ? 'rgba(255,255,255,0.08)' : 'transparent',
+            border: 'none',
+            borderBottom: activeSubTab === 'epg' ? '2px solid var(--accent-primary, #00d4ff)' : '2px solid transparent',
+            color: activeSubTab === 'epg' ? 'white' : 'rgba(255,255,255,0.6)',
+            cursor: 'pointer',
+            fontSize: '0.9rem',
+            fontWeight: 500,
+            transition: 'all 0.2s ease',
+          }}
+        >
+          EPG
+        </button>
+      </div>
+
+      {activeSubTab === 'source' && (
+        <>
+          {/* Sources List */}
+          <div className="settings-section">
+            <div className="section-header">
+              <h3>Sources</h3>
+              <div className="section-actions">
+                <button
+                  className="sync-btn"
+                  onClick={handleSync}
+                  disabled={syncing || sources.length === 0}
+                  style={{ minWidth: '140px' }}
+                >
+                  {syncing ? (syncStatusMsg || 'Syncing...') : 'Sync Channels'}
+                </button>
+                <button
+                  className="sync-btn"
+                  onClick={handleVodSync}
+                  disabled={vodSyncing || !hasVodSource}
+                >
+                  {vodSyncing ? 'Syncing...' : 'Sync Movies & Series'}
+                </button>
+                <button className="add-btn" onClick={handleAdd}>+ Add Playlist</button>
+              </div>
         </div>
 
         {syncError && (
@@ -1679,6 +1937,253 @@ export function SourcesTab({ sources, isEncryptionAvailable, onSourcesChange, ed
                 type="button"
                 className="save-btn"
                 onClick={confirmDeleteBackup}
+                style={{ borderColor: '#ff4444', color: '#ff4444', background: 'rgba(255, 68, 68, 0.1)' }}
+              >
+                Yes, Delete
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+        </>
+      )}
+
+      {activeSubTab === 'epg' && (
+        <div className="settings-section">
+          <div className="section-header">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <h3>Global EPG Links</h3>
+              <div className="epg-tooltip">
+                <span className="epg-tooltip-icon">?</span>
+                <div className="epg-tooltip-content">
+                  Add EPG URLs that can be shared across multiple sources. Downloaded once and applied to all linked sources. Only fills channels that don't already have EPG. Use arrows to reorder — higher EPGs fill first, lower ones fill remaining gaps (waterfall).
+                </div>
+              </div>
+            </div>
+            <div className="section-actions">
+              {globalEpgLinks.length > 0 && (
+                <button
+                  className="sync-btn"
+                  onClick={handleSyncAllEpg}
+                  disabled={syncingAllEpg || syncingEpgId !== null}
+                  style={{ minWidth: '100px' }}
+                >
+                  {syncingAllEpg ? 'Syncing...' : 'Sync All'}
+                </button>
+              )}
+              <button className="add-btn" onClick={handleAddEpg}>+ Add EPG</button>
+            </div>
+          </div>
+
+          {sortedEpgLinks.length === 0 ? (
+            <div className="empty-state">
+              <p>No global EPG links configured</p>
+              <p className="hint">Add an EPG URL and link it to one or more sources</p>
+            </div>
+          ) : (
+            <ul className="epg-links-list">
+              {sortedEpgLinks.map((epg, index) => {
+                const isSyncing = syncingEpgId === epg.id;
+                return (
+                  <li key={epg.id} className={`epg-card${isSyncing ? ' syncing' : ''}`}>
+                    {/* Priority badge */}
+                    <div className="epg-priority">{index + 1}</div>
+
+                    <div className="epg-card-content">
+                      {/* Header row: name + status */}
+                      <div className="epg-card-header">
+                        <span className="epg-card-name">{epg.name}</span>
+                        <span className={`epg-status${epg.lastSynced ? ' synced' : ' never'}`}>
+                          {formatLastSynced(epg.lastSynced)}
+                        </span>
+                      </div>
+
+                      {/* Linked sources as pills */}
+                      <div className="epg-card-sources">
+                        {epg.sourceIds.map(id => {
+                          const src = sources.find(s => s.id === id);
+                          return (
+                            <span key={id} className="epg-source-pill">
+                              {src?.name || id}
+                            </span>
+                          );
+                        })}
+                      </div>
+
+                      {/* Sync results bar */}
+                      {epg.lastSyncResult && (
+                        <div className="epg-card-results">
+                          <span className="epg-results-total">
+                            {epg.lastSyncResult.totalInserted.toLocaleString()} programs
+                          </span>
+                          <div className="epg-results-breakdown">
+                            {Object.entries(epg.lastSyncResult.perSource).map(([srcId, count]) => {
+                              const srcName = sources.find(s => s.id === srcId)?.name || srcId;
+                              return (
+                                <span key={srcId} className="epg-results-item">
+                                  {srcName}: {Number(count).toLocaleString()}
+                                </span>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Actions row */}
+                    <div className="epg-card-actions">
+                      <button
+                        className="epg-reorder-btn"
+                        onClick={() => moveEpgUp(index)}
+                        disabled={index === 0}
+                        title="Higher priority"
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
+                      </button>
+                      <button
+                        className="epg-reorder-btn"
+                        onClick={() => moveEpgDown(index)}
+                        disabled={index === sortedEpgLinks.length - 1}
+                        title="Lower priority"
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                      </button>
+                      <div className="epg-action-divider" />
+                      <button
+                        className="epg-sync-btn"
+                        onClick={() => handleSyncEpg(epg)}
+                        disabled={isSyncing || syncingAllEpg}
+                        title="Sync this EPG"
+                      >
+                        {isSyncing ? (
+                          <svg className="epg-spin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+                        ) : (
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.3"/></svg>
+                        )}
+                        {isSyncing ? 'Syncing' : 'Sync'}
+                      </button>
+                      <button
+                        className="epg-icon-btn"
+                        onClick={() => handleEditEpg(epg)}
+                        title="Edit"
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                      </button>
+                      <button
+                        className="epg-icon-btn delete"
+                        onClick={() => handleDeleteEpgClick(epg)}
+                        title="Delete"
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                      </button>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+      )}
+
+      {/* Add/Edit Global EPG Form */}
+      {showAddEpgForm && createPortal(
+        <div className="source-form-overlay">
+          <form className="source-form" onSubmit={handleSubmitEpg} style={{ maxWidth: '500px' }}>
+            <h3>{editingEpgId ? 'Edit Global EPG' : 'Add Global EPG'}</h3>
+
+            {epgFormError && <div className="form-error">{epgFormError}</div>}
+
+            <div className="form-group">
+              <label>Name</label>
+              <input
+                type="text"
+                value={epgFormData.name}
+                onChange={(e) => setEpgFormData({ ...epgFormData, name: e.target.value })}
+                placeholder="My Shared EPG"
+              />
+            </div>
+
+            <div className="form-group">
+              <label>EPG URL</label>
+              <input
+                type="text"
+                value={epgFormData.url}
+                onChange={(e) => setEpgFormData({ ...epgFormData, url: e.target.value })}
+                placeholder="http://example.com/epg.xml"
+              />
+              <span className="hint">XMLTV format EPG URL</span>
+            </div>
+
+            <div className="form-group">
+              <label>Linked Sources</label>
+              <span className="hint" style={{ display: 'block', marginBottom: '10px' }}>
+                Select which sources should use this EPG (only fills channels without EPG)
+              </span>
+              {sources.length === 0 ? (
+                <p className="hint">No sources available. Add a source first.</p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {sources.map(source => (
+                    <label
+                      key={source.id}
+                      className="checkbox-label"
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        padding: '8px 12px',
+                        background: 'rgba(255,255,255,0.05)',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={epgFormData.sourceIds.includes(source.id)}
+                        onChange={() => toggleEpgSourceId(source.id)}
+                      />
+                      <span>{source.name}</span>
+                      <span className="source-type" style={{ marginLeft: 'auto' }}>{source.type.toUpperCase()}</span>
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="form-actions">
+              <button type="button" className="cancel-btn" onClick={handleCancelEpg}>
+                Cancel
+              </button>
+              <button type="submit" className="save-btn">
+                {editingEpgId ? 'Save Changes' : 'Add EPG'}
+              </button>
+            </div>
+          </form>
+        </div>,
+        document.body
+      )}
+
+      {/* Delete Global EPG Confirmation Modal */}
+      {deleteEpgConfirm && createPortal(
+        <div className="source-form-overlay">
+          <div className="source-form" style={{ maxWidth: '400px', height: 'auto' }}>
+            <h3>Delete Global EPG Link</h3>
+            <p style={{ color: 'rgba(255,255,255,0.8)', marginBottom: '24px', lineHeight: '1.5' }}>
+              Are you sure you want to delete <strong>"{deleteEpgConfirm.name}"</strong>?
+              <br /><br />
+              This will stop this EPG from being applied to linked sources on next sync.
+            </p>
+            <div className="form-actions" style={{ marginTop: '0' }}>
+              <button
+                className="cancel-btn"
+                onClick={() => setDeleteEpgConfirm(null)}
+              >
+                Cancel
+              </button>
+              <button
+                className="save-btn"
+                onClick={confirmDeleteEpg}
                 style={{ borderColor: '#ff4444', color: '#ff4444', background: 'rgba(255, 68, 68, 0.1)' }}
               >
                 Yes, Delete

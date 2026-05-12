@@ -3,9 +3,10 @@ import { fetchAndParseM3U, XtreamClient, StalkerClient, type XmltvProgram, extra
 import type { Source, Channel, Category, Movie, Series } from '@ynotv/core';
 import { useUIStore } from '../stores/uiStore';
 import { bulkOps, type BulkChannel, type BulkCategory } from '../services/bulk-ops';
-import { epgStreaming, type EpgProgressCallback, type EpgParseResult } from '../services/epg-streaming';
+import { epgStreaming, parseEpgFile, type EpgProgressCallback, type EpgParseResult } from '../services/epg-streaming';
 import { dbEvents } from './sqlite-adapter';
 import { matchAllMoviesLazy, matchAllSeriesLazy } from '../services/title-match';
+import type { GlobalEpgLink } from '../types/app';
 
 import { fetch as tauriFetch } from '@tauri-apps/plugin-http';
 import { invoke } from '@tauri-apps/api/core';
@@ -1063,6 +1064,443 @@ async function syncAdditionalEpgUrls(
 }
 // ─────────────────────────────────────────────────────────────────────────────
 
+// ─── Global EPG links helper ─────────────────────────────────────────────────
+/**
+ * Sync global EPG links that are linked to a specific source.
+ * Each global EPG only fills in channels that have no programs yet.
+ */
+/**
+ * Apply global EPG links to a single source.
+ * ALWAYS applies (no freshness check) — intended for manual single-source sync
+ * where the primary EPG just cleared all programs.
+ */
+export async function applyGlobalEpgToSource(
+  source: Source,
+  channels: Channel[],
+  onProgress?: (msg: string) => void
+): Promise<number> {
+  if (!window.storage) {
+    debugLog('Storage API not available, skipping global EPG links', 'epg');
+    return 0;
+  }
+
+  try {
+    const settingsResult = await window.storage.getSettings();
+    const globalEpgLinks = settingsResult.data?.globalEpgLinks || [];
+
+    // Filter to links that include this source, sorted by display_order (lower = higher priority)
+    const linksForSource = globalEpgLinks
+      .filter(link => link.sourceIds.includes(source.id))
+      .sort((a, b) => (a.display_order ?? Number.MAX_SAFE_INTEGER) - (b.display_order ?? Number.MAX_SAFE_INTEGER));
+
+    if (linksForSource.length === 0) {
+      debugLog(`No global EPG links for source: ${source.name}`, 'epg');
+      return 0;
+    }
+
+    if (channels.length === 0) {
+      debugLog(`No channels for global EPG sync on source: ${source.name}`, 'epg');
+      return 0;
+    }
+
+    debugLog(`Applying global EPG to source: ${source.name} (${linksForSource.length} links, waterfall order)`, 'epg');
+
+    // Find channels that currently have no programs
+    let channelsWithPrograms = await getStreamIdsWithPrograms(source.id);
+    let channelsNeedingEpg = channels.filter(ch => !channelsWithPrograms.has(ch.stream_id));
+
+    console.log(`[EPG] Global EPG sync starting: ${channelsNeedingEpg.length} channels out of ${channels.length} need EPG.`);
+
+    if (channelsNeedingEpg.length === 0) {
+      console.log(`[EPG] Global EPG sync skipped: All channels already have EPG.`);
+      debugLog('All channels already have EPG, skipping global EPG links', 'epg');
+      return 0;
+    }
+
+    // Load user-applied EPG channel ID overrides
+    const epgOverrideMap = await loadEpgChannelOverrideMap();
+    let totalInserted = 0;
+    // Track per-link insertion counts so we can update lastSyncResult in settings
+    const linkResultCounts = new Map<string, number>();
+
+    for (let i = 0; i < linksForSource.length; i++) {
+      if (channelsNeedingEpg.length === 0) break;
+
+      const link = linksForSource[i];
+      const epgUrl = link.url.trim();
+      if (!epgUrl) continue;
+
+      debugLog(
+        `Global EPG ${i + 1}/${linksForSource.length}: ${link.name} - ${epgUrl.substring(0, 80)}...`,
+        'epg'
+      );
+      onProgress?.(`Updating EPG (global ${i + 1}/${linksForSource.length})...`);
+
+      try {
+        // Build channel mappings for Rust parser
+        // We only pass channels that STILL need EPGs
+        const channelMappings = channelsNeedingEpg
+          .filter((ch) => epgOverrideMap.has(ch.stream_id) || ch.epg_channel_id || ch.name)
+          .map((ch) => ({
+            epg_channel_id: epgOverrideMap.get(ch.stream_id) || ch.epg_channel_id || ch.name || '',
+            stream_id: ch.stream_id,
+            channel_name: ch.name || '',
+          }));
+
+        if (channelMappings.length === 0) {
+          debugLog(`No channels with EPG IDs remaining for global EPG ${i + 1}`, 'epg');
+          continue;
+        }
+
+        console.log(`[EPG] Global EPG ${i + 1}: Built channel map with ${channelMappings.length} unique mappings`);
+
+        // Use streaming EPG parser (with clearExisting = false to preserve waterfall)
+        const result = await epgStreaming.streamParseEpg(
+          source.id,
+          source.name || source.id,
+          epgUrl,
+          channelMappings,
+          onProgress
+            ? (progress) => {
+                debugLog(epgStreaming.formatProgress(progress), 'epg');
+                onProgress(epgStreaming.formatProgress(progress));
+              }
+            : undefined,
+          source.advanced_epg_matching,
+          source.epg_timeshift_hours ?? 0,
+          false // clearExisting = false
+        );
+
+        console.log(`[EPG] Global EPG ${i + 1}: Matched ${result.matched_programs}/${result.total_programs} programs. Inserted: ${result.inserted_programs}`);
+
+        debugLog(
+          `Global EPG ${i + 1}: inserted ${result.inserted_programs} programs`,
+          'epg'
+        );
+
+        if (result.inserted_programs === 0) {
+          console.warn(`[EPG] Global EPG ${i + 1}: No programs inserted!`);
+          continue;
+        }
+
+        totalInserted += result.inserted_programs;
+        linkResultCounts.set(link.id, result.inserted_programs);
+
+        // Re-query which channels now have programs
+        channelsWithPrograms = await getStreamIdsWithPrograms(source.id);
+        channelsNeedingEpg = channels.filter(ch => !channelsWithPrograms.has(ch.stream_id));
+
+        debugLog(
+          `${channelsNeedingEpg.length} channels still need EPG after global ${i + 1}`,
+          'epg'
+        );
+
+        // Notify UI of new programs
+        dbEvents.notify('programs', 'add');
+      } catch (err) {
+        const errMsg = err instanceof Error ? err.message : String(err);
+        console.error(`[EPG] Global EPG ${i + 1} failed: ${errMsg}`);
+        debugLog(`Global EPG ${i + 1} failed: ${errMsg}`, 'epg');
+        // Continue to next global EPG
+      }
+    }
+
+    // Update lastSyncResult on each affected link (merge with existing perSource data)
+    if (linkResultCounts.size > 0 && window.storage) {
+      try {
+        const settingsResult = await window.storage.getSettings();
+        const existingLinks = settingsResult.data?.globalEpgLinks || [];
+        const updatedLinks = existingLinks.map((link: GlobalEpgLink) => {
+          const countForThisSource = linkResultCounts.get(link.id);
+          if (countForThisSource === undefined) return link;
+
+          const existingResult = link.lastSyncResult;
+          const existingPerSource = existingResult?.perSource || {};
+          const updatedPerSource = {
+            ...existingPerSource,
+            [source.id]: countForThisSource,
+          };
+          const newTotal = Object.values(updatedPerSource).reduce(
+            (sum, c) => sum + (typeof c === 'number' ? c : 0),
+            0
+          );
+
+          return {
+            ...link,
+            lastSyncResult: {
+              timestamp: Date.now(),
+              totalInserted: newTotal,
+              perSource: updatedPerSource,
+            },
+          };
+        });
+        await window.storage.updateSettings({ globalEpgLinks: updatedLinks });
+        console.log(`[Global EPG] Updated lastSyncResult for ${linkResultCounts.size} link(s) after manual sync of ${source.name}`);
+      } catch (err) {
+        console.warn(`[Global EPG] Failed to update lastSyncResult after manual sync:`, err);
+      }
+    }
+
+    debugLog(
+      `Global EPG links complete: ${totalInserted} programs inserted total`,
+      'epg'
+    );
+    return totalInserted;
+  } catch (err) {
+    const errMsg = err instanceof Error ? err.message : String(err);
+    console.error(`[EPG] Failed to load global EPG links: ${errMsg}`);
+    debugLog(`Failed to load global EPG links: ${errMsg}`, 'epg');
+    return 0;
+  }
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Sync all stale global EPG links.
+ * Intended as a post-batch-sync step: after all sources have synced their primary EPGs,
+ * this downloads each stale global EPG once and applies it to all linked sources.
+ * Skips links that were synced recently (within GLOBAL_EPG_FRESH_MS).
+ */
+export async function syncAllStaleGlobalEpgLinks(
+  onProgress?: (msg: string) => void
+): Promise<number> {
+  if (!window.storage) {
+    debugLog('Storage API not available, skipping stale global EPG sync', 'epg');
+    return 0;
+  }
+
+  try {
+    const settingsResult = await window.storage.getSettings();
+    const globalEpgLinks = settingsResult.data?.globalEpgLinks || [];
+    // Sort by display_order so higher priority EPGs are synced first
+    const staleLinks = globalEpgLinks
+      .filter(link => !isGlobalEpgFresh(link))
+      .sort((a, b) => (a.display_order ?? Number.MAX_SAFE_INTEGER) - (b.display_order ?? Number.MAX_SAFE_INTEGER));
+
+    if (staleLinks.length === 0) {
+      debugLog('All global EPG links are fresh, skipping post-sync', 'epg');
+      return 0;
+    }
+
+    console.log(`[Global EPG] Post-sync: ${staleLinks.length} stale global EPG link(s)`);
+    debugLog(`Post-syncing ${staleLinks.length} stale global EPG links (waterfall order)`, 'epg');
+
+    let totalInserted = 0;
+    for (let i = 0; i < staleLinks.length; i++) {
+      const link = staleLinks[i];
+      onProgress?.(`Syncing global EPG ${i + 1}/${staleLinks.length}: ${link.name}...`);
+      try {
+        const count = await syncGlobalEpgLinkStandalone(link, (msg) => {
+          onProgress?.(`[${link.name}] ${msg}`);
+        });
+        totalInserted += count;
+      } catch (err) {
+        const errMsg = err instanceof Error ? err.message : String(err);
+        console.error(`[Global EPG] Post-sync failed for ${link.name}: ${errMsg}`);
+      }
+    }
+
+    console.log(`[Global EPG] Post-sync complete: ${totalInserted} total programs inserted`);
+    return totalInserted;
+  } catch (err) {
+    const errMsg = err instanceof Error ? err.message : String(err);
+    console.error(`[Global EPG] Post-sync failed: ${errMsg}`);
+    return 0;
+  }
+}
+
+// ─── Standalone Global EPG Sync ──────────────────────────────────────────────
+/**
+ * Sync a global EPG link standalone: download once, apply to all linked sources.
+ * Each source only receives programs for channels that don't already have EPG.
+ * Updates the link's lastSynced timestamp in settings on success.
+ * @returns total programs inserted across all linked sources
+ */
+export async function syncGlobalEpgLinkStandalone(
+  epgLink: GlobalEpgLink,
+  onProgress?: (msg: string) => void
+): Promise<number> {
+  if (!window.storage) {
+    debugLog('Storage API not available, skipping standalone global EPG sync', 'epg');
+    return 0;
+  }
+
+  const url = epgLink.url.trim();
+  if (!url) {
+    console.warn(`[Global EPG] Empty URL for link: ${epgLink.name}`);
+    return 0;
+  }
+
+  console.log(`[Global EPG] Starting standalone sync for: ${epgLink.name}`);
+  debugLog(`Standalone sync for global EPG: ${epgLink.name} (${url.substring(0, 80)}...)`, 'epg');
+  onProgress?.(`Downloading global EPG: ${epgLink.name}...`);
+
+  // 1. Download raw XML once (ask worker to return decompressed XML text)
+  let rawXml: string;
+  try {
+    const result = await fetchXmltvFromUrl(url, true);
+    if (!result.rawXml) {
+      throw new Error('EPG worker did not return raw XML');
+    }
+    rawXml = result.rawXml;
+    console.log(`[Global EPG] Downloaded ${rawXml.length} bytes of raw XML from ${epgLink.name}`);
+    debugLog(`Downloaded ${rawXml.length} bytes of raw XML`, 'epg');
+  } catch (err) {
+    const errMsg = err instanceof Error ? err.message : String(err);
+    console.error(`[Global EPG] Failed to download ${epgLink.name}: ${errMsg}`);
+    debugLog(`Download failed: ${errMsg}`, 'epg');
+    return 0;
+  }
+
+  if (rawXml.length === 0) {
+    console.warn(`[Global EPG] Empty XML from ${epgLink.name}`);
+    return 0;
+  }
+
+  // 2. Write raw XML to a temp file so the Rust parser can read it
+  let tempFilePath: string;
+  try {
+    const fs = await import('@tauri-apps/plugin-fs');
+    const { appLocalDataDir, join } = await import('@tauri-apps/api/path');
+    const appDir = await appLocalDataDir();
+    tempFilePath = await join(appDir, `global-epg-${epgLink.id}-${Date.now()}.xml`);
+    await fs.writeFile(tempFilePath, new TextEncoder().encode(rawXml));
+    console.log(`[Global EPG] Saved temp file: ${tempFilePath}`);
+  } catch (err) {
+    const errMsg = err instanceof Error ? err.message : String(err);
+    console.error(`[Global EPG] Failed to write temp file: ${errMsg}`);
+    return 0;
+  }
+
+  // Load user-applied EPG channel ID overrides (shared across all sources)
+  const epgOverrideMap = await loadEpgChannelOverrideMap();
+
+  let totalInserted = 0;
+  const perSourceCounts: Record<string, number> = {};
+
+  // 3. For each linked source, call the Rust native parser with the temp file
+  for (let i = 0; i < epgLink.sourceIds.length; i++) {
+    const sourceId = epgLink.sourceIds[i];
+    onProgress?.(`Applying EPG to source ${i + 1}/${epgLink.sourceIds.length}...`);
+
+    // Get channels for this source
+    const sourceChannels = await db.channels.where('source_id').equals(sourceId).toArray();
+    if (sourceChannels.length === 0) {
+      debugLog(`Source ${sourceId} has no channels, skipping`, 'epg');
+      continue;
+    }
+
+    // Find channels that currently have no programs
+    const channelsWithPrograms = await getStreamIdsWithPrograms(sourceId);
+    const channelsNeedingEpg = sourceChannels.filter(ch => !channelsWithPrograms.has(ch.stream_id));
+
+    if (channelsNeedingEpg.length === 0) {
+      console.log(`[Global EPG] Source ${sourceId}: all channels already have EPG`);
+      debugLog(`Source ${sourceId}: all ${sourceChannels.length} channels already have EPG`, 'epg');
+      perSourceCounts[sourceId] = 0;
+      continue;
+    }
+
+    console.log(`[Global EPG] Source ${sourceId}: ${channelsNeedingEpg.length}/${sourceChannels.length} channels need EPG`);
+
+    // Build channel mappings in the format the Rust parser expects
+    const channelMappings = channelsNeedingEpg
+      .filter((ch) => epgOverrideMap.has(ch.stream_id) || ch.epg_channel_id || ch.name)
+      .map((ch) => ({
+        epg_channel_id: epgOverrideMap.get(ch.stream_id) || ch.epg_channel_id || ch.name || '',
+        stream_id: ch.stream_id,
+        channel_name: ch.name || '',
+      }));
+
+    if (channelMappings.length === 0) {
+      debugLog(`Source ${sourceId}: no channels have EPG IDs`, 'epg');
+      perSourceCounts[sourceId] = 0;
+      continue;
+    }
+
+    console.log(`[Global EPG] Source ${sourceId}: Built ${channelMappings.length} channel mappings`);
+
+    try {
+      // Call Rust native parser with the temp file (clearExisting = false for waterfall/gap-fill)
+      const result = await parseEpgFile(
+        sourceId,
+        tempFilePath,
+        channelMappings,
+        undefined,
+        false, // advancedEpgMatching
+        0,     // timeshiftHours
+        false  // clearExisting
+      );
+
+      console.log(`[Global EPG] Source ${sourceId}: Rust parser inserted ${result.inserted_programs} programs`);
+      debugLog(`Source ${sourceId}: inserted ${result.inserted_programs} programs`, 'epg');
+
+      totalInserted += result.inserted_programs;
+      perSourceCounts[sourceId] = result.inserted_programs;
+
+      // Notify UI of new programs
+      if (result.inserted_programs > 0) {
+        dbEvents.notify('programs', 'add');
+      }
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : String(err);
+      console.error(`[Global EPG] Rust parser failed for source ${sourceId}: ${errMsg}`);
+      debugLog(`Rust parser failed for source ${sourceId}: ${errMsg}`, 'epg');
+      perSourceCounts[sourceId] = 0;
+    }
+  }
+
+  // 4. Delete temp file
+  try {
+    const fs = await import('@tauri-apps/plugin-fs');
+    await fs.remove(tempFilePath);
+    console.log(`[Global EPG] Deleted temp file: ${tempFilePath}`);
+  } catch (err) {
+    console.warn(`[Global EPG] Failed to delete temp file: ${tempFilePath}`, err);
+  }
+
+  // 5. Update lastSynced and lastSyncResult in settings
+  if (window.storage) {
+    try {
+      const settingsResult = await window.storage.getSettings();
+      const existingLinks = settingsResult.data?.globalEpgLinks || [];
+      const updatedLinks = existingLinks.map((link: GlobalEpgLink) =>
+        link.id === epgLink.id
+          ? {
+              ...link,
+              lastSynced: Date.now(),
+              lastSyncResult: {
+                timestamp: Date.now(),
+                totalInserted,
+                perSource: perSourceCounts,
+              },
+            }
+          : link
+      );
+      await window.storage.updateSettings({ globalEpgLinks: updatedLinks });
+      console.log(`[Global EPG] Updated lastSynced and result for ${epgLink.name}`);
+    } catch (err) {
+      console.warn(`[Global EPG] Failed to update lastSynced:`, err);
+    }
+  }
+
+  console.log(`[Global EPG] Standalone sync complete for ${epgLink.name}: ${totalInserted} total programs inserted`);
+  debugLog(`Standalone sync complete: ${totalInserted} programs across ${epgLink.sourceIds.length} sources`, 'epg');
+  return totalInserted;
+}
+
+// How recently a global EPG must have been synced to be considered fresh (ms)
+const GLOBAL_EPG_FRESH_MS = 30 * 60 * 1000; // 30 minutes
+
+/**
+ * Check if a global EPG link was synced recently enough to skip re-downloading.
+ */
+function isGlobalEpgFresh(epgLink: GlobalEpgLink): boolean {
+  if (!epgLink.lastSynced) return false;
+  return Date.now() - epgLink.lastSynced < GLOBAL_EPG_FRESH_MS;
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 // Check if EPG needs refresh
 // refreshHours: 0 = manual only (never auto-stale), default 6 hours
 export async function isEpgStale(sourceId: string, refreshHours: number = DEFAULT_EPG_STALE_HOURS): Promise<boolean> {
@@ -1932,6 +2370,19 @@ export async function syncAllSources(
   }
 
   debugLog('syncAllSources complete', 'sync');
+
+  // Post-sync: apply stale global EPG links to all linked sources
+  // (primary EPGs have already cleared + inserted; now fill gaps with shared EPGs)
+  try {
+    debugLog('Running post-sync global EPG...', 'sync');
+    onProgress?.('Updating global EPG links...');
+    const globalCount = await syncAllStaleGlobalEpgLinks(onProgress);
+    if (globalCount > 0) {
+      debugLog(`Post-sync global EPG: ${globalCount} programs inserted`, 'sync');
+    }
+  } catch (err) {
+    console.error('[Sync] Post-sync global EPG failed:', err);
+  }
 
   // Final checkpoint after all sources synced
   // TRUNCATE mode ensures WAL file is actually truncated to 0 bytes
