@@ -3,7 +3,7 @@ import { fetchAndParseM3U, XtreamClient, StalkerClient } from '@ynotv/local-adap
 import type { Source, Channel, Category, Movie, Series } from '@ynotv/core';
 import { useUIStore } from '../stores/uiStore';
 import { bulkOps, type BulkChannel, type BulkCategory } from '../services/bulk-ops';
-import { epgStreaming, parseEpgFile, type EpgProgressCallback, type EpgParseResult } from '../services/epg-streaming';
+import { epgStreaming, type EpgProgressCallback, type EpgParseResult } from '../services/epg-streaming';
 import { dbEvents } from './sqlite-adapter';
 import { matchAllMoviesLazy, matchAllSeriesLazy } from '../services/title-match';
 import type { GlobalEpgLink } from '../types/app';
@@ -898,56 +898,10 @@ export async function syncAllStaleGlobalEpgLinks(
 
 // ─── Standalone Global EPG Sync ──────────────────────────────────────────────
 /**
- * Download an EPG file directly to a temp file on disk.
- * Bypasses the JS worker and its 50MB size limit — raw bytes are written as-is
- * so Rust can stream-parse/decompress without loading everything into JS memory.
- */
-async function downloadEpgToTempFile(url: string): Promise<string> {
-  const fs = await import('@tauri-apps/plugin-fs');
-  const { appLocalDataDir, join } = await import('@tauri-apps/api/path');
-  const appDir = await appLocalDataDir();
-  const tempFilePath = await join(appDir, `global-epg-${Date.now()}.xml`);
-
-  // Handle local file paths (copy to temp so Rust can read it)
-  const isLocalFile = url.startsWith('C:') || url.startsWith('D:') || url.startsWith('/') || url.startsWith('file://');
-  if (isLocalFile) {
-    const path = url.replace('file://', '');
-    const data = await fs.readFile(path);
-    await fs.writeFile(tempFilePath, data);
-    return tempFilePath;
-  }
-
-  const isGz = url.split('?')[0].endsWith('.gz');
-
-  if (isGz) {
-    // Binary fetch for gzipped files — decode base64 to bytes and write straight to disk
-    const response = await window.fetchProxy.fetchBinary(url);
-    if (!response.data) {
-      throw new Error(response.error || 'Failed to download gzipped EPG');
-    }
-    const binaryString = atob(response.data);
-    const bytes = new Uint8Array(binaryString.length);
-    for (let i = 0; i < binaryString.length; i++) {
-      bytes[i] = binaryString.charCodeAt(i);
-    }
-    await fs.writeFile(tempFilePath, bytes);
-  } else {
-    // Text fetch for plain XML — encode to bytes and write to disk
-    const response = await window.fetchProxy.fetch(url);
-    if (!response.data?.ok) {
-      throw new Error(`Failed to fetch XMLTV: ${response.data?.status || response.error || 'unknown error'}`);
-    }
-    const bytes = new TextEncoder().encode(response.data.text);
-    await fs.writeFile(tempFilePath, bytes);
-  }
-
-  return tempFilePath;
-}
-
-/**
- * Sync a global EPG link standalone: download once, apply to all linked sources.
- * Each source only receives programs for channels that don't already have EPG.
- * Updates the link's lastSynced timestamp in settings on success.
+ * Sync a global EPG link standalone using the Rust streaming parser.
+ * Downloads and parses the EPG via Rust (same path as Additional EPG waterfall).
+ * Applies to all linked sources — each source only receives programs for channels
+ * that don't already have EPG.
  * @returns total programs inserted across all linked sources
  */
 export async function syncGlobalEpgLinkStandalone(
@@ -967,26 +921,11 @@ export async function syncGlobalEpgLinkStandalone(
 
   console.log(`[Global EPG] Starting standalone sync for: ${epgLink.name}`);
   debugLog(`Standalone sync for global EPG: ${epgLink.name} (${url.substring(0, 80)}...)`, 'epg');
-  onProgress?.(`Downloading global EPG: ${epgLink.name}...`);
 
-  // 1. Download EPG directly to temp file (bypass JS worker size limit)
-  let tempFilePath: string;
-  try {
-    tempFilePath = await downloadEpgToTempFile(url);
-    const stats = await (await import('@tauri-apps/plugin-fs')).metadata(tempFilePath);
-    console.log(`[Global EPG] Downloaded to temp file: ${tempFilePath} (${stats.size} bytes)`);
-    debugLog(`Downloaded to temp file: ${tempFilePath} (${stats.size} bytes)`, 'epg');
-  } catch (err) {
-    const errMsg = err instanceof Error ? err.message : String(err);
-    console.error(`[Global EPG] Failed to download ${epgLink.name}: ${errMsg}`);
-    debugLog(`Download failed: ${errMsg}`, 'epg');
-    return 0;
-  }
-
-  if (!tempFilePath) {
-    console.warn(`[Global EPG] Empty download for ${epgLink.name}`);
-    return 0;
-  }
+  // Fetch all sources from storage so we can pass source-specific settings to Rust
+  const sourcesResult = await window.storage.getSources();
+  const allSources = sourcesResult.data || [];
+  const sourceMap = new Map(allSources.map(s => [s.id, s]));
 
   // Load user-applied EPG channel ID overrides (shared across all sources)
   const epgOverrideMap = await loadEpgChannelOverrideMap();
@@ -994,10 +933,15 @@ export async function syncGlobalEpgLinkStandalone(
   let totalInserted = 0;
   const perSourceCounts: Record<string, number> = {};
 
-  // 3. For each linked source, call the Rust native parser with the temp file
   for (let i = 0; i < epgLink.sourceIds.length; i++) {
     const sourceId = epgLink.sourceIds[i];
+    const source = sourceMap.get(sourceId);
     onProgress?.(`Applying EPG to source ${i + 1}/${epgLink.sourceIds.length}...`);
+
+    if (!source) {
+      debugLog(`Source ${sourceId} not found in storage, skipping`, 'epg');
+      continue;
+    }
 
     // Get channels for this source
     const sourceChannels = await db.channels.where('source_id').equals(sourceId).toArray();
@@ -1037,15 +981,16 @@ export async function syncGlobalEpgLinkStandalone(
     console.log(`[Global EPG] Source ${sourceId}: Built ${channelMappings.length} channel mappings`);
 
     try {
-      // Call Rust native parser with the temp file (clearExisting = false for waterfall/gap-fill)
-      const result = await parseEpgFile(
+      // Use Rust streaming parser — handles download, decompression, parsing, and insertion natively
+      const result = await epgStreaming.streamParseEpg(
         sourceId,
-        tempFilePath,
+        source.name || sourceId,
+        url,
         channelMappings,
         undefined,
-        false, // advancedEpgMatching
-        0,     // timeshiftHours
-        false  // clearExisting
+        source.advanced_epg_matching ?? false,
+        source.epg_timeshift_hours ?? 0,
+        false // clearExisting = false (gap-fill only)
       );
 
       console.log(`[Global EPG] Source ${sourceId}: Rust parser inserted ${result.inserted_programs} programs`);
@@ -1066,16 +1011,7 @@ export async function syncGlobalEpgLinkStandalone(
     }
   }
 
-  // 4. Delete temp file
-  try {
-    const fs = await import('@tauri-apps/plugin-fs');
-    await fs.remove(tempFilePath);
-    console.log(`[Global EPG] Deleted temp file: ${tempFilePath}`);
-  } catch (err) {
-    console.warn(`[Global EPG] Failed to delete temp file: ${tempFilePath}`, err);
-  }
-
-  // 5. Update lastSynced and lastSyncResult in settings
+  // Update lastSynced and lastSyncResult in settings
   if (window.storage) {
     try {
       const settingsResult = await window.storage.getSettings();
