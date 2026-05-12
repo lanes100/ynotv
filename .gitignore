@@ -26,9 +26,8 @@ pnpm-debug.log*
 .env.local
 .env.*.local
 
-# Electron
+# App bundles
 release/
-packages/electron/mpv-bundle/
 *.dmg
 *.exe
 *.AppImage

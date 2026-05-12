@@ -1,7 +1,7 @@
 /**
  * Universal Fetch Utility
- * 
- * Consolidates environment-specific fetch logic (Tauri, Electron fetchProxy, native fetch)
+ *
+ * Consolidates environment-specific fetch logic (Tauri fetchProxy, native fetch)
  * into reusable functions. Eliminates ~150 lines of duplicate code across clients.
  */
 
@@ -24,7 +24,7 @@ export interface FetchResponse {
 /**
  * Unified fetch implementation that works across all environments:
  * - Tauri (desktop app with Tauri HTTP plugin)
- * - Electron (with fetchProxy for CORS bypass)
+ * - Tauri fetchProxy polyfill (for CORS bypass)
  * - Browser (native fetch)
  */
 export async function universalFetch(
@@ -63,7 +63,7 @@ export async function universalFetch(
         }
     }
 
-    // Electron Environment (fetchProxy for CORS bypass)
+    // Tauri fetchProxy polyfill (for CORS bypass)
     if (typeof window !== 'undefined' && window.fetchProxy) {
         const result = await window.fetchProxy.fetch(url, { headers });
 
