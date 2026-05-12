@@ -1,11 +1,11 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { check, Update, DownloadEvent } from '@tauri-apps/plugin-updater';
 import { relaunch } from '@tauri-apps/plugin-process';
 import { getVersion } from '@tauri-apps/api/app';
 import './UpdateModal.css';
 
-function parseInlineMarkdown(text: string): (string | JSX.Element)[] {
-  const parts: (string | JSX.Element)[] = [];
+function parseInlineMarkdown(text: string): React.ReactNode[] {
+  const parts: React.ReactNode[] = [];
   const regex = /\*\*(.+?)\*\*|__(.+?)__/g;
   let lastIndex = 0;
   let match;
@@ -27,9 +27,9 @@ function parseInlineMarkdown(text: string): (string | JSX.Element)[] {
 
 function ChangelogContent({ body }: { body: string }) {
   const lines = body.replace(/\r\n/g, '\n').split('\n');
-  const elements: JSX.Element[] = [];
+  const elements: React.ReactNode[] = [];
   let key = 0;
-  let currentList: JSX.Element[] | null = null;
+  let currentList: React.ReactNode[] | null = null;
 
   const flushList = () => {
     if (currentList) {

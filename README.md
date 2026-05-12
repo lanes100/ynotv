@@ -12,78 +12,41 @@ Built with the help of AI.
 
 [Documentation](https://tbeezy.github.io/ynotvdoc)
 
-[![Watch the video](https://i.imgur.com/KoxtSZh.png)](https://streamable.com/jxjq9n)
+[![Watch the video](https://i.imgur.com/a4x1L28.png)](https://streamable.com/jxjq9n)
 
 [Video Demonstration](https://streamable.com/jxjq9n)
 
 ---
 
-## Table of Contents
-
-- [Features](#features)
-- [Building from Source](#building-from-source)
-- [Data & File Locations](#data--file-locations)
-- [Keyboard Shortcuts](#keyboard-shortcuts)
-- [Disclaimer](#disclaimer)
-- [Credits](#credits)
-- [License](#license)
-
----
 
 ## Features
 
-### Playlist Management
-
-ynoTV supports M3U/M3U8 playlists, Xtream Codes API, and Stalker Portal integration out of the box. Each source can be configured with its own user agent for maximum compatibility, and backup MAC addresses or credentials can be attached to any provider with one-click switching between them.
-
-The source overview displays channel, movie, and series counts per playlist at a glance, alongside real-time connection monitoring showing active/max connections and expiration dates. Playlists and categories can be enabled, disabled, and reordered freely.
-
-Built-in EPG support allows a separate EPG source to be configured independently of your playlist provider.
-
-### Playback
-
-Video playback is powered by mpv, providing broad format compatibility and hardware acceleration. The interface supports single-click to watch and double-click for fullscreen, with one-click favorites and the ability to create custom channel groups.
-
-### Search
-
-Channel and EPG program search is backed by SQLite for fast, responsive results across large playlists.
-
-### Watchlist and Reminders
-
-Programs can be added to a watchlist directly from the EPG guide. Popup reminders fire at a configurable lead time before a program begins, with an option to automatically switch to the channel when the program starts.
-
-### DVR Recording
-
-Recordings can be started instantly on the currently playing channel, scheduled for a specific time on any channel, or set directly from the EPG guide. All recordings are available for in-app playback without leaving the application.
-
-### Sports Hub
-
-Live scoreboards display real-time scores for major sports leagues with detailed game information. Each match shows the associated channel source, with a direct search to find and tune to it immediately.
-
-### EPG Catchup/ Cache Time Shift
-
-Supports providers that provides channels with Catchup/Time Shift. Also has an option to use MPV's --demuxer-max-back-bytes flag to provide instant replay/cache of the channel you're watching with its own scrub bar.
-
-### TV Calendar
-
-Shows are tracked through the [TVMaze](https://www.tvmaze.com) database. Upcoming episodes appear on a monthly calendar with show posters and episode details, automatically synced daily. Shows can be linked to an IPTV channel for one-click watching, and future episodes can be automatically added to the watchlist with configurable reminder and auto-switch settings.
-
-### Multiview
-
-ynoTV supports picture-in-picture mode and up to four simultaneous streams in a 2x2 grid. Each stream has independent volume and mute controls, and feeds can be swapped between windows at any time.
-
-### Themes and Personalization
-
-Over 40 built-in themes are included, spanning dark, light, glassmorphism, gradient, and neon styles. All settings, including keyboard shortcuts, can be exported and restored via a backup file.
-
-### Known Bugs
-
-Currently dragging the window with multiview on will cause video to bug, press any hotkey to fix
+- Supports M3U, Xtream Codes, and Stalker portals with multiple EPG support
+- Grid style EPG with preview window
+- Catchup channel support with a Cache Time Shift for instant replays
+- Automatic stream fallback when it detects a stalled/dead stream
+- VOD support with rich metadata powered by TMDB and RPDB, with saved progress
+- Subsource subtitle integration for VODs
+- Set Backup DNS/URLs to automatically swap when current one fails
+- Favorites and Custom groups from any source
+- Rename/Hide/Sort Categories/Channels easily in any way you want
+- Built in EPG Editor to change tvgid/logo or automatch to a different one
+- Embedded MPV for playback, with option to set custom parameters
+- Multiview with resizable PiP and can support up to four simultaneous streams in a 2x2 grid.
+- Instant Channel and EPG search with advanced options
+- Watchlist and Reminder with an autoswap when a program goes live
+- Built in DVR to record any streams
+- Dedicated Sports tab with real-time scores and detailed game stats
+- TV Calendar powered by TVMaze to auto-set reminders for upcoming shows
+- Reprogrammable hotkeys for fast interaction
+- 40+ built-in themes for any style you may prefer
 
 ---
 
 <details>
-<summary>## Building from Source</summary>
+<summary>Building from Source</summary>
+
+## Building from Source
 
 ### Prerequisites
 
@@ -152,7 +115,9 @@ packages/app/src-tauri/target/release/bundle/
 ---
 
 <details>
-<summary>## Data & File Locations</summary>
+<summary>Data & File Locations</summary>
+
+## Data & File Locations
 
 ### Configuration
 
@@ -189,6 +154,9 @@ The recording directory is configurable in Settings > DVR. The default location 
 </details>
 
 ---
+
+<details>
+<summary>Keyboard Shortcuts</summary>
 
 ## Keyboard Shortcuts
 
@@ -238,6 +206,8 @@ All shortcuts are fully customizable in Settings > Shortcuts.
 | Layout: Picture in Picture | `2` |
 | Layout: Big + Bottom Bar | `3` |
 | Layout: 2×2 Grid | `4` |
+
+</details>
 
 ---
 
