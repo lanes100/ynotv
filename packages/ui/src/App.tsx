@@ -48,7 +48,7 @@ import { db } from './db';
 import { VideoErrorOverlay } from './components/VideoErrorOverlay';
 import { StreamRetryOverlay } from './components/StreamRetryOverlay';
 import { FailoverOverlay } from './components/FailoverOverlay';
-import { syncSource, syncVodForSource, isEpgStale, isVodStale } from './db/sync';
+import { syncSource, syncVodForSource, isEpgStale, isVodStale, syncAllStaleGlobalEpgLinks } from './db/sync';
 import { bulkOps } from './services/bulk-ops';
 import { Bridge } from './services/tauri-bridge';
 import { getCurrentWindow, LogicalSize } from '@tauri-apps/api/window';
@@ -786,6 +786,7 @@ function App() {
         if (!sourcesResult.data || sourcesResult.data.length === 0) return;
 
         let didSync = false;
+        const syncedSourceIds: string[] = [];
 
         // ── Channel / EPG sync ──────────────────────────────────────────────
         if (epgRefreshHours > 0) {
@@ -812,9 +813,16 @@ function App() {
               await Promise.all(
                 batch.map(async (source: any, idx: number) => {
                   const prefix = `[${i + idx + 1}/${total}] ${source.name}`;
-                  await syncSource(source, (msg) => setSyncStatusMessage(`${prefix}: ${msg}`));
+                  const result = await syncSource(source, (msg) => setSyncStatusMessage(`${prefix}: ${msg}`));
+                  if (result.success) {
+                    syncedSourceIds.push(source.id);
+                  }
                 })
               );
+            }
+            if (syncedSourceIds.length > 0) {
+              setSyncStatusMessage('Updating global EPG links...');
+              await syncAllStaleGlobalEpgLinks((msg) => setSyncStatusMessage(msg), syncedSourceIds);
             }
             setSyncStatusMessage(null);
           }

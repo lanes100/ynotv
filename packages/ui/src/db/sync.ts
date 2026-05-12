@@ -848,8 +848,29 @@ export async function applyGlobalEpgToSource(
  * this downloads each stale global EPG once and applies it to all linked sources.
  * Skips links that were synced recently (within GLOBAL_EPG_FRESH_MS).
  */
+let globalEpgPostSyncInFlight: Promise<number> | null = null;
+const globalEpgLinkSyncsInFlight = new Map<string, Promise<number>>();
+
 export async function syncAllStaleGlobalEpgLinks(
-  onProgress?: (msg: string) => void
+  onProgress?: (msg: string) => void,
+  sourceIds?: string[]
+): Promise<number> {
+  if (globalEpgPostSyncInFlight) {
+    console.log('[Global EPG] Post-sync already in progress; joining existing run');
+    onProgress?.('Global EPG sync already in progress...');
+    return globalEpgPostSyncInFlight;
+  }
+
+  globalEpgPostSyncInFlight = syncAllStaleGlobalEpgLinksImpl(onProgress, sourceIds).finally(() => {
+    globalEpgPostSyncInFlight = null;
+  });
+
+  return globalEpgPostSyncInFlight;
+}
+
+async function syncAllStaleGlobalEpgLinksImpl(
+  onProgress?: (msg: string) => void,
+  sourceIds?: string[]
 ): Promise<number> {
   if (!window.storage) {
     debugLog('Storage API not available, skipping stale global EPG sync', 'epg');
@@ -859,13 +880,20 @@ export async function syncAllStaleGlobalEpgLinks(
   try {
     const settingsResult = await window.storage.getSettings();
     const globalEpgLinks = settingsResult.data?.globalEpgLinks || [];
+    const sourceIdFilter = sourceIds && sourceIds.length > 0 ? new Set(sourceIds) : null;
     // Sort by display_order so higher priority EPGs are synced first
     const staleLinks = globalEpgLinks
+      .filter(link => !sourceIdFilter || link.sourceIds.some(sourceId => sourceIdFilter.has(sourceId)))
       .filter(link => !isGlobalEpgFresh(link))
       .sort((a, b) => (a.display_order ?? Number.MAX_SAFE_INTEGER) - (b.display_order ?? Number.MAX_SAFE_INTEGER));
 
     if (staleLinks.length === 0) {
-      debugLog('All global EPG links are fresh, skipping post-sync', 'epg');
+      debugLog(
+        sourceIdFilter
+          ? 'No stale global EPG links are tied to the synced sources, skipping post-sync'
+          : 'All global EPG links are fresh, skipping post-sync',
+        'epg'
+      );
       return 0;
     }
 
@@ -904,6 +932,25 @@ export async function syncAllStaleGlobalEpgLinks(
  * @returns total programs inserted across all linked sources
  */
 export async function syncGlobalEpgLinkStandalone(
+  epgLink: GlobalEpgLink,
+  onProgress?: (msg: string) => void
+): Promise<number> {
+  const inFlight = globalEpgLinkSyncsInFlight.get(epgLink.id);
+  if (inFlight) {
+    console.log(`[Global EPG] Sync already in progress for ${epgLink.name}; joining existing run`);
+    onProgress?.(`Global EPG ${epgLink.name} is already syncing...`);
+    return inFlight;
+  }
+
+  const syncPromise = syncGlobalEpgLinkStandaloneImpl(epgLink, onProgress).finally(() => {
+    globalEpgLinkSyncsInFlight.delete(epgLink.id);
+  });
+  globalEpgLinkSyncsInFlight.set(epgLink.id, syncPromise);
+
+  return syncPromise;
+}
+
+async function syncGlobalEpgLinkStandaloneImpl(
   epgLink: GlobalEpgLink,
   onProgress?: (msg: string) => void
 ): Promise<number> {
@@ -1936,18 +1983,23 @@ export async function syncAllSources(
   }
 
   debugLog('syncAllSources complete', 'sync');
+  const syncedSourceIds = Array.from(results.entries())
+    .filter(([, result]) => result.success)
+    .map(([sourceId]) => sourceId);
 
   // Post-sync: apply stale global EPG links to all linked sources
   // (primary EPGs have already cleared + inserted; now fill gaps with shared EPGs)
-  try {
-    debugLog('Running post-sync global EPG...', 'sync');
-    onProgress?.('Updating global EPG links...');
-    const globalCount = await syncAllStaleGlobalEpgLinks(onProgress);
-    if (globalCount > 0) {
-      debugLog(`Post-sync global EPG: ${globalCount} programs inserted`, 'sync');
+  if (syncedSourceIds.length > 0) {
+    try {
+      debugLog('Running post-sync global EPG...', 'sync');
+      onProgress?.('Updating global EPG links...');
+      const globalCount = await syncAllStaleGlobalEpgLinks(onProgress, syncedSourceIds);
+      if (globalCount > 0) {
+        debugLog(`Post-sync global EPG: ${globalCount} programs inserted`, 'sync');
+      }
+    } catch (err) {
+      console.error('[Sync] Post-sync global EPG failed:', err);
     }
-  } catch (err) {
-    console.error('[Sync] Post-sync global EPG failed:', err);
   }
 
   // Final checkpoint after all sources synced

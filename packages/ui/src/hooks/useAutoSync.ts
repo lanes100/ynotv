@@ -92,6 +92,7 @@ export function useAutoSync(callbacks: AutoSyncSettings = {}) {
                 }
 
                 let hasSynced = false;
+                const syncedSourceIds: string[] = [];
 
                 // ── Channel / EPG sync ──────────────────────────────────────────────
                 if (epgRefreshHours > 0) {
@@ -116,7 +117,10 @@ export function useAutoSync(callbacks: AutoSyncSettings = {}) {
                             await Promise.all(
                                 batch.map(async (source: any, idx: number) => {
                                     const prefix = `[${i + idx + 1}/${total}] ${source.name}`;
-                                    await syncSource(source, (msg) => settersRef.current.setSyncStatusMessage(`${prefix}: ${msg}`));
+                                    const syncResult = await syncSource(source, (msg) => settersRef.current.setSyncStatusMessage(`${prefix}: ${msg}`));
+                                    if (syncResult.success) {
+                                        syncedSourceIds.push(source.id);
+                                    }
                                 })
                             );
                         }
@@ -151,11 +155,13 @@ export function useAutoSync(callbacks: AutoSyncSettings = {}) {
                 }
 
                 // Post-sync: apply stale global EPG links
-                try {
-                    settersRef.current.setSyncStatusMessage('Updating global EPG links...');
-                    await syncAllStaleGlobalEpgLinks((msg) => settersRef.current.setSyncStatusMessage(msg));
-                } catch (err) {
-                    console.error('[AutoSync] Post-sync global EPG failed:', err);
+                if (syncedSourceIds.length > 0) {
+                    try {
+                        settersRef.current.setSyncStatusMessage('Updating global EPG links...');
+                        await syncAllStaleGlobalEpgLinks((msg) => settersRef.current.setSyncStatusMessage(msg), syncedSourceIds);
+                    } catch (err) {
+                        console.error('[AutoSync] Post-sync global EPG failed:', err);
+                    }
                 }
 
                 if (hasSynced) {
@@ -191,6 +197,7 @@ export function useAutoSync(callbacks: AutoSyncSettings = {}) {
                 const settingsResult = await window.storage.getSettings();
                 const epgRefreshHours = settingsResult.data?.epgRefreshHours ?? 6;
                 const vodRefreshHours = settingsResult.data?.vodRefreshHours ?? 24;
+                const syncedSourceIds: string[] = [];
 
                 // Apply stored settings via callbacks
                 if (settingsResult.data?.channelSortOrder) {
@@ -233,7 +240,10 @@ export function useAutoSync(callbacks: AutoSyncSettings = {}) {
                         await Promise.all(
                             batch.map(async (source: any, idx: number) => {
                                 const prefix = `[${i + idx + 1}/${total}] ${source.name}`;
-                                await syncSource(source, (msg) => settersRef.current.setSyncStatusMessage(`${prefix}: ${msg}`));
+                                const syncResult = await syncSource(source, (msg) => settersRef.current.setSyncStatusMessage(`${prefix}: ${msg}`));
+                                if (syncResult.success) {
+                                    syncedSourceIds.push(source.id);
+                                }
                             })
                         );
                     }
@@ -263,11 +273,13 @@ export function useAutoSync(callbacks: AutoSyncSettings = {}) {
                 }
 
                 // Post-sync: apply stale global EPG links
-                try {
-                    settersRef.current.setSyncStatusMessage('Updating global EPG links...');
-                    await syncAllStaleGlobalEpgLinks((msg) => settersRef.current.setSyncStatusMessage(msg));
-                } catch (err) {
-                    console.error('[AutoSync] Initial post-sync global EPG failed:', err);
+                if (syncedSourceIds.length > 0) {
+                    try {
+                        settersRef.current.setSyncStatusMessage('Updating global EPG links...');
+                        await syncAllStaleGlobalEpgLinks((msg) => settersRef.current.setSyncStatusMessage(msg), syncedSourceIds);
+                    } catch (err) {
+                        console.error('[AutoSync] Initial post-sync global EPG failed:', err);
+                    }
                 }
 
                 // ── Start periodic checking ─────────────────────────────────────────
