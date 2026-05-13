@@ -146,6 +146,8 @@ export function Settings({
   // Popout settings state
   const [popoutStopMain, setPopoutStopMain] = useState(true);
   const [popoutAlwaysOnTop, setPopoutAlwaysOnTop] = useState(false);
+  const [popoutMpvParamsEnabled, setPopoutMpvParamsEnabled] = useState(false);
+  const [popoutMpvParams, setPopoutMpvParams] = useState('');
 
   // Sync prop values to internal state so changes from App.tsx take effect immediately
   useEffect(() => { setChannelInfoOverlayEnabled(channelInfoOverlayEnabledProp ?? false); }, [channelInfoOverlayEnabledProp]);
@@ -260,6 +262,8 @@ export function Settings({
         channelInfoOverlayHideDescription?: boolean;
         popoutStopMain?: boolean;
         popoutAlwaysOnTop?: boolean;
+        popoutMpvParamsEnabled?: boolean;
+        popoutMpvParams?: string;
         subtitleSettings?: SubtitleSettings;
       };
 
@@ -382,6 +386,8 @@ export function Settings({
       // Load Popout settings
       setPopoutStopMain(settings.popoutStopMain ?? true);
       setPopoutAlwaysOnTop(settings.popoutAlwaysOnTop ?? false);
+      setPopoutMpvParamsEnabled(settings.popoutMpvParamsEnabled ?? false);
+      setPopoutMpvParams(settings.popoutMpvParams ?? '');
 
       // Load subtitle settings
       if (settings.subtitleSettings) {
@@ -563,6 +569,20 @@ export function Settings({
       }
     } catch {
       // Ignore if bridge isn't ready or popout isn't running
+    }
+  };
+
+  const handlePopoutMpvParamsEnabledChange = async (enabled: boolean) => {
+    setPopoutMpvParamsEnabled(enabled);
+    if (window.storage) {
+      await window.storage.updateSettings({ popoutMpvParamsEnabled: enabled });
+    }
+  };
+
+  const handlePopoutMpvParamsChange = async (params: string) => {
+    setPopoutMpvParams(params);
+    if (window.storage) {
+      await window.storage.updateSettings({ popoutMpvParams: params });
     }
   };
 
@@ -854,6 +874,10 @@ export function Settings({
             onPopoutStopMainChange={handlePopoutStopMainChange}
             popoutAlwaysOnTop={popoutAlwaysOnTop}
             onPopoutAlwaysOnTopChange={handlePopoutAlwaysOnTopChange}
+            popoutMpvParamsEnabled={popoutMpvParamsEnabled}
+            onPopoutMpvParamsEnabledChange={handlePopoutMpvParamsEnabledChange}
+            popoutMpvParams={popoutMpvParams}
+            onPopoutMpvParamsChange={handlePopoutMpvParamsChange}
           />
         );
       case 'about':

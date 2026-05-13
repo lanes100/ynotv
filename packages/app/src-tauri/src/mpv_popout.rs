@@ -272,6 +272,7 @@ pub async fn spawn_and_load<R: Runtime>(
     app: &AppHandle<R>,
     url: String,
     always_on_top: bool,
+    custom_params: Vec<String>,
 ) -> Result<(), String> {
     // Kill any existing instance first
     kill_popout(app).await;
@@ -279,26 +280,26 @@ pub async fn spawn_and_load<R: Runtime>(
     let socket_path = popout_socket_path();
 
     // Base args — NO --wid so MPV creates its own window
-    let args = vec![
+    // NOTE: Native MPV controls are ENABLED so the popout behaves like
+    // a normal media player window (hover for OSC, keyboard shortcuts, etc.)
+    let mut args = vec![
         format!("--input-ipc-server={}", socket_path),
         "--title=YNOTV_POPOUT".into(),
         "--force-window=immediate".into(),
         "--idle=yes".into(),
         "--keep-open=yes".into(),
         "--cache=yes".into(),
-        "--no-osc".into(),
-        "--no-osd-bar".into(),
-        "--osd-level=0".into(),
-        "--input-default-bindings=no".into(),
-        "--no-input-cursor".into(),
-        "--cursor-autohide=no".into(),
-        "--no-terminal".into(),
         "--volume=100".into(),
         "--mute=no".into(),
     ];
 
     // On Windows, omit --wid to get a standalone window.
     // On macOS, MPV naturally creates its own window.
+
+    // Append user-provided custom parameters (already sanitized by caller)
+    for param in &custom_params {
+        args.push(param.clone());
+    }
 
     let sidecar = app.shell().sidecar("mpv")
         .map_err(|e| format!("Sidecar error: {}", e))?;

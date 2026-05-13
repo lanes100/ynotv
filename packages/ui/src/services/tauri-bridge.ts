@@ -305,8 +305,8 @@ export const Bridge = {
     },
 
     // Popout MPV Controls
-    async popoutOpen(url: string, alwaysOnTop: boolean = false) {
-        return invoke('popout_open', { url, alwaysOnTop });
+    async popoutOpen(url: string, alwaysOnTop: boolean = false, customParams: string = '') {
+        return invoke('popout_open', { url, alwaysOnTop, customParams });
     },
 
     async popoutLoad(url: string) {
@@ -343,6 +343,10 @@ export const Bridge = {
 
     async popoutSeek(seconds: number) {
         return invoke('popout_seek', { seconds });
+    },
+
+    async popoutGetParamsDebug(): Promise<Record<string, unknown>> {
+        return invoke('popout_get_params_debug');
     },
 
     // Window Controls

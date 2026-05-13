@@ -33,7 +33,7 @@ const SETTINGS_TABS: SettingsTab[] = [
   { id: 'subtitles', label: 'Subtitles' },
   { id: 'livetv', label: 'LiveTV' },
   { id: 'live-view', label: 'Channel Overlay' },
-  { id: 'popout', label: 'Popout' },
+  { id: 'popout', label: 'Popout Player' },
   { id: 'theme', label: 'Theme' },
   { id: 'ui', label: 'UI' },
   { id: 'startup', label: 'Startup' },

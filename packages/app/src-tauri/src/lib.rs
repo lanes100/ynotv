@@ -194,7 +194,7 @@ const BLOCKED_MPV_KEYS: &[&str] = &[
     "sub-file", "audio-file", "external-file",
 ];
 
-fn sanitize_mpv_args(args: Vec<String>, allow_all: bool) -> Vec<String> {
+pub fn sanitize_mpv_args(args: Vec<String>, allow_all: bool) -> Vec<String> {
     // If user disabled the whitelist, accept all well-formed arguments
     if allow_all {
         let mut valid_args = Vec::new();
@@ -905,8 +905,23 @@ async fn popout_open<R: Runtime>(
     app: AppHandle<R>,
     url: String,
     always_on_top: bool,
+    custom_params: String,
 ) -> Result<(), String> {
-    mpv_popout::spawn_and_load(&app, url, always_on_top).await
+    // Parse custom params string into lines
+    let raw_params: Vec<String> = custom_params
+        .lines()
+        .map(|line| line.trim())
+        .filter(|line| !line.is_empty() && !line.starts_with('#'))
+        .map(|s| s.to_string())
+        .collect();
+
+    // Check whitelist disable setting (reuse main MPV setting)
+    let disable_whitelist = read_store_setting(&app, "mpvDisableWhitelist")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false);
+
+    let safe_params = sanitize_mpv_args(raw_params, disable_whitelist);
+    mpv_popout::spawn_and_load(&app, url, always_on_top, safe_params).await
 }
 
 #[tauri::command]
@@ -974,6 +989,52 @@ async fn popout_toggle_fullscreen<R: Runtime>(app: AppHandle<R>) -> Result<(), S
         mpv_popout::send_ipc(&tx, "cycle", vec![serde_json::json!("fullscreen")]).await;
     }
     Ok(())
+}
+
+/// Debug command to preview popout MPV parameters (raw vs sanitized)
+#[tauri::command]
+async fn popout_get_params_debug<R: Runtime>(app: AppHandle<R>) -> Result<serde_json::Value, String> {
+    use serde_json::json;
+
+    let settings = read_store_setting(&app, "settings").and_then(|v| v.as_object().cloned());
+
+    let enabled = settings.as_ref()
+        .and_then(|s| s.get("popoutMpvParamsEnabled"))
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false);
+
+    let raw_str = settings.as_ref()
+        .and_then(|s| s.get("popoutMpvParams"))
+        .and_then(|v| v.as_str())
+        .unwrap_or("");
+
+    let raw_params: Vec<String> = raw_str
+        .lines()
+        .map(|line| line.trim())
+        .filter(|line| !line.is_empty() && !line.starts_with('#'))
+        .map(|s| s.to_string())
+        .collect();
+
+    let disable_whitelist = read_store_setting(&app, "mpvDisableWhitelist")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false);
+
+    let safe_params = if enabled {
+        sanitize_mpv_args(raw_params.clone(), disable_whitelist)
+    } else {
+        vec![]
+    };
+
+    let result = json!({
+        "enabled": enabled,
+        "raw_loaded": raw_params,
+        "sanitized": safe_params,
+        "dropped_count": if enabled { raw_params.len().saturating_sub(safe_params.len()) } else { 0 },
+        "whitelist_disabled": disable_whitelist,
+    });
+
+    debug!("[Popout Debug] Params debug: {:?}", result);
+    Ok(result)
 }
 
 #[tauri::command]
@@ -2425,6 +2486,7 @@ pub fn run() {
             popout_toggle_pause,
             popout_toggle_fullscreen,
             popout_seek,
+            popout_get_params_debug,
             // Optimized bulk sync commands
             sync_provider::sync_m3u_source,
             sync_provider::sync_xtream_source,

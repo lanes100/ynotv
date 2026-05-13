@@ -81,10 +81,13 @@ export function usePopoutPlayer(): PopoutPlayerState {
       // Read popout settings from store
       let alwaysOnTop = false;
       let stopMain = true;
+      let customParams = '';
       try {
         const result = await window.storage?.getSettings();
         alwaysOnTop = result?.data?.popoutAlwaysOnTop ?? false;
         stopMain = result?.data?.popoutStopMain ?? true;
+        const paramsEnabled = result?.data?.popoutMpvParamsEnabled ?? false;
+        customParams = paramsEnabled ? (result?.data?.popoutMpvParams ?? '') : '';
       } catch { /* ignore */ }
 
       // If already open, just swap the URL
@@ -95,7 +98,7 @@ export function usePopoutPlayer(): PopoutPlayerState {
         setIsLoading(false);
       } else {
         logInfo('[Popout] Opening popout with URL:', url);
-        await Bridge.popoutOpen(url, alwaysOnTop);
+        await Bridge.popoutOpen(url, alwaysOnTop, customParams);
         setContent(newContent);
         setIsOpen(true);
         setIsLoading(false);

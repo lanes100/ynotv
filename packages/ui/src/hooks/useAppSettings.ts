@@ -41,6 +41,8 @@ export interface AppSettings {
   // Popout
   popoutStopMain: boolean;
   popoutAlwaysOnTop: boolean;
+  popoutMpvParamsEnabled: boolean;
+  popoutMpvParams: string;
 
   // Theme
   theme: ThemeId;
@@ -68,6 +70,8 @@ export interface AppSettings {
     setChannelInfoOverlayHideDescription: (hide: boolean) => void;
     setPopoutStopMain: (stop: boolean) => void;
     setPopoutAlwaysOnTop: (onTop: boolean) => void;
+    setPopoutMpvParamsEnabled: (enabled: boolean) => void;
+    setPopoutMpvParams: (params: string) => void;
 }
 
 /**
@@ -112,6 +116,8 @@ export function useAppSettings(): AppSettings {
   // Popout settings
   const [popoutStopMain, setPopoutStopMainState] = useState(true);
   const [popoutAlwaysOnTop, setPopoutAlwaysOnTopState] = useState(false);
+  const [popoutMpvParamsEnabled, setPopoutMpvParamsEnabledState] = useState(false);
+  const [popoutMpvParams, setPopoutMpvParamsState] = useState('');
 
   // Theme state
   const [theme, setThemeState] = useState<ThemeId>('glass-neon');
@@ -178,6 +184,8 @@ export function useAppSettings(): AppSettings {
           setCategoriesHiddenState(result.data.categoriesHidden ?? false);
           setPopoutStopMainState(result.data.popoutStopMain ?? true);
           setPopoutAlwaysOnTopState(result.data.popoutAlwaysOnTop ?? false);
+          setPopoutMpvParamsEnabledState(result.data.popoutMpvParamsEnabled ?? false);
+          setPopoutMpvParamsState(result.data.popoutMpvParams ?? '');
 
           // Apply EPG darken current setting on load
           if (result.data.epgDarkenCurrent) {
@@ -349,6 +357,28 @@ export function useAppSettings(): AppSettings {
     }
   }, []);
 
+  const setPopoutMpvParamsEnabled = useCallback(async (enabled: boolean) => {
+    setPopoutMpvParamsEnabledState(enabled);
+    if (window.storage) {
+      try {
+        await window.storage.updateSettings({ popoutMpvParamsEnabled: enabled });
+      } catch (e) {
+        console.error('[useAppSettings] Failed to save popoutMpvParamsEnabled:', e);
+      }
+    }
+  }, []);
+
+  const setPopoutMpvParams = useCallback(async (params: string) => {
+    setPopoutMpvParamsState(params);
+    if (window.storage) {
+      try {
+        await window.storage.updateSettings({ popoutMpvParams: params });
+      } catch (e) {
+        console.error('[useAppSettings] Failed to save popoutMpvParams:', e);
+      }
+    }
+  }, []);
+
   return {
     rememberLastChannels,
     reopenLastOnStartup,
@@ -374,6 +404,8 @@ export function useAppSettings(): AppSettings {
     channelInfoOverlayHideDescription,
     popoutStopMain,
     popoutAlwaysOnTop,
+    popoutMpvParamsEnabled,
+    popoutMpvParams,
     theme,
     shortcuts,
     categoriesHidden,
@@ -393,5 +425,7 @@ export function useAppSettings(): AppSettings {
     setCategorySortOrder: setCategorySortOrderSetting,
     setPopoutStopMain,
     setPopoutAlwaysOnTop,
+    setPopoutMpvParamsEnabled,
+    setPopoutMpvParams,
   };
 }
