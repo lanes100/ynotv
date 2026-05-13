@@ -13,6 +13,9 @@
   gap: 8px;
   transition: transform 0.3s ease, opacity 0.3s ease;
   z-index: 50;
+  /* Ensure padding is included in width so the bar never overflows
+     its containing block and get clipped by ancestor overflow:hidden */
+  box-sizing: border-box;
 }
 
 .now-playing-bar.hidden {
@@ -165,6 +168,7 @@
 /* Row 2: Controls row */
 .npb-controls-row {
   gap: 16px;
+  flex-wrap: wrap;
 }
 
 /* Progress section - takes remaining space */

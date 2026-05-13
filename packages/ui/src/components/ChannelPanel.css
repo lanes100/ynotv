@@ -387,11 +387,56 @@
   padding-bottom: 24px;
 }
 
-/* Reduce seek bar width in alternate view to fit fullscreen button */
+/* Alternate view NowPlayingBar: compact layout so buttons (especially
+   fullscreen) never get cut off. The preview pane is only ~360px tall,
+   so the bar must stay compact horizontally. */
 .guide-top-section.alternate-view .now-playing-bar .npb-progress-section {
-  flex: 1 1 auto;
-  min-width: 100px;
-  max-width: 1085px;
+  flex: 1 1 0%;
+  min-width: 0;
+  max-width: none;
+}
+
+.guide-top-section.alternate-view .now-playing-bar .npb-controls-row {
+  flex-wrap: wrap;
+  gap: 10px;
+  row-gap: 6px;
+}
+
+/* Tighten up extra-controls spacing */
+.guide-top-section.alternate-view .now-playing-bar .npb-extra-controls {
+  margin-left: 0;
+  padding-left: 8px;
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Smaller volume slider in alternate view */
+.guide-top-section.alternate-view .now-playing-bar .npb-volume-slider {
+  width: 50px;
+}
+
+/* Hide description in alternate view bar — it's shown in the info pane below */
+.guide-top-section.alternate-view .now-playing-bar .npb-description-section,
+.guide-top-section.alternate-view .now-playing-bar .npb-divider {
+  display: none;
+}
+
+/* Tighter channel info in alternate view */
+.guide-top-section.alternate-view .now-playing-bar .npb-channel-section {
+  max-width: 220px;
+}
+
+/* Progressive collapse at moderate/narrow widths in alternate view */
+@media (max-width: 1000px) {
+  .guide-top-section.alternate-view .now-playing-bar .npb-extra-controls {
+    display: none;
+  }
+}
+
+@media (max-width: 600px) {
+  .guide-top-section.alternate-view .now-playing-bar .npb-channel-up-btn,
+  .guide-top-section.alternate-view .now-playing-bar .npb-channel-down-btn {
+    display: none;
+  }
 }
 
 /* Header */

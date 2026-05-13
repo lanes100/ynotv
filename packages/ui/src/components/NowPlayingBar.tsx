@@ -660,7 +660,7 @@ export function NowPlayingBar({
             <div className="npb-controls">
               {onChannelUp && (
                 <button
-                  className="npb-btn"
+                  className="npb-btn npb-channel-up-btn"
                   onClick={(e) => {
                     e.stopPropagation();
                     e.preventDefault();
@@ -674,7 +674,7 @@ export function NowPlayingBar({
               )}
               {onChannelDown && (
                 <button
-                  className="npb-btn"
+                  className="npb-btn npb-channel-down-btn"
                   onClick={(e) => {
                     e.stopPropagation();
                     e.preventDefault();
