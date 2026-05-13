@@ -12,7 +12,7 @@ A feature-rich, open source IPTV player for Windows built on [Tauri v2](https://
 
 [Documentation](https://tbeezy.github.io/ynotvdoc)
 
-[![Watch the video](https://i.imgur.com/a4x1L28.png)](https://streamable.com/jxjq9n)
+[![Watch the video](https://i.imgur.com/JiMwuw1.png)](https://streamable.com/jxjq9n)
 
 [Video Demonstration](https://streamable.com/jxjq9n)
 
