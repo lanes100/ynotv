@@ -224,7 +224,7 @@ export function CategoryManager({ sourceId, sourceName, onClose, onChange }: Cat
     const totalCount = categories.length;
 
     const modalContent = (
-        <div className="category-manager-overlay" onClick={onClose}>
+        <div className="category-manager-overlay">
             <div className="category-manager-modal" onClick={e => e.stopPropagation()}>
                 <div className="category-manager-header">
                     <h2>Manage Categories - {sourceName}</h2>

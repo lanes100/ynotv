@@ -1241,36 +1241,64 @@ export async function cleanupTmdbExportCache(): Promise<void> {
   );
 }
 
-/** Batch update categories (enabled state and/or display order) */
+/** Batch update categories (enabled state and/or display order) in a single SQL statement */
 export async function updateCategoriesBatch(
   updates: Array<{ categoryId: string; enabled?: boolean; displayOrder?: number }>
 ): Promise<number> {
+  if (updates.length === 0) return 0;
+
+  const dbInstance = await (db as any).dbPromise;
   let totalUpdated = 0;
 
-  try {
-    await db.transaction('rw', [db.categories], async () => {
-      // Bulk update approach is much faster than individual awaits
-      const promises = updates.map(async u => {
-        const changes: Partial<StoredCategory> = {};
-        if (u.enabled !== undefined) changes.enabled = u.enabled;
-        if (u.displayOrder !== undefined) changes.display_order = u.displayOrder;
+  // SQLite default param limit is 999. Each update uses ~5 params max (2 per CASE column + 1 IN).
+  // Chunk to stay well under the limit.
+  const CHUNK_SIZE = 150;
 
-        if (Object.keys(changes).length > 0) {
-          const result = await db.categories.update(u.categoryId, changes);
-          return result;
-        }
-        return 0;
-      });
+  for (let i = 0; i < updates.length; i += CHUNK_SIZE) {
+    const chunk = updates.slice(i, i + CHUNK_SIZE);
+    const hasEnabled = chunk.some(u => u.enabled !== undefined);
+    const hasOrder = chunk.some(u => u.displayOrder !== undefined);
 
-      const results = await Promise.all(promises);
-      totalUpdated = results.reduce((sum, count) => sum + count, 0);
-      // Explicitly notify after transaction completes
-      const { dbEvents } = await import('./sqlite-adapter');
-      dbEvents.notify('categories', 'update');
-    });
-  } catch (error) {
-    throw error;
+    // Build CASE statements for each column being updated
+    const caseParts: string[] = [];
+    const params: any[] = [];
+
+    if (hasEnabled) {
+      const enabledCases = chunk
+        .filter(u => u.enabled !== undefined)
+        .map(u => {
+          params.push(u.categoryId, u.enabled ? 1 : 0);
+          return `WHEN $${params.length - 1} THEN $${params.length}`;
+        })
+        .join(' ');
+      caseParts.push(`enabled = CASE category_id ${enabledCases} ELSE enabled END`);
+    }
+
+    if (hasOrder) {
+      const orderCases = chunk
+        .filter(u => u.displayOrder !== undefined)
+        .map(u => {
+          params.push(u.categoryId, u.displayOrder);
+          return `WHEN $${params.length - 1} THEN $${params.length}`;
+        })
+        .join(' ');
+      caseParts.push(`display_order = CASE category_id ${orderCases} ELSE display_order END`);
+    }
+
+    if (caseParts.length === 0) continue;
+
+    // Build IN clause for WHERE
+    const idParams = chunk.map((_, idx) => `$${params.length + idx + 1}`).join(',');
+    chunk.forEach(u => params.push(u.categoryId));
+
+    const sql = `UPDATE categories SET ${caseParts.join(', ')} WHERE category_id IN (${idParams})`;
+    const result = await dbInstance.execute(sql, params);
+    totalUpdated += result.rowsAffected ?? chunk.length;
   }
+
+  // Single notification for the bulk change
+  const { dbEvents } = await import('./sqlite-adapter');
+  dbEvents.notify('categories', 'update');
 
   return totalUpdated;
 }
