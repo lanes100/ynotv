@@ -20,6 +20,8 @@ interface ChannelContextMenuProps {
     // Multiview props
     currentLayout?: string;
     onSendToSlot?: (slotId: 2 | 3 | 4, channelName: string, channelUrl: string, sourceName?: string | null) => void;
+    // Popout props
+    onPlayInPopout?: (channel: StoredChannel) => void;
 }
 
 // Helper to format date for datetime-local input
@@ -37,6 +39,7 @@ export function ChannelContextMenu({
     onClose,
     currentLayout,
     onSendToSlot,
+    onPlayInPopout,
 }: ChannelContextMenuProps) {
     const menuRef = useRef<HTMLDivElement>(null);
     const [currentView, setCurrentView] = useState<MenuView>('main');
@@ -625,6 +628,21 @@ export function ChannelContextMenu({
                             📺 Send to Viewer {slotId}
                         </div>
                     ))}
+                    <div className="context-menu-separator" />
+                </>
+            )}
+            {/* Play in Popout */}
+            {onPlayInPopout && (
+                <>
+                    <div
+                        className="context-menu-item"
+                        onClick={() => {
+                            onPlayInPopout(channel);
+                            onClose();
+                        }}
+                    >
+                        🖥️ Play in Popout
+                    </div>
                     <div className="context-menu-separator" />
                 </>
             )}

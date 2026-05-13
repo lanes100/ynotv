@@ -38,6 +38,10 @@ export interface AppSettings {
   channelInfoOverlayOpacity: number;
   channelInfoOverlayHideDescription: boolean;
 
+  // Popout
+  popoutStopMain: boolean;
+  popoutAlwaysOnTop: boolean;
+
   // Theme
   theme: ThemeId;
 
@@ -62,6 +66,8 @@ export interface AppSettings {
     setChannelInfoOverlayBoxWidth: (width: number) => void;
     setChannelInfoOverlayOpacity: (opacity: number) => void;
     setChannelInfoOverlayHideDescription: (hide: boolean) => void;
+    setPopoutStopMain: (stop: boolean) => void;
+    setPopoutAlwaysOnTop: (onTop: boolean) => void;
 }
 
 /**
@@ -102,6 +108,10 @@ export function useAppSettings(): AppSettings {
   const [channelInfoOverlayBoxWidth, setChannelInfoOverlayBoxWidthState] = useState(380);
   const [channelInfoOverlayOpacity, setChannelInfoOverlayOpacityState] = useState(55);
   const [channelInfoOverlayHideDescription, setChannelInfoOverlayHideDescriptionState] = useState(false);
+
+  // Popout settings
+  const [popoutStopMain, setPopoutStopMainState] = useState(true);
+  const [popoutAlwaysOnTop, setPopoutAlwaysOnTopState] = useState(false);
 
   // Theme state
   const [theme, setThemeState] = useState<ThemeId>('glass-neon');
@@ -166,6 +176,8 @@ export function useAppSettings(): AppSettings {
           setChannelInfoOverlayOpacityState(result.data.channelInfoOverlayOpacity ?? 55);
           setChannelInfoOverlayHideDescriptionState(result.data.channelInfoOverlayHideDescription ?? false);
           setCategoriesHiddenState(result.data.categoriesHidden ?? false);
+          setPopoutStopMainState(result.data.popoutStopMain ?? true);
+          setPopoutAlwaysOnTopState(result.data.popoutAlwaysOnTop ?? false);
 
           // Apply EPG darken current setting on load
           if (result.data.epgDarkenCurrent) {
@@ -315,6 +327,28 @@ export function useAppSettings(): AppSettings {
     }
   }, []);
 
+  const setPopoutStopMain = useCallback(async (stop: boolean) => {
+    setPopoutStopMainState(stop);
+    if (window.storage) {
+      try {
+        await window.storage.updateSettings({ popoutStopMain: stop });
+      } catch (e) {
+        console.error('[useAppSettings] Failed to save popoutStopMain:', e);
+      }
+    }
+  }, []);
+
+  const setPopoutAlwaysOnTop = useCallback(async (onTop: boolean) => {
+    setPopoutAlwaysOnTopState(onTop);
+    if (window.storage) {
+      try {
+        await window.storage.updateSettings({ popoutAlwaysOnTop: onTop });
+      } catch (e) {
+        console.error('[useAppSettings] Failed to save popoutAlwaysOnTop:', e);
+      }
+    }
+  }, []);
+
   return {
     rememberLastChannels,
     reopenLastOnStartup,
@@ -338,6 +372,8 @@ export function useAppSettings(): AppSettings {
     channelInfoOverlayBoxWidth,
     channelInfoOverlayOpacity,
     channelInfoOverlayHideDescription,
+    popoutStopMain,
+    popoutAlwaysOnTop,
     theme,
     shortcuts,
     categoriesHidden,
@@ -355,5 +391,7 @@ export function useAppSettings(): AppSettings {
     setChannelInfoOverlayOpacity,
     setChannelInfoOverlayHideDescription,
     setCategorySortOrder: setCategorySortOrderSetting,
+    setPopoutStopMain,
+    setPopoutAlwaysOnTop,
   };
 }

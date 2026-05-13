@@ -48,6 +48,7 @@ interface ChannelRowData {
   activeRecordings: import('../hooks/useActiveRecordings').RecordingInfo[];
   currentLayout?: string;
   onSendToSlot?: (slotId: 2 | 3 | 4, channelName: string, channelUrl: string, sourceName?: string | null) => void;
+  onPlayInPopout?: (channel: StoredChannel) => void;
   currentChannel?: StoredChannel | null;
 }
 
@@ -79,6 +80,7 @@ const ChannelRowVirtuoso = memo(function ChannelRowVirtuoso({
       activeRecordings={data.activeRecordings}
       currentLayout={data.currentLayout}
       onSendToSlot={data.onSendToSlot}
+      onPlayInPopout={data.onPlayInPopout}
       isCurrentlyPlaying={isCurrentlyPlaying}
     />
   );
@@ -152,6 +154,11 @@ interface ChannelPanelProps {
   retryState?: RetryState | null;
   /** Failover state for Live TV — shown in preview pane */
   failoverState?: FailoverState | null;
+  // Popout props
+  popoutMode?: boolean;
+  onTogglePopoutMode?: () => void;
+  onPlayInPopout?: (channel: StoredChannel) => void;
+  popoutIsOpen?: boolean;
 }
 
 export function ChannelPanel({
@@ -204,6 +211,10 @@ export function ChannelPanel({
   onTimeshiftCatchUp,
   retryState = null,
   failoverState = null,
+  popoutMode = false,
+  onTogglePopoutMode,
+  onPlayInPopout,
+  popoutIsOpen = false,
 }: ChannelPanelProps) {
   const epgView = useEpgView();
 
@@ -1632,6 +1643,25 @@ export function ChannelPanel({
             )}
           </div>
           <div className="guide-header-right">
+            {/* Popout mode toggle */}
+            {onTogglePopoutMode && (
+              <button
+                className={`guide-nav-btn ${popoutMode ? 'active' : ''}`}
+                onClick={onTogglePopoutMode}
+                title={popoutMode ? 'Popout mode ON — clicks go to popout' : 'Popout mode OFF'}
+                style={{
+                  color: popoutMode ? 'var(--accent)' : 'inherit',
+                  marginRight: '8px',
+                }}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+                  <line x1="8" y1="21" x2="16" y2="21"/>
+                  <line x1="12" y1="17" x2="12" y2="21"/>
+                </svg>
+                {popoutMode && <span style={{ marginLeft: '4px', fontSize: '11px' }}>Popout</span>}
+              </button>
+            )}
             {!isSearchMode && (
               <div className="guide-nav">
                 <button className="guide-nav-btn" onClick={goBack} title="Previous hour">
@@ -1785,6 +1815,7 @@ export function ChannelPanel({
                       activeRecordings={activeRecordings}
                       currentLayout={currentLayout}
                       onSendToSlot={onSendToSlot}
+                      onPlayInPopout={onPlayInPopout}
                       includeSourceInSearch={includeSourceInSearch}
                       currentChannel={currentChannel}
                     />
@@ -1864,6 +1895,7 @@ export function ChannelPanel({
                                   onPlay={() => handleSearchChannelClick(channel)}
                                   onFavoriteToggle={refreshSearchResults}
                                   activeRecordings={activeRecordings}
+                                  onPlayInPopout={onPlayInPopout}
                                   includeSourceInSearch={includeSourceInSearch}
                                   currentChannel={currentChannel}
                                 />
@@ -1889,6 +1921,7 @@ export function ChannelPanel({
                                   onPlay={() => handleSearchChannelClick(channel)}
                                   onFavoriteToggle={refreshSearchResults}
                                   activeRecordings={activeRecordings}
+                                  onPlayInPopout={onPlayInPopout}
                                   includeSourceInSearch={includeSourceInSearch}
                                   currentChannel={currentChannel}
                                 />
@@ -1950,6 +1983,7 @@ export function ChannelPanel({
                 activeRecordings,
                 currentLayout,
                 onSendToSlot,
+                onPlayInPopout,
                 currentChannel,
               }}
               components={{

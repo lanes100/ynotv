@@ -16,6 +16,7 @@ export type SettingsTabId =
   | 'cache'
   | 'livetv'
   | 'live-view'
+  | 'popout'
   | 'about';
 
 interface SettingsTab {
@@ -32,6 +33,7 @@ const SETTINGS_TABS: SettingsTab[] = [
   { id: 'subtitles', label: 'Subtitles' },
   { id: 'livetv', label: 'LiveTV' },
   { id: 'live-view', label: 'Channel Overlay' },
+  { id: 'popout', label: 'Popout' },
   { id: 'theme', label: 'Theme' },
   { id: 'ui', label: 'UI' },
   { id: 'startup', label: 'Startup' },

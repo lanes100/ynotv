@@ -14,6 +14,7 @@ mod mpv_macos;
 mod mpv_windows;
 #[cfg(target_os = "windows")]
 mod mpv_secondary;
+mod mpv_popout;
 
 // Re-export the MPV state and functions based on platform
 #[cfg(target_os = "macos")]
@@ -22,6 +23,7 @@ use mpv_macos::MpvState;
 use mpv_windows::MpvState;
 #[cfg(target_os = "windows")]
 use mpv_secondary::SecondaryMpvState;
+use mpv_popout::PopoutMpvState;
 
 // DVR Module (Rust native implementation)
 mod dvr;
@@ -892,6 +894,99 @@ async fn multiview_kill_all<R: Runtime>(
     { mpv_secondary::kill_all(&app).await; Ok(()) }
     #[cfg(not(target_os = "windows"))]
     { Ok(()) }
+}
+
+// ============================================================================
+// Popout MPV Commands
+// ============================================================================
+
+#[tauri::command]
+async fn popout_open<R: Runtime>(
+    app: AppHandle<R>,
+    url: String,
+    always_on_top: bool,
+) -> Result<(), String> {
+    mpv_popout::spawn_and_load(&app, url, always_on_top).await
+}
+
+#[tauri::command]
+async fn popout_load<R: Runtime>(
+    app: AppHandle<R>,
+    url: String,
+) -> Result<(), String> {
+    mpv_popout::load_url(&app, url).await
+}
+
+#[tauri::command]
+async fn popout_stop<R: Runtime>(app: AppHandle<R>) -> Result<(), String> {
+    mpv_popout::stop(&app).await
+}
+
+#[tauri::command]
+async fn popout_close<R: Runtime>(app: AppHandle<R>) -> Result<(), String> {
+    mpv_popout::kill_popout(&app).await;
+    Ok(())
+}
+
+#[tauri::command]
+async fn popout_set_property<R: Runtime>(
+    app: AppHandle<R>,
+    property: String,
+    value: serde_json::Value,
+) -> Result<(), String> {
+    mpv_popout::set_property(&app, &property, value).await
+}
+
+#[tauri::command]
+async fn popout_set_always_on_top<R: Runtime>(
+    app: AppHandle<R>,
+    on_top: bool,
+) -> Result<(), String> {
+    mpv_popout::set_always_on_top_cmd(&app, on_top).await
+}
+
+#[tauri::command]
+fn popout_is_running<R: Runtime>(app: AppHandle<R>) -> bool {
+    mpv_popout::is_running(&app)
+}
+
+#[tauri::command]
+async fn popout_toggle_pause<R: Runtime>(app: AppHandle<R>) -> Result<(), String> {
+    let tx = {
+        let state = app.state::<PopoutMpvState>();
+        let inst = state.instance.lock().unwrap();
+        inst.as_ref().and_then(|i| i.ipc_tx.clone())
+    };
+    if let Some(tx) = tx {
+        mpv_popout::send_ipc(&tx, "cycle", vec![serde_json::json!("pause")]).await;
+    }
+    Ok(())
+}
+
+#[tauri::command]
+async fn popout_toggle_fullscreen<R: Runtime>(app: AppHandle<R>) -> Result<(), String> {
+    let tx = {
+        let state = app.state::<PopoutMpvState>();
+        let inst = state.instance.lock().unwrap();
+        inst.as_ref().and_then(|i| i.ipc_tx.clone())
+    };
+    if let Some(tx) = tx {
+        mpv_popout::send_ipc(&tx, "cycle", vec![serde_json::json!("fullscreen")]).await;
+    }
+    Ok(())
+}
+
+#[tauri::command]
+async fn popout_seek<R: Runtime>(app: AppHandle<R>, seconds: f64) -> Result<(), String> {
+    let tx = {
+        let state = app.state::<PopoutMpvState>();
+        let inst = state.instance.lock().unwrap();
+        inst.as_ref().and_then(|i| i.ipc_tx.clone())
+    };
+    if let Some(tx) = tx {
+        mpv_popout::send_ipc(&tx, "seek", vec![serde_json::json!(seconds), serde_json::json!("absolute")]).await;
+    }
+    Ok(())
 }
 
 // ============================================================================
@@ -2241,6 +2336,9 @@ pub fn run() {
                 }
             }
 
+            // Register PopoutMpvState for standalone popout player
+            app.manage(PopoutMpvState::new());
+
             // Register TmdbCacheState as managed state so the cache is shared
             // across all TMDB commands instead of being re-created each call.
             match app.path().app_cache_dir() {
@@ -2316,6 +2414,17 @@ pub fn run() {
             multiview_reposition_slot,
             multiview_kill_slot,
             multiview_kill_all,
+            // Popout MPV commands
+            popout_open,
+            popout_load,
+            popout_stop,
+            popout_close,
+            popout_set_property,
+            popout_set_always_on_top,
+            popout_is_running,
+            popout_toggle_pause,
+            popout_toggle_fullscreen,
+            popout_seek,
             // Optimized bulk sync commands
             sync_provider::sync_m3u_source,
             sync_provider::sync_xtream_source,
