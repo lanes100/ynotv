@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useLiveQuery } from '../../hooks/useSqliteLiveQuery';
-import { db, type StoredChannel } from '../../db';
+import { db, type StoredChannel, updateChannelsBatch } from '../../db';
 import { normalizeBoolean } from '../../utils/db-helpers';
 import {
   listFailoverGroups,
@@ -290,16 +290,17 @@ export function ChannelManager({ categoryId, categoryName, sourceId, onClose, on
         try {
             isSavingRef.current = true;
 
-            // 1. Update each channel individually to avoid REPLACE INTO.
-            // REPLACE INTO deletes the row first, which cascades into
-            // failover_group_members and wipes out failover group memberships.
-            const updatePromises = channels.map((ch, i) =>
-                db.channels.update(ch.stream_id, {
-                    enabled: ch.enabled !== false,
-                    display_order: i,
-                })
-            );
-            await Promise.all(updatePromises);
+            // 1. Bulk update channels (enabled + display_order) in a single SQL statement.
+            // Avoids REPLACE INTO which deletes the row first and cascades into
+            // failover_group_members, wiping out failover group memberships.
+            const channelUpdates = channels.map((ch, i) => ({
+                streamId: ch.stream_id,
+                enabled: ch.enabled !== false,
+                displayOrder: i,
+            }));
+            if (channelUpdates.length > 0) {
+                await updateChannelsBatch(channelUpdates);
+            }
 
             // 3. Perform atomic operation for category filter words
             await db.categories.update(categoryId, {

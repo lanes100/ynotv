@@ -5,41 +5,60 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6?logo=typescript)](https://www.typescriptlang.org)
 [![License](https://img.shields.io/badge/License-AGPL%20v3-green.svg)](./LICENSE)
 [![Platform](https://img.shields.io/badge/Platform-Windows-blue)](./README.md)
+![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/tbeezy/ynotv/total)
 [![Chat Server](https://img.shields.io/badge/chat-discord-7289da.svg)](https://discord.gg/e5eGa5QETB)
 
-A feature-rich, open source IPTV player for Windows built on [Tauri v2](https://tauri.app) and [mpv](https://mpv.io). Was made for my personal use with features I wanted.
-Built with the help of AI.
+A feature-rich, open source IPTV player for Windows built on [Tauri v2](https://tauri.app) and [mpv](https://mpv.io). 
 
 [Documentation](https://tbeezy.github.io/ynotvdoc)
 
-[![Watch the video](https://i.imgur.com/a4x1L28.png)](https://streamable.com/jxjq9n)
+[![Watch the video](https://i.imgur.com/JiMwuw1.png)](https://streamable.com/jxjq9n)
 
 [Video Demonstration](https://streamable.com/jxjq9n)
 
 ---
 
+## Screenshots:
 
+| EPG with preview | Play screen |
+| :-------------------------------------: | :--------------------------------------: |
+| ![EPG with preview](https://i.ibb.co/Q7FHXSwD/EPG.png) | ![Play screen](https://i.ibb.co/gCqPTFb/Playing.jpg) |
+| Channel Overlay | EPG Editor |
+| ![Channel Overlay](https://i.ibb.co/0RbyQDPQ/Channel-Overlay.jpg) | ![EPG Editor](https://i.ibb.co/kg2drZYn/EPGEditor.png) |
+| Watchlist Option with autoswitch | Calendar View |
+| ![Watchlist Option with autoswitch](https://i.ibb.co/YTQwhPV5/Watchlist.png) | ![Calendar View](https://i.ibb.co/fz9b7Pfq/Calendar.png) |
+| Sports View | Vod Page |
+| ![Sports View](https://i.ibb.co/yn5ZWb2F/Sports.png) | ![Vod Page](https://i.ibb.co/nsvmdbTp/Vod.jpg) |
+| Multiview Menu | PiP View |
+| ![Multiview Menu](https://i.ibb.co/b5RBSYDc/Multiview.jpg) | ![PiP View](https://i.ibb.co/bjY4vbxB/Pip.jpg) |
+| Multiview 2x2 | DVR Page |
+| ![Multiview 2x2](https://i.ibb.co/BH8pF1VL/multi2x2.jpg) | ![DVR Page](https://i.ibb.co/Ng4dX9Yh/DVR.png) |
+| Themes | Add Source |
+| ![Themes](https://i.ibb.co/r23W6Mpj/Themes.png) | ![Add Source](https://i.ibb.co/5hr6Bpjn/Add-Source.png) |
+
+
+---
 ## Features
 
-- Supports M3U, Xtream Codes, and Stalker portals with multiple EPG support
-- Grid style EPG with preview window
-- Catchup channel support with a Cache Time Shift for instant replays
-- Automatic stream fallback when it detects a stalled/dead stream
-- VOD support with rich metadata powered by TMDB and RPDB, with saved progress
-- Subsource subtitle integration for VODs
-- Set Backup DNS/URLs to automatically swap when current one fails
-- Favorites and Custom groups from any source
-- Rename/Hide/Sort Categories/Channels easily in any way you want
-- Built in EPG Editor to change tvgid/logo or automatch to a different one
-- Embedded MPV for playback, with option to set custom parameters
-- Multiview with resizable PiP and can support up to four simultaneous streams in a 2x2 grid.
-- Instant Channel and EPG search with advanced options
-- Watchlist and Reminder with an autoswap when a program goes live
-- Built in DVR to record any streams
-- Dedicated Sports tab with real-time scores and detailed game stats
-- TV Calendar powered by TVMaze to auto-set reminders for upcoming shows
-- Reprogrammable hotkeys for fast interaction
-- 40+ built-in themes for any style you may prefer
+- **M3U, Xtream Codes & Stalker Support** — multiple EPG sources supported
+- **Grid-style EPG** — with an integrated preview window
+- **Catchup & Cache Time Shift** — instant replays on supported channels
+- **Automatic Stream Fallback** — detects and switches away from stalled or dead streams
+- **Sports Tab** — real-time scores and detailed game stats with instant search to find channel
+- **VOD Support** — rich metadata via TMDB and RPDB with saved progress
+- **Subtitle Integration** — Subsource support for VODs
+- **Backup DNS/URLs** — automatically swaps when the current source fails
+- **Favorites & Custom Groups** — pull from any source
+- **Channel Management** — rename, hide, and sort categories and channels freely
+- **EPG Editor** — change tvg-id, logos, or auto-match to a different entry
+- **Embedded MPV Playback** — with support for custom parameters
+- **Multiview** — resizable PiP, also supporting up to four simultaneous streams in a 2x2 grid
+- **Channel & EPG Search** — instant results with advanced filtering options
+- **Watchlist & Reminders** — auto-swaps to a channel when a program goes live
+- **Built-in DVR** — record any stream or schedule for later
+- **TV Calendar** — powered by TVMaze for auto-setting reminders on upcoming shows
+- **Reprogrammable Hotkeys** — fast navigation
+- **40+ Built-in Themes** — something for every preference
 
 ---
 
@@ -212,6 +231,8 @@ All shortcuts are fully customizable in Settings > Shortcuts.
 ---
 
 ## Disclaimer
+
+Built with the help of AI.
 
 ynoTV is a media player only. It does not provide, host, distribute, or facilitate access to any streaming services, broadcast content, channel lists, or IPTV subscriptions of any kind.
 

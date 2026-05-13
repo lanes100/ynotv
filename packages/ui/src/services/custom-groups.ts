@@ -1,4 +1,4 @@
-import { db, type CustomGroup, type CustomGroupChannel } from '../db';
+import { db, updateCustomGroupChannelsBatch, type CustomGroup, type CustomGroupChannel } from '../db';
 
 
 /**
@@ -91,12 +91,15 @@ export async function reorderGroupChannels(groupId: string, orderedStreamIds: st
         const items = await db.customGroupChannels.where('group_id').equals(groupId).toArray();
         const itemMap = new Map(items.map(i => [i.stream_id, i]));
 
-        for (let i = 0; i < orderedStreamIds.length; i++) {
-            const streamId = orderedStreamIds[i];
-            const item = itemMap.get(streamId);
-            if (item) {
-                await db.customGroupChannels.update(item.id!, { display_order: i });
-            }
+        const updates = orderedStreamIds
+            .map((streamId, i) => {
+                const item = itemMap.get(streamId);
+                return item && item.id !== undefined ? { id: item.id, displayOrder: i } : null;
+            })
+            .filter(Boolean) as Array<{ id: number; displayOrder: number }>;
+
+        if (updates.length > 0) {
+            await updateCustomGroupChannelsBatch(updates);
         }
     });
 }

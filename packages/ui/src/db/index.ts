@@ -1186,11 +1186,70 @@ export async function updateChannelAlias(channelId: string, alias: string | unde
 
 /** Update multiple categories' order */
 export async function updateCategoriesOrder(updates: { categoryId: string; displayOrder: number }[]) {
-  await db.transaction('rw', [db.categories], async () => {
-    for (const { categoryId, displayOrder } of updates) {
-      await db.categories.update(categoryId, { display_order: displayOrder });
+  await updateCategoriesBatch(updates.map(u => ({ categoryId: u.categoryId, displayOrder: u.displayOrder })));
+}
+
+/** Batch update channels (enabled state, display order, and/or fav order) in a single SQL statement */
+export async function updateChannelsBatch(
+  updates: Array<{ streamId: string; enabled?: boolean; displayOrder?: number; favOrder?: number }>
+): Promise<number> {
+  if (updates.length === 0) return 0;
+
+  const dbInstance = await (db as any).dbPromise;
+  let totalUpdated = 0;
+  const CHUNK_SIZE = 120; // 3 columns max, stay well under SQLite 999 param limit
+
+  for (let i = 0; i < updates.length; i += CHUNK_SIZE) {
+    const chunk = updates.slice(i, i + CHUNK_SIZE);
+    const caseParts: string[] = [];
+    const params: any[] = [];
+
+    if (chunk.some(u => u.enabled !== undefined)) {
+      const cases = chunk
+        .filter(u => u.enabled !== undefined)
+        .map(u => {
+          params.push(u.streamId, u.enabled ? 1 : 0);
+          return `WHEN $${params.length - 1} THEN $${params.length}`;
+        })
+        .join(' ');
+      caseParts.push(`enabled = CASE stream_id ${cases} ELSE enabled END`);
     }
-  });
+
+    if (chunk.some(u => u.displayOrder !== undefined)) {
+      const cases = chunk
+        .filter(u => u.displayOrder !== undefined)
+        .map(u => {
+          params.push(u.streamId, u.displayOrder);
+          return `WHEN $${params.length - 1} THEN $${params.length}`;
+        })
+        .join(' ');
+      caseParts.push(`display_order = CASE stream_id ${cases} ELSE display_order END`);
+    }
+
+    if (chunk.some(u => u.favOrder !== undefined)) {
+      const cases = chunk
+        .filter(u => u.favOrder !== undefined)
+        .map(u => {
+          params.push(u.streamId, u.favOrder);
+          return `WHEN $${params.length - 1} THEN $${params.length}`;
+        })
+        .join(' ');
+      caseParts.push(`fav_order = CASE stream_id ${cases} ELSE fav_order END`);
+    }
+
+    if (caseParts.length === 0) continue;
+
+    const idParams = chunk.map((_, idx) => `$${params.length + idx + 1}`).join(',');
+    chunk.forEach(u => params.push(u.streamId));
+
+    const sql = `UPDATE channels SET ${caseParts.join(', ')} WHERE stream_id IN (${idParams})`;
+    const result = await dbInstance.execute(sql, params);
+    totalUpdated += result.rowsAffected ?? chunk.length;
+  }
+
+  const { dbEvents } = await import('./sqlite-adapter');
+  dbEvents.notify('channels', 'update');
+  return totalUpdated;
 }
 
 // ============================================================================
@@ -1321,6 +1380,70 @@ export async function disableAllSourceCategories(sourceId: string) {
     [sourceId]
   );
   dbEvents.notify('categories', 'update');
+}
+
+/** Batch update failover group member priorities in a single SQL statement */
+export async function updateFailoverMembersBatch(
+  updates: Array<{ id: number; priority: number }>
+): Promise<number> {
+  if (updates.length === 0) return 0;
+
+  const dbInstance = await (db as any).dbPromise;
+  let totalUpdated = 0;
+  const CHUNK_SIZE = 300; // 3 params per row (2 CASE + 1 IN), 300*3=900 < 999
+
+  for (let i = 0; i < updates.length; i += CHUNK_SIZE) {
+    const chunk = updates.slice(i, i + CHUNK_SIZE);
+    const params: any[] = [];
+
+    const cases = chunk.map(u => {
+      params.push(u.id, u.priority);
+      return `WHEN $${params.length - 1} THEN $${params.length}`;
+    }).join(' ');
+
+    const idParams = chunk.map((_, idx) => `$${params.length + idx + 1}`).join(',');
+    chunk.forEach(u => params.push(u.id));
+
+    const sql = `UPDATE failover_group_members SET priority = CASE id ${cases} ELSE priority END WHERE id IN (${idParams})`;
+    const result = await dbInstance.execute(sql, params);
+    totalUpdated += result.rowsAffected ?? chunk.length;
+  }
+
+  const { dbEvents } = await import('./sqlite-adapter');
+  dbEvents.notify('failover_group_members', 'update');
+  return totalUpdated;
+}
+
+/** Batch update custom group channel display orders in a single SQL statement */
+export async function updateCustomGroupChannelsBatch(
+  updates: Array<{ id: number; displayOrder: number }>
+): Promise<number> {
+  if (updates.length === 0) return 0;
+
+  const dbInstance = await (db as any).dbPromise;
+  let totalUpdated = 0;
+  const CHUNK_SIZE = 300; // 3 params per row (2 CASE + 1 IN), 300*3=900 < 999
+
+  for (let i = 0; i < updates.length; i += CHUNK_SIZE) {
+    const chunk = updates.slice(i, i + CHUNK_SIZE);
+    const params: any[] = [];
+
+    const cases = chunk.map(u => {
+      params.push(u.id, u.displayOrder);
+      return `WHEN $${params.length - 1} THEN $${params.length}`;
+    }).join(' ');
+
+    const idParams = chunk.map((_, idx) => `$${params.length + idx + 1}`).join(',');
+    chunk.forEach(u => params.push(u.id));
+
+    const sql = `UPDATE custom_group_channels SET display_order = CASE id ${cases} ELSE display_order END WHERE id IN (${idParams})`;
+    const result = await dbInstance.execute(sql, params);
+    totalUpdated += result.rowsAffected ?? chunk.length;
+  }
+
+  const { dbEvents } = await import('./sqlite-adapter');
+  dbEvents.notify('custom_group_channels', 'update');
+  return totalUpdated;
 }
 
 // ============================================================================
