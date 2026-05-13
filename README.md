@@ -18,7 +18,26 @@ A feature-rich, open source IPTV player for Windows built on [Tauri v2](https://
 
 ---
 
+## Screenshots:
 
+| EPG with preview | Play screen |
+| :-------------------------------------: | :--------------------------------------: |
+| ![EPG with preview](https://i.ibb.co/Q7FHXSwD/EPG.png) | ![Play screen](https://i.ibb.co/gCqPTFb/Playing.jpg) |
+| Channel Overlay | EPG Editor |
+| ![Channel Overlay](https://i.ibb.co/0RbyQDPQ/Channel-Overlay.jpg) | ![EPG Editor](https://i.ibb.co/kg2drZYn/EPGEditor.png) |
+| Watchlist Option with autoswitch | Calendar View |
+| ![Watchlist Option with autoswitch](https://i.ibb.co/YTQwhPV5/Watchlist.png) | ![Calendar View](https://i.ibb.co/fz9b7Pfq/Calendar.png) |
+| Sports View | Vod Page |
+| ![Sports View](https://i.ibb.co/Lz6cn2Kd/Sports.png) | ![Vod Page](https://i.ibb.co/nsvmdbTp/Vod.jpg) |
+| Multiview Menu | PiP View |
+| ![Multiview Menu](https://i.ibb.co/b5RBSYDc/Multiview.jpg) | ![PiP View](https://i.ibb.co/bjY4vbxB/Pip.jpg) |
+| Multiview 2x2 | DVR Page |
+| ![Multiview 2x2](https://i.ibb.co/BH8pF1VL/multi2x2.jpg) | ![DVR Page](https://i.ibb.co/Ng4dX9Yh/DVR.png) |
+| Themes | Add Source |
+| ![Themes](https://i.ibb.co/r23W6Mpj/Themes.png) | ![Add Source](https://i.ibb.co/5hr6Bpjn/Add-Source.png) |
+
+
+---
 ## Features
 
 - **M3U, Xtream Codes & Stalker Support** — multiple EPG sources supported
