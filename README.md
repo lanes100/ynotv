@@ -28,7 +28,7 @@ A feature-rich, open source IPTV player for Windows built on [Tauri v2](https://
 | Watchlist Option with autoswitch | Calendar View |
 | ![Watchlist Option with autoswitch](https://i.ibb.co/YTQwhPV5/Watchlist.png) | ![Calendar View](https://i.ibb.co/fz9b7Pfq/Calendar.png) |
 | Sports View | Vod Page |
-| ![Sports View](https://i.ibb.co/Lz6cn2Kd/Sports.png) | ![Vod Page](https://i.ibb.co/nsvmdbTp/Vod.jpg) |
+| ![Sports View](https://i.ibb.co/yn5ZWb2F/Sports.png) | ![Vod Page](https://i.ibb.co/nsvmdbTp/Vod.jpg) |
 | Multiview Menu | PiP View |
 | ![Multiview Menu](https://i.ibb.co/b5RBSYDc/Multiview.jpg) | ![PiP View](https://i.ibb.co/bjY4vbxB/Pip.jpg) |
 | Multiview 2x2 | DVR Page |
