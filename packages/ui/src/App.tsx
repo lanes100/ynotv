@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 
 // Auto-sync check interval: 10 minutes
 const AUTO_SYNC_CHECK_INTERVAL_MS = 10 * 60 * 1000;
+let hasStartupAutoSyncTriggered = false;
 import { invoke } from '@tauri-apps/api/core';
 import './services/tauri-bridge'; // Initialize Tauri bridge and polyfills
 import { checkForUpdates, checkForUpdatesSilent } from './services/updater';
@@ -755,6 +756,14 @@ function App() {
     // Helper to perform sync check and sync stale sources
     const performSyncCheck = async (isPeriodic = false) => {
       if (!window.storage) return;
+
+      if (!isPeriodic) {
+        if (hasStartupAutoSyncTriggered) {
+          console.log('[AutoSync] Startup sync already triggered, skipping duplicate execution');
+          return;
+        }
+        hasStartupAutoSyncTriggered = true;
+      }
 
       // Skip if already syncing (for periodic checks)
       if (isPeriodic && isAutoSyncingRef.current) {
