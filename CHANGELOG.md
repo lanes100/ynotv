@@ -1,5 +1,20 @@
 # Changelog
 
+## v1.7.0
+
+### Added
+
+- **Global EPG** — A global EPG source can now be configured to apply across any playlist, automatically filling in missing EPG data without requiring per-source setup. Configurable under `Settings → Source → EPG`.
+- **Popout player** — Streams can now be played in a dedicated popout MPV window. Access via `Right-click → Play in Popout`. The window can be set to always stay on top under `Settings → Popout Player`.
+- **Popout mode for Live TV EPG** — Activating Popout mode via the new icon on the middle-right of the Live TV EPG will route all channel selections directly to the popout player.
+
+### Fixed
+
+- **Manage Categories saving slowly** — Resolved a performance issue causing category changes to take longer than expected to save.
+- **Fullscreen button clipped in Alternate EPG view** — The fullscreen button is now fully visible and accessible in the Alternate EPG layout.
+- **Auto-updater popup not rendering Markdown** — The update changelog popup now correctly renders Markdown formatting.
+
+
 ## v1.6.9
 
 ### Added

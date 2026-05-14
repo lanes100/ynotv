@@ -308,8 +308,11 @@ pub async fn spawn_and_load<R: Runtime>(
         .map_err(|e| format!("Failed to spawn popout MPV: {}", e))?;
 
     let pid = child.pid();
+    let app_handle_stderr = app.clone();
 
-    // Monitor stderr
+    // Monitor stderr AND process death.
+    // When MPV dies naturally (user closes the window), we emit popout-closed
+    // so the frontend floating widget can disappear.
     tauri::async_runtime::spawn(async move {
         while let Some(event) = rx.recv().await {
             match event {
@@ -317,6 +320,23 @@ pub async fn spawn_and_load<R: Runtime>(
                     eprintln!("[MPV-POPOUT] {}", String::from_utf8_lossy(&line));
                 }
                 CommandEvent::Terminated(_) => {
+                    // Check if the instance is still in state.
+                    // If yes, MPV died on its own (user closed window) — clean up and notify frontend.
+                    // If no, kill_popout() already handled it — do nothing.
+                    let state = app_handle_stderr.state::<PopoutMpvState>();
+                    let was_alive = {
+                        let mut inst = state.instance.lock().unwrap();
+                        if inst.is_some() {
+                            let _ = inst.take();
+                            true
+                        } else {
+                            false
+                        }
+                    };
+                    if was_alive {
+                        let _ = app_handle_stderr.emit("popout-closed", ());
+                        eprintln!("[MPV-POPOUT] Process terminated naturally — emitted popout-closed");
+                    }
                     break;
                 }
                 _ => {}

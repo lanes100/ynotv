@@ -112,6 +112,9 @@ export function usePopoutPlayer(): PopoutPlayerState {
       // Optionally stop main player (based on settings or explicit override)
       const shouldStopMain = options?.stopMain !== undefined ? options.stopMain : stopMain;
       if (shouldStopMain) {
+        // Signal to usePlayback that this stop is intentional so retry/watchdog
+        // doesn't try to reconnect the main player.
+        window.dispatchEvent(new CustomEvent('ynotv:intentional-stop'));
         await Bridge.stop().catch(() => {});
       }
     } catch (e) {

@@ -342,6 +342,16 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
     return () => window.removeEventListener('ynotv:retry-settings-changed', handler);
   }, []);
 
+  // Listen for intentional-stop signals (e.g. popout opened with "stop main")
+  useEffect(() => {
+    const handler = () => {
+      logInfo('[Playback] Received intentional-stop signal — suppressing next stream-death retry');
+      intentionallyStoppedRef.current = true;
+    };
+    window.addEventListener('ynotv:intentional-stop', handler);
+    return () => window.removeEventListener('ynotv:intentional-stop', handler);
+  }, []);
+
   const retryAttemptRef = useRef(0);
   const isRetryingRef = useRef(false);
   const retryFailedDuringLoadRef = useRef(false);
@@ -359,6 +369,9 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
   const streamFailureHandlingRef = useRef(false);
   const recoveryArmedRef = useRef(false);
   const userPausedRef = useRef(false);
+  // When true, the next stream death event should be ignored because the
+  // main player was intentionally stopped (e.g. popout opened with "stop main").
+  const intentionallyStoppedRef = useRef(false);
   // Stable refs for use inside intervals (avoids stale closure issues)
   const currentChannelRef = useRef(currentChannel);
   const vodInfoRef2 = useRef(vodInfo);
@@ -784,6 +797,11 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
   const handleStreamDied = useCallback(async () => {
     // Only retry for Live TV (not VOD, not catchup)
     if (!currentChannelRef.current || vodInfoRef2.current || catchupInfoRef.current) return;
+    if (intentionallyStoppedRef.current) {
+      logInfo('[Retry] Ignoring stream failure — main player was intentionally stopped');
+      intentionallyStoppedRef.current = false;
+      return;
+    }
     if (userPausedRef.current) {
       logInfo('[Retry] Ignoring stream failure while user-paused');
       return;
@@ -1087,6 +1105,7 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
     streamFailureHandlingRef.current = false;
     recoveryArmedRef.current = autoSwitched;
     userPausedRef.current = false;
+    intentionallyStoppedRef.current = false;
     resetHealthTracking();
 
     // Reset failover state on manual channel switch
