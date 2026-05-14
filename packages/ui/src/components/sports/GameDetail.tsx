@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import type { SportsEvent } from '@ynotv/core';
-import { 
-  getGameSummary, 
+import {
+  getGameSummary,
   formatEventDateTime,
   type GameSummary,
   type PlayerStatCategory,
@@ -12,11 +12,12 @@ interface GameDetailProps {
   onClose: () => void;
   onChannelClick?: (channelName: string) => void;
   onPlayChannel?: (channel: import('../../db').StoredChannel) => void;
+  variant?: 'default' | 'glass';
 }
 
 type TabId = 'stats' | 'players' | 'scoring' | 'info';
 
-export function GameDetail({ event, onClose, onChannelClick, onPlayChannel }: GameDetailProps) {
+export function GameDetail({ event, onClose, onChannelClick, onPlayChannel, variant = 'default' }: GameDetailProps) {
   const [summary, setSummary] = useState<GameSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<TabId>('stats');
@@ -312,8 +313,8 @@ export function GameDetail({ event, onClose, onChannelClick, onPlayChannel }: Ga
     const mainEvent = event.matches?.[event.matches.length - 1];
 
     return (
-      <div className="game-detail-overlay" onClick={handleOverlayClick} onKeyDown={handleKeyDown}>
-        <div className="game-detail-modal ufc-detail-modal">
+      <div className={`game-detail-overlay${variant === 'glass' ? ' glass' : ''}`} onClick={handleOverlayClick} onKeyDown={handleKeyDown}>
+        <div className={`game-detail-modal ufc-detail-modal${variant === 'glass' ? ' glass' : ''}`}>
           {/* Header */}
           <div className="game-detail-header">
             <div className="game-detail-header-info">
@@ -437,8 +438,8 @@ export function GameDetail({ event, onClose, onChannelClick, onPlayChannel }: Ga
     const hasResults = results.length > 0;
 
     return (
-      <div className="game-detail-overlay" onClick={handleOverlayClick} onKeyDown={handleKeyDown}>
-        <div className="game-detail-modal racing-detail-modal">
+      <div className={`game-detail-overlay${variant === 'glass' ? ' glass' : ''}`} onClick={handleOverlayClick} onKeyDown={handleKeyDown}>
+        <div className={`game-detail-modal racing-detail-modal${variant === 'glass' ? ' glass' : ''}`}>
           {/* Header */}
           <div className="game-detail-header">
             <div className="game-detail-header-info">
@@ -556,8 +557,8 @@ export function GameDetail({ event, onClose, onChannelClick, onPlayChannel }: Ga
     const roundCount = leaderboard[0]?.roundScores?.length || 0;
 
     return (
-      <div className="game-detail-overlay" onClick={handleOverlayClick} onKeyDown={handleKeyDown}>
-        <div className="game-detail-modal golf-detail-modal">
+      <div className={`game-detail-overlay${variant === 'glass' ? ' glass' : ''}`} onClick={handleOverlayClick} onKeyDown={handleKeyDown}>
+        <div className={`game-detail-modal golf-detail-modal${variant === 'glass' ? ' glass' : ''}`}>
           {/* Header */}
           <div className="game-detail-header">
             <div className="game-detail-header-info">
@@ -676,8 +677,8 @@ export function GameDetail({ event, onClose, onChannelClick, onPlayChannel }: Ga
     }, {} as Record<string, typeof matches>);
 
     return (
-      <div className="game-detail-overlay" onClick={handleOverlayClick} onKeyDown={handleKeyDown}>
-        <div className="game-detail-modal tennis-detail-modal">
+      <div className={`game-detail-overlay${variant === 'glass' ? ' glass' : ''}`} onClick={handleOverlayClick} onKeyDown={handleKeyDown}>
+        <div className={`game-detail-modal tennis-detail-modal${variant === 'glass' ? ' glass' : ''}`}>
           {/* Header */}
           <div className="game-detail-header">
             <div className="game-detail-header-info">
@@ -787,8 +788,8 @@ export function GameDetail({ event, onClose, onChannelClick, onPlayChannel }: Ga
   }
 
   return (
-    <div className="game-detail-overlay" onClick={handleOverlayClick} onKeyDown={handleKeyDown}>
-      <div className="game-detail-modal">
+    <div className={`game-detail-overlay${variant === 'glass' ? ' glass' : ''}`} onClick={handleOverlayClick} onKeyDown={handleKeyDown}>
+      <div className={`game-detail-modal${variant === 'glass' ? ' glass' : ''}`}>
         <div className="game-detail-header">
           <div className="game-detail-header-info">
             <span className="game-detail-sport">{event.league.sport.toUpperCase()}</span>

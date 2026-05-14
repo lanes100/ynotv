@@ -1,0 +1,131 @@
+/* Recent Channels Widget - bottom left overlay above Now Playing Bar */
+.recent-channels-widget {
+  position: absolute;
+  bottom: 120px;
+  left: 16px;
+  z-index: 55;
+  max-width: 340px;
+  min-width: 200px;
+  pointer-events: none;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+/* When channel info overlay is enabled, the Now Playing Bar is shorter
+   (only controls row, no info row), so we can sit closer to the bottom */
+.recent-channels-widget.cio-enabled {
+  bottom: 76px;
+}
+
+.recent-channels-widget .recent-channels-header {
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-radius: 10px 10px 0 0;
+  padding: 8px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: none;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.6);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  pointer-events: none;
+}
+
+.recent-channels-widget .recent-channels-list {
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-radius: 0 0 10px 10px;
+  padding: 4px 6px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.35);
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.recent-channel-item {
+  padding: 6px 10px;
+  cursor: pointer;
+  color: rgba(255, 255, 255, 0.85);
+  transition: all 0.15s ease;
+  user-select: none;
+  pointer-events: auto;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.82rem;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.recent-channel-item:hover {
+  background: rgba(0, 212, 255, 0.1);
+  color: var(--accent-primary, #00d4ff);
+}
+
+.recent-channel-item:active {
+  background: rgba(0, 212, 255, 0.2);
+}
+
+.recent-channel-name {
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.recent-channel-separator {
+  color: rgba(255, 255, 255, 0.35);
+  flex-shrink: 0;
+}
+
+.recent-channel-program {
+  color: rgba(255, 255, 255, 0.55);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.recent-channel-item:hover .recent-channel-program {
+  color: inherit;
+}
+
+/* Scrollbar styling for the list */
+.recent-channels-list::-webkit-scrollbar {
+  width: 4px;
+}
+
+.recent-channels-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.recent-channels-list::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 2px;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  .recent-channels-widget {
+    bottom: 110px;
+    left: 10px;
+    max-width: 260px;
+    min-width: 160px;
+  }
+
+  .recent-channels-widget.cio-enabled {
+    bottom: 68px;
+  }
+
+  .recent-channel-item {
+    font-size: 0.78rem;
+    padding: 5px 8px;
+  }
+
+  .recent-channels-list {
+    max-height: 260px;
+  }
+}

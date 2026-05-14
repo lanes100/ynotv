@@ -404,6 +404,115 @@
   transform: scale(0.95);
 }
 
+/* ==========================================================================
+   SPORTS SCORES OVERLAY (top of preview pane)
+   ========================================================================== */
+.sports-scores-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 15;
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.75) 0%, rgba(0, 0, 0, 0.4) 60%, transparent 100%);
+  padding: 8px 12px 20px;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.sports-scores-track {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  mask-image: linear-gradient(to right, transparent, black 8px, black calc(100% - 8px), transparent);
+  -webkit-mask-image: linear-gradient(to right, transparent, black 8px, black calc(100% - 8px), transparent);
+}
+
+.sports-scores-track::-webkit-scrollbar {
+  display: none;
+}
+
+.sports-score-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-radius: 8px;
+  padding: 4px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  cursor: pointer;
+  pointer-events: auto;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.sports-score-item:hover {
+  background: rgba(0, 0, 0, 0.7);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.sports-score-league {
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: rgba(255, 255, 255, 0.6);
+  white-space: nowrap;
+}
+
+.sports-score-matchup {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sports-score-block {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.sports-score-team {
+  font-size: 12px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.9);
+  white-space: nowrap;
+}
+
+.sports-score-team.winning {
+  color: #fff;
+  font-weight: 700;
+}
+
+.sports-score-vs {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.4);
+  text-transform: uppercase;
+}
+
+.sports-score-value {
+  font-size: 13px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.85);
+  min-width: 16px;
+  text-align: center;
+}
+
+.sports-score-value.winning {
+  color: #fff;
+}
+
+.sports-score-status {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--accent-primary, #ef4444);
+  white-space: nowrap;
+}
+
 .sports-info-pane {
   flex: 1;
   background: var(--bg-overlay, rgba(0, 0, 0, 0.95));
@@ -2785,6 +2894,53 @@
   border-radius: 4px;
   font-size: 13px;
   color: var(--text-primary, #fff);
+}
+
+/* Glass / transparent variant for overlay widgets */
+.game-detail-overlay.glass {
+  background: rgba(0, 0, 0, 0.25);
+}
+
+.game-detail-modal.glass {
+  background: rgba(15, 15, 15, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
+}
+
+/* Scrollbar Theming for GameDetail modal content areas */
+.game-detail-content::-webkit-scrollbar,
+.ufc-detail-content::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.game-detail-content::-webkit-scrollbar-track,
+.ufc-detail-content::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+}
+
+.game-detail-content::-webkit-scrollbar-thumb,
+.ufc-detail-content::-webkit-scrollbar-thumb {
+  background: var(--accent-primary, #e50914);
+  border-radius: 4px;
+}
+
+.game-detail-content::-webkit-scrollbar-thumb:hover,
+.ufc-detail-content::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-primary, #e50914);
+  filter: brightness(1.3);
+}
+
+.game-detail-content::-webkit-scrollbar-corner,
+.ufc-detail-content::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+.game-detail-content,
+.ufc-detail-content {
+  scrollbar-width: thin;
+  scrollbar-color: var(--accent-primary, #e50914) rgba(255, 255, 255, 0.05);
 }
 
 /* =============================================================================

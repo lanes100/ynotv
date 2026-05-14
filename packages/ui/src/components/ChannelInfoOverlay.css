@@ -192,3 +192,33 @@
     -webkit-line-clamp: 2;
   }
 }
+
+/* ==========================================================================
+   LIVE SPORTS OVERLAY WIDGET POSITIONING
+   When the live sports overlay widget is active, push channel info down
+   so the two overlays don't overlap.
+   ========================================================================== */
+
+/* Both modes: push down when controls are visible (sports overlay sits at top: 32px) */
+.app.has-live-sports-autohide .channel-info-overlay,
+.app.has-live-sports-persistent .channel-info-overlay {
+  top: 90px;
+}
+
+/* Persistent mode: also push down when controls are hidden
+   (overlay hugs top: 0, but channel info may flash on channel change) */
+.app.controls-hidden.has-live-sports-persistent .channel-info-overlay {
+  top: 56px;
+}
+
+/* Responsive adjustment */
+@media (max-width: 600px) {
+  .app.has-live-sports-autohide .channel-info-overlay,
+  .app.has-live-sports-persistent .channel-info-overlay {
+    top: 86px;
+  }
+
+  .app.controls-hidden.has-live-sports-persistent .channel-info-overlay {
+    top: 52px;
+  }
+}

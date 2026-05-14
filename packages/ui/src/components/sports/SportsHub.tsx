@@ -14,6 +14,7 @@ import { FavoritesTab } from './FavoritesTab';
 import { NewsTab } from './NewsTab';
 import { LeadersTab } from './LeadersTab';
 import { SettingsTab } from './SettingsTab';
+import { SportsScoresOverlay } from './SportsScoresOverlay';
 import './SportsHub.css';
 
 interface SportsHubProps {
@@ -534,6 +535,9 @@ export function SportsHub({
                 <div ref={fillerRightRef} className="sports-preview-filler sports-preview-filler-right" />
                 <div ref={fillerTopRef} className="sports-preview-filler sports-preview-filler-top" />
                 <div ref={fillerBottomRef} className="sports-preview-filler sports-preview-filler-bottom" />
+
+                {/* Live Scores Overlay at top of preview */}
+                <SportsScoresOverlay />
 
                 {/* Resizer Handle */}
                 <div

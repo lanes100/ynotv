@@ -21,6 +21,9 @@ import { SeriesPage } from './components/SeriesPage';
 import { DvrDashboard } from './components/DvrDashboard';
 import { SportsHub } from './components/sports/SportsHub';
 import { TVCalendarPage } from './components/TVCalendarPage';
+import { LiveSportsOverlay } from './components/LiveSportsOverlay';
+import { RecentChannelsWidget } from './components/RecentChannelsWidget';
+import { BackgroundContextMenu } from './components/BackgroundContextMenu';
 import { useActiveRecordings } from './hooks/useActiveRecordings';
 import { RecordingIndicator } from './components/RecordingIndicator';
 import { Logo } from './components/Logo';
@@ -419,6 +422,44 @@ function App() {
   // Sports Preview State
   // ==========================================================================
   const [sportsPreviewEnabled, setSportsPreviewEnabled] = useState(true);
+
+  // ==========================================================================
+  // Live Sports Overlay Widget State
+  // ==========================================================================
+  const [sportsOverlayWidget, setSportsOverlayWidget] = useState<'autohide' | 'persistent' | null>(() => {
+    const saved = localStorage.getItem('sportsOverlayWidget');
+    return saved === 'autohide' || saved === 'persistent' ? saved : null;
+  });
+
+  // ==========================================================================
+  // Recent Channels Overlay Widget State
+  // ==========================================================================
+  const [recentOverlayWidget, setRecentOverlayWidget] = useState<boolean>(() => {
+    const saved = localStorage.getItem('recentOverlayWidget');
+    return saved === 'true';
+  });
+
+  const [bgContextMenu, setBgContextMenu] = useState<{ x: number; y: number } | null>(null);
+
+  const handleAddSportsOverlay = useCallback((mode: 'autohide' | 'persistent') => {
+    setSportsOverlayWidget(mode);
+    localStorage.setItem('sportsOverlayWidget', mode);
+  }, []);
+
+  const handleRemoveSportsOverlay = useCallback(() => {
+    setSportsOverlayWidget(null);
+    localStorage.removeItem('sportsOverlayWidget');
+  }, []);
+
+  const handleAddRecentOverlay = useCallback(() => {
+    setRecentOverlayWidget(true);
+    localStorage.setItem('recentOverlayWidget', 'true');
+  }, []);
+
+  const handleRemoveRecentOverlay = useCallback(() => {
+    setRecentOverlayWidget(false);
+    localStorage.removeItem('recentOverlayWidget');
+  }, []);
 
   // ==========================================================================
   // Sync State from Store
@@ -988,7 +1029,7 @@ function App() {
   // Render
   // ==========================================================================
   return (
-    <div className={`app${showControls ? '' : ' controls-hidden'}`} onMouseMove={handleMouseMove}>
+    <div className={`app${showControls ? '' : ' controls-hidden'}${sportsOverlayWidget === 'autohide' ? ' has-live-sports-autohide' : ''}${sportsOverlayWidget === 'persistent' ? ' has-live-sports-persistent' : ''}${recentOverlayWidget ? ' has-recent-widget' : ''}`} onMouseMove={handleMouseMove}>
       {/* Custom title bar for frameless window */}
       <div className={`title-bar${showControls ? ' visible' : ''}`} data-tauri-drag-region>
         <div className="title-bar-left-group" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -1265,6 +1306,44 @@ function App() {
           onDoubleClick={() => {
             handleToggleFullscreen();
           }}
+          onContextMenu={(e) => {
+            e.preventDefault();
+            setBgContextMenu({ x: e.clientX, y: e.clientY });
+          }}
+        />
+      )}
+
+      {/* Live Sports Overlay Widget */}
+      {sportsOverlayWidget && (
+        <LiveSportsOverlay
+          mode={sportsOverlayWidget}
+          showControls={showControls}
+          activeView={activeView}
+        />
+      )}
+
+      {/* Recent Channels Overlay Widget */}
+      {recentOverlayWidget && (
+        <RecentChannelsWidget
+          showControls={showControls}
+          activeView={activeView}
+          channelInfoOverlayEnabled={channelInfoOverlayEnabled}
+          onChannelClick={handlePlayChannelWrapper}
+        />
+      )}
+
+      {/* Background Context Menu */}
+      {bgContextMenu && (
+        <BackgroundContextMenu
+          position={bgContextMenu}
+          sportsWidget={sportsOverlayWidget}
+          recentWidget={recentOverlayWidget}
+          onAddSportsAutohide={() => handleAddSportsOverlay('autohide')}
+          onAddSportsPersistent={() => handleAddSportsOverlay('persistent')}
+          onRemoveSports={handleRemoveSportsOverlay}
+          onAddRecent={handleAddRecentOverlay}
+          onRemoveRecent={handleRemoveRecentOverlay}
+          onClose={() => setBgContextMenu(null)}
         />
       )}
 

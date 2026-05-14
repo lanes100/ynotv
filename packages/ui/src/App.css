@@ -635,3 +635,118 @@
   width: 24px;
   height: 24px;
 }
+
+/* ==========================================================================
+   LIVE SPORTS OVERLAY WIDGET (main screen)
+   ========================================================================== */
+.live-sports-overlay {
+  position: absolute;
+  top: 32px;
+  left: 0;
+  right: 0;
+  z-index: 70;
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.7) 0%, rgba(0, 0, 0, 0.35) 60%, transparent 100%);
+  padding: 8px 12px 20px;
+  pointer-events: none;
+  overflow: hidden;
+  transition: top 0.3s ease, opacity 0.3s ease;
+}
+
+/* When controls are hidden, slide up to hug the top edge */
+.live-sports-overlay.controls-hidden {
+  top: 0;
+}
+
+.live-sports-track {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  mask-image: linear-gradient(to right, transparent, black 8px, black calc(100% - 8px), transparent);
+  -webkit-mask-image: linear-gradient(to right, transparent, black 8px, black calc(100% - 8px), transparent);
+}
+
+.live-sports-track::-webkit-scrollbar {
+  display: none;
+}
+
+.live-sports-score-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-radius: 8px;
+  padding: 4px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  cursor: pointer;
+  pointer-events: auto;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.live-sports-score-item:hover {
+  background: rgba(0, 0, 0, 0.7);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.live-sports-score-league {
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: rgba(255, 255, 255, 0.6);
+  white-space: nowrap;
+}
+
+.live-sports-score-matchup {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.live-sports-score-block {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.live-sports-score-team {
+  font-size: 12px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.9);
+  white-space: nowrap;
+}
+
+.live-sports-score-team.winning {
+  color: #fff;
+  font-weight: 700;
+}
+
+.live-sports-score-vs {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.4);
+  text-transform: uppercase;
+}
+
+.live-sports-score-value {
+  font-size: 13px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.85);
+  min-width: 16px;
+  text-align: center;
+}
+
+.live-sports-score-value.winning {
+  color: #fff;
+}
+
+.live-sports-score-status {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--accent-primary, #ef4444);
+  white-space: nowrap;
+}
