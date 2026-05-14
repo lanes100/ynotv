@@ -1,4 +1,4 @@
-import { db } from '../db';
+import { db, updateFailoverMembersBatch } from '../db';
 import type { FailoverGroup, StoredChannel } from '../db';
 
 /** Get the full ordered member list for a group, with channel data joined */
@@ -170,10 +170,11 @@ export async function removeChannelFromFailoverGroup(streamId: string): Promise<
     .where('group_id')
     .equals(member.group_id)
     .sortBy('priority');
-  for (let i = 0; i < remaining.length; i++) {
-    if (remaining[i].priority !== i && remaining[i].id !== undefined) {
-      await db.failoverGroupMembers.update(remaining[i].id!, { priority: i });
-    }
+  const renormalizeUpdates = remaining
+    .map((m, i) => (m.priority !== i && m.id !== undefined ? { id: m.id!, priority: i } : null))
+    .filter(Boolean) as Array<{ id: number; priority: number }>;
+  if (renormalizeUpdates.length > 0) {
+    await updateFailoverMembersBatch(renormalizeUpdates);
   }
 }
 
@@ -198,10 +199,11 @@ export async function reorderFailoverGroupMember(
   reordered.splice(newPriority, 0, member);
 
   // Write back new priorities
-  for (let i = 0; i < reordered.length; i++) {
-    if (reordered[i].id !== undefined && reordered[i].priority !== i) {
-      await db.failoverGroupMembers.update(reordered[i].id!, { priority: i });
-    }
+  const reorderUpdates = reordered
+    .map((m, i) => (m.id !== undefined && m.priority !== i ? { id: m.id!, priority: i } : null))
+    .filter(Boolean) as Array<{ id: number; priority: number }>;
+  if (reorderUpdates.length > 0) {
+    await updateFailoverMembersBatch(reorderUpdates);
   }
 }
 
@@ -216,12 +218,16 @@ export async function reorderFailoverGroupChannels(
     .toArray();
   const memberMap = new Map(members.map(m => [m.stream_id, m]));
 
-  for (let i = 0; i < orderedStreamIds.length; i++) {
-    const streamId = orderedStreamIds[i];
-    const member = memberMap.get(streamId);
-    if (member && member.id !== undefined && member.priority !== i) {
-      await db.failoverGroupMembers.update(member.id, { priority: i });
-    }
+  const reorderUpdates = orderedStreamIds
+    .map((streamId, i) => {
+      const member = memberMap.get(streamId);
+      return member && member.id !== undefined && member.priority !== i
+        ? { id: member.id, priority: i }
+        : null;
+    })
+    .filter(Boolean) as Array<{ id: number; priority: number }>;
+  if (reorderUpdates.length > 0) {
+    await updateFailoverMembersBatch(reorderUpdates);
   }
 }
 

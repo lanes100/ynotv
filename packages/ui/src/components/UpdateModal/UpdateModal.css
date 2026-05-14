@@ -204,40 +204,55 @@
 .update-notes-content h1,
 .update-notes-content h2 {
   margin: 0 0 8px 0;
-  font-size: 1rem;
-  color: rgba(255, 255, 255, 0.95);
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #fff;
 }
 
 .update-notes-content h3,
 .update-notes-content h4,
 .update-notes-content h5,
 .update-notes-content h6 {
-  margin: 12px 0 6px 0;
-  font-size: 0.875rem;
-  color: rgba(255, 255, 255, 0.9);
+  margin: 16px 0 8px 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #fff;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.update-notes-content h3:first-child,
+.update-notes-content h4:first-child {
+  margin-top: 0;
 }
 
 .update-notes-content p {
-  margin: 0 0 8px 0;
+  margin: 0 0 10px 0;
+  line-height: 1.5;
+}
+
+.update-notes-content strong {
+  color: #fff;
+  font-weight: 700;
 }
 
 .update-notes-content ul,
 .update-notes-content ol {
-  margin: 0 0 12px 0;
-  padding-left: 18px;
+  margin: 8px 0 16px 0;
+  padding-left: 20px;
 }
 
 .update-notes-content li {
-  margin-bottom: 4px;
+  margin-bottom: 6px;
+  line-height: 1.5;
+}
+
+.update-notes-content li::marker {
+  color: #4fc1ff;
 }
 
 .update-notes-content li:last-child {
   margin-bottom: 0;
-}
-
-.update-notes-content strong {
-  color: rgba(255, 255, 255, 0.95);
-  font-weight: 600;
 }
 
 .update-notes-content code {

@@ -57,6 +57,7 @@ fn get_parent_hwnd<R: Runtime>(app: &AppHandle<R>) -> Result<isize, String> {
 fn set_hwnd_rect(hwnd_raw: isize, x: i32, y: i32, w: u32, h: u32, bring_to_front: bool) -> Result<(), String> {
     use windows::Win32::Foundation::HWND;
     use windows::Win32::UI::WindowsAndMessaging::{SetWindowPos, SWP_NOZORDER, SWP_NOACTIVATE, HWND_TOP};
+    use windows::Win32::Graphics::Gdi::{CreateRoundRectRgn, SetWindowRgn};
 
     let hwnd = HWND(hwnd_raw as _);
     unsafe {
@@ -68,6 +69,13 @@ fn set_hwnd_rect(hwnd_raw: isize, x: i32, y: i32, w: u32, h: u32, bring_to_front
             // Main MPV stays behind webview (no z-order change)
             SetWindowPos(hwnd, None, x, y, w as i32, h as i32, SWP_NOZORDER | SWP_NOACTIVATE)
                 .map_err(|e| format!("SetWindowPos failed: {}", e))?;
+        }
+
+        // Apply rounded corners to secondary MPV windows
+        let rgn = CreateRoundRectRgn(0, 0, w as i32 + 1, h as i32 + 1, 12, 12);
+        if !rgn.is_invalid() {
+            // SetWindowRgn takes ownership of the region on success
+            let _ = SetWindowRgn(hwnd, rgn, true);
         }
     }
     Ok(())

@@ -793,10 +793,47 @@
   color: rgba(255, 255, 255, 0.7);
 }
 
-/* Reduce seek bar width in alternate view to fit fullscreen button (modern UI specific) */
+/* Alternate view NowPlayingBar: compact layout (modern UI specific) */
 .modern-ui .guide-top-section.alternate-view .now-playing-bar .npb-progress-section {
-  flex: 1 1 auto;
-  max-width: 1000px;
+  flex: 1 1 0%;
+  max-width: none;
+}
+
+.modern-ui .guide-top-section.alternate-view .now-playing-bar .npb-controls-row {
+  flex-wrap: wrap;
+  gap: 10px;
+  row-gap: 6px;
+}
+
+.modern-ui .guide-top-section.alternate-view .now-playing-bar .npb-extra-controls {
+  margin-left: 0;
+  padding-left: 8px;
+}
+
+.modern-ui .guide-top-section.alternate-view .now-playing-bar .npb-volume-slider {
+  width: 50px;
+}
+
+.modern-ui .guide-top-section.alternate-view .now-playing-bar .npb-description-section,
+.modern-ui .guide-top-section.alternate-view .now-playing-bar .npb-divider {
+  display: none;
+}
+
+.modern-ui .guide-top-section.alternate-view .now-playing-bar .npb-channel-section {
+  max-width: 220px;
+}
+
+@media (max-width: 1000px) {
+  .modern-ui .guide-top-section.alternate-view .now-playing-bar .npb-extra-controls {
+    display: none;
+  }
+}
+
+@media (max-width: 600px) {
+  .modern-ui .guide-top-section.alternate-view .now-playing-bar .npb-channel-up-btn,
+  .modern-ui .guide-top-section.alternate-view .now-playing-bar .npb-channel-down-btn {
+    display: none;
+  }
 }
 
 /* Modern Progress Bar */

@@ -1,15 +1,14 @@
 import { db, clearSourceData, clearVodData, type SourceMeta, type StoredProgram, type StoredMovie, type StoredSeries, type StoredEpisode, type VodCategory } from './index';
-import { fetchAndParseM3U, XtreamClient, StalkerClient, type XmltvProgram, extractXmltvChannels } from '@ynotv/local-adapter';
+import { fetchAndParseM3U, XtreamClient, StalkerClient } from '@ynotv/local-adapter';
 import type { Source, Channel, Category, Movie, Series } from '@ynotv/core';
 import { useUIStore } from '../stores/uiStore';
 import { bulkOps, type BulkChannel, type BulkCategory } from '../services/bulk-ops';
 import { epgStreaming, type EpgProgressCallback, type EpgParseResult } from '../services/epg-streaming';
 import { dbEvents } from './sqlite-adapter';
 import { matchAllMoviesLazy, matchAllSeriesLazy } from '../services/title-match';
+import type { GlobalEpgLink } from '../types/app';
 
-import { fetch as tauriFetch } from '@tauri-apps/plugin-http';
 import { invoke } from '@tauri-apps/api/core';
-import { compressEpgDescription, decompressEpgDescription } from '../utils/compression';
 
 // Debug logging helper - logs to console and optionally to debug file
 function debugLog(message: string, category = 'sync'): void {
@@ -128,58 +127,6 @@ const VOD_SERIES_FIELDS = [
   'rating_5based', 'category_id'
 ];
 
-// ─── Shared EPG helper ────────────────────────────────────────────────────────
-/**
- * Convert raw XMLTV programs into StoredProgram format.
- * @param xmltvPrograms  Parsed XMLTV entries
- * @param channelMap     Map from epg_channel_id → stream_id
- * @param sourceId       Source identifier (written into each record)
- * @param options.compressDescriptions  Whether to gzip-compress descriptions (Xtream/M3U path)
- * @param options.idPrefix              Optional prefix for the program ID (pass sourceId for legacy format)
- * @returns storedPrograms array + count of unmatched channels
- */
-function buildStoredPrograms(
-  xmltvPrograms: import('@ynotv/local-adapter').XmltvProgram[],
-  channelMap: Map<string, string | string[]>,
-  sourceId: string,
-  options: { compressDescriptions?: boolean; idPrefix?: string } = {}
-): { programs: StoredProgram[]; unmatchedCount: number } {
-  const programs: StoredProgram[] = [];
-  const unmatched = new Set<string>();
-
-  for (const prog of xmltvPrograms) {
-    const streamIds = channelMap.get(prog.channel_id);
-    if (streamIds) {
-      const ids = Array.isArray(streamIds) ? streamIds : [streamIds];
-      
-      for (const streamId of ids) {
-        const idBase = options.idPrefix
-          ? `${options.idPrefix}-${streamId}-${prog.start.getTime()}`
-          : `${streamId}_${prog.start.getTime()}`;
-
-        const description = options.compressDescriptions
-          ? (compressEpgDescription(prog.description) ?? '')
-          : (prog.description || '');
-
-        programs.push({
-          id: idBase,
-          stream_id: streamId,
-          title: prog.title,
-          description,
-          start: prog.start,
-          end: prog.stop,
-          source_id: sourceId,
-        });
-      }
-    } else {
-      unmatched.add(prog.channel_id);
-    }
-  }
-
-  return { programs, unmatchedCount: unmatched.size };
-}
-// ─────────────────────────────────────────────────────────────────────────────
-
 function sanitizeMovie(movie: any, existingMovie?: any): any {
   const clean: any = {};
 
@@ -253,280 +200,6 @@ function sanitizeSeries(series: any, existingSeries?: any): any {
   clean.cover = clean.cover || existingSeries?.cover; // Preserve source cover if exists
 
   return clean;
-}
-
-const MAX_COMPRESSED_SIZE_MB = 50;   // Max 50MB compressed (~500MB uncompressed)
-const MAX_COMPRESSED_BYTES = MAX_COMPRESSED_SIZE_MB * 1024 * 1024;
-
-// EPG Parser Web Worker - handles decompression and parsing off main thread
-let epgWorker: Worker | null = null;
-let epgWorkerIdCounter = 0;
-let epgWorkerIdleTimeout: ReturnType<typeof setTimeout> | null = null;
-const epgWorkerCallbacks = new Map<number, { resolve: (value: any) => void; reject: (err: Error) => void }>();
-
-const EPG_WORKER_IDLE_MS = 5 * 60 * 1000; // 5 minutes
-
-function terminateEpgWorker() {
-  if (epgWorker) {
-    epgWorker.terminate();
-    epgWorker = null;
-  }
-  if (epgWorkerIdleTimeout) {
-    clearTimeout(epgWorkerIdleTimeout);
-    epgWorkerIdleTimeout = null;
-  }
-}
-
-function resetEpgWorkerIdleTimer() {
-  if (epgWorkerIdleTimeout) {
-    clearTimeout(epgWorkerIdleTimeout);
-  }
-  epgWorkerIdleTimeout = setTimeout(() => {
-    if (epgWorkerCallbacks.size === 0) {
-      debugLog('Terminating idle EPG worker', 'epg');
-      terminateEpgWorker();
-    }
-  }, EPG_WORKER_IDLE_MS);
-}
-
-function getEpgWorker(): Worker {
-  resetEpgWorkerIdleTimer();
-
-  if (!epgWorker) {
-    epgWorker = new Worker(new URL('../workers/epg-parser.worker.ts', import.meta.url), { type: 'module' });
-    epgWorker.onmessage = (event) => {
-      const { type, id, programs, rawXml, error } = event.data;
-      const callback = epgWorkerCallbacks.get(id);
-      if (callback) {
-        epgWorkerCallbacks.delete(id);
-        if (type === 'result') {
-          // Pass full response object when rawXml is included, otherwise just programs array
-          if (rawXml !== undefined) {
-            callback.resolve({ programs: programs || [], rawXml });
-          } else {
-            callback.resolve({ programs: programs || [] });
-          }
-        } else {
-          callback.reject(new Error(error || 'Worker error'));
-        }
-      }
-      resetEpgWorkerIdleTimer();
-    };
-    epgWorker.onerror = (err) => {
-      debugLog(`EPG Worker error: ${err.message}`, 'epg');
-      for (const [, callback] of epgWorkerCallbacks) {
-        callback.reject(new Error(`EPG Worker crashed: ${err.message}`));
-      }
-      epgWorkerCallbacks.clear();
-      terminateEpgWorker();
-    };
-  }
-  return epgWorker;
-}
-
-// Convert string to Uint8Array in chunks (avoids blocking for large strings)
-async function stringToBufferChunked(str: string): Promise<Uint8Array> {
-  const encoder = new TextEncoder();
-  const CHUNK_SIZE = 1_000_000; // 1MB chunks
-
-  if (str.length <= CHUNK_SIZE) {
-    return encoder.encode(str);
-  }
-
-  // For large strings, encode in chunks with yields
-  const chunks: Uint8Array[] = [];
-  for (let i = 0; i < str.length; i += CHUNK_SIZE) {
-    const chunk = str.slice(i, i + CHUNK_SIZE);
-    chunks.push(encoder.encode(chunk));
-    // Yield to event loop
-    await new Promise(resolve => setTimeout(resolve, 0));
-  }
-
-  // Combine chunks
-  const totalLength = chunks.reduce((sum, c) => sum + c.length, 0);
-  const result = new Uint8Array(totalLength);
-  let offset = 0;
-  for (const chunk of chunks) {
-    result.set(chunk, offset);
-    offset += chunk.length;
-  }
-  return result;
-}
-
-
-
-// ... existing imports
-
-// ...
-
-// Parse EPG data using Web Worker (off main thread)
-// Uses Transferable for large data to avoid blocking structured clone
-async function parseEpgInWorker(
-  data: string | Uint8Array,
-  isGzipped: boolean,
-  includeRawXml?: boolean
-): Promise<{ programs: XmltvProgram[]; rawXml?: string }> {
-  return new Promise(async (resolve, reject) => {
-    const id = ++epgWorkerIdCounter;
-    epgWorkerCallbacks.set(id, { resolve, reject });
-
-    if (data instanceof Uint8Array) {
-      getEpgWorker().postMessage(
-        { type: 'parse', id, buffer: data, isGzipped, isBuffer: true, includeRawXml },
-        [data.buffer]
-      );
-      return;
-    }
-
-    // For large data, convert to ArrayBuffer and transfer (avoids copy)
-    if (data.length > 1_000_000) { // > 1MB
-      debugLog(`Large EPG data (${Math.round(data.length / 1024 / 1024)}MB), using chunked transfer...`, 'epg');
-      const buffer = await stringToBufferChunked(data);
-      getEpgWorker().postMessage(
-        { type: 'parse', id, buffer, isGzipped, isBuffer: true, includeRawXml },
-        [buffer.buffer] // Transfer ownership
-      );
-    } else {
-      getEpgWorker().postMessage({ type: 'parse', id, data, isGzipped, includeRawXml });
-    }
-  });
-}
-
-// Fetch XMLTV from a single URL and parse it (parsing happens in worker)
-async function fetchXmltvFromUrl(
-  epgUrl: string,
-  includeRawXml?: boolean
-): Promise<{ programs: XmltvProgram[]; rawXml?: string }> {
-  const url = epgUrl.trim();
-  debugLog(`Fetching XMLTV from: ${url}`, 'epg');
-
-  if (!window.fetchProxy) {
-    throw new Error('fetchProxy not available');
-  }
-
-  // Handle local file paths (C:\... or /Users/...)
-  const isLocalFile = url.startsWith('C:') || url.startsWith('D:') || url.startsWith('/') || url.startsWith('file://');
-  if (isLocalFile) {
-    debugLog(`Detected local file path, reading directly from disk...`, 'epg');
-    const fs = await import('@tauri-apps/plugin-fs');
-    const path = url.replace('file://', '');
-    try {
-      const data = await fs.readFile(path);
-      const isGz = path.split('?')[0].endsWith('.gz');
-      
-      if (isGz && data.length > MAX_COMPRESSED_BYTES) {
-         throw new Error(`EPG file too large.`);
-      }
-      
-      const { programs, rawXml } = await parseEpgInWorker(data, isGz, includeRawXml);
-      debugLog(`Worker parsed ${programs.length} programs from local file`, 'epg');
-      return { programs, rawXml };
-    } catch (e: any) {
-      const errorMsg = `Failed to read local XMLTV file: ${e.message}`;
-      console.error(`[EPG] ${errorMsg}`);
-      throw new Error(errorMsg);
-    }
-  }
-
-  // Handle gzipped files
-  if (url.split('?')[0].endsWith('.gz')) {
-    debugLog('Detected gzipped file, fetching binary...', 'epg');
-    const response = await window.fetchProxy.fetchBinary(url);
-    if (!response.data) {
-      const errorMsg = `Failed to fetch gzipped XMLTV: ${response.error || 'unknown error'}`;
-      console.error(`[EPG] ${errorMsg}`);
-      throw new Error(errorMsg);
-    }
-
-    // Check compressed size before processing (large files freeze UI)
-    const estimatedCompressedSize = response.data.length;
-    if (estimatedCompressedSize > MAX_COMPRESSED_BYTES) {
-      const sizeMB = Math.round(estimatedCompressedSize / 1024 / 1024);
-      debugLog(`Skipping oversized EPG file: ${sizeMB}MB (max ${MAX_COMPRESSED_SIZE_MB}MB) - ${url}`, 'epg');
-      throw new Error(`EPG file too large (${sizeMB}MB). Use a regional EPG instead of ALL_SOURCES.`);
-    }
-
-    debugLog(`Received ${response.data.length} bytes (base64), sending to worker for decompression...`, 'epg');
-    const { programs, rawXml } = await parseEpgInWorker(response.data, true, includeRawXml);
-    debugLog(`Worker parsed ${programs.length} programs`, 'epg');
-    return { programs, rawXml };
-  } else {
-    const response = await window.fetchProxy.fetch(url);
-    if (!response.data?.ok) {
-      const errorMsg = `Failed to fetch XMLTV: ${response.data?.status || response.error || 'unknown error'}`;
-      console.error(`[EPG] ${errorMsg} for URL: ${url}`);
-      throw new Error(errorMsg);
-    }
-    debugLog(`Received ${response.data.text.length} bytes, sending to worker for parsing...`, 'epg');
-    const rawXml = response.data.text;
-    const { programs } = await parseEpgInWorker(rawXml, false, includeRawXml);
-    debugLog(`Worker parsed ${programs.length} programs`, 'epg');
-    return { programs, rawXml: includeRawXml ? rawXml : undefined };
-  }
-}
-
-// Fetch XMLTV from potentially multiple URLs (comma-separated)
-async function fetchXmltvFromUrls(epgUrlStr: string): Promise<XmltvProgram[]> {
-  // Split by comma and trim each URL
-  let urls = epgUrlStr.split(',').map(u => u.trim()).filter(u => u.length > 0);
-  
-  // Convert HTTPS to HTTP for all EPG URLs to avoid TLS issues
-  urls = urls.map(url => {
-    if (url.startsWith('https://')) {
-      const httpUrl = url.replace('https://', 'http://');
-      console.log(`[EPG] Converting HTTPS to HTTP: ${url.substring(0, 60)}... -> ${httpUrl.substring(0, 60)}...`);
-      return httpUrl;
-    }
-    return url;
-  });
-
-  if (urls.length === 0) {
-    return [];
-  }
-
-  if (urls.length === 1) {
-    const result = await fetchXmltvFromUrl(urls[0]);
-    return result.programs;
-  }
-
-  // Multiple URLs - fetch in parallel batches to avoid overwhelming servers
-  // Yields to event loop between batches to keep UI responsive
-  debugLog(`Found ${urls.length} EPG URLs, fetching in parallel batches...`, 'epg');
-  const BATCH_SIZE = 5;
-  const allResults: XmltvProgram[][] = [];
-
-  for (let i = 0; i < urls.length; i += BATCH_SIZE) {
-    const batch = urls.slice(i, i + BATCH_SIZE);
-    debugLog(`Fetching batch ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(urls.length / BATCH_SIZE)} (${batch.length} URLs)`, 'epg');
-
-    const results = await Promise.all(
-      batch.map(async (url) => {
-        try {
-          const result = await fetchXmltvFromUrl(url);
-          return result.programs;
-        } catch (err) {
-          const errMsg = err instanceof Error ? err.message : String(err);
-          // Always log EPG fetch errors to console for visibility
-          console.error(`[EPG] Failed to fetch from ${url}: ${errMsg}`);
-          debugLog(`Failed to fetch from ${url}: ${errMsg}`, 'epg');
-          return []; // Return empty array on failure, continue with others
-        }
-      })
-    );
-
-    // Collect results without spreading (faster)
-    for (const r of results) {
-      if (r.length > 0) allResults.push(r);
-    }
-
-    // Yield to event loop between batches to keep UI responsive
-    await new Promise(resolve => setTimeout(resolve, 0));
-  }
-
-  // Flatten at the end (single operation)
-  const allPrograms = allResults.flat();
-  debugLog(`Total programs from all EPG sources: ${allPrograms.length}`, 'epg');
-  return allPrograms;
 }
 
 // Sync EPG from XMLTV URL(s) for M3U sources using streaming parser
@@ -636,91 +309,6 @@ async function syncEpgFromUrl(
     const errMsg = err instanceof Error ? err.message : String(err);
     console.error(`[EPG] M3U EPG sync FAILED: ${errMsg}`);
     debugLog(`M3U EPG sync FAILED: ${errMsg}`, 'epg');
-    // Fallback to legacy method if streaming fails
-    debugLog('Falling back to legacy EPG sync method', 'epg');
-    return syncEpgFromUrlLegacy(source, epgUrl, channels);
-  }
-}
-
-// Legacy EPG sync method (fallback)
-async function syncEpgFromUrlLegacy(
-  source: Source,
-  epgUrl: string,
-  channels: Channel[]
-): Promise<number> {
-  debugLog(`Starting legacy M3U EPG sync`, 'epg');
-
-  try {
-    const xmltvPrograms = await fetchXmltvFromUrls(epgUrl);
-
-    if (xmltvPrograms.length === 0) {
-      debugLog('No programs found in XMLTV, keeping existing data', 'epg');
-      return 0;
-    }
-
-    // Load user-applied EPG channel ID overrides
-    const epgOverrideMap = await loadEpgChannelOverrideMap();
-
-    // Build a map of epg_channel_id -> stream_id for matching (overrides win)
-    const channelMap = new Map<string, string>();
-    let channelsWithEpgId = 0;
-    for (const ch of channels) {
-      const effectiveEpgId = epgOverrideMap.get(ch.stream_id) || ch.epg_channel_id;
-      if (effectiveEpgId) {
-        channelMap.set(effectiveEpgId, ch.stream_id);
-        channelsWithEpgId++;
-      }
-    }
-    debugLog(
-      `${channelsWithEpgId}/${channels.length} channels have epg_channel_id`,
-      'epg'
-    );
-
-    // Convert XMLTV programs to stored format using shared helper
-    const { programs: storedPrograms, unmatchedCount } = buildStoredPrograms(
-      xmltvPrograms, channelMap, source.id,
-      { idPrefix: source.id }  // Legacy uses source.id prefix in the program ID
-    );
-
-    debugLog(`Matched ${storedPrograms.length}/${xmltvPrograms.length} programs (${unmatchedCount} unmatched)`, 'epg');
-
-    if (storedPrograms.length === 0) {
-      debugLog(
-        'WARNING: No programs matched! Keeping existing EPG data',
-        'epg'
-      );
-      return 0;
-    }
-
-    // Store programs using optimized bulk operation
-    const bulkPrograms = storedPrograms.map((p) => ({
-      id: p.id,
-      stream_id: p.stream_id,
-      title: p.title,
-      description:
-        p.description?.length > 2000
-          ? p.description.substring(0, 2000)
-          : p.description || '',
-      start: p.start instanceof Date ? p.start.toISOString() : p.start,
-      end: p.end instanceof Date ? p.end.toISOString() : p.end,
-      source_id: p.source_id,
-    }));
-
-    await bulkOps.replacePrograms(source.id, bulkPrograms);
-
-    debugLog(
-      `Legacy M3U EPG sync complete: ${storedPrograms.length} programs stored`,
-      'epg'
-    );
-
-    if (bulkPrograms.length > 0) {
-      dbEvents.notify('programs', 'add');
-    }
-
-    return storedPrograms.length;
-  } catch (err) {
-    const errMsg = err instanceof Error ? err.message : String(err);
-    debugLog(`Legacy M3U EPG fetch FAILED: ${errMsg}`, 'epg');
     return 0;
   }
 }
@@ -1060,6 +648,469 @@ async function syncAdditionalEpgUrls(
     'epg'
   );
   return totalInserted;
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ─── Global EPG links helper ─────────────────────────────────────────────────
+/**
+ * Sync global EPG links that are linked to a specific source.
+ * Each global EPG only fills in channels that have no programs yet.
+ */
+/**
+ * Apply global EPG links to a single source.
+ * ALWAYS applies (no freshness check) — intended for manual single-source sync
+ * where the primary EPG just cleared all programs.
+ */
+export async function applyGlobalEpgToSource(
+  source: Source,
+  channels: Channel[],
+  onProgress?: (msg: string) => void
+): Promise<number> {
+  if (!window.storage) {
+    debugLog('Storage API not available, skipping global EPG links', 'epg');
+    return 0;
+  }
+
+  try {
+    const settingsResult = await window.storage.getSettings();
+    const globalEpgLinks = settingsResult.data?.globalEpgLinks || [];
+
+    // Filter to links that include this source, sorted by display_order (lower = higher priority)
+    const linksForSource = globalEpgLinks
+      .filter(link => link.sourceIds.includes(source.id))
+      .sort((a, b) => (a.display_order ?? Number.MAX_SAFE_INTEGER) - (b.display_order ?? Number.MAX_SAFE_INTEGER));
+
+    if (linksForSource.length === 0) {
+      debugLog(`No global EPG links for source: ${source.name}`, 'epg');
+      return 0;
+    }
+
+    if (channels.length === 0) {
+      debugLog(`No channels for global EPG sync on source: ${source.name}`, 'epg');
+      return 0;
+    }
+
+    debugLog(`Applying global EPG to source: ${source.name} (${linksForSource.length} links, waterfall order)`, 'epg');
+
+    // Find channels that currently have no programs
+    let channelsWithPrograms = await getStreamIdsWithPrograms(source.id);
+    let channelsNeedingEpg = channels.filter(ch => !channelsWithPrograms.has(ch.stream_id));
+
+    console.log(`[EPG] Global EPG sync starting: ${channelsNeedingEpg.length} channels out of ${channels.length} need EPG.`);
+
+    if (channelsNeedingEpg.length === 0) {
+      console.log(`[EPG] Global EPG sync skipped: All channels already have EPG.`);
+      debugLog('All channels already have EPG, skipping global EPG links', 'epg');
+      return 0;
+    }
+
+    // Load user-applied EPG channel ID overrides
+    const epgOverrideMap = await loadEpgChannelOverrideMap();
+    let totalInserted = 0;
+    // Track per-link insertion counts so we can update lastSyncResult in settings
+    const linkResultCounts = new Map<string, number>();
+
+    for (let i = 0; i < linksForSource.length; i++) {
+      if (channelsNeedingEpg.length === 0) break;
+
+      const link = linksForSource[i];
+      const epgUrl = link.url.trim();
+      if (!epgUrl) continue;
+
+      debugLog(
+        `Global EPG ${i + 1}/${linksForSource.length}: ${link.name} - ${epgUrl.substring(0, 80)}...`,
+        'epg'
+      );
+      onProgress?.(`Updating EPG (global ${i + 1}/${linksForSource.length})...`);
+
+      try {
+        // Build channel mappings for Rust parser
+        // We only pass channels that STILL need EPGs
+        const channelMappings = channelsNeedingEpg
+          .filter((ch) => epgOverrideMap.has(ch.stream_id) || ch.epg_channel_id || ch.name)
+          .map((ch) => ({
+            epg_channel_id: epgOverrideMap.get(ch.stream_id) || ch.epg_channel_id || ch.name || '',
+            stream_id: ch.stream_id,
+            channel_name: ch.name || '',
+          }));
+
+        if (channelMappings.length === 0) {
+          debugLog(`No channels with EPG IDs remaining for global EPG ${i + 1}`, 'epg');
+          continue;
+        }
+
+        console.log(`[EPG] Global EPG ${i + 1}: Built channel map with ${channelMappings.length} unique mappings`);
+
+        // Use streaming EPG parser (with clearExisting = false to preserve waterfall)
+        const result = await epgStreaming.streamParseEpg(
+          source.id,
+          source.name || source.id,
+          epgUrl,
+          channelMappings,
+          onProgress
+            ? (progress) => {
+                debugLog(epgStreaming.formatProgress(progress), 'epg');
+                onProgress(epgStreaming.formatProgress(progress));
+              }
+            : undefined,
+          source.advanced_epg_matching,
+          source.epg_timeshift_hours ?? 0,
+          false // clearExisting = false
+        );
+
+        console.log(`[EPG] Global EPG ${i + 1}: Matched ${result.matched_programs}/${result.total_programs} programs. Inserted: ${result.inserted_programs}`);
+
+        debugLog(
+          `Global EPG ${i + 1}: inserted ${result.inserted_programs} programs`,
+          'epg'
+        );
+
+        if (result.inserted_programs === 0) {
+          console.warn(`[EPG] Global EPG ${i + 1}: No programs inserted!`);
+          continue;
+        }
+
+        totalInserted += result.inserted_programs;
+        linkResultCounts.set(link.id, result.inserted_programs);
+
+        // Re-query which channels now have programs
+        channelsWithPrograms = await getStreamIdsWithPrograms(source.id);
+        channelsNeedingEpg = channels.filter(ch => !channelsWithPrograms.has(ch.stream_id));
+
+        debugLog(
+          `${channelsNeedingEpg.length} channels still need EPG after global ${i + 1}`,
+          'epg'
+        );
+
+        // Notify UI of new programs
+        dbEvents.notify('programs', 'add');
+      } catch (err) {
+        const errMsg = err instanceof Error ? err.message : String(err);
+        console.error(`[EPG] Global EPG ${i + 1} failed: ${errMsg}`);
+        debugLog(`Global EPG ${i + 1} failed: ${errMsg}`, 'epg');
+        // Continue to next global EPG
+      }
+    }
+
+    // Update lastSyncResult on each affected link (merge with existing perSource data)
+    if (linkResultCounts.size > 0 && window.storage) {
+      try {
+        const settingsResult = await window.storage.getSettings();
+        const existingLinks = settingsResult.data?.globalEpgLinks || [];
+        const updatedLinks = existingLinks.map((link: GlobalEpgLink) => {
+          const countForThisSource = linkResultCounts.get(link.id);
+          if (countForThisSource === undefined) return link;
+
+          const existingResult = link.lastSyncResult;
+          const existingPerSource = existingResult?.perSource || {};
+          const updatedPerSource = {
+            ...existingPerSource,
+            [source.id]: countForThisSource,
+          };
+          const newTotal = Object.values(updatedPerSource).reduce(
+            (sum, c) => sum + (typeof c === 'number' ? c : 0),
+            0
+          );
+
+          return {
+            ...link,
+            lastSyncResult: {
+              timestamp: Date.now(),
+              totalInserted: newTotal,
+              perSource: updatedPerSource,
+            },
+          };
+        });
+        await window.storage.updateSettings({ globalEpgLinks: updatedLinks });
+        console.log(`[Global EPG] Updated lastSyncResult for ${linkResultCounts.size} link(s) after manual sync of ${source.name}`);
+      } catch (err) {
+        console.warn(`[Global EPG] Failed to update lastSyncResult after manual sync:`, err);
+      }
+    }
+
+    debugLog(
+      `Global EPG links complete: ${totalInserted} programs inserted total`,
+      'epg'
+    );
+    return totalInserted;
+  } catch (err) {
+    const errMsg = err instanceof Error ? err.message : String(err);
+    console.error(`[EPG] Failed to load global EPG links: ${errMsg}`);
+    debugLog(`Failed to load global EPG links: ${errMsg}`, 'epg');
+    return 0;
+  }
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Sync all stale global EPG links.
+ * Intended as a post-batch-sync step: after all sources have synced their primary EPGs,
+ * this downloads each stale global EPG once and applies it to all linked sources.
+ * Skips links that were synced recently (within GLOBAL_EPG_FRESH_MS).
+ */
+let globalEpgPostSyncInFlight: Promise<number> | null = null;
+const globalEpgLinkSyncsInFlight = new Map<string, Promise<number>>();
+
+export async function syncAllStaleGlobalEpgLinks(
+  onProgress?: (msg: string) => void,
+  sourceIds?: string[]
+): Promise<number> {
+  if (globalEpgPostSyncInFlight) {
+    console.log('[Global EPG] Post-sync already in progress; joining existing run');
+    onProgress?.('Global EPG sync already in progress...');
+    return globalEpgPostSyncInFlight;
+  }
+
+  globalEpgPostSyncInFlight = syncAllStaleGlobalEpgLinksImpl(onProgress, sourceIds).finally(() => {
+    globalEpgPostSyncInFlight = null;
+  });
+
+  return globalEpgPostSyncInFlight;
+}
+
+async function syncAllStaleGlobalEpgLinksImpl(
+  onProgress?: (msg: string) => void,
+  sourceIds?: string[]
+): Promise<number> {
+  if (!window.storage) {
+    debugLog('Storage API not available, skipping stale global EPG sync', 'epg');
+    return 0;
+  }
+
+  try {
+    const settingsResult = await window.storage.getSettings();
+    const globalEpgLinks = settingsResult.data?.globalEpgLinks || [];
+    const sourceIdFilter = sourceIds && sourceIds.length > 0 ? new Set(sourceIds) : null;
+    // Sort by display_order so higher priority EPGs are synced first
+    const staleLinks = globalEpgLinks
+      .filter(link => !sourceIdFilter || link.sourceIds.some(sourceId => sourceIdFilter.has(sourceId)))
+      .filter(link => !isGlobalEpgFresh(link))
+      .sort((a, b) => (a.display_order ?? Number.MAX_SAFE_INTEGER) - (b.display_order ?? Number.MAX_SAFE_INTEGER));
+
+    if (staleLinks.length === 0) {
+      debugLog(
+        sourceIdFilter
+          ? 'No stale global EPG links are tied to the synced sources, skipping post-sync'
+          : 'All global EPG links are fresh, skipping post-sync',
+        'epg'
+      );
+      return 0;
+    }
+
+    console.log(`[Global EPG] Post-sync: ${staleLinks.length} stale global EPG link(s)`);
+    debugLog(`Post-syncing ${staleLinks.length} stale global EPG links (waterfall order)`, 'epg');
+
+    let totalInserted = 0;
+    for (let i = 0; i < staleLinks.length; i++) {
+      const link = staleLinks[i];
+      onProgress?.(`Syncing global EPG ${i + 1}/${staleLinks.length}: ${link.name}...`);
+      try {
+        const count = await syncGlobalEpgLinkStandalone(link, (msg) => {
+          onProgress?.(`[${link.name}] ${msg}`);
+        });
+        totalInserted += count;
+      } catch (err) {
+        const errMsg = err instanceof Error ? err.message : String(err);
+        console.error(`[Global EPG] Post-sync failed for ${link.name}: ${errMsg}`);
+      }
+    }
+
+    console.log(`[Global EPG] Post-sync complete: ${totalInserted} total programs inserted`);
+    return totalInserted;
+  } catch (err) {
+    const errMsg = err instanceof Error ? err.message : String(err);
+    console.error(`[Global EPG] Post-sync failed: ${errMsg}`);
+    return 0;
+  }
+}
+
+// ─── Standalone Global EPG Sync ──────────────────────────────────────────────
+/**
+ * Sync a global EPG link standalone using the Rust multi-source streaming parser.
+ * Downloads the EPG ONCE and applies it to all linked sources in a single Rust call.
+ * Each source only receives programmes for channels that don't already have EPG.
+ * @returns total programs inserted across all linked sources
+ */
+export async function syncGlobalEpgLinkStandalone(
+  epgLink: GlobalEpgLink,
+  onProgress?: (msg: string) => void
+): Promise<number> {
+  const inFlight = globalEpgLinkSyncsInFlight.get(epgLink.id);
+  if (inFlight) {
+    console.log(`[Global EPG] Sync already in progress for ${epgLink.name}; joining existing run`);
+    onProgress?.(`Global EPG ${epgLink.name} is already syncing...`);
+    return inFlight;
+  }
+
+  const syncPromise = syncGlobalEpgLinkStandaloneImpl(epgLink, onProgress).finally(() => {
+    globalEpgLinkSyncsInFlight.delete(epgLink.id);
+  });
+  globalEpgLinkSyncsInFlight.set(epgLink.id, syncPromise);
+
+  return syncPromise;
+}
+
+async function syncGlobalEpgLinkStandaloneImpl(
+  epgLink: GlobalEpgLink,
+  onProgress?: (msg: string) => void
+): Promise<number> {
+  if (!window.storage) {
+    debugLog('Storage API not available, skipping standalone global EPG sync', 'epg');
+    return 0;
+  }
+
+  const url = epgLink.url.trim();
+  if (!url) {
+    console.warn(`[Global EPG] Empty URL for link: ${epgLink.name}`);
+    return 0;
+  }
+
+  console.log(`[Global EPG] Starting standalone multi-source sync for: ${epgLink.name}`);
+  debugLog(`Standalone sync for global EPG: ${epgLink.name} (${url.substring(0, 80)}...)`, 'epg');
+  onProgress?.(`Preparing ${epgLink.sourceIds.length} source(s)...`);
+
+  // Fetch all sources from storage
+  const sourcesResult = await window.storage.getSources();
+  const allSources = sourcesResult.data || [];
+  const sourceMap = new Map(allSources.map(s => [s.id, s]));
+
+  // Load user-applied EPG channel ID overrides (shared across all sources)
+  const epgOverrideMap = await loadEpgChannelOverrideMap();
+
+  // Build per-source channel mappings (only channels that still need EPG)
+  const sourceConfigs: import('../services/epg-streaming').SourceEpgConfig[] = [];
+
+  for (const sourceId of epgLink.sourceIds) {
+    const source = sourceMap.get(sourceId);
+    if (!source) {
+      debugLog(`Source ${sourceId} not found in storage, skipping`, 'epg');
+      continue;
+    }
+
+    const sourceChannels = await db.channels.where('source_id').equals(sourceId).toArray();
+    if (sourceChannels.length === 0) {
+      debugLog(`Source ${sourceId} has no channels, skipping`, 'epg');
+      continue;
+    }
+
+    const channelsWithPrograms = await getStreamIdsWithPrograms(sourceId);
+    const channelsNeedingEpg = sourceChannels.filter(ch => !channelsWithPrograms.has(ch.stream_id));
+
+    if (channelsNeedingEpg.length === 0) {
+      console.log(`[Global EPG] Source ${sourceId}: all channels already have EPG`);
+      debugLog(`Source ${sourceId}: all ${sourceChannels.length} channels already have EPG`, 'epg');
+      continue;
+    }
+
+    const channelMappings = channelsNeedingEpg
+      .filter((ch) => epgOverrideMap.has(ch.stream_id) || ch.epg_channel_id || ch.name)
+      .map((ch) => ({
+        epg_channel_id: epgOverrideMap.get(ch.stream_id) || ch.epg_channel_id || ch.name || '',
+        stream_id: ch.stream_id,
+        channel_name: ch.name || '',
+      }));
+
+    if (channelMappings.length === 0) {
+      debugLog(`Source ${sourceId}: no channels have EPG IDs`, 'epg');
+      continue;
+    }
+
+    console.log(`[Global EPG] Source ${sourceId}: ${channelMappings.length} channel mappings prepared`);
+
+    sourceConfigs.push({
+      sourceId,
+      sourceName: source.name || sourceId,
+      channelMappings,
+      advancedEpgMatching: source.advanced_epg_matching ?? false,
+      timeshiftHours: source.epg_timeshift_hours ?? 0,
+      clearExisting: false,
+    });
+  }
+
+  if (sourceConfigs.length === 0) {
+    console.log(`[Global EPG] No sources need EPG from ${epgLink.name}`);
+    // Mark as synced so we don't retry every 10 min, but only for 30 min freshness window
+    await updateGlobalEpgLastSynced(epgLink.id, 0, {});
+    return 0;
+  }
+
+  onProgress?.(`Applying EPG to ${sourceConfigs.length} source(s) via Rust...`);
+
+  let totalInserted = 0;
+  const perSourceCounts: Record<string, number> = {};
+  let syncSucceeded = false;
+
+  try {
+    const results = await epgStreaming.streamParseEpgMulti(url, sourceConfigs);
+    syncSucceeded = true;
+
+    for (const result of results) {
+      totalInserted += result.inserted_programs;
+      perSourceCounts[result.source_id] = result.inserted_programs;
+      console.log(`[Global EPG] Source ${result.source_id}: ${result.inserted_programs} programs inserted`);
+
+      if (result.inserted_programs > 0) {
+        dbEvents.notify('programs', 'add');
+      }
+    }
+  } catch (err) {
+    const errMsg = err instanceof Error ? err.message : String(err);
+    console.error(`[Global EPG] Multi-source Rust parser failed: ${errMsg}`);
+    debugLog(`Multi-source Rust parser failed: ${errMsg}`, 'epg');
+    // DO NOT update lastSynced on failure — keep it stale for retry
+  }
+
+  // Only mark as synced if the Rust call succeeded (even if 0 programmes inserted)
+  if (syncSucceeded) {
+    await updateGlobalEpgLastSynced(epgLink.id, totalInserted, perSourceCounts);
+  }
+
+  console.log(`[Global EPG] Standalone sync complete for ${epgLink.name}: ${totalInserted} total programs inserted`);
+  debugLog(`Standalone sync complete: ${totalInserted} programs across ${sourceConfigs.length} sources`, 'epg');
+  return totalInserted;
+}
+
+/**
+ * Update lastSynced and lastSyncResult for a global EPG link.
+ */
+async function updateGlobalEpgLastSynced(
+  epgLinkId: string,
+  totalInserted: number,
+  perSourceCounts: Record<string, number>
+): Promise<void> {
+  if (!window.storage) return;
+  try {
+    const settingsResult = await window.storage.getSettings();
+    const existingLinks = settingsResult.data?.globalEpgLinks || [];
+    const updatedLinks = existingLinks.map((link: GlobalEpgLink) =>
+      link.id === epgLinkId
+        ? {
+            ...link,
+            lastSynced: Date.now(),
+            lastSyncResult: {
+              timestamp: Date.now(),
+              totalInserted,
+              perSource: perSourceCounts,
+            },
+          }
+        : link
+    );
+    await window.storage.updateSettings({ globalEpgLinks: updatedLinks });
+    console.log(`[Global EPG] Updated lastSynced for link ${epgLinkId}`);
+  } catch (err) {
+    console.warn(`[Global EPG] Failed to update lastSynced:`, err);
+  }
+}
+
+// How recently a global EPG must have been synced to be considered fresh (ms)
+const GLOBAL_EPG_FRESH_MS = 30 * 60 * 1000; // 30 minutes
+
+/**
+ * Check if a global EPG link was synced recently enough to skip re-downloading.
+ */
+function isGlobalEpgFresh(epgLink: GlobalEpgLink): boolean {
+  if (!epgLink.lastSynced) return false;
+  return Date.now() - epgLink.lastSynced < GLOBAL_EPG_FRESH_MS;
 }
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -1932,6 +1983,24 @@ export async function syncAllSources(
   }
 
   debugLog('syncAllSources complete', 'sync');
+  const syncedSourceIds = Array.from(results.entries())
+    .filter(([, result]) => result.success)
+    .map(([sourceId]) => sourceId);
+
+  // Post-sync: apply stale global EPG links to all linked sources
+  // (primary EPGs have already cleared + inserted; now fill gaps with shared EPGs)
+  if (syncedSourceIds.length > 0) {
+    try {
+      debugLog('Running post-sync global EPG...', 'sync');
+      onProgress?.('Updating global EPG links...');
+      const globalCount = await syncAllStaleGlobalEpgLinks(onProgress, syncedSourceIds);
+      if (globalCount > 0) {
+        debugLog(`Post-sync global EPG: ${globalCount} programs inserted`, 'sync');
+      }
+    } catch (err) {
+      console.error('[Sync] Post-sync global EPG failed:', err);
+    }
+  }
 
   // Final checkpoint after all sources synced
   // TRUNCATE mode ensures WAL file is actually truncated to 0 bytes

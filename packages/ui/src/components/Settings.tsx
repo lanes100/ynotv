@@ -17,6 +17,7 @@ import { CacheTab } from './settings/CacheTab';
 import { AboutTab } from './settings/AboutTab';
 import { LiveTVTab } from './settings/LiveTVTab';
 import { LiveViewTab } from './settings/LiveViewTab';
+import { PopoutTab } from './settings/PopoutTab';
 import { SubtitlesTab, type SubtitleSettings } from './settings/SubtitlesTab';
 import type { ShortcutsMap, ThemeId } from '../types/app';
 import './Settings.css';
@@ -142,6 +143,12 @@ export function Settings({
   const [channelInfoOverlayOpacity, setChannelInfoOverlayOpacity] = useState(channelInfoOverlayOpacityProp ?? 55);
   const [channelInfoOverlayHideDescription, setChannelInfoOverlayHideDescription] = useState(channelInfoOverlayHideDescriptionProp ?? false);
 
+  // Popout settings state
+  const [popoutStopMain, setPopoutStopMain] = useState(true);
+  const [popoutAlwaysOnTop, setPopoutAlwaysOnTop] = useState(false);
+  const [popoutMpvParamsEnabled, setPopoutMpvParamsEnabled] = useState(false);
+  const [popoutMpvParams, setPopoutMpvParams] = useState('');
+
   // Sync prop values to internal state so changes from App.tsx take effect immediately
   useEffect(() => { setChannelInfoOverlayEnabled(channelInfoOverlayEnabledProp ?? false); }, [channelInfoOverlayEnabledProp]);
   useEffect(() => { setChannelInfoOverlayFontSize(channelInfoOverlayFontSizeProp ?? 16); }, [channelInfoOverlayFontSizeProp]);
@@ -253,6 +260,10 @@ export function Settings({
         channelInfoOverlayBoxWidth?: number;
         channelInfoOverlayOpacity?: number;
         channelInfoOverlayHideDescription?: boolean;
+        popoutStopMain?: boolean;
+        popoutAlwaysOnTop?: boolean;
+        popoutMpvParamsEnabled?: boolean;
+        popoutMpvParams?: string;
         subtitleSettings?: SubtitleSettings;
       };
 
@@ -371,6 +382,12 @@ export function Settings({
       setChannelInfoOverlayBoxWidth(settings.channelInfoOverlayBoxWidth ?? 380);
       setChannelInfoOverlayOpacity(settings.channelInfoOverlayOpacity ?? 55);
       setChannelInfoOverlayHideDescription(settings.channelInfoOverlayHideDescription ?? false);
+
+      // Load Popout settings
+      setPopoutStopMain(settings.popoutStopMain ?? true);
+      setPopoutAlwaysOnTop(settings.popoutAlwaysOnTop ?? false);
+      setPopoutMpvParamsEnabled(settings.popoutMpvParamsEnabled ?? false);
+      setPopoutMpvParams(settings.popoutMpvParams ?? '');
 
       // Load subtitle settings
       if (settings.subtitleSettings) {
@@ -528,6 +545,44 @@ export function Settings({
     }
     if (window.storage) {
       await window.storage.updateSettings({ channelInfoOverlayHideDescription: hide });
+    }
+  };
+
+  const handlePopoutStopMainChange = async (stop: boolean) => {
+    setPopoutStopMain(stop);
+    if (window.storage) {
+      await window.storage.updateSettings({ popoutStopMain: stop });
+    }
+  };
+
+  const handlePopoutAlwaysOnTopChange = async (onTop: boolean) => {
+    setPopoutAlwaysOnTop(onTop);
+    if (window.storage) {
+      await window.storage.updateSettings({ popoutAlwaysOnTop: onTop });
+    }
+    // Apply immediately if a popout is currently open
+    try {
+      const { Bridge } = await import('../services/tauri-bridge');
+      const isRunning = await Bridge.popoutIsRunning();
+      if (isRunning) {
+        await Bridge.popoutSetAlwaysOnTop(onTop);
+      }
+    } catch {
+      // Ignore if bridge isn't ready or popout isn't running
+    }
+  };
+
+  const handlePopoutMpvParamsEnabledChange = async (enabled: boolean) => {
+    setPopoutMpvParamsEnabled(enabled);
+    if (window.storage) {
+      await window.storage.updateSettings({ popoutMpvParamsEnabled: enabled });
+    }
+  };
+
+  const handlePopoutMpvParamsChange = async (params: string) => {
+    setPopoutMpvParams(params);
+    if (window.storage) {
+      await window.storage.updateSettings({ popoutMpvParams: params });
     }
   };
 
@@ -810,6 +865,19 @@ export function Settings({
             onChannelInfoOverlayOpacityChange={handleChannelInfoOverlayOpacityChange}
             channelInfoOverlayHideDescription={channelInfoOverlayHideDescription}
             onChannelInfoOverlayHideDescriptionChange={handleChannelInfoOverlayHideDescriptionChange}
+          />
+        );
+      case 'popout':
+        return (
+          <PopoutTab
+            popoutStopMain={popoutStopMain}
+            onPopoutStopMainChange={handlePopoutStopMainChange}
+            popoutAlwaysOnTop={popoutAlwaysOnTop}
+            onPopoutAlwaysOnTopChange={handlePopoutAlwaysOnTopChange}
+            popoutMpvParamsEnabled={popoutMpvParamsEnabled}
+            onPopoutMpvParamsEnabledChange={handlePopoutMpvParamsEnabledChange}
+            popoutMpvParams={popoutMpvParams}
+            onPopoutMpvParamsChange={handlePopoutMpvParamsChange}
           />
         );
       case 'about':

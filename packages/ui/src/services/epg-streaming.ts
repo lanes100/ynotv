@@ -43,6 +43,15 @@ export interface EpgParseResult {
   bytes_processed: number;
 }
 
+export interface SourceEpgConfig {
+  sourceId: string;
+  sourceName: string;
+  channelMappings: ChannelMapping[];
+  advancedEpgMatching?: boolean;
+  timeshiftHours?: number;
+  clearExisting?: boolean;
+}
+
 // Progress callback type
 export type EpgProgressCallback = (progress: EpgParseProgress) => void;
 
@@ -171,6 +180,39 @@ export async function parseEpgFile(
 }
 
 /**
+ * Stream parse EPG for multiple sources with a single download.
+ * Rust downloads the EPG once, parses it, and inserts programmes for all sources.
+ * Each source only gets programmes for its own channels (waterfall/gap-fill).
+ */
+export async function streamParseEpgMulti(
+  epgUrl: string,
+  sourceConfigs: SourceEpgConfig[],
+): Promise<EpgParseResult[]> {
+  console.time(`stream-parse-epg-multi`);
+
+  const results = await invoke<EpgParseResult[]>('stream_parse_epg_multi', {
+    epgUrl,
+    sourceConfigs: sourceConfigs.map((c) => ({
+      sourceId: c.sourceId,
+      sourceName: c.sourceName,
+      channelMappings: c.channelMappings,
+      advancedEpgMatching: c.advancedEpgMatching ?? false,
+      timeshiftHours: c.timeshiftHours ?? 0,
+      clearExisting: c.clearExisting ?? false,
+    })),
+  });
+
+  console.timeEnd(`stream-parse-epg-multi`);
+
+  const totalInserted = results.reduce((sum, r) => sum + r.inserted_programs, 0);
+  console.log(
+    `[Streaming EPG Multi] Complete: ${totalInserted} total programs inserted across ${results.length} source(s)`
+  );
+
+  return results;
+}
+
+/**
  * Create channel mappings from channels array
  * Extracts epg_channel_id from channels and maps to stream_id
  * Includes channel_name as fallback for fuzzy matching
@@ -234,6 +276,7 @@ export function formatProgress(progress: EpgParseProgress): string {
 // Export all functions as a namespace
 export const epgStreaming = {
   streamParseEpg,
+  streamParseEpgMulti,
   parseEpgFile,
   createChannelMappings,
   formatProgress,

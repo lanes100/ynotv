@@ -186,6 +186,24 @@ pub struct EpgParseResult {
     pub bytes_processed: u64,
 }
 
+/// Configuration for one source in a multi-source EPG parse
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SourceEpgConfig {
+    pub source_id: String,
+    pub source_name: String,
+    pub channel_mappings: Vec<ChannelMapping>,
+    pub advanced_epg_matching: bool,
+    pub timeshift_hours: f64,
+    pub clear_existing: bool,
+}
+
+/// Per-source stats accumulated during multi-source parsing
+struct SourceParseStats {
+    matched_programs: usize,
+    unmatched_channels: std::collections::HashSet<String>,
+}
+
 /// Normalize a channel name for fuzzy matching
 /// Removes common prefixes, suffixes, and special characters
 fn normalize_channel_name(name: &str) -> String {
@@ -457,7 +475,254 @@ pub async fn stream_parse_epg<R: tauri::Runtime>(
     })
 }
 
-/// Parser result from streaming parse
+// =============================================================================
+// Multi-source streaming EPG parse (download once, apply to many sources)
+// =============================================================================
+
+/// Stream and parse EPG XML from URL for multiple sources with a single download.
+/// Each source gets programmes for its own channels. Waterfall-safe: clear_existing
+/// is respected per source (typically false for global EPG gap-filling).
+pub async fn stream_parse_epg_multi<R: tauri::Runtime>(
+    app_handle: tauri::AppHandle<R>,
+    db: &DvrDatabase,
+    epg_url: String,
+    source_configs: Vec<SourceEpgConfig>,
+) -> Result<Vec<EpgParseResult>> {
+    let start_time = std::time::Instant::now();
+    let source_count = source_configs.len();
+
+    if source_configs.is_empty() {
+        return Ok(Vec::new());
+    }
+
+    info!(
+        "Starting multi-source EPG parse for {} source(s) from {}",
+        source_count, epg_url
+    );
+
+    // Determine if any source needs advanced matching (build display mapping once if so)
+    let any_advanced = source_configs.iter().any(|c| c.advanced_epg_matching);
+
+    // Check if URL is gzipped
+    let is_gzipped = epg_url.ends_with(".gz");
+
+    // Create HTTP client
+    let client = reqwest::Client::builder()
+        .connect_timeout(std::time::Duration::from_secs(30))
+        .timeout(std::time::Duration::from_secs(300))
+        .pool_max_idle_per_host(10)
+        .danger_accept_invalid_certs(true)
+        .danger_accept_invalid_hostnames(true)
+        .build()
+        .context("Failed to create HTTP client")?;
+
+    // Download
+    let response = match client.get(&epg_url).send().await {
+        Ok(resp) => resp,
+        Err(e) => {
+            let err_msg = format!("Failed to download EPG from {}: {}", epg_url, e);
+            error!("[EPG] {}", err_msg);
+            return Err(anyhow::anyhow!(err_msg));
+        }
+    };
+
+    let response = match response.error_for_status() {
+        Ok(resp) => resp,
+        Err(e) => {
+            let err_msg = format!("HTTP error from EPG URL {}: {}", epg_url, e);
+            error!("[EPG] {}", err_msg);
+            return Err(anyhow::anyhow!(err_msg));
+        }
+    };
+
+    let total_bytes = response.content_length();
+    info!("EPG download started, total size: {:?} bytes", total_bytes);
+
+    let is_response_gzipped = response.headers()
+        .get("content-encoding")
+        .and_then(|v| v.to_str().ok())
+        .map(|v| v.to_lowercase().contains("gzip"))
+        .unwrap_or(false);
+    let should_decompress = is_gzipped || is_response_gzipped;
+
+    // Download chunks into memory
+    let mut chunks: Vec<bytes::Bytes> = Vec::new();
+    let mut total_bytes_downloaded: u64 = 0;
+    let mut stream = response.bytes_stream();
+
+    while let Some(chunk_result) = stream.next().await {
+        match chunk_result {
+            Ok(chunk) => {
+                total_bytes_downloaded += chunk.len() as u64;
+                chunks.push(chunk);
+            }
+            Err(e) => {
+                warn!("Download error: {}", e);
+                return Err(anyhow::anyhow!("Download interrupted: {}", e));
+            }
+        }
+    }
+
+    if let Some(expected) = total_bytes {
+        if total_bytes_downloaded < expected {
+            return Err(anyhow::anyhow!(
+                "Incomplete EPG download: expected {} bytes but got {}",
+                expected, total_bytes_downloaded
+            ));
+        }
+    }
+
+    info!("[EPG] EPG Download verified successful.");
+
+    // Combine chunks
+    let total_size = chunks.iter().map(|c| c.len()).sum::<usize>();
+    let mut compressed_data = Vec::with_capacity(total_size);
+    for chunk in chunks {
+        compressed_data.extend_from_slice(&chunk);
+    }
+
+    let has_gzip_magic = compressed_data.len() >= 2
+        && compressed_data[0] == 0x1f && compressed_data[1] == 0x8b;
+    let should_decompress = should_decompress || has_gzip_magic;
+
+    // Decompress
+    let xml_data: Vec<u8> = if should_decompress {
+        use flate2::read::GzDecoder;
+        use std::io::Read;
+        let mut decoder = GzDecoder::new(&compressed_data[..]);
+        let mut decompressed = Vec::new();
+        decoder.read_to_end(&mut decompressed)
+            .context("Failed to decompress gzipped EPG")?;
+        info!("[EPG] Decompressed {} bytes to {} bytes", compressed_data.len(), decompressed.len());
+        decompressed
+    } else {
+        compressed_data
+    };
+
+    // Extract EPG channel metadata once, insert for all sources
+    let epg_channels = extract_epg_channels(&xml_data);
+    for config in &source_configs {
+        if let Err(e) = insert_epg_channels(db, &config.source_id, &epg_channels) {
+            warn!("[EPG] Failed to insert epg_channels for source {}: {}", config.source_id, e);
+        }
+    }
+
+    // Delete old programs for sources that request it (after verified download)
+    for config in &source_configs {
+        if config.clear_existing {
+            let deleted = delete_programs_for_source(db, &config.source_id)?;
+            info!("[EPG] Deleted {} old programs for source {}", deleted, config.source_id);
+        }
+    }
+
+    // Build master channel lookup: epg_channel_id -> Vec<(source_id, stream_id)>
+    let mut master_lookup: HashMap<String, Vec<(String, String)>> = HashMap::new();
+
+    for config in &source_configs {
+        let mut source_lookup = build_channel_lookup(config.channel_mappings.clone());
+
+        // If advanced matching enabled for this source, merge display names
+        if config.advanced_epg_matching {
+            let display_mapping = build_display_name_mapping(&xml_data);
+            source_lookup = merge_with_display_names(source_lookup, &display_mapping);
+        }
+
+        for (epg_id, stream_ids) in source_lookup {
+            let entry = master_lookup.entry(epg_id).or_default();
+            for stream_id in stream_ids {
+                entry.push((config.source_id.clone(), stream_id));
+            }
+        }
+    }
+
+    info!("[EPG] Master lookup has {} entries for {} sources", master_lookup.len(), source_count);
+
+    // Create per-source batch channels and inserter tasks
+    let mut batch_senders: HashMap<String, mpsc::Sender<Vec<EpgProgram>>> = HashMap::new();
+    let mut inserter_handles: Vec<tokio::task::JoinHandle<InserterResult>> = Vec::new();
+
+    for config in &source_configs {
+        let (batch_tx, batch_rx) = mpsc::channel::<Vec<EpgProgram>>(CHANNEL_BUFFER);
+        let sid = config.source_id.clone();
+        let db_clone = db.clone();
+        let app_clone = app_handle.clone();
+
+        let handle = tokio::spawn(async move {
+            insert_batches_pipeline(&db_clone, batch_rx, &sid, app_clone, total_bytes, start_time).await
+        });
+
+        batch_senders.insert(config.source_id.clone(), batch_tx);
+        inserter_handles.push(handle);
+    }
+
+    // Parse once, route programmes to per-source batches
+    let parse_result = parse_and_stream_batches_multi(
+        &xml_data,
+        master_lookup,
+        batch_senders,
+        app_handle.clone(),
+        total_bytes,
+        total_bytes_downloaded,
+        start_time,
+    ).await?;
+
+    // Wait for all inserters to finish
+    let mut per_source_inserted: HashMap<String, usize> = HashMap::new();
+    for (i, handle) in inserter_handles.into_iter().enumerate() {
+        let sid = source_configs[i].source_id.clone();
+        match handle.await {
+            Ok(result) => {
+                per_source_inserted.insert(sid, result.inserted);
+            }
+            Err(e) => {
+                warn!("[EPG] Inserter task panicked for source {}: {}", sid, e);
+                per_source_inserted.insert(sid, 0);
+            }
+        }
+    }
+
+    let duration_ms = start_time.elapsed().as_millis() as u64;
+
+    // Build per-source results
+    let mut results = Vec::with_capacity(source_configs.len());
+    for config in &source_configs {
+        let sid = &config.source_id;
+        let stats = parse_result.source_stats.get(sid);
+        let inserted = per_source_inserted.get(sid).copied().unwrap_or(0);
+
+        let matched = stats.map(|s| s.matched_programs).unwrap_or(0);
+        let unmatched = stats.map(|s| s.unmatched_channels.len()).unwrap_or(0);
+
+        info!(
+            "[EPG] Multi-source result for {}: {} matched, {} inserted, {} unmatched channels",
+            sid, matched, inserted, unmatched
+        );
+
+        results.push(EpgParseResult {
+            source_id: sid.clone(),
+            total_programs: parse_result.total_programs,
+            matched_programs: matched,
+            inserted_programs: inserted,
+            unmatched_channels: unmatched,
+            duration_ms,
+            bytes_processed: parse_result.bytes_processed,
+        });
+    }
+
+    info!(
+        "Multi-source EPG parse complete: {} total programs, {} sources, {}ms",
+        parse_result.total_programs, source_count, duration_ms
+    );
+
+    Ok(results)
+}
+
+/// Aggregated parser result from multi-source streaming parse
+struct MultiSourceParserResult {
+    total_programs: usize,
+    bytes_processed: u64,
+    source_stats: HashMap<String, SourceParseStats>,
+}
 struct StreamingParserResult {
     total_programs: usize,
     matched_programs: usize,
@@ -1101,6 +1366,192 @@ async fn parse_and_stream_batches<R: tauri::Runtime>(
         matched_programs,
         unmatched_channels: unmatched_channels.len(),
         bytes_processed: bytes_downloaded,
+    })
+}
+
+/// Parse XMLTV and route matched programmes to per-source batch channels.
+/// A single download is shared across all sources — each source only gets
+/// programmes for channels in its own channel mapping (waterfill behaviour).
+async fn parse_and_stream_batches_multi<R: tauri::Runtime>(
+    xml_data: &[u8],
+    master_lookup: HashMap<String, Vec<(String, String)>>,
+    mut batch_senders: HashMap<String, mpsc::Sender<Vec<EpgProgram>>>,
+    app_handle: tauri::AppHandle<R>,
+    total_bytes: Option<u64>,
+    bytes_downloaded: u64,
+    start_time: std::time::Instant,
+) -> Result<MultiSourceParserResult> {
+    let mut reader = Reader::from_reader(xml_data);
+    reader.config_mut().trim_text(true);
+
+    let mut buf = Vec::with_capacity(4096);
+    let mut current_program: Option<EpgProgram> = None;
+    let mut current_element: Option<String> = None;
+    let mut current_text = String::new();
+
+    let mut total_programs = 0usize;
+    let mut global_matched = 0usize;
+    let mut last_progress_update = std::time::Instant::now();
+
+    // Per-source batch buffers and stats
+    let mut batch_buffers: HashMap<String, Vec<EpgProgram>> = HashMap::new();
+    let mut source_stats: HashMap<String, SourceParseStats> = HashMap::new();
+
+    for sid in batch_senders.keys() {
+        batch_buffers.insert(sid.clone(), Vec::with_capacity(BATCH_SIZE));
+        source_stats.insert(sid.clone(), SourceParseStats {
+            matched_programs: 0,
+            unmatched_channels: std::collections::HashSet::new(),
+        });
+    }
+
+    loop {
+        match reader.read_event_into(&mut buf) {
+            Ok(Event::Start(e)) => {
+                let name = std::str::from_utf8(e.name().as_ref()).unwrap_or("").to_string();
+                match name.as_str() {
+                    "programme" => {
+                        let mut program = EpgProgram::default();
+                        for attr in e.attributes() {
+                            if let Ok(attr) = attr {
+                                let key = std::str::from_utf8(attr.key.as_ref()).unwrap_or("");
+                                let value = attr.decode_and_unescape_value(reader.decoder()).unwrap_or_default();
+                                match key {
+                                    "channel" => program.channel_id = value.to_string(),
+                                    "start" => program.start = parse_xmltv_date(&value),
+                                    "stop" => program.stop = parse_xmltv_date(&value),
+                                    _ => {}
+                                }
+                            }
+                        }
+                        current_program = Some(program);
+                    }
+                    "title" | "desc" => {
+                        current_element = Some(name);
+                        current_text.clear();
+                    }
+                    _ => {}
+                }
+            }
+            Ok(Event::Text(e)) => {
+                if let Some(ref _element) = current_element {
+                    if let Ok(text) = e.unescape() {
+                        current_text.push_str(&text);
+                    }
+                }
+            }
+            Ok(Event::End(e)) => {
+                let name = std::str::from_utf8(e.name().as_ref()).unwrap_or("").to_string();
+                match name.as_str() {
+                    "programme" => {
+                        if let Some(program) = current_program.take() {
+                            total_programs += 1;
+
+                            let pairs = master_lookup.get(&program.channel_id)
+                                .or_else(|| master_lookup.get(&normalize_channel_name(&program.channel_id)));
+
+                            if let Some(pairs) = pairs {
+                                global_matched += 1;
+
+                                for (source_id, stream_id) in pairs {
+                                    let mut copy = program.clone();
+                                    copy.channel_id = stream_id.clone();
+                                    copy.start = normalize_to_utc(&copy.start);
+                                    copy.stop = normalize_to_utc(&copy.stop);
+
+                                    let buffer = batch_buffers.get_mut(source_id).unwrap();
+                                    buffer.push(copy);
+
+                                    if buffer.len() >= BATCH_SIZE {
+                                        let batch_to_send = std::mem::take(buffer);
+                                        buffer.reserve(BATCH_SIZE);
+                                        if let Some(sender) = batch_senders.get(source_id) {
+                                            if sender.send(batch_to_send).await.is_err() {
+                                                warn!("Batch channel closed for source {}, stopping parser", source_id);
+                                            }
+                                        }
+                                    }
+
+                                    // Update per-source stats
+                                    if let Some(stats) = source_stats.get_mut(source_id) {
+                                        stats.matched_programs += 1;
+                                    }
+                                }
+                            } else {
+                                // Track unmatched per source... but we don't know which source
+                                // expected this channel. Skip for now.
+                            }
+
+                            // Progress update
+                            if total_programs % (BATCH_SIZE * PROGRESS_INTERVAL) == 0 {
+                                if last_progress_update.elapsed().as_millis() > 100 {
+                                    emit_progress(
+                                        &app_handle,
+                                        "multi",
+                                        EpgParseProgress {
+                                            source_id: "multi".to_string(),
+                                            phase: "parsing".to_string(),
+                                            bytes_downloaded,
+                                            total_bytes,
+                                            programs_parsed: total_programs,
+                                            programs_matched: global_matched,
+                                            programs_inserted: 0,
+                                            estimated_remaining_seconds: estimate_remaining(
+                                                bytes_downloaded, total_bytes,
+                                                start_time.elapsed().as_secs(),
+                                            ),
+                                        },
+                                    ).await;
+                                    last_progress_update = std::time::Instant::now();
+                                }
+                            }
+                        }
+                    }
+                    "title" => {
+                        if let Some(ref mut program) = current_program {
+                            program.title = current_text.clone();
+                        }
+                        current_element = None;
+                    }
+                    "desc" => {
+                        if let Some(ref mut program) = current_program {
+                            program.description = Some(current_text.clone());
+                        }
+                        current_element = None;
+                    }
+                    _ => {}
+                }
+            }
+            Ok(Event::Eof) => break,
+            Err(e) => {
+                warn!("XML parse error: {}", e);
+                break;
+            }
+            _ => {}
+        }
+        buf.clear();
+    }
+
+    // Send remaining batches for all sources and drop senders to signal completion
+    for (source_id, buffer) in batch_buffers {
+        if !buffer.is_empty() {
+            if let Some(sender) = batch_senders.remove(&source_id) {
+                let _ = sender.send(buffer).await;
+            }
+        } else if let Some(sender) = batch_senders.remove(&source_id) {
+            drop(sender);
+        }
+    }
+
+    info!(
+        "[EPG] Multi-source parser finished: {} programs, {} total matched",
+        total_programs, global_matched
+    );
+
+    Ok(MultiSourceParserResult {
+        total_programs,
+        bytes_processed: bytes_downloaded,
+        source_stats,
     })
 }
 

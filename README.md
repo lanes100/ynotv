@@ -47,6 +47,7 @@ A feature-rich, open source IPTV player for Windows built on [Tauri v2](https://
 - **Sports Tab** — real-time scores and detailed game stats with instant search to find channel
 - **VOD Support** — rich metadata via TMDB and RPDB with saved progress
 - **Subtitle Integration** — Subsource support for VODs
+- **Popout Player** — play streams in a seperate MPV window
 - **Backup DNS/URLs** — automatically swaps when the current source fails
 - **Favorites & Custom Groups** — pull from any source
 - **Channel Management** — rename, hide, and sort categories and channels freely

@@ -48,7 +48,7 @@ import { db } from './db';
 import { VideoErrorOverlay } from './components/VideoErrorOverlay';
 import { StreamRetryOverlay } from './components/StreamRetryOverlay';
 import { FailoverOverlay } from './components/FailoverOverlay';
-import { syncSource, syncVodForSource, isEpgStale, isVodStale } from './db/sync';
+import { syncSource, syncVodForSource, isEpgStale, isVodStale, syncAllStaleGlobalEpgLinks } from './db/sync';
 import { bulkOps } from './services/bulk-ops';
 import { Bridge } from './services/tauri-bridge';
 import { getCurrentWindow, LogicalSize } from '@tauri-apps/api/window';
@@ -74,6 +74,7 @@ import { usePlayback } from './hooks/usePlayback';
 import { useNavigation } from './hooks/useNavigation';
 import { useWatchlist } from './hooks/useWatchlist';
 import { useWindowManager } from './hooks/useWindowManager';
+import { usePopoutPlayer } from './hooks/usePopoutPlayer';
 
 // ============================================================================
 // App Component
@@ -120,6 +121,8 @@ function App() {
     setChannelInfoOverlayOpacity,
     channelInfoOverlayHideDescription,
     setChannelInfoOverlayHideDescription,
+    popoutStopMain,
+    popoutAlwaysOnTop,
   } = useAppSettings();
 
   // ==========================================================================
@@ -274,6 +277,29 @@ function App() {
       lastPlayedChannelRef.current = currentChannel;
     }
   }, [currentChannel]);
+
+  // ==========================================================================
+  // Popout Player
+  // ==========================================================================
+  const popout = usePopoutPlayer();
+  const {
+    isOpen: popoutIsOpen,
+    swapChannel: popoutSwapChannel,
+    swapVod: popoutSwapVod,
+    closePopout,
+    togglePause: popoutTogglePause,
+    stopPlayback: popoutStopPlayback,
+    toggleFullscreen: popoutToggleFullscreen,
+    setPopoutVolume,
+    setPopoutMuted,
+    seekPopout,
+  } = popout;
+
+  // Popout mode state (all clicks go to popout)
+  const [popoutMode, setPopoutMode] = useState(false);
+  const togglePopoutMode = useCallback(() => {
+    setPopoutMode(prev => !prev);
+  }, []);
 
   // ==========================================================================
   // Navigation State (from useNavigation)
@@ -517,15 +543,34 @@ function App() {
   }, [activeView, enterTabMode, exitTabMode]);
 
   // ==========================================================================
+  // Popout-aware channel/VOD play wrappers
+  // ==========================================================================
+  const handlePlayChannelWrapper = useCallback((channel: StoredChannel, autoSwitched?: boolean) => {
+    if (popoutMode) {
+      popoutSwapChannel(channel);
+    } else {
+      handlePlayChannel(channel, autoSwitched);
+    }
+  }, [popoutMode, handlePlayChannel, popoutSwapChannel]);
+
+  const handlePlayVodWrapper = useCallback((info: import('./types/media').VodPlayInfo, onCloseView?: () => void) => {
+    if (popoutMode) {
+      popoutSwapVod(info);
+    } else {
+      handlePlayVod(info, onCloseView);
+    }
+  }, [popoutMode, handlePlayVod, popoutSwapVod]);
+
+  // ==========================================================================
   // Handle Watchlist Switch (needs access to handlePlayChannel)
   // ==========================================================================
   const handleWatchlistSwitchWrapper = useCallback(async (notification: import('./components/WatchlistNotification').WatchlistNotificationItem) => {
     const channel = await db.channels.get(notification.channelId);
     if (channel) {
       addToRecentChannels(channel);
-      handlePlayChannel(channel);
+      handlePlayChannelWrapper(channel);
     }
-  }, [handlePlayChannel]);
+  }, [handlePlayChannelWrapper]);
 
   // ==========================================================================
   // Handle Channel Navigation (Up/Down) - with Series Episode Support
@@ -786,6 +831,7 @@ function App() {
         if (!sourcesResult.data || sourcesResult.data.length === 0) return;
 
         let didSync = false;
+        const syncedSourceIds: string[] = [];
 
         // ── Channel / EPG sync ──────────────────────────────────────────────
         if (epgRefreshHours > 0) {
@@ -812,9 +858,16 @@ function App() {
               await Promise.all(
                 batch.map(async (source: any, idx: number) => {
                   const prefix = `[${i + idx + 1}/${total}] ${source.name}`;
-                  await syncSource(source, (msg) => setSyncStatusMessage(`${prefix}: ${msg}`));
+                  const result = await syncSource(source, (msg) => setSyncStatusMessage(`${prefix}: ${msg}`));
+                  if (result.success) {
+                    syncedSourceIds.push(source.id);
+                  }
                 })
               );
+            }
+            if (syncedSourceIds.length > 0) {
+              setSyncStatusMessage('Updating global EPG links...');
+              await syncAllStaleGlobalEpgLinks((msg) => setSyncStatusMessage(msg), syncedSourceIds);
             }
             setSyncStatusMessage(null);
           }
@@ -1240,7 +1293,7 @@ function App() {
         onToggleFullscreen={handleToggleFullscreen}
         onShowSubtitleModal={handleShowSubtitleModal}
         onShowAudioModal={handleShowAudioModal}
-        onGoToLive={() => currentChannel && handlePlayChannel(currentChannel)}
+        onGoToLive={() => currentChannel && handlePlayChannelWrapper(currentChannel)}
         onCatchupSeek={handleCatchupSeek}
         timeshiftEnabled={timeshiftEnabled}
         timeshiftState={timeshiftState}
@@ -1255,7 +1308,7 @@ function App() {
           <FailoverGroupOverlay
             currentChannel={currentChannel}
             visible={isFailoverGroupOverlayVisible}
-            onChannelClick={handlePlayChannel}
+            onChannelClick={handlePlayChannelWrapper}
           />
         }
       />
@@ -1367,7 +1420,11 @@ function App() {
         categoryId={isSearchMode || isWatchlistMode ? null : categoryId}
         visible={activeView === 'guide'}
         categoryStripOpen={categoriesOpen}
-        onPlayChannel={handlePlayChannel}
+        onPlayChannel={handlePlayChannelWrapper}
+        popoutMode={popoutMode}
+        onTogglePopoutMode={togglePopoutMode}
+        onPlayInPopout={popoutSwapChannel}
+        popoutIsOpen={popoutIsOpen}
         onPlayCatchup={handlePlayCatchup}
         onClose={() => {
           setActiveView('none');
@@ -1455,7 +1512,7 @@ function App() {
       {/* Movies Page */}
       {activeView === 'movies' && (
         <MoviesPage
-          onPlay={(info) => handlePlayVod(info, () => setActiveView('none'))}
+          onPlay={(info) => handlePlayVodWrapper(info, () => setActiveView('none'))}
           onClose={() => setActiveView('none')}
         />
       )}
@@ -1463,7 +1520,7 @@ function App() {
       {/* Series Page */}
       {activeView === 'series' && (
         <SeriesPage
-          onPlay={(info) => handlePlayVod(info, () => setActiveView('none'))}
+          onPlay={(info) => handlePlayVodWrapper(info, () => setActiveView('none'))}
           onClose={() => setActiveView('none')}
         />
       )}
@@ -1492,7 +1549,7 @@ function App() {
           }}
           previewEnabled={sportsPreviewEnabled}
           onTogglePreview={() => setSportsPreviewEnabled(v => !v)}
-          onPlayChannel={handlePlayChannel}
+          onPlayChannel={handlePlayChannelWrapper}
           onTogglePlay={handleTogglePlay}
           isPlaying={playing}
           onStop={handleStop}
@@ -1514,7 +1571,7 @@ function App() {
               }
             }
             if (channel) {
-              handlePlayChannel(channel);
+              handlePlayChannelWrapper(channel);
             }
           }}
         />
@@ -1526,6 +1583,156 @@ function App() {
         onSwitch={handleWatchlistSwitchWrapper}
         onDismiss={handleWatchlistDismiss}
       />
+
+      {/* Popout Player Control Bar */}
+      {popoutIsOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            bottom: '20px',
+            right: '20px',
+            zIndex: 9999,
+            background: 'rgba(0,0,0,0.9)',
+            backdropFilter: 'blur(12px)',
+            borderRadius: '14px',
+            padding: '10px 14px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '8px',
+            border: '1px solid rgba(255,255,255,0.12)',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
+            fontSize: '13px',
+            color: '#fff',
+            cursor: 'default',
+            userSelect: 'none',
+            minWidth: '240px',
+          }}
+        >
+          {/* Title row */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 500 }}>
+            <span style={{ color: 'var(--accent, #00d4ff)', fontSize: '15px' }}>🖥️</span>
+            <span style={{ opacity: 0.95, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '180px' }}>
+              {popout.content?.type === 'channel'
+                ? popout.content.channel.name
+                : popout.content?.type === 'vod'
+                  ? popout.content.info.title
+                  : 'Popout Active'}
+            </span>
+          </div>
+
+          {/* Controls row */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', justifyContent: 'center' }}>
+            <button
+              onClick={() => popoutTogglePause()}
+              title="Play / Pause"
+              style={{
+                background: 'rgba(255,255,255,0.1)',
+                border: 'none',
+                borderRadius: '8px',
+                color: '#fff',
+                width: '32px',
+                height: '32px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                fontSize: '14px',
+              }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/></svg>
+            </button>
+            <button
+              onClick={() => popoutStopPlayback()}
+              title="Stop"
+              style={{
+                background: 'rgba(255,255,255,0.1)',
+                border: 'none',
+                borderRadius: '8px',
+                color: '#fff',
+                width: '32px',
+                height: '32px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                fontSize: '14px',
+              }}
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>
+            </button>
+            <button
+              onClick={() => popoutToggleFullscreen()}
+              title="Fullscreen"
+              style={{
+                background: 'rgba(255,255,255,0.1)',
+                border: 'none',
+                borderRadius: '8px',
+                color: '#fff',
+                width: '32px',
+                height: '32px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                fontSize: '14px',
+              }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+            </button>
+            <div style={{ width: '1px', height: '20px', background: 'rgba(255,255,255,0.15)', margin: '0 4px' }} />
+            <button
+              onClick={() => closePopout()}
+              title="Close popout"
+              style={{
+                background: 'rgba(255,80,80,0.2)',
+                border: 'none',
+                borderRadius: '8px',
+                color: '#ff8080',
+                width: '32px',
+                height: '32px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                fontSize: '14px',
+              }}
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
+            </button>
+          </div>
+
+          {/* Volume row */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <button
+              onClick={() => setPopoutMuted(true)}
+              title="Mute"
+              style={{
+                background: 'none',
+                border: 'none',
+                color: 'rgba(255,255,255,0.6)',
+                cursor: 'pointer',
+                padding: '2px',
+                display: 'flex',
+                alignItems: 'center',
+              }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+            </button>
+            <input
+              type="range"
+              min="0"
+              max="100"
+              defaultValue="100"
+              onChange={(e) => setPopoutVolume(parseInt(e.target.value, 10))}
+              style={{
+                flex: 1,
+                accentColor: 'var(--accent, #00d4ff)',
+                height: '4px',
+              }}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Update Modal */}
       <UpdateModal

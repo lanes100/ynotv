@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { db, type StoredChannel } from '../../db';
+import { db, type StoredChannel, updateChannelsBatch } from '../../db';
 import './FavoriteManager.css';
 
 interface FavoriteManagerProps {
@@ -101,11 +101,10 @@ export function FavoriteManager({ onClose, onChange }: FavoriteManagerProps) {
     const handleSave = useCallback(async () => {
         setSaving(true);
         try {
-            await db.transaction('rw', [db.channels], async () => {
-                for (let i = 0; i < favorites.length; i++) {
-                    await db.channels.update(favorites[i].stream_id, { fav_order: i });
-                }
-            });
+            const updates = favorites.map((ch, i) => ({ streamId: ch.stream_id, favOrder: i }));
+            if (updates.length > 0) {
+                await updateChannelsBatch(updates);
+            }
             if (onChange) onChange();
             onClose();
         } catch (e) {

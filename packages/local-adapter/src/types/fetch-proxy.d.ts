@@ -1,4 +1,4 @@
-// Type declarations for Electron APIs used by local-adapter
+// Type declarations for the fetchProxy window API used by local-adapter
 
 export interface FetchProxyResponse {
   ok: boolean;

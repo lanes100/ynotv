@@ -38,6 +38,12 @@ export interface AppSettings {
   channelInfoOverlayOpacity: number;
   channelInfoOverlayHideDescription: boolean;
 
+  // Popout
+  popoutStopMain: boolean;
+  popoutAlwaysOnTop: boolean;
+  popoutMpvParamsEnabled: boolean;
+  popoutMpvParams: string;
+
   // Theme
   theme: ThemeId;
 
@@ -62,6 +68,10 @@ export interface AppSettings {
     setChannelInfoOverlayBoxWidth: (width: number) => void;
     setChannelInfoOverlayOpacity: (opacity: number) => void;
     setChannelInfoOverlayHideDescription: (hide: boolean) => void;
+    setPopoutStopMain: (stop: boolean) => void;
+    setPopoutAlwaysOnTop: (onTop: boolean) => void;
+    setPopoutMpvParamsEnabled: (enabled: boolean) => void;
+    setPopoutMpvParams: (params: string) => void;
 }
 
 /**
@@ -102,6 +112,12 @@ export function useAppSettings(): AppSettings {
   const [channelInfoOverlayBoxWidth, setChannelInfoOverlayBoxWidthState] = useState(380);
   const [channelInfoOverlayOpacity, setChannelInfoOverlayOpacityState] = useState(55);
   const [channelInfoOverlayHideDescription, setChannelInfoOverlayHideDescriptionState] = useState(false);
+
+  // Popout settings
+  const [popoutStopMain, setPopoutStopMainState] = useState(true);
+  const [popoutAlwaysOnTop, setPopoutAlwaysOnTopState] = useState(false);
+  const [popoutMpvParamsEnabled, setPopoutMpvParamsEnabledState] = useState(false);
+  const [popoutMpvParams, setPopoutMpvParamsState] = useState('');
 
   // Theme state
   const [theme, setThemeState] = useState<ThemeId>('glass-neon');
@@ -166,6 +182,10 @@ export function useAppSettings(): AppSettings {
           setChannelInfoOverlayOpacityState(result.data.channelInfoOverlayOpacity ?? 55);
           setChannelInfoOverlayHideDescriptionState(result.data.channelInfoOverlayHideDescription ?? false);
           setCategoriesHiddenState(result.data.categoriesHidden ?? false);
+          setPopoutStopMainState(result.data.popoutStopMain ?? true);
+          setPopoutAlwaysOnTopState(result.data.popoutAlwaysOnTop ?? false);
+          setPopoutMpvParamsEnabledState(result.data.popoutMpvParamsEnabled ?? false);
+          setPopoutMpvParamsState(result.data.popoutMpvParams ?? '');
 
           // Apply EPG darken current setting on load
           if (result.data.epgDarkenCurrent) {
@@ -315,6 +335,50 @@ export function useAppSettings(): AppSettings {
     }
   }, []);
 
+  const setPopoutStopMain = useCallback(async (stop: boolean) => {
+    setPopoutStopMainState(stop);
+    if (window.storage) {
+      try {
+        await window.storage.updateSettings({ popoutStopMain: stop });
+      } catch (e) {
+        console.error('[useAppSettings] Failed to save popoutStopMain:', e);
+      }
+    }
+  }, []);
+
+  const setPopoutAlwaysOnTop = useCallback(async (onTop: boolean) => {
+    setPopoutAlwaysOnTopState(onTop);
+    if (window.storage) {
+      try {
+        await window.storage.updateSettings({ popoutAlwaysOnTop: onTop });
+      } catch (e) {
+        console.error('[useAppSettings] Failed to save popoutAlwaysOnTop:', e);
+      }
+    }
+  }, []);
+
+  const setPopoutMpvParamsEnabled = useCallback(async (enabled: boolean) => {
+    setPopoutMpvParamsEnabledState(enabled);
+    if (window.storage) {
+      try {
+        await window.storage.updateSettings({ popoutMpvParamsEnabled: enabled });
+      } catch (e) {
+        console.error('[useAppSettings] Failed to save popoutMpvParamsEnabled:', e);
+      }
+    }
+  }, []);
+
+  const setPopoutMpvParams = useCallback(async (params: string) => {
+    setPopoutMpvParamsState(params);
+    if (window.storage) {
+      try {
+        await window.storage.updateSettings({ popoutMpvParams: params });
+      } catch (e) {
+        console.error('[useAppSettings] Failed to save popoutMpvParams:', e);
+      }
+    }
+  }, []);
+
   return {
     rememberLastChannels,
     reopenLastOnStartup,
@@ -338,6 +402,10 @@ export function useAppSettings(): AppSettings {
     channelInfoOverlayBoxWidth,
     channelInfoOverlayOpacity,
     channelInfoOverlayHideDescription,
+    popoutStopMain,
+    popoutAlwaysOnTop,
+    popoutMpvParamsEnabled,
+    popoutMpvParams,
     theme,
     shortcuts,
     categoriesHidden,
@@ -355,5 +423,9 @@ export function useAppSettings(): AppSettings {
     setChannelInfoOverlayOpacity,
     setChannelInfoOverlayHideDescription,
     setCategorySortOrder: setCategorySortOrderSetting,
+    setPopoutStopMain,
+    setPopoutAlwaysOnTop,
+    setPopoutMpvParamsEnabled,
+    setPopoutMpvParams,
   };
 }

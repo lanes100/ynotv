@@ -304,6 +304,51 @@ export const Bridge = {
         return invoke('mpv_get_property', { name });
     },
 
+    // Popout MPV Controls
+    async popoutOpen(url: string, alwaysOnTop: boolean = false, customParams: string = '') {
+        return invoke('popout_open', { url, alwaysOnTop, customParams });
+    },
+
+    async popoutLoad(url: string) {
+        return invoke('popout_load', { url });
+    },
+
+    async popoutStop() {
+        return invoke('popout_stop');
+    },
+
+    async popoutClose() {
+        return invoke('popout_close');
+    },
+
+    async popoutSetProperty(property: string, value: any) {
+        return invoke('popout_set_property', { property, value });
+    },
+
+    async popoutSetAlwaysOnTop(onTop: boolean) {
+        return invoke('popout_set_always_on_top', { onTop });
+    },
+
+    popoutIsRunning(): Promise<boolean> {
+        return invoke('popout_is_running');
+    },
+
+    async popoutTogglePause() {
+        return invoke('popout_toggle_pause');
+    },
+
+    async popoutToggleFullscreen() {
+        return invoke('popout_toggle_fullscreen');
+    },
+
+    async popoutSeek(seconds: number) {
+        return invoke('popout_seek', { seconds });
+    },
+
+    async popoutGetParamsDebug(): Promise<Record<string, unknown>> {
+        return invoke('popout_get_params_debug');
+    },
+
     // Window Controls
     async minimize() {
         console.log('[Bridge] minimize called');
@@ -557,7 +602,15 @@ export async function initPolyfills() {
         getPosition: () => 0,
         getVolume: () => 100,
         getMuted: () => false,
-        getPaused: () => false
+        getPaused: () => false,
+        // Popout player methods
+        popoutOpen: Bridge.popoutOpen,
+        popoutLoad: Bridge.popoutLoad,
+        popoutStop: Bridge.popoutStop,
+        popoutClose: Bridge.popoutClose,
+        popoutSetProperty: Bridge.popoutSetProperty,
+        popoutSetAlwaysOnTop: Bridge.popoutSetAlwaysOnTop,
+        popoutIsRunning: Bridge.popoutIsRunning,
     };
 }
 

@@ -1,6 +1,6 @@
 [package]
 name = "ynotv"
-version = "1.6.9"
+version = "1.7.0"
 description = "A Tauri App"
 authors = ["tbeezy"]
 edition = "2021"
@@ -72,4 +72,5 @@ windows = { version = "0.58", features = [
     "Win32_Foundation",
     "Win32_UI_WindowsAndMessaging",
     "Win32_System_Threading",
+    "Win32_Graphics_Gdi",
 ] }

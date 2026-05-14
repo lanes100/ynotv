@@ -14,6 +14,7 @@ mod mpv_macos;
 mod mpv_windows;
 #[cfg(target_os = "windows")]
 mod mpv_secondary;
+mod mpv_popout;
 
 // Re-export the MPV state and functions based on platform
 #[cfg(target_os = "macos")]
@@ -22,6 +23,7 @@ use mpv_macos::MpvState;
 use mpv_windows::MpvState;
 #[cfg(target_os = "windows")]
 use mpv_secondary::SecondaryMpvState;
+use mpv_popout::PopoutMpvState;
 
 // DVR Module (Rust native implementation)
 mod dvr;
@@ -192,7 +194,7 @@ const BLOCKED_MPV_KEYS: &[&str] = &[
     "sub-file", "audio-file", "external-file",
 ];
 
-fn sanitize_mpv_args(args: Vec<String>, allow_all: bool) -> Vec<String> {
+pub fn sanitize_mpv_args(args: Vec<String>, allow_all: bool) -> Vec<String> {
     // If user disabled the whitelist, accept all well-formed arguments
     if allow_all {
         let mut valid_args = Vec::new();
@@ -895,6 +897,160 @@ async fn multiview_kill_all<R: Runtime>(
 }
 
 // ============================================================================
+// Popout MPV Commands
+// ============================================================================
+
+#[tauri::command]
+async fn popout_open<R: Runtime>(
+    app: AppHandle<R>,
+    url: String,
+    always_on_top: bool,
+    custom_params: String,
+) -> Result<(), String> {
+    // Parse custom params string into lines
+    let raw_params: Vec<String> = custom_params
+        .lines()
+        .map(|line| line.trim())
+        .filter(|line| !line.is_empty() && !line.starts_with('#'))
+        .map(|s| s.to_string())
+        .collect();
+
+    // Check whitelist disable setting (reuse main MPV setting)
+    let disable_whitelist = read_store_setting(&app, "mpvDisableWhitelist")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false);
+
+    let safe_params = sanitize_mpv_args(raw_params, disable_whitelist);
+    mpv_popout::spawn_and_load(&app, url, always_on_top, safe_params).await
+}
+
+#[tauri::command]
+async fn popout_load<R: Runtime>(
+    app: AppHandle<R>,
+    url: String,
+) -> Result<(), String> {
+    mpv_popout::load_url(&app, url).await
+}
+
+#[tauri::command]
+async fn popout_stop<R: Runtime>(app: AppHandle<R>) -> Result<(), String> {
+    mpv_popout::stop(&app).await
+}
+
+#[tauri::command]
+async fn popout_close<R: Runtime>(app: AppHandle<R>) -> Result<(), String> {
+    mpv_popout::kill_popout(&app).await;
+    Ok(())
+}
+
+#[tauri::command]
+async fn popout_set_property<R: Runtime>(
+    app: AppHandle<R>,
+    property: String,
+    value: serde_json::Value,
+) -> Result<(), String> {
+    mpv_popout::set_property(&app, &property, value).await
+}
+
+#[tauri::command]
+async fn popout_set_always_on_top<R: Runtime>(
+    app: AppHandle<R>,
+    on_top: bool,
+) -> Result<(), String> {
+    mpv_popout::set_always_on_top_cmd(&app, on_top).await
+}
+
+#[tauri::command]
+fn popout_is_running<R: Runtime>(app: AppHandle<R>) -> bool {
+    mpv_popout::is_running(&app)
+}
+
+#[tauri::command]
+async fn popout_toggle_pause<R: Runtime>(app: AppHandle<R>) -> Result<(), String> {
+    let tx = {
+        let state = app.state::<PopoutMpvState>();
+        let inst = state.instance.lock().unwrap();
+        inst.as_ref().and_then(|i| i.ipc_tx.clone())
+    };
+    if let Some(tx) = tx {
+        mpv_popout::send_ipc(&tx, "cycle", vec![serde_json::json!("pause")]).await;
+    }
+    Ok(())
+}
+
+#[tauri::command]
+async fn popout_toggle_fullscreen<R: Runtime>(app: AppHandle<R>) -> Result<(), String> {
+    let tx = {
+        let state = app.state::<PopoutMpvState>();
+        let inst = state.instance.lock().unwrap();
+        inst.as_ref().and_then(|i| i.ipc_tx.clone())
+    };
+    if let Some(tx) = tx {
+        mpv_popout::send_ipc(&tx, "cycle", vec![serde_json::json!("fullscreen")]).await;
+    }
+    Ok(())
+}
+
+/// Debug command to preview popout MPV parameters (raw vs sanitized)
+#[tauri::command]
+async fn popout_get_params_debug<R: Runtime>(app: AppHandle<R>) -> Result<serde_json::Value, String> {
+    use serde_json::json;
+
+    let settings = read_store_setting(&app, "settings").and_then(|v| v.as_object().cloned());
+
+    let enabled = settings.as_ref()
+        .and_then(|s| s.get("popoutMpvParamsEnabled"))
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false);
+
+    let raw_str = settings.as_ref()
+        .and_then(|s| s.get("popoutMpvParams"))
+        .and_then(|v| v.as_str())
+        .unwrap_or("");
+
+    let raw_params: Vec<String> = raw_str
+        .lines()
+        .map(|line| line.trim())
+        .filter(|line| !line.is_empty() && !line.starts_with('#'))
+        .map(|s| s.to_string())
+        .collect();
+
+    let disable_whitelist = read_store_setting(&app, "mpvDisableWhitelist")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false);
+
+    let safe_params = if enabled {
+        sanitize_mpv_args(raw_params.clone(), disable_whitelist)
+    } else {
+        vec![]
+    };
+
+    let result = json!({
+        "enabled": enabled,
+        "raw_loaded": raw_params,
+        "sanitized": safe_params,
+        "dropped_count": if enabled { raw_params.len().saturating_sub(safe_params.len()) } else { 0 },
+        "whitelist_disabled": disable_whitelist,
+    });
+
+    debug!("[Popout Debug] Params debug: {:?}", result);
+    Ok(result)
+}
+
+#[tauri::command]
+async fn popout_seek<R: Runtime>(app: AppHandle<R>, seconds: f64) -> Result<(), String> {
+    let tx = {
+        let state = app.state::<PopoutMpvState>();
+        let inst = state.instance.lock().unwrap();
+        inst.as_ref().and_then(|i| i.ipc_tx.clone())
+    };
+    if let Some(tx) = tx {
+        mpv_popout::send_ipc(&tx, "seek", vec![serde_json::json!(seconds), serde_json::json!("absolute")]).await;
+    }
+    Ok(())
+}
+
+// ============================================================================
 // DVR Commands (Rust Native Implementation)
 // ============================================================================
 
@@ -1414,6 +1570,19 @@ async fn parse_epg_file(
     epg_streaming::parse_epg_file(app, &state.db, source_id, file_path, channel_mappings, advanced_epg_matching, timeshift_hours.unwrap_or(0.0), clear_existing)
         .await
         .map_err(|e| format!("Parse EPG file failed: {}", e))
+}
+
+/// Stream parse EPG for multiple sources with a single download
+#[tauri::command]
+async fn stream_parse_epg_multi(
+    app: AppHandle,
+    state: tauri::State<'_, DvrState>,
+    epg_url: String,
+    source_configs: Vec<epg_streaming::SourceEpgConfig>,
+) -> Result<Vec<epg_streaming::EpgParseResult>, String> {
+    epg_streaming::stream_parse_epg_multi(app, &state.db, epg_url, source_configs)
+        .await
+        .map_err(|e| format!("Stream parse EPG multi failed: {}", e))
 }
 
 // =============================================================================
@@ -2228,6 +2397,9 @@ pub fn run() {
                 }
             }
 
+            // Register PopoutMpvState for standalone popout player
+            app.manage(PopoutMpvState::new());
+
             // Register TmdbCacheState as managed state so the cache is shared
             // across all TMDB commands instead of being re-created each call.
             match app.path().app_cache_dir() {
@@ -2303,6 +2475,18 @@ pub fn run() {
             multiview_reposition_slot,
             multiview_kill_slot,
             multiview_kill_all,
+            // Popout MPV commands
+            popout_open,
+            popout_load,
+            popout_stop,
+            popout_close,
+            popout_set_property,
+            popout_set_always_on_top,
+            popout_is_running,
+            popout_toggle_pause,
+            popout_toggle_fullscreen,
+            popout_seek,
+            popout_get_params_debug,
             // Optimized bulk sync commands
             sync_provider::sync_m3u_source,
             sync_provider::sync_xtream_source,
@@ -2319,6 +2503,7 @@ pub fn run() {
             health_check,
             // Streaming EPG commands
             stream_parse_epg,
+            stream_parse_epg_multi,
             parse_epg_file,
             // DVR commands
             init_dvr,

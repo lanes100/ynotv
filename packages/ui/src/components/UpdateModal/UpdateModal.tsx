@@ -1,9 +1,86 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { check, Update, DownloadEvent } from '@tauri-apps/plugin-updater';
 import { relaunch } from '@tauri-apps/plugin-process';
 import { getVersion } from '@tauri-apps/api/app';
-import ReactMarkdown from 'react-markdown';
 import './UpdateModal.css';
+
+function parseInlineMarkdown(text: string): React.ReactNode[] {
+  const parts: React.ReactNode[] = [];
+  const regex = /\*\*(.+?)\*\*|__(.+?)__/g;
+  let lastIndex = 0;
+  let match;
+
+  while ((match = regex.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push(text.slice(lastIndex, match.index));
+    }
+    parts.push(<strong key={match.index}>{match[1] || match[2]}</strong>);
+    lastIndex = regex.lastIndex;
+  }
+
+  if (lastIndex < text.length) {
+    parts.push(text.slice(lastIndex));
+  }
+
+  return parts;
+}
+
+function ChangelogContent({ body }: { body: string }) {
+  const lines = body.replace(/\r\n/g, '\n').split('\n');
+  const elements: React.ReactNode[] = [];
+  let key = 0;
+  let currentList: React.ReactNode[] | null = null;
+
+  const flushList = () => {
+    if (currentList) {
+      elements.push(<ul key={`list-${key++}`}>{currentList}</ul>);
+      currentList = null;
+    }
+  };
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const trimmed = line.trim();
+
+    if (trimmed === '') {
+      flushList();
+      continue;
+    }
+
+    if (trimmed.startsWith('### ')) {
+      flushList();
+      elements.push(<h3 key={key++}>{parseInlineMarkdown(trimmed.slice(4))}</h3>);
+      continue;
+    }
+
+    if (trimmed.startsWith('## ')) {
+      flushList();
+      elements.push(<h2 key={key++}>{parseInlineMarkdown(trimmed.slice(3))}</h2>);
+      continue;
+    }
+
+    if (trimmed.startsWith('# ')) {
+      flushList();
+      elements.push(<h1 key={key++}>{parseInlineMarkdown(trimmed.slice(2))}</h1>);
+      continue;
+    }
+
+    if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
+      if (!currentList) currentList = [];
+      currentList.push(
+        <li key={key++}>{parseInlineMarkdown(trimmed.slice(2))}</li>
+      );
+      continue;
+    }
+
+    flushList();
+    elements.push(<p key={key++}>{parseInlineMarkdown(trimmed)}</p>);
+  }
+
+  flushList();
+
+  return <>{elements}</>;
+}
 
 interface UpdateModalProps {
   isOpen: boolean;
@@ -39,6 +116,7 @@ export function UpdateModal({ isOpen, onClose }: UpdateModalProps) {
         setStatus('uptodate');
       } else {
         setUpdate(result);
+        console.log('[UpdateModal] Release body:', JSON.stringify(result.body));
         setStatus('available');
       }
     } catch (e) {
@@ -138,7 +216,7 @@ export function UpdateModal({ isOpen, onClose }: UpdateModalProps) {
                 <div className="update-modal-notes">
                   <h4>What's New:</h4>
                   <div className="update-notes-content">
-                    <ReactMarkdown>{update.body}</ReactMarkdown>
+                    <ChangelogContent body={update.body} />
                   </div>
                 </div>
               )}

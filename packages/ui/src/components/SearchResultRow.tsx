@@ -19,6 +19,7 @@ interface SearchResultRowProps {
   activeRecordings?: RecordingInfo[];
   currentLayout?: string;
   onSendToSlot?: (slotId: 2 | 3 | 4, channelName: string, channelUrl: string, sourceName?: string | null) => void;
+  onPlayInPopout?: (channel: StoredChannel) => void;
   includeSourceInSearch?: boolean;
   currentChannel?: StoredChannel | null;
 }
@@ -50,6 +51,7 @@ export const SearchResultRow = memo(function SearchResultRow({
   activeRecordings = [],
   currentLayout,
   onSendToSlot,
+  onPlayInPopout,
   includeSourceInSearch,
   currentChannel,
 }: SearchResultRowProps) {
@@ -246,6 +248,7 @@ export const SearchResultRow = memo(function SearchResultRow({
           onClose={() => setChannelContextMenu(null)}
           currentLayout={currentLayout}
           onSendToSlot={onSendToSlot}
+          onPlayInPopout={onPlayInPopout}
         />
       )}
 

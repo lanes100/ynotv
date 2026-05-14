@@ -2,12 +2,12 @@
 
 ## How It Works
 
-The app now automatically downloads FFmpeg during the build process:
+The app automatically downloads FFmpeg during the build process:
 
 1. **Before each build**, the script `packages/app/scripts/download-ffmpeg.js` runs
 2. **Detects your platform** (Windows/Mac/Linux)
-3. **Downloads FFmpeg** from official sources (~50MB)
-4. **Extracts** the binary to `packages/app/src-tauri/bin/`
+3. **Downloads or copies FFmpeg** from official sources
+4. **Places the binary** in `packages/app/src-tauri/bin/`
 5. **Tauri bundles** it with your installer
 
 ## For Developers
@@ -33,28 +33,37 @@ GitHub Actions and other CI systems will automatically download FFmpeg during th
 
 ## Download Sources
 
-- **Windows**: https://www.gyan.dev/ffmpeg/builds/ (gyan.dev essentials build)
-- **Mac**: https://evermeet.cx/ffmpeg/ (evermeet static builds)
+- **Windows**: https://github.com/BtbN/FFmpeg-Builds/releases (latest win64-gpl build)
+- **Mac**: Copied from system (Homebrew installation)
 - **Linux**: https://johnvansickle.com/ffmpeg/ (static builds)
 
 ## Requirements
 
 ### Windows
-- **7-Zip** is required for extraction. Install via:
-  ```powershell
-  choco install 7zip
-  ```
-  Or download from: https://www.7-zip.org/
+- **PowerShell** with `Expand-Archive` (built into Windows 10/11)
+- Fallback to **7-Zip** if PowerShell extraction fails
 
-### Mac/Linux
-- Built-in `tar` or `7z` command
+### Mac
+- FFmpeg installed via Homebrew:
+  ```bash
+  brew install ffmpeg
+  ```
+
+### Linux
+- Built-in `tar` command
 
 ## Troubleshooting
 
-### "7z not found" error (Windows)
-Install 7-Zip:
-```powershell
-choco install 7zip
+### "PowerShell extraction failed" error (Windows)
+The script will automatically try 7-Zip as a fallback. If both fail:
+1. The downloaded archive will be in `packages/app/src-tauri/bin/`
+2. Extract it manually
+3. Copy `ffmpeg.exe` to `packages/app/src-tauri/bin/ffmpeg-x86_64-pc-windows-msvc.exe`
+
+### "FFmpeg not found" error (Mac)
+Install FFmpeg via Homebrew:
+```bash
+brew install ffmpeg
 ```
 
 ### Manual extraction
@@ -62,6 +71,3 @@ If automatic extraction fails:
 1. The downloaded archive will be in `packages/app/src-tauri/bin/`
 2. Extract it manually
 3. Copy `ffmpeg.exe` (or `ffmpeg` on Mac/Linux) to `packages/app/src-tauri/bin/`
-
-### Update FFmpeg version
-Edit `packages/app/scripts/download-ffmpeg.js` and change the `FFMPEG_VERSION` constant.
