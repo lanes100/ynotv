@@ -329,10 +329,12 @@ export function GameCard({ event, onClick, onChannelClick, onSearchTeams, onPlay
 
   const isUFC = event.league.id === 'ufc' && !!event.matches;
   const isRacing = (event.league.id === 'f1' || event.league.id === 'nascar' || event.league.id === 'indycar') && !!event.matches;
+  const isGolf = (event.league.id === 'pga' || event.league.id === 'lpga') && !!event.matches;
+  const isTennis = (event.league.id === 'atp' || event.league.id === 'wta') && !!event.matches;
 
   const fullView = (
     <div
-      className={`game-card ${event.status} ${isUFC ? 'ufc-card' : ''} ${isRacing ? 'racing-card' : ''}`}
+      className={`game-card ${event.status} ${isUFC ? 'ufc-card' : ''} ${isRacing ? 'racing-card' : ''} ${isGolf ? 'golf-card' : ''} ${isTennis ? 'tennis-card' : ''}`}
       onClick={onClick}
       onKeyDown={handleKeyDown}
       tabIndex={0}
@@ -424,6 +426,89 @@ export function GameCard({ event, onClick, onChannelClick, onSearchTeams, onPlay
           ) : (
             <div className="gc-racing-scheduled-info">
               <span className="gc-racing-scheduled-date">{formatEventTime(event.startTime)}</span>
+            </div>
+          )}
+        </>
+      ) : isGolf ? (
+        /* ─── Golf Tournament Card Layout ─── */
+        <>
+          {/* Tournament Title */}
+          <div className="gc-golf-title">{event.title}</div>
+          {event.venue && <div className="gc-golf-venue">{event.venue}</div>}
+
+          {/* Leaderboard Preview */}
+          {event.matches && event.matches.length > 0 ? (
+            <div className="gc-golf-leaderboard">
+              <div className="gc-golf-lb-header">
+                <span>Pos</span>
+                <span>Player</span>
+                <span>Score</span>
+              </div>
+              {event.matches.slice(0, 5).map((match) => (
+                <div key={match.id} className={`gc-golf-lb-row ${match.position === 1 ? 'leader' : ''}`}>
+                  <span className="gc-golf-lb-pos">{match.position || '-'}</span>
+                  <span className="gc-golf-lb-player">
+                    {match.awayLogo && (
+                      <img src={match.awayLogo} alt="" className="gc-golf-lb-flag" />
+                    )}
+                    {match.awayName}
+                  </span>
+                  <span className={`gc-golf-lb-score ${match.subtitle?.startsWith('-') ? 'under' : match.subtitle?.startsWith('+') ? 'over' : 'even'}`}>
+                    {match.subtitle || 'E'}
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="gc-golf-scheduled-info">
+              <span className="gc-golf-scheduled-date">{formatEventTime(event.startTime)}</span>
+            </div>
+          )}
+        </>
+      ) : isTennis ? (
+        /* ─── Tennis Tournament Card Layout ─── */
+        <>
+          {/* Tournament Title */}
+          <div className="gc-tennis-title">{event.title}</div>
+          {event.venue && <div className="gc-tennis-venue">{event.venue}</div>}
+
+          {/* Featured Match */}
+          {event.matches && event.matches.length > 0 ? (
+            <div className="gc-tennis-featured">
+              {event.matches.slice(0, 1).map((match) => (
+                <div key={match.id} className={`gc-tennis-match ${match.status === 'live' ? 'live' : ''}`}>
+                  <div className="gc-tennis-match-header">
+                    {match.groupName && <span className="gc-tennis-group">{match.groupName}</span>}
+                    {match.status === 'live' && <span className="gc-tennis-live-badge">LIVE</span>}
+                  </div>
+                  <div className="gc-tennis-players">
+                    <div className="gc-tennis-player">
+                      {match.awayLogo && (
+                        <img src={match.awayLogo} alt="" className="gc-tennis-flag" />
+                      )}
+                      <span className="gc-tennis-player-name">{match.awayName}</span>
+                    </div>
+                    <div className="gc-tennis-vs">VS</div>
+                    <div className="gc-tennis-player">
+                      {match.homeLogo && (
+                        <img src={match.homeLogo} alt="" className="gc-tennis-flag" />
+                      )}
+                      <span className="gc-tennis-player-name">{match.homeName}</span>
+                    </div>
+                  </div>
+                  {match.roundScores && match.roundScores.length > 0 && (
+                    <div className="gc-tennis-sets">
+                      {match.roundScores.map((set, idx) => (
+                        <span key={idx} className="gc-tennis-set">{set}</span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="gc-tennis-scheduled-info">
+              <span className="gc-tennis-scheduled-date">{formatEventTime(event.startTime)}</span>
             </div>
           )}
         </>

@@ -272,13 +272,78 @@ function mapRacingEvent(event: ESPNEvent, sportKey: string, config: SportConfig)
   };
 }
 
+function mapGolfEvent(event: ESPNEvent, sportKey: string, config: SportConfig): SportsEvent {
+  const competition = event.competitions?.[0];
+  const competitors = competition?.competitors || [];
+
+  // Sort by leaderboard position (order = 1 is the leader)
+  const sortedCompetitors = [...competitors].sort((a, b) => (a.order || 999) - (b.order || 999));
+
+  // Build leaderboard entries
+  const matches: NonNullable<SportsEvent['matches']> = sortedCompetitors.map((comp) => {
+    const athlete = comp.athlete;
+    const scoreStr = typeof comp.score === 'object' ? comp.score.displayValue : (comp.score || '');
+    const roundScores = (comp as any).linescores?.map((ls: any) => ls.displayValue || String(ls.value || '')) || [];
+
+    return {
+      id: comp.id,
+      awayName: athlete?.displayName || athlete?.fullName || 'Unknown',
+      homeName: '',
+      awayLogo: athlete?.flag?.href,
+      subtitle: scoreStr,
+      position: comp.order,
+      roundScores,
+    };
+  });
+
+  const leader = sortedCompetitors[0];
+  const leaderScore = typeof leader?.score === 'object' ? leader.score.displayValue : (leader?.score || '');
+
+  const state = event.status?.type?.state || 'pre';
+  let status: SportsEvent['status'] = 'scheduled';
+  if (state === 'in') status = 'live';
+  else if (state === 'post') status = 'finished';
+
+  // Use tournament name as "home team" and leader as "away team" for card preview
+  const homeTeam = {
+    id: event.id,
+    name: event.name,
+    shortName: event.shortName,
+    logo: undefined,
+  };
+
+  const awayTeam = leader?.athlete
+    ? {
+        id: leader.athlete.id,
+        name: leader.athlete.displayName || leader.athlete.fullName || 'Leader',
+        shortName: leader.athlete.shortName,
+        logo: leader.athlete.flag?.href,
+      }
+    : { id: '', name: 'Leader TBD', shortName: undefined, logo: undefined };
+
+  return {
+    id: event.id,
+    title: event.name,
+    homeTeam,
+    awayTeam,
+    league: { id: sportKey, name: config.name, sport: config.sport },
+    startTime: new Date(event.date),
+    status,
+    homeScore: undefined,
+    awayScore: undefined,
+    period: event.status?.period?.toString(),
+    timeElapsed: event.status?.displayClock,
+    channels: extractChannels(event, competition),
+    venue: competition?.venue?.fullName || (event as any).venues?.[0]?.fullName,
+    matches,
+  };
+}
+
 function mapStandardEvent(event: ESPNEvent, sportKey: string, config: SportConfig): SportsEvent {
   const competition = event.competitions?.[0];
   const competitors = competition?.competitors || [];
 
-  const isGolf = sportKey === 'pga' || sportKey === 'lpga';
   const isTennis = sportKey.startsWith('atp') || sportKey.startsWith('wta') || sportKey.includes('tennis');
-  const isIndividualSport = sportKey === 'ufc' || isGolf || isTennis;
 
   let homeCompetitor = competitors.find(c => c.homeAway === 'home');
   let awayCompetitor = competitors.find(c => c.homeAway === 'away');
@@ -290,23 +355,6 @@ function mapStandardEvent(event: ESPNEvent, sportKey: string, config: SportConfi
     homeCompetitor = sortedCompetitors[1];
   }
 
-  // Golf: Show tournament leaderboard (top player as "leader")
-  if (isGolf && competitors.length > 0) {
-    const sortedCompetitors = [...competitors].sort((a, b) => (a.order || 999) - (b.order || 999));
-    const leader = sortedCompetitors[0];
-
-    if (leader?.athlete) {
-      awayCompetitor = {
-        id: leader.athlete.id,
-        athlete: leader.athlete,
-      } as any;
-      homeCompetitor = {
-        id: 'field',
-        athlete: { displayName: `${competitors.length} Players` },
-      } as any;
-    }
-  }
-
   const state = event.status?.type?.state || 'pre';
   let status: SportsEvent['status'] = 'scheduled';
   if (state === 'in') status = 'live';
@@ -314,17 +362,6 @@ function mapStandardEvent(event: ESPNEvent, sportKey: string, config: SportConfi
 
   const homeTeam = getTeamInfo(homeCompetitor, sportKey);
   const awayTeam = getTeamInfo(awayCompetitor, sportKey);
-
-  // For Golf, get the leader's score
-  let golfLeaderScore: number | undefined;
-  if (isGolf && competitors.length > 0) {
-    const sortedCompetitors = [...competitors].sort((a, b) => (a.order || 999) - (b.order || 999));
-    const leader = sortedCompetitors[0];
-    if (leader?.score) {
-      const scoreVal = typeof leader.score === 'object' ? leader.score.value : parseInt(leader.score, 10);
-      if (!isNaN(scoreVal)) golfLeaderScore = scoreVal;
-    }
-  }
 
   return {
     id: event.id,
@@ -334,7 +371,7 @@ function mapStandardEvent(event: ESPNEvent, sportKey: string, config: SportConfi
     league: { id: sportKey, name: config.name, sport: config.sport },
     startTime: new Date(event.date),
     status,
-    homeScore: isGolf ? golfLeaderScore : getScore(homeCompetitor),
+    homeScore: getScore(homeCompetitor),
     awayScore: getScore(awayCompetitor),
     period: event.status?.period?.toString(),
     timeElapsed: event.status?.displayClock,
@@ -354,7 +391,97 @@ export function mapESPNEvent(event: ESPNEvent, sportKey: string): SportsEvent {
     return mapRacingEvent(event, sportKey, config);
   }
 
+  if (sportKey === 'pga' || sportKey === 'lpga') {
+    return mapGolfEvent(event, sportKey, config);
+  }
+
+  if (sportKey === 'atp' || sportKey === 'wta') {
+    return mapTennisEvent(event, sportKey, config);
+  }
+
   return mapStandardEvent(event, sportKey, config);
+}
+
+function mapTennisEvent(event: ESPNEvent, sportKey: string, config: SportConfig): SportsEvent {
+  // Tennis: matches live in groups[].competitions[]
+  const groups = event.groups || [];
+  const tournamentStatus = event.status?.type?.state || 'pre';
+  let status: SportsEvent['status'] = 'scheduled';
+  if (tournamentStatus === 'in') status = 'live';
+  else if (tournamentStatus === 'post') status = 'finished';
+
+  // Flatten all matches from all groups
+  const matches: NonNullable<SportsEvent['matches']> = [];
+  for (const group of groups) {
+    for (const comp of group.competitions) {
+      const competitors = comp.competitors || [];
+      if (competitors.length < 2) continue;
+
+      const p1 = competitors[0];
+      const p2 = competitors[1];
+
+      const p1Name = p1.athlete?.displayName || p1.athlete?.shortName || 'TBD';
+      const p2Name = p2.athlete?.displayName || p2.athlete?.shortName || 'TBD';
+
+      const p1Score = typeof p1.score === 'object' ? p1.score.displayValue : (p1.score || '');
+      const p2Score = typeof p2.score === 'object' ? p2.score.displayValue : (p2.score || '');
+
+      // Build set scores from linescores
+      const setScores: string[] = [];
+      if (comp.linescores) {
+        for (const ls of comp.linescores) {
+          setScores.push(ls.displayValue || String(ls.value || ''));
+        }
+      }
+
+      const matchState = comp.status?.type?.state || 'pre';
+      let matchStatus: 'scheduled' | 'live' | 'finished' = 'scheduled';
+      if (matchState === 'in') matchStatus = 'live';
+      else if (matchState === 'post') matchStatus = 'finished';
+
+      matches.push({
+        id: comp.id,
+        awayName: p1Name,
+        homeName: p2Name,
+        awayLogo: p1.athlete?.flag?.href,
+        homeLogo: p2.athlete?.flag?.href,
+        subtitle: comp.status?.type?.shortDetail || comp.status?.type?.detail || '',
+        status: matchStatus,
+        roundScores: setScores,
+        groupName: group.grouping.displayName,
+      });
+    }
+  }
+
+  // Find a featured match for the card preview (first live, then first finished, then first scheduled)
+  const featuredMatch = matches.find(m => m.status === 'live')
+    || matches.find(m => m.status === 'finished')
+    || matches[0];
+
+  const awayTeam = featuredMatch
+    ? { id: featuredMatch.id, name: featuredMatch.awayName, shortName: undefined, logo: featuredMatch.awayLogo }
+    : { id: '', name: 'TBD', shortName: undefined, logo: undefined };
+
+  const homeTeam = featuredMatch
+    ? { id: featuredMatch.id, name: featuredMatch.homeName, shortName: undefined, logo: featuredMatch.homeLogo }
+    : { id: '', name: 'TBD', shortName: undefined, logo: undefined };
+
+  return {
+    id: event.id,
+    title: event.name,
+    homeTeam,
+    awayTeam,
+    league: { id: sportKey, name: config.name, sport: config.sport },
+    startTime: new Date(event.date),
+    status,
+    homeScore: undefined,
+    awayScore: undefined,
+    period: event.status?.period?.toString(),
+    timeElapsed: event.status?.displayClock,
+    channels: extractChannels(event, undefined),
+    venue: (event as any).venue?.displayName || (event as any).venue?.fullName,
+    matches,
+  };
 }
 
 export function mapESPNTeam(team: ESPTeam, leagueId: string): SportsTeam {

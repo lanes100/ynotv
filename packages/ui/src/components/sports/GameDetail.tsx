@@ -26,6 +26,8 @@ export function GameDetail({ event, onClose, onChannelClick, onPlayChannel }: Ga
   const awayWinning = (event.awayScore ?? 0) > (event.homeScore ?? 0);
   const isUFC = event.league.id === 'ufc' && !!event.matches;
   const isRacing = (event.league.id === 'f1' || event.league.id === 'nascar' || event.league.id === 'indycar') && !!event.matches;
+  const isGolf = (event.league.id === 'pga' || event.league.id === 'lpga') && !!event.matches;
+  const isTennis = (event.league.id === 'atp' || event.league.id === 'wta') && !!event.matches;
 
   useEffect(() => {
     const loadDetails = async () => {
@@ -548,12 +550,240 @@ export function GameDetail({ event, onClose, onChannelClick, onPlayChannel }: Ga
     );
   };
 
+  const renderGolfDetail = () => {
+    const leaderboard = event.matches || [];
+    const hasLeaderboard = leaderboard.length > 0;
+    const roundCount = leaderboard[0]?.roundScores?.length || 0;
+
+    return (
+      <div className="game-detail-overlay" onClick={handleOverlayClick} onKeyDown={handleKeyDown}>
+        <div className="game-detail-modal golf-detail-modal">
+          {/* Header */}
+          <div className="game-detail-header">
+            <div className="game-detail-header-info">
+              <span className="game-detail-sport">{event.league.sport.toUpperCase()}</span>
+              <span className="game-detail-league">{event.league.name}</span>
+            </div>
+            <button className="game-detail-close" onClick={onClose}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+          </div>
+
+          {/* Tournament Title */}
+          <div className="golf-detail-title-bar">
+            <h2 className="golf-detail-event-title">{event.title}</h2>
+            <div className="golf-detail-meta">
+              {isLive && (
+                <span className="golf-detail-live-badge">
+                  <span className="golf-detail-live-dot" />
+                  LIVE
+                </span>
+              )}
+              <span className="golf-detail-datetime">{formatEventDateTime(event.startTime)}</span>
+              {event.venue && <span className="golf-detail-venue">{event.venue}</span>}
+            </div>
+          </div>
+
+          {/* Leaderboard */}
+          {hasLeaderboard ? (
+            <div className="golf-detail-content">
+              <div className="golf-detail-leaderboard">
+                <div className="golf-lb-header">
+                  <span className="golf-lb-col pos">Pos</span>
+                  <span className="golf-lb-col player">Player</span>
+                  {Array.from({ length: roundCount }, (_, i) => (
+                    <span key={i} className="golf-lb-col round">R{i + 1}</span>
+                  ))}
+                  <span className="golf-lb-col total">Total</span>
+                </div>
+                {leaderboard.map((entry) => (
+                  <div
+                    key={entry.id}
+                    className={`golf-lb-row ${entry.position === 1 ? 'leader' : ''}`}
+                  >
+                    <span className="golf-lb-col pos">{entry.position || '-'}</span>
+                    <span className="golf-lb-col player">
+                      {entry.awayLogo && (
+                        <img src={entry.awayLogo} alt="" className="golf-lb-flag" />
+                      )}
+                      {entry.awayName}
+                    </span>
+                    {entry.roundScores?.map((score, idx) => (
+                      <span key={idx} className="golf-lb-col round">{score}</span>
+                    ))}
+                    <span className={`golf-lb-col total ${entry.subtitle?.startsWith('-') ? 'under' : entry.subtitle?.startsWith('+') ? 'over' : 'even'}`}>
+                      {entry.subtitle || 'E'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="golf-detail-content">
+              <div className="game-detail-no-data">
+                <span>Leaderboard not yet available.</span>
+              </div>
+            </div>
+          )}
+
+          {/* Broadcast */}
+          {event.channels.length > 0 && (
+            <div className="golf-detail-broadcast">
+              <h3 className="golf-detail-section-title">Watch On</h3>
+              <div className="game-detail-channels">
+                {event.channels.map((channel, idx) => (
+                  <button
+                    key={idx}
+                    className="game-detail-channel-btn"
+                    onClick={() => onChannelClick?.(channel.name)}
+                  >
+                    {channel.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   if (isUFC) {
     return renderUFCDetail();
   }
 
   if (isRacing) {
     return renderRacingDetail();
+  }
+
+  if (isGolf) {
+    return renderGolfDetail();
+  }
+
+  const renderTennisDetail = () => {
+    const matches = event.matches || [];
+    const hasMatches = matches.length > 0;
+
+    // Group matches by draw type
+    const grouped = matches.reduce((acc, match) => {
+      const group = match.groupName || 'Matches';
+      if (!acc[group]) acc[group] = [];
+      acc[group].push(match);
+      return acc;
+    }, {} as Record<string, typeof matches>);
+
+    return (
+      <div className="game-detail-overlay" onClick={handleOverlayClick} onKeyDown={handleKeyDown}>
+        <div className="game-detail-modal tennis-detail-modal">
+          {/* Header */}
+          <div className="game-detail-header">
+            <div className="game-detail-header-info">
+              <span className="game-detail-sport">{event.league.sport.toUpperCase()}</span>
+              <span className="game-detail-league">{event.league.name}</span>
+            </div>
+            <button className="game-detail-close" onClick={onClose}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+          </div>
+
+          {/* Tournament Title */}
+          <div className="tennis-detail-title-bar">
+            <h2 className="tennis-detail-event-title">{event.title}</h2>
+            <div className="tennis-detail-meta">
+              {isLive && (
+                <span className="tennis-detail-live-badge">
+                  <span className="tennis-detail-live-dot" />
+                  LIVE
+                </span>
+              )}
+              <span className="tennis-detail-datetime">{formatEventDateTime(event.startTime)}</span>
+              {event.venue && <span className="tennis-detail-venue">{event.venue}</span>}
+            </div>
+          </div>
+
+          {/* Matches by group */}
+          {hasMatches ? (
+            <div className="tennis-detail-content">
+              {Object.entries(grouped).map(([groupName, groupMatches]) => (
+                <div key={groupName} className="tennis-detail-group">
+                  <h3 className="tennis-detail-section-title">{groupName}</h3>
+                  <div className="tennis-detail-matches">
+                    {groupMatches.map((match) => (
+                      <div key={match.id} className={`tennis-match-row ${match.status === 'live' ? 'live' : ''}`}>
+                        <div className="tennis-match-players">
+                          <div className="tennis-match-player">
+                            {match.awayLogo && (
+                              <img src={match.awayLogo} alt="" className="tennis-match-flag" />
+                            )}
+                            <span className="tennis-match-name">{match.awayName}</span>
+                          </div>
+                          <div className="tennis-match-vs">vs</div>
+                          <div className="tennis-match-player">
+                            {match.homeLogo && (
+                              <img src={match.homeLogo} alt="" className="tennis-match-flag" />
+                            )}
+                            <span className="tennis-match-name">{match.homeName}</span>
+                          </div>
+                        </div>
+                        <div className="tennis-match-info">
+                          {match.roundScores && match.roundScores.length > 0 && (
+                            <div className="tennis-match-sets">
+                              {match.roundScores.map((set, idx) => (
+                                <span key={idx} className="tennis-match-set">{set}</span>
+                              ))}
+                            </div>
+                          )}
+                          {match.status === 'live' && (
+                            <span className="tennis-match-live-badge">LIVE</span>
+                          )}
+                          {match.subtitle && (
+                            <span className="tennis-match-status">{match.subtitle}</span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="tennis-detail-content">
+              <div className="game-detail-no-data">
+                <span>Matches not yet available.</span>
+              </div>
+            </div>
+          )}
+
+          {/* Broadcast */}
+          {event.channels.length > 0 && (
+            <div className="tennis-detail-broadcast">
+              <h3 className="tennis-detail-section-title">Watch On</h3>
+              <div className="game-detail-channels">
+                {event.channels.map((channel, idx) => (
+                  <button
+                    key={idx}
+                    className="game-detail-channel-btn"
+                    onClick={() => onChannelClick?.(channel.name)}
+                  >
+                    {channel.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  if (isTennis) {
+    return renderTennisDetail();
   }
 
   return (

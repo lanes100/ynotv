@@ -234,6 +234,8 @@ export interface SportsMatch {
   status?: 'scheduled' | 'live' | 'finished';
   position?: number;
   points?: number;
+  roundScores?: string[];
+  groupName?: string;
 }
 
 export interface SportsEvent {

@@ -3443,6 +3443,649 @@
 }
 
 /* =============================================================================
+   GOLF TOURNAMENT CARD
+   ============================================================================= */
+
+.golf-card {
+  gap: 0;
+}
+
+.gc-golf-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary, #fff);
+  text-align: center;
+  padding: 4px 14px 6px;
+  line-height: 1.3;
+  letter-spacing: 0.2px;
+}
+
+.gc-golf-venue {
+  font-size: 12px;
+  color: var(--text-secondary, #888);
+  text-align: center;
+  padding: 0 14px 12px;
+}
+
+.gc-golf-leaderboard {
+  padding: 0 14px 14px;
+}
+
+.gc-golf-lb-header {
+  display: grid;
+  grid-template-columns: 32px 1fr 48px;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-secondary, #888);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.gc-golf-lb-row {
+  display: grid;
+  grid-template-columns: 32px 1fr 48px;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 8px;
+  font-size: 12px;
+  border-radius: 4px;
+  transition: background 0.15s ease;
+}
+
+.gc-golf-lb-row:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.gc-golf-lb-row.leader {
+  background: rgba(251, 191, 36, 0.06);
+}
+
+.gc-golf-lb-pos {
+  font-weight: 700;
+  color: var(--text-muted, #666);
+  text-align: center;
+}
+
+.gc-golf-lb-row.leader .gc-golf-lb-pos {
+  color: #fbbf24;
+}
+
+.gc-golf-lb-player {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-primary, #fff);
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.gc-golf-lb-flag {
+  width: 16px;
+  height: 12px;
+  object-fit: cover;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.gc-golf-lb-score {
+  font-weight: 700;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.gc-golf-lb-score.under {
+  color: #22c55e;
+}
+
+.gc-golf-lb-score.over {
+  color: #ef4444;
+}
+
+.gc-golf-lb-score.even {
+  color: var(--text-secondary, #888);
+}
+
+.gc-golf-scheduled-info {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px 14px;
+}
+
+.gc-golf-scheduled-date {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-secondary, #888);
+}
+
+/* =============================================================================
+   GOLF DETAIL MODAL
+   ============================================================================= */
+
+.golf-detail-modal {
+  max-width: 640px;
+}
+
+.golf-detail-title-bar {
+  padding: 20px 24px 16px;
+  text-align: center;
+  border-bottom: 1px solid var(--border-color, #2a2a2a);
+  background: var(--bg-secondary, #1a1a1a);
+}
+
+.golf-detail-event-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text-primary, #fff);
+  margin: 0 0 10px 0;
+  line-height: 1.3;
+}
+
+.golf-detail-meta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.golf-detail-live-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: rgba(239, 68, 68, 0.15);
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent-primary, #e50914);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.golf-detail-live-dot {
+  width: 6px;
+  height: 6px;
+  background: var(--accent-primary, #e50914);
+  border-radius: 50%;
+  animation: game-pulse 1.5s ease-in-out infinite;
+}
+
+.golf-detail-datetime {
+  font-size: 13px;
+  color: var(--text-secondary, #888);
+}
+
+.golf-detail-venue {
+  font-size: 12px;
+  color: var(--text-muted, #666);
+}
+
+.golf-detail-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px 24px;
+}
+
+.golf-detail-section-title {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--text-secondary, #888);
+  margin: 0 0 14px 0;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border-color, rgba(255, 255, 255, 0.05));
+}
+
+.golf-detail-leaderboard {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.golf-lb-header {
+  display: grid;
+  grid-template-columns: 36px 1.6fr repeat(auto-fit, minmax(32px, 1fr)) 56px;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-secondary, #888);
+  border-bottom: 1px solid var(--border-color, #2a2a2a);
+}
+
+.golf-lb-row {
+  display: grid;
+  grid-template-columns: 36px 1.6fr repeat(auto-fit, minmax(32px, 1fr)) 56px;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.02);
+  font-size: 13px;
+  transition: background 0.15s ease;
+}
+
+.golf-lb-row:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.golf-lb-row.leader {
+  background: rgba(251, 191, 36, 0.06);
+}
+
+.golf-lb-col {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.golf-lb-col.pos {
+  font-weight: 700;
+  color: var(--text-muted, #666);
+  text-align: center;
+}
+
+.golf-lb-row.leader .golf-lb-col.pos {
+  color: #fbbf24;
+}
+
+.golf-lb-col.player {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  color: var(--text-primary, #fff);
+}
+
+.golf-lb-flag {
+  width: 20px;
+  height: 14px;
+  object-fit: cover;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.golf-lb-col.round {
+  text-align: center;
+  color: var(--text-secondary, #aaa);
+  font-variant-numeric: tabular-nums;
+}
+
+.golf-lb-col.total {
+  font-weight: 700;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.golf-lb-col.total.under {
+  color: #22c55e;
+}
+
+.golf-lb-col.total.over {
+  color: #ef4444;
+}
+
+.golf-lb-col.total.even {
+  color: var(--text-secondary, #888);
+}
+
+/* Broadcast section */
+.golf-detail-broadcast {
+  padding: 16px 24px 20px;
+  border-top: 1px solid var(--border-color, #2a2a2a);
+}
+
+/* =============================================================================
+   TENNIS TOURNAMENT CARD
+   ============================================================================= */
+
+.tennis-card {
+  gap: 0;
+}
+
+.gc-tennis-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary, #fff);
+  text-align: center;
+  padding: 4px 14px 6px;
+  line-height: 1.3;
+  letter-spacing: 0.2px;
+}
+
+.gc-tennis-venue {
+  font-size: 12px;
+  color: var(--text-secondary, #888);
+  text-align: center;
+  padding: 0 14px 12px;
+}
+
+.gc-tennis-featured {
+  padding: 0 14px 14px;
+}
+
+.gc-tennis-match {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.gc-tennis-match.live {
+  background: rgba(239, 68, 68, 0.06);
+  border-color: rgba(239, 68, 68, 0.15);
+}
+
+.gc-tennis-match-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.gc-tennis-group {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--accent-primary, #e50914);
+}
+
+.gc-tennis-live-badge {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  color: #ef4444;
+  padding: 2px 8px;
+  background: rgba(239, 68, 68, 0.12);
+  border-radius: 4px;
+}
+
+.gc-tennis-players {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.gc-tennis-player {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-align: center;
+}
+
+.gc-tennis-flag {
+  width: 24px;
+  height: 16px;
+  object-fit: cover;
+  border-radius: 2px;
+}
+
+.gc-tennis-player-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary, #fff);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.gc-tennis-vs {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--text-muted, #666);
+  letter-spacing: 1px;
+}
+
+.gc-tennis-sets {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.gc-tennis-set {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-primary, #fff);
+  padding: 2px 8px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 4px;
+  font-variant-numeric: tabular-nums;
+}
+
+.gc-tennis-scheduled-info {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px 14px;
+}
+
+.gc-tennis-scheduled-date {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-secondary, #888);
+}
+
+/* =============================================================================
+   TENNIS DETAIL MODAL
+   ============================================================================= */
+
+.tennis-detail-modal {
+  max-width: 720px;
+}
+
+.tennis-detail-title-bar {
+  padding: 20px 24px 16px;
+  text-align: center;
+  border-bottom: 1px solid var(--border-color, #2a2a2a);
+  background: var(--bg-secondary, #1a1a1a);
+}
+
+.tennis-detail-event-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text-primary, #fff);
+  margin: 0 0 10px 0;
+  line-height: 1.3;
+}
+
+.tennis-detail-meta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.tennis-detail-live-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: rgba(239, 68, 68, 0.15);
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent-primary, #e50914);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.tennis-detail-live-dot {
+  width: 6px;
+  height: 6px;
+  background: var(--accent-primary, #e50914);
+  border-radius: 50%;
+  animation: game-pulse 1.5s ease-in-out infinite;
+}
+
+.tennis-detail-datetime {
+  font-size: 13px;
+  color: var(--text-secondary, #888);
+}
+
+.tennis-detail-venue {
+  font-size: 12px;
+  color: var(--text-muted, #666);
+}
+
+.tennis-detail-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.tennis-detail-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.tennis-detail-section-title {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--text-secondary, #888);
+  margin: 0;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border-color, rgba(255, 255, 255, 0.05));
+}
+
+.tennis-detail-matches {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tennis-match-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid transparent;
+  transition: all 0.15s ease;
+}
+
+.tennis-match-row:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.tennis-match-row.live {
+  background: rgba(239, 68, 68, 0.06);
+  border-color: rgba(239, 68, 68, 0.15);
+}
+
+.tennis-match-players {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+
+.tennis-match-player {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.tennis-match-flag {
+  width: 20px;
+  height: 14px;
+  object-fit: cover;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.tennis-match-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary, #fff);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tennis-match-vs {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted, #666);
+  flex-shrink: 0;
+}
+
+.tennis-match-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.tennis-match-sets {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tennis-match-set {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-primary, #fff);
+  padding: 2px 6px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 4px;
+  font-variant-numeric: tabular-nums;
+}
+
+.tennis-match-live-badge {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  color: #ef4444;
+  padding: 2px 8px;
+  background: rgba(239, 68, 68, 0.12);
+  border-radius: 4px;
+}
+
+.tennis-match-status {
+  font-size: 11px;
+  color: var(--text-secondary, #888);
+  white-space: nowrap;
+}
+
+/* Broadcast section */
+.tennis-detail-broadcast {
+  padding: 16px 24px 20px;
+  border-top: 1px solid var(--border-color, #2a2a2a);
+}
+
+/* =============================================================================
    SETTINGS TAB
    ============================================================================= */
 

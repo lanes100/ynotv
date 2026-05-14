@@ -93,6 +93,55 @@ export interface ESPNEvent {
     type: number;
   };
   week?: number;
+  // Tennis: matches grouped by draw type (mens-singles, womens-singles, etc.)
+  groups?: Array<{
+    grouping: {
+      id: string;
+      slug: string;
+      displayName: string;
+    };
+    competitions: Array<{
+      id: string;
+      uid?: string;
+      date?: string;
+      startDate?: string;
+      status?: {
+        type: {
+          name: string;
+          state: string;
+          completed: boolean;
+          description: string;
+          detail: string;
+          shortDetail: string;
+        };
+        displayClock?: string;
+        period?: number;
+      };
+      competitors: Array<{
+        id: string;
+        uid: string;
+        athlete?: {
+          id: string;
+          displayName: string;
+          shortName: string;
+          flag?: { href: string; alt: string };
+          headshot?: { href: string };
+        };
+        score?: string | { value: number; displayValue: string };
+        winner?: boolean;
+      }>;
+      linescores?: Array<{
+        value?: number;
+        displayValue?: string;
+        period?: number;
+      }>;
+      venue?: { fullName: string };
+      broadcasts?: Array<{
+        market: string;
+        names: string[];
+      }>;
+    }>;
+  }>;
 }
 
 export interface ESPTeam {
