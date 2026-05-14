@@ -233,27 +233,89 @@ function extractPlayerStats(teamId: string, boxscore?: any, rosters?: any): Play
     }));
   }
 
-  // Try rosters for soccer
+  // Soccer: Build dynamic player stat table from roster
   const teamRoster = rosters?.find((r: any) => r.team.id === teamId);
   if (teamRoster?.roster?.length > 0) {
-    const athletes = teamRoster.roster
-      .filter((p: any) => p.athlete)
-      .map((p: any) => ({
-        athleteId: p.athlete.id,
-        name: p.athlete.displayName,
-        headshot: p.athlete.headshot?.href,
-        jersey: p.athlete.jersey,
-        stats: p.stats?.map((s: any) => String(s.displayValue || s.value)) || [],
-      }));
-
-    if (athletes.length > 0) {
-      return [{
-        name: 'roster',
-        text: 'Starting Lineup',
-        labels: ['Pos', 'Jersey', 'Name'],
-        athletes: athletes.slice(0, 11),
-      }];
+    // Collect all unique stat names and their metadata
+    const statMeta = new Map<string, { shortName: string; fullName: string }>();
+    for (const player of teamRoster.roster) {
+      for (const stat of (player.stats || [])) {
+        if (!statMeta.has(stat.name)) {
+          statMeta.set(stat.name, {
+            shortName: stat.shortDisplayName || stat.abbreviation || stat.displayName || stat.name,
+            fullName: stat.displayName || stat.name,
+          });
+        }
+      }
     }
+
+    // Priority order for soccer stats (most important first)
+    const priority = [
+      'totalGoals', 'goalAssists', 'totalShots', 'shotsOnTarget',
+      'saves', 'goalsConceded', 'shotsFaced',
+      'yellowCards', 'redCards', 'foulsCommitted', 'foulsSuffered',
+      'offsides', 'ownGoals', 'subIns', 'appearances'
+    ];
+    const statNames = Array.from(statMeta.keys()).sort((a, b) => {
+      const pa = priority.indexOf(a);
+      const pb = priority.indexOf(b);
+      if (pa >= 0 && pb >= 0) return pa - pb;
+      if (pa >= 0) return -1;
+      if (pb >= 0) return 1;
+      return a.localeCompare(b);
+    });
+
+    const labels = statNames.map(n => statMeta.get(n)!.shortName);
+    const descriptions = statNames.map(n => statMeta.get(n)!.fullName);
+
+    const allAthletes = teamRoster.roster
+      .filter((p: any) => p.athlete)
+      .map((p: any) => {
+        const statMap = new Map<string, string>();
+        for (const stat of (p.stats || [])) {
+          statMap.set(stat.name, String(stat.displayValue ?? stat.value ?? '-'));
+        }
+        const posAbbr = p.position?.abbreviation || p.position?.name?.slice(0, 2) || '';
+        return {
+          athleteId: p.athlete.id,
+          name: posAbbr ? `[${posAbbr}] ${p.athlete.displayName}` : p.athlete.displayName,
+          headshot: p.athlete.headshot?.href,
+          jersey: p.athlete.jersey,
+          stats: statNames.map(n => statMap.get(n) || '-'),
+        };
+      });
+
+    const categories: PlayerStatCategory[] = [];
+
+    // Starting XI
+    const starters = allAthletes.filter((a: any) =>
+      teamRoster.roster.find((p: any) => p.athlete?.id === a.athleteId)?.starter === true
+    );
+    if (starters.length > 0) {
+      categories.push({
+        name: 'starters',
+        text: `Starting Lineup${teamRoster.formation ? ` — ${teamRoster.formation}` : ''}`,
+        labels,
+        descriptions,
+        athletes: starters,
+      });
+    }
+
+    // Substitutes
+    const subs = allAthletes.filter((a: any) =>
+      teamRoster.roster.find((p: any) => p.athlete?.id === a.athleteId)?.starter !== true
+    );
+    if (subs.length > 0) {
+      categories.push({
+        name: 'subs',
+        text: 'Substitutes',
+        labels,
+        descriptions,
+        athletes: subs,
+      });
+    }
+
+    return categories;
   }
 
   return [];

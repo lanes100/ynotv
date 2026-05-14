@@ -25,6 +25,7 @@ export function GameDetail({ event, onClose, onChannelClick, onPlayChannel }: Ga
   const homeWinning = (event.homeScore ?? 0) > (event.awayScore ?? 0);
   const awayWinning = (event.awayScore ?? 0) > (event.homeScore ?? 0);
   const isUFC = event.league.id === 'ufc' && !!event.matches;
+  const isRacing = (event.league.id === 'f1' || event.league.id === 'nascar' || event.league.id === 'indycar') && !!event.matches;
 
   useEffect(() => {
     const loadDetails = async () => {
@@ -429,8 +430,130 @@ export function GameDetail({ event, onClose, onChannelClick, onPlayChannel }: Ga
     );
   };
 
+  const renderRacingDetail = () => {
+    const results = event.matches || [];
+    const hasResults = results.length > 0;
+
+    return (
+      <div className="game-detail-overlay" onClick={handleOverlayClick} onKeyDown={handleKeyDown}>
+        <div className="game-detail-modal racing-detail-modal">
+          {/* Header */}
+          <div className="game-detail-header">
+            <div className="game-detail-header-info">
+              <span className="game-detail-sport">{event.league.sport.toUpperCase()}</span>
+              <span className="game-detail-league">{event.league.name}</span>
+            </div>
+            <button className="game-detail-close" onClick={onClose}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+          </div>
+
+          {/* Race Title */}
+          <div className="racing-detail-title-bar">
+            <h2 className="racing-detail-event-title">{event.title}</h2>
+            <div className="racing-detail-meta">
+              {isLive && (
+                <span className="racing-detail-live-badge">
+                  <span className="racing-detail-live-dot" />
+                  LIVE
+                </span>
+              )}
+              <span className="racing-detail-datetime">{formatEventDateTime(event.startTime)}</span>
+              {event.venue && <span className="racing-detail-venue">{event.venue}</span>}
+            </div>
+          </div>
+
+          {/* Results Grid */}
+          {hasResults ? (
+            <div className="racing-detail-content">
+              {/* Podium */}
+              <div className="racing-detail-podium">
+                {results.slice(0, 3).map((result, idx) => {
+                  const posClass = idx === 0 ? 'gold' : idx === 1 ? 'silver' : 'bronze';
+                  return (
+                    <div key={result.id} className={`racing-podium-item ${posClass}`}>
+                      <span className="racing-podium-position">{idx + 1}</span>
+                      {result.awayLogo && (
+                        <img src={result.awayLogo} alt={result.awayName} className="racing-podium-driver-img" />
+                      )}
+                      <span className="racing-podium-driver-name">{result.awayName}</span>
+                      <span className="racing-podium-team-name">{result.homeName}</span>
+                      {result.subtitle && (
+                        <span className="racing-podium-time">{result.subtitle}</span>
+                      )}
+                      {result.points !== undefined && (
+                        <span className="racing-podium-points">{result.points} pts</span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Full Results Table */}
+              <h3 className="racing-detail-section-title">Race Results</h3>
+              <div className="racing-detail-results-table">
+                <div className="racing-results-header">
+                  <span className="racing-results-col pos">Pos</span>
+                  <span className="racing-results-col driver">Driver</span>
+                  <span className="racing-results-col team">Team</span>
+                  <span className="racing-results-col time">Time/Interval</span>
+                  <span className="racing-results-col pts">Pts</span>
+                </div>
+                {results.map((result) => (
+                  <div key={result.id} className={`racing-results-row ${result.position && result.position <= 3 ? 'podium' : ''}`}>
+                    <span className="racing-results-col pos">{result.position || '-'}</span>
+                    <span className="racing-results-col driver">
+                      {result.awayLogo && (
+                        <img src={result.awayLogo} alt="" className="racing-results-driver-img" />
+                      )}
+                      {result.awayName}
+                    </span>
+                    <span className="racing-results-col team">{result.homeName}</span>
+                    <span className="racing-results-col time">{result.subtitle || '-'}</span>
+                    <span className="racing-results-col pts">{result.points ?? '-'}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="racing-detail-content">
+              <div className="game-detail-no-data">
+                <span>Race results not yet available.</span>
+              </div>
+            </div>
+          )}
+
+          {/* Broadcast */}
+          {event.channels.length > 0 && (
+            <div className="racing-detail-broadcast">
+              <h3 className="racing-detail-section-title">Watch On</h3>
+              <div className="game-detail-channels">
+                {event.channels.map((channel, idx) => (
+                  <button
+                    key={idx}
+                    className="game-detail-channel-btn"
+                    onClick={() => onChannelClick?.(channel.name)}
+                  >
+                    {channel.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   if (isUFC) {
     return renderUFCDetail();
+  }
+
+  if (isRacing) {
+    return renderRacingDetail();
   }
 
   return (

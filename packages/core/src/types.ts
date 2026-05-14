@@ -232,6 +232,8 @@ export interface SportsMatch {
   homeRecord?: string;
   subtitle?: string;
   status?: 'scheduled' | 'live' | 'finished';
+  position?: number;
+  points?: number;
 }
 
 export interface SportsEvent {

@@ -1432,120 +1432,6 @@
   border-radius: 2px;
 }
 
-/* UFC Rankings */
-.ufc-rankings-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 16px;
-}
-
-.ufc-ranking-card {
-  background: var(--bg-secondary, #1a1a1a);
-  border-radius: 12px;
-  padding: 16px;
-}
-
-.ufc-ranking-division {
-  margin: 0 0 12px;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text-primary, #fff);
-  padding-bottom: 8px;
-  border-bottom: 1px solid var(--border-color, #222);
-}
-
-.ufc-ranking-champion {
-  margin-bottom: 12px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid var(--border-color, #1a1a1a);
-}
-
-.ufc-ranking-champion-label {
-  display: block;
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: #fbbf24;
-  margin-bottom: 8px;
-}
-
-.ufc-ranking-fighter {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.ufc-ranking-headshot {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  object-fit: cover;
-  background: var(--bg-primary, #0f0f0f);
-}
-
-.ufc-ranking-headshot-small {
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  object-fit: cover;
-  background: var(--bg-primary, #0f0f0f);
-}
-
-.ufc-ranking-fighter-info {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.ufc-ranking-fighter-name {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--text-primary, #fff);
-}
-
-.ufc-ranking-fighter-record {
-  font-size: 11px;
-  color: var(--text-secondary, #888);
-}
-
-.ufc-ranking-list {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.ufc-ranking-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 8px;
-  background: var(--bg-primary, #0f0f0f);
-  border-radius: 6px;
-}
-
-.ufc-ranking-rank {
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--text-secondary, #888);
-  min-width: 20px;
-}
-
-.ufc-ranking-row .ufc-ranking-fighter-name {
-  flex: 1;
-  font-size: 12px;
-}
-
-.ufc-ranking-row .ufc-ranking-fighter-record {
-  font-size: 10px;
-}
-
-.ufc-ranking-empty {
-  padding: 16px;
-  text-align: center;
-  color: var(--text-secondary, #666);
-  font-size: 12px;
-}
-
 .sports-event-row-channels {
   display: flex;
   justify-content: flex-end;
@@ -3178,6 +3064,380 @@
 
 /* Broadcast section */
 .ufc-detail-broadcast {
+  padding: 16px 24px 20px;
+  border-top: 1px solid var(--border-color, #2a2a2a);
+}
+
+/* =============================================================================
+   RACING EVENT CARD
+   ============================================================================= */
+
+.racing-card {
+  gap: 0;
+}
+
+.gc-racing-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary, #fff);
+  text-align: center;
+  padding: 4px 14px 6px;
+  line-height: 1.3;
+  letter-spacing: 0.2px;
+}
+
+.gc-racing-circuit {
+  font-size: 12px;
+  color: var(--text-secondary, #888);
+  text-align: center;
+  padding: 0 14px 12px;
+}
+
+.gc-racing-podium {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+  padding: 0 14px 14px;
+}
+
+.gc-racing-podium-pos {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 6px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
+  text-align: center;
+}
+
+.gc-racing-podium-pos.pos-1 {
+  background: rgba(251, 191, 36, 0.1);
+  border: 1px solid rgba(251, 191, 36, 0.2);
+}
+
+.gc-racing-podium-pos.pos-2 {
+  background: rgba(192, 192, 192, 0.08);
+  border: 1px solid rgba(192, 192, 192, 0.15);
+}
+
+.gc-racing-podium-pos.pos-3 {
+  background: rgba(205, 127, 50, 0.08);
+  border: 1px solid rgba(205, 127, 50, 0.15);
+}
+
+.gc-racing-podium-label {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted, #666);
+}
+
+.gc-racing-podium-pos.pos-1 .gc-racing-podium-label {
+  color: #fbbf24;
+}
+
+.gc-racing-podium-img {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--bg-primary, #0f0f0f);
+}
+
+.gc-racing-podium-driver {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary, #fff);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.gc-racing-podium-team {
+  font-size: 10px;
+  color: var(--text-secondary, #888);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.gc-racing-scheduled-info {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px 14px;
+}
+
+.gc-racing-scheduled-date {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-secondary, #888);
+}
+
+/* =============================================================================
+   RACING DETAIL MODAL
+   ============================================================================= */
+
+.racing-detail-modal {
+  max-width: 720px;
+}
+
+.racing-detail-title-bar {
+  padding: 20px 24px 16px;
+  text-align: center;
+  border-bottom: 1px solid var(--border-color, #2a2a2a);
+  background: var(--bg-secondary, #1a1a1a);
+}
+
+.racing-detail-event-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text-primary, #fff);
+  margin: 0 0 10px 0;
+  line-height: 1.3;
+}
+
+.racing-detail-meta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.racing-detail-live-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: rgba(239, 68, 68, 0.15);
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent-primary, #e50914);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.racing-detail-live-dot {
+  width: 6px;
+  height: 6px;
+  background: var(--accent-primary, #e50914);
+  border-radius: 50%;
+  animation: game-pulse 1.5s ease-in-out infinite;
+}
+
+.racing-detail-datetime {
+  font-size: 13px;
+  color: var(--text-secondary, #888);
+}
+
+.racing-detail-venue {
+  font-size: 12px;
+  color: var(--text-muted, #666);
+}
+
+/* Podium */
+.racing-detail-podium {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 16px;
+  padding: 24px;
+  background: var(--bg-secondary, #1a1a1a);
+}
+
+.racing-podium-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 10px;
+  border-radius: 12px;
+  text-align: center;
+}
+
+.racing-podium-item.gold {
+  background: rgba(251, 191, 36, 0.1);
+  border: 1px solid rgba(251, 191, 36, 0.25);
+}
+
+.racing-podium-item.silver {
+  background: rgba(192, 192, 192, 0.08);
+  border: 1px solid rgba(192, 192, 192, 0.15);
+}
+
+.racing-podium-item.bronze {
+  background: rgba(205, 127, 50, 0.08);
+  border: 1px solid rgba(205, 127, 50, 0.15);
+}
+
+.racing-podium-position {
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--text-muted, #666);
+  line-height: 1;
+}
+
+.racing-podium-item.gold .racing-podium-position {
+  color: #fbbf24;
+}
+
+.racing-podium-item.silver .racing-podium-position {
+  color: #c0c0c0;
+}
+
+.racing-podium-item.bronze .racing-podium-position {
+  color: #cd7f32;
+}
+
+.racing-podium-driver-img {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--bg-primary, #0f0f0f);
+  border: 2px solid var(--border-color, #2a2a2a);
+}
+
+.racing-podium-driver-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary, #fff);
+}
+
+.racing-podium-team-name {
+  font-size: 12px;
+  color: var(--text-secondary, #888);
+}
+
+.racing-podium-time {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary, #fff);
+  font-variant-numeric: tabular-nums;
+}
+
+.racing-podium-points {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent-primary, #e50914);
+  padding: 2px 8px;
+  background: rgba(229, 9, 20, 0.1);
+  border-radius: 4px;
+}
+
+/* Results Table */
+.racing-detail-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px 24px;
+}
+
+.racing-detail-section-title {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--text-secondary, #888);
+  margin: 0 0 14px 0;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border-color, rgba(255, 255, 255, 0.05));
+}
+
+.racing-detail-results-table {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.racing-results-header {
+  display: grid;
+  grid-template-columns: 40px 1.4fr 1fr 1fr 50px;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-secondary, #888);
+  border-bottom: 1px solid var(--border-color, #2a2a2a);
+}
+
+.racing-results-row {
+  display: grid;
+  grid-template-columns: 40px 1.4fr 1fr 1fr 50px;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.02);
+  font-size: 13px;
+  transition: background 0.15s ease;
+}
+
+.racing-results-row:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.racing-results-row.podium {
+  background: rgba(251, 191, 36, 0.04);
+}
+
+.racing-results-col {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.racing-results-col.pos {
+  font-weight: 700;
+  color: var(--text-muted, #666);
+  text-align: center;
+}
+
+.racing-results-row.podium .racing-results-col.pos {
+  color: #fbbf24;
+}
+
+.racing-results-col.driver {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  color: var(--text-primary, #fff);
+}
+
+.racing-results-driver-img {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--bg-primary, #0f0f0f);
+  flex-shrink: 0;
+}
+
+.racing-results-col.team {
+  color: var(--text-secondary, #888);
+}
+
+.racing-results-col.time {
+  font-variant-numeric: tabular-nums;
+  color: var(--text-secondary, #aaa);
+}
+
+.racing-results-col.pts {
+  font-weight: 700;
+  text-align: right;
+  color: var(--text-primary, #fff);
+}
+
+/* Broadcast section */
+.racing-detail-broadcast {
   padding: 16px 24px 20px;
   border-top: 1px solid var(--border-color, #2a2a2a);
 }

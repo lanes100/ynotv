@@ -184,14 +184,101 @@ function mapUFCEvent(event: ESPNEvent, config: SportConfig): SportsEvent {
   };
 }
 
+function mapRacingEvent(event: ESPNEvent, sportKey: string, config: SportConfig): SportsEvent {
+  const competition = event.competitions?.[0];
+  const competitors = competition?.competitors || [];
+  const sessionType = (competition as any).type?.abbreviation || 'Race';
+
+  // Sort competitors by finishing position (order)
+  const sortedCompetitors = [...competitors].sort((a, b) => (a.order || 999) - (b.order || 999));
+
+  // Build results list from all competitors (drivers)
+  const matches: NonNullable<SportsEvent['matches']> = sortedCompetitors.map((comp) => {
+    const driver = comp.athlete;
+    const team = comp.team;
+    const pos = comp.order || 0;
+
+    // Parse time/interval from score or status
+    let timeStr = '';
+    if (typeof comp.score === 'object' && comp.score?.displayValue) {
+      timeStr = comp.score.displayValue;
+    } else if (typeof comp.score === 'string') {
+      timeStr = comp.score;
+    }
+
+    // Parse points
+    let points: number | undefined;
+    if (comp.records && comp.records.length > 0) {
+      const pts = parseInt(comp.records[0].summary, 10);
+      if (!isNaN(pts)) points = pts;
+    }
+
+    return {
+      id: comp.id,
+      awayName: driver?.displayName || driver?.fullName || 'Unknown',
+      homeName: team?.displayName || team?.name || 'Unknown',
+      awayLogo: driver?.headshot?.href,
+      homeLogo: team?.logos?.[0]?.href,
+      subtitle: timeStr,
+      awayRecord: points !== undefined ? `${points} pts` : undefined,
+      status: comp.winner ? 'finished' : 'finished',
+      position: pos,
+      points,
+    };
+  });
+
+  // Top 2 drivers for card preview
+  const p1 = sortedCompetitors[0];
+  const p2 = sortedCompetitors[1];
+
+  const homeTeam = p1
+    ? {
+        id: p1.id,
+        name: p1.athlete?.displayName || p1.athlete?.fullName || 'TBD',
+        shortName: p1.athlete?.shortName,
+        logo: p1.athlete?.headshot?.href,
+      }
+    : { id: '', name: 'TBD', shortName: undefined, logo: undefined };
+
+  const awayTeam = p2
+    ? {
+        id: p2.id,
+        name: p2.athlete?.displayName || p2.athlete?.fullName || 'TBD',
+        shortName: p2.athlete?.shortName,
+        logo: p2.athlete?.headshot?.href,
+      }
+    : { id: '', name: 'TBD', shortName: undefined, logo: undefined };
+
+  const state = event.status?.type?.state || 'pre';
+  let status: SportsEvent['status'] = 'scheduled';
+  if (state === 'in') status = 'live';
+  else if (state === 'post') status = 'finished';
+
+  return {
+    id: event.id,
+    title: event.name,
+    homeTeam,
+    awayTeam,
+    league: { id: sportKey, name: config.name, sport: config.sport },
+    startTime: new Date(event.date),
+    status,
+    homeScore: p1 && typeof p1.score === 'object' ? p1.score.value : undefined,
+    awayScore: p2 && typeof p2.score === 'object' ? p2.score.value : undefined,
+    period: event.status?.period?.toString(),
+    timeElapsed: event.status?.displayClock,
+    channels: extractChannels(event, competition),
+    venue: competition?.venue?.fullName || (event as any).venues?.[0]?.fullName,
+    matches,
+  };
+}
+
 function mapStandardEvent(event: ESPNEvent, sportKey: string, config: SportConfig): SportsEvent {
   const competition = event.competitions?.[0];
   const competitors = competition?.competitors || [];
 
   const isGolf = sportKey === 'pga' || sportKey === 'lpga';
   const isTennis = sportKey.startsWith('atp') || sportKey.startsWith('wta') || sportKey.includes('tennis');
-  const isRacing = sportKey === 'f1' || sportKey === 'nascar' || sportKey === 'indycar';
-  const isIndividualSport = sportKey === 'ufc' || isGolf || isTennis || isRacing;
+  const isIndividualSport = sportKey === 'ufc' || isGolf || isTennis;
 
   let homeCompetitor = competitors.find(c => c.homeAway === 'home');
   let awayCompetitor = competitors.find(c => c.homeAway === 'away');
@@ -218,19 +305,6 @@ function mapStandardEvent(event: ESPNEvent, sportKey: string, config: SportConfi
         athlete: { displayName: `${competitors.length} Players` },
       } as any;
     }
-  }
-
-  // F1/Racing: Show race session type
-  if (isRacing && competition) {
-    const sessionType = (competition as any).type?.abbreviation || 'Race';
-    awayCompetitor = {
-      id: 'session',
-      athlete: { displayName: sessionType },
-    } as any;
-    homeCompetitor = {
-      id: 'session2',
-      athlete: { displayName: event.name },
-    } as any;
   }
 
   const state = event.status?.type?.state || 'pre';
@@ -274,6 +348,10 @@ export function mapESPNEvent(event: ESPNEvent, sportKey: string): SportsEvent {
 
   if (sportKey === 'ufc') {
     return mapUFCEvent(event, config);
+  }
+
+  if (sportKey === 'f1' || sportKey === 'nascar' || sportKey === 'indycar') {
+    return mapRacingEvent(event, sportKey, config);
   }
 
   return mapStandardEvent(event, sportKey, config);

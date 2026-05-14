@@ -328,10 +328,11 @@ export function GameCard({ event, onClick, onChannelClick, onSearchTeams, onPlay
   );
 
   const isUFC = event.league.id === 'ufc' && !!event.matches;
+  const isRacing = (event.league.id === 'f1' || event.league.id === 'nascar' || event.league.id === 'indycar') && !!event.matches;
 
   const fullView = (
     <div
-      className={`game-card ${event.status} ${isUFC ? 'ufc-card' : ''}`}
+      className={`game-card ${event.status} ${isUFC ? 'ufc-card' : ''} ${isRacing ? 'racing-card' : ''}`}
       onClick={onClick}
       onKeyDown={handleKeyDown}
       tabIndex={0}
@@ -393,6 +394,36 @@ export function GameCard({ event, onClick, onChannelClick, onSearchTeams, onPlay
                   </div>
                 ))}
               </div>
+            </div>
+          )}
+        </>
+      ) : isRacing ? (
+        /* ─── Racing Event Card Layout ─── */
+        <>
+          {/* Race Title */}
+          <div className="gc-racing-title">{event.title}</div>
+          {event.venue && <div className="gc-racing-circuit">{event.venue}</div>}
+
+          {/* Podium Preview */}
+          {event.matches && event.matches.length > 0 ? (
+            <div className="gc-racing-podium">
+              {event.matches.slice(0, 3).map((match, idx) => {
+                const posLabels = ['1st', '2nd', '3rd'];
+                return (
+                  <div key={match.id} className={`gc-racing-podium-pos pos-${idx + 1}`}>
+                    <span className="gc-racing-podium-label">{posLabels[idx]}</span>
+                    {match.awayLogo && (
+                      <img src={match.awayLogo} alt={match.awayName} className="gc-racing-podium-img" />
+                    )}
+                    <span className="gc-racing-podium-driver">{match.awayName}</span>
+                    <span className="gc-racing-podium-team">{match.homeName}</span>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="gc-racing-scheduled-info">
+              <span className="gc-racing-scheduled-date">{formatEventTime(event.startTime)}</span>
             </div>
           )}
         </>

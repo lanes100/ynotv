@@ -6,13 +6,11 @@ import {
   getLeagueTeams,
   getLeagueStandings,
   getLeagueStandingsGrouped,
-  getUFCRankings,
   getGolfRankings,
   getTennisRankings,
   getRacingStandings,
   type StandingTeam,
   type StandingGroup,
-  type UFCWeightClassRanking,
   type GolfRanking,
   type TennisRanking,
   type RacingStanding,
@@ -38,7 +36,6 @@ export function LeaguesTab({ onSearchChannels, onPlayChannel }: LeaguesTabProps)
   const [leagueTeams, setLeagueTeams] = useState<SportsTeam[]>([]);
   const [leagueStandings, setLeagueStandings] = useState<StandingTeam[]>([]);
   const [leagueStandingsGroups, setLeagueStandingsGroups] = useState<StandingGroup[]>([]);
-  const [ufcRankings, setUfcRankings] = useState<UFCWeightClassRanking[]>([]);
   const [golfRankings, setGolfRankings] = useState<GolfRanking[]>([]);
   const [tennisRankings, setTennisRankings] = useState<TennisRanking[]>([]);
   const [racingStandings, setRacingStandings] = useState<RacingStanding[]>([]);
@@ -84,15 +81,11 @@ export function LeaguesTab({ onSearchChannels, onPlayChannel }: LeaguesTabProps)
     setLoading(true);
 
     try {
-      if (view === 'schedule') {
+        if (view === 'schedule') {
         const events = await getLeagueEvents(selectedLeague.id);
         setLeagueEvents(events);
       } else if (view === 'standings') {
-        if (isUFC) {
-          // UFC Rankings - weight classes
-          const rankings = await getUFCRankings();
-          setUfcRankings(rankings);
-        } else if (isGolf) {
+        if (isGolf) {
           // Golf Rankings - World Golf Rankings
           const rankings = await getGolfRankings(selectedLeague.id as 'pga' | 'lpga');
           setGolfRankings(rankings);
@@ -128,7 +121,6 @@ export function LeaguesTab({ onSearchChannels, onPlayChannel }: LeaguesTabProps)
     setLeagueEvents([]);
     setLeagueStandings([]);
     setLeagueStandingsGroups([]);
-    setUfcRankings([]);
     setGolfRankings([]);
     setTennisRankings([]);
     setRacingStandings([]);
@@ -153,7 +145,6 @@ export function LeaguesTab({ onSearchChannels, onPlayChannel }: LeaguesTabProps)
           events={leagueEvents}
           standings={leagueStandings}
           standingsGroups={leagueStandingsGroups}
-          ufcRankings={ufcRankings}
           golfRankings={golfRankings}
           tennisRankings={tennisRankings}
           racingStandings={racingStandings}
@@ -184,7 +175,6 @@ export function LeaguesTab({ onSearchChannels, onPlayChannel }: LeaguesTabProps)
         events={leagueEvents}
         standings={leagueStandings}
         standingsGroups={leagueStandingsGroups}
-        ufcRankings={ufcRankings}
         golfRankings={golfRankings}
         tennisRankings={tennisRankings}
         racingStandings={racingStandings}
@@ -246,7 +236,6 @@ interface LeagueDetailProps {
   events: SportsEvent[];
   standings: StandingTeam[];
   standingsGroups: StandingGroup[];
-  ufcRankings: UFCWeightClassRanking[];
   golfRankings: GolfRanking[];
   tennisRankings: TennisRanking[];
   racingStandings: RacingStanding[];
@@ -266,7 +255,6 @@ function LeagueDetail({
   events,
   standings,
   standingsGroups,
-  ufcRankings,
   golfRankings,
   tennisRankings,
   racingStandings,
@@ -467,63 +455,6 @@ function LeagueDetail({
               ) : (
                 <div className="sports-empty">
                   <p>Standings not available</p>
-                </div>
-              )}
-            </section>
-          )}
-
-          {/* Individual Sports Rankings */}
-          {activeView === 'standings' && isUFC && (
-            <section className="sports-section">
-              <h3 className="sports-section-title">Weight Class Rankings</h3>
-              {ufcRankings.length > 0 ? (
-                <div className="ufc-rankings-grid">
-                  {ufcRankings.map((division) => (
-                    <div key={division.weightClass} className="ufc-ranking-card">
-                      <h4 className="ufc-ranking-division">{division.weightClass}</h4>
-                      {division.champion && (
-                        <div className="ufc-ranking-champion">
-                          <span className="ufc-ranking-champion-label">Champion</span>
-                          <div className="ufc-ranking-fighter">
-                            {division.champion.headshot && (
-                              <img src={division.champion.headshot} alt={division.champion.name} className="ufc-ranking-headshot" />
-                            )}
-                            <div className="ufc-ranking-fighter-info">
-                              <span className="ufc-ranking-fighter-name">{division.champion.name}</span>
-                              {division.champion.record && (
-                                <span className="ufc-ranking-fighter-record">{division.champion.record}</span>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                      {division.rankedFighters.length > 0 && (
-                        <div className="ufc-ranking-list">
-                          {division.rankedFighters.slice(0, 5).map((fighter) => (
-                            <div key={fighter.id} className="ufc-ranking-row">
-                              <span className="ufc-ranking-rank">#{fighter.rank}</span>
-                              {fighter.headshot && (
-                                <img src={fighter.headshot} alt={fighter.name} className="ufc-ranking-headshot-small" />
-                              )}
-                              <span className="ufc-ranking-fighter-name">{fighter.name}</span>
-                              {fighter.record && (
-                                <span className="ufc-ranking-fighter-record">{fighter.record}</span>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                      {division.rankedFighters.length === 0 && !division.champion && (
-                        <div className="ufc-ranking-empty">
-                          <span>No rankings available</span>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="sports-empty">
-                  <p>Rankings not available</p>
                 </div>
               )}
             </section>

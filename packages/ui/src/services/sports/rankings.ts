@@ -224,12 +224,12 @@ export async function getRacingStandings(leagueId: 'f1' | 'nascar' | 'indycar'):
   const config = SPORT_CONFIG[leagueId];
   if (!config) return [];
 
-  // For racing, use the standings endpoint
   const url = `https://site.web.api.espn.com/apis/v2/sports/${config.sport}/${config.league}/standings`;
-  
+
   const data = await fetchJson<{
     children?: Array<{
       name: string;
+      abbreviation?: string;
       standings?: {
         entries?: Array<{
           athlete?: {
@@ -244,6 +244,7 @@ export async function getRacingStandings(leagueId: 'f1' | 'nascar' | 'indycar'):
           stats?: Array<{
             name: string;
             value: number;
+            displayValue?: string;
           }>;
         }>;
       };
@@ -253,26 +254,35 @@ export async function getRacingStandings(leagueId: 'f1' | 'nascar' | 'indycar'):
   const standings: RacingStanding[] = [];
 
   if (data?.children) {
-    for (const group of data.children) {
-      const entries = group.standings?.entries || [];
-      for (const entry of entries) {
-        const stats = entry.stats || [];
-        const getStat = (name: string) => stats.find(s => s.name === name)?.value || 0;
+    // Only process the "Driver Standings" group — skip "Constructor Standings"
+    const driverGroup = data.children.find(
+      (g) => g.name === 'Driver Standings' || g.abbreviation === 'Driver'
+    );
 
-        standings.push({
-          rank: getStat('rank'),
-          driver: {
-            id: entry.athlete?.id || '',
-            name: entry.athlete?.displayName || 'Unknown',
-            team: entry.team?.displayName || '',
-            flag: entry.athlete?.flag?.href,
-            headshot: entry.athlete?.headshot?.href,
-          },
-          points: getStat('points'),
-          wins: getStat('wins'),
-          podiums: getStat('podiums') || getStat('top5s') || 0,
-        });
-      }
+    const entries = driverGroup?.standings?.entries || [];
+    for (const entry of entries) {
+      // Skip constructor entries (they have `team` but no `athlete`)
+      if (!entry.athlete) continue;
+
+      const stats = entry.stats || [];
+      const getStat = (name: string) => stats.find((s) => s.name === name)?.value || 0;
+
+      // F1 uses 'championshipPts'; NASCAR/IndyCar may use 'points'
+      const points = getStat('championshipPts') || getStat('points');
+
+      standings.push({
+        rank: getStat('rank'),
+        driver: {
+          id: entry.athlete.id,
+          name: entry.athlete.displayName,
+          team: entry.team?.displayName || '',
+          flag: entry.athlete.flag?.href,
+          headshot: entry.athlete.headshot?.href,
+        },
+        points,
+        wins: getStat('wins'),
+        podiums: getStat('podiums') || getStat('top5s') || 0,
+      });
     }
   }
 
