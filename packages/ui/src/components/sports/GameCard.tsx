@@ -96,7 +96,13 @@ function stripMascotForCollege(name: string): string {
   return words.slice(0, -1).join(' ');
 }
 
-function buildTeamSearchQuery(homeTeam: string, awayTeam: string, leagueId?: string): string {
+// Individual sports where team names don't make sense for search — use event title instead
+const INDIVIDUAL_SPORT_LEAGUES = new Set(['ufc', 'f1', 'nascar', 'indycar', 'pga', 'lpga', 'atp', 'wta']);
+
+function buildTeamSearchQuery(homeTeam: string, awayTeam: string, leagueId?: string, eventTitle?: string): string {
+  if (leagueId && INDIVIDUAL_SPORT_LEAGUES.has(leagueId) && eventTitle) {
+    return eventTitle;
+  }
   if (leagueId && NCAA_LEAGUE_IDS.has(leagueId)) {
     return `${stripMascotForCollege(homeTeam)} ${stripMascotForCollege(awayTeam)}`;
   }
@@ -585,7 +591,7 @@ export function GameCard({ event, onClick, onChannelClick, onSearchTeams, onPlay
             title={`Search EPG for ${event.homeTeam.name} vs ${event.awayTeam.name}`}
             onClick={(e) => {
               e.stopPropagation();
-              const query = buildTeamSearchQuery(event.homeTeam.name, event.awayTeam.name, event.league.id);
+      const query = buildTeamSearchQuery(event.homeTeam.name, event.awayTeam.name, event.league.id, event.title);
               onSearchTeams(query);
             }}
           >
