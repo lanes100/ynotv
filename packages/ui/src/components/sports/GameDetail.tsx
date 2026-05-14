@@ -24,6 +24,7 @@ export function GameDetail({ event, onClose, onChannelClick, onPlayChannel }: Ga
   const isLive = event.status === 'live';
   const homeWinning = (event.homeScore ?? 0) > (event.awayScore ?? 0);
   const awayWinning = (event.awayScore ?? 0) > (event.homeScore ?? 0);
+  const isUFC = event.league.id === 'ufc' && !!event.matches;
 
   useEffect(() => {
     const loadDetails = async () => {
@@ -304,6 +305,134 @@ export function GameDetail({ event, onClose, onChannelClick, onPlayChannel }: Ga
     );
   };
 
+  const renderUFCDetail = () => {
+    const mainEvent = event.matches?.[event.matches.length - 1];
+
+    return (
+      <div className="game-detail-overlay" onClick={handleOverlayClick} onKeyDown={handleKeyDown}>
+        <div className="game-detail-modal ufc-detail-modal">
+          {/* Header */}
+          <div className="game-detail-header">
+            <div className="game-detail-header-info">
+              <span className="game-detail-sport">{event.league.sport.toUpperCase()}</span>
+              <span className="game-detail-league">{event.league.name}</span>
+            </div>
+            <button className="game-detail-close" onClick={onClose}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+          </div>
+
+          {/* Event Title */}
+          <div className="ufc-detail-title-bar">
+            <h2 className="ufc-detail-event-title">{event.title}</h2>
+            <div className="ufc-detail-meta">
+              {isLive && (
+                <span className="ufc-detail-live-badge">
+                  <span className="ufc-detail-live-dot" />
+                  LIVE
+                </span>
+              )}
+              <span className="ufc-detail-datetime">{formatEventDateTime(event.startTime)}</span>
+              {event.venue && <span className="ufc-detail-venue">{event.venue}</span>}
+            </div>
+          </div>
+
+          {/* Main Event */}
+          {mainEvent && (
+            <div className="ufc-detail-main-event">
+              <div className="ufc-detail-fighter away">
+                {event.awayTeam.logo && (
+                  <img src={event.awayTeam.logo} alt={event.awayTeam.name} className="ufc-detail-fighter-img" />
+                )}
+                <span className="ufc-detail-fighter-name">{event.awayTeam.name}</span>
+                {mainEvent.awayRecord && (
+                  <span className="ufc-detail-fighter-record">{mainEvent.awayRecord}</span>
+                )}
+              </div>
+              <div className="ufc-detail-main-vs">
+                <span className="ufc-detail-vs-text">VS</span>
+                {mainEvent.subtitle && (
+                  <span className="ufc-detail-weight-class">{mainEvent.subtitle}</span>
+                )}
+              </div>
+              <div className="ufc-detail-fighter home">
+                {event.homeTeam.logo && (
+                  <img src={event.homeTeam.logo} alt={event.homeTeam.name} className="ufc-detail-fighter-img" />
+                )}
+                <span className="ufc-detail-fighter-name">{event.homeTeam.name}</span>
+                {mainEvent.homeRecord && (
+                  <span className="ufc-detail-fighter-record">{mainEvent.homeRecord}</span>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Fight Card */}
+          <div className="ufc-detail-content">
+            <h3 className="ufc-detail-section-title">Fight Card</h3>
+            <div className="ufc-detail-card-list">
+              {event.matches?.map((match, idx) => {
+                const isMainEvent = idx === (event.matches?.length || 0) - 1;
+                return (
+                  <div key={match.id} className={`ufc-detail-fight ${match.status === 'live' ? 'live' : ''} ${isMainEvent ? 'main-event' : ''}`}>
+                    <div className="ufc-detail-fight-order">{idx + 1}</div>
+                    <div className="ufc-detail-fight-info">
+                      <div className="ufc-detail-fight-matchup">
+                        <span className="ufc-detail-fight-away">{match.awayName}</span>
+                        <span className="ufc-detail-fight-vs">vs</span>
+                        <span className="ufc-detail-fight-home">{match.homeName}</span>
+                      </div>
+                      <div className="ufc-detail-fight-records">
+                        {match.awayRecord && <span>{match.awayRecord}</span>}
+                        {match.homeRecord && <span>{match.homeRecord}</span>}
+                      </div>
+                    </div>
+                    <div className="ufc-detail-fight-badges">
+                      {match.subtitle && (
+                        <span className="ufc-detail-fight-weight">{match.subtitle}</span>
+                      )}
+                      {match.status === 'live' && (
+                        <span className="ufc-detail-fight-live-badge">LIVE</span>
+                      )}
+                      {isMainEvent && (
+                        <span className="ufc-detail-fight-main-badge">Main Event</span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Broadcast */}
+          {event.channels.length > 0 && (
+            <div className="ufc-detail-broadcast">
+              <h3 className="ufc-detail-section-title">Watch On</h3>
+              <div className="game-detail-channels">
+                {event.channels.map((channel, idx) => (
+                  <button
+                    key={idx}
+                    className="game-detail-channel-btn"
+                    onClick={() => onChannelClick?.(channel.name)}
+                  >
+                    {channel.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  if (isUFC) {
+    return renderUFCDetail();
+  }
+
   return (
     <div className="game-detail-overlay" onClick={handleOverlayClick} onKeyDown={handleKeyDown}>
       <div className="game-detail-modal">
@@ -323,9 +452,9 @@ export function GameDetail({ event, onClose, onChannelClick, onPlayChannel }: Ga
         <div className="game-detail-scoreboard">
           <div className="game-detail-team away">
             {event.awayTeam.logo && (
-              <img 
-                src={event.awayTeam.logo} 
-                alt={event.awayTeam.name} 
+              <img
+                src={event.awayTeam.logo}
+                alt={event.awayTeam.name}
                 className="game-detail-team-logo"
                 onError={(e) => { e.currentTarget.style.display = 'none'; }}
               />
@@ -361,9 +490,9 @@ export function GameDetail({ event, onClose, onChannelClick, onPlayChannel }: Ga
 
           <div className="game-detail-team home">
             {event.homeTeam.logo && (
-              <img 
-                src={event.homeTeam.logo} 
-                alt={event.homeTeam.name} 
+              <img
+                src={event.homeTeam.logo}
+                alt={event.homeTeam.name}
                 className="game-detail-team-logo"
                 onError={(e) => { e.currentTarget.style.display = 'none'; }}
               />
@@ -382,25 +511,25 @@ export function GameDetail({ event, onClose, onChannelClick, onPlayChannel }: Ga
         </div>
 
         <div className="game-detail-tabs">
-          <button 
+          <button
             className={`game-detail-tab ${activeTab === 'stats' ? 'active' : ''}`}
             onClick={() => setActiveTab('stats')}
           >
             Team Stats
           </button>
-          <button 
+          <button
             className={`game-detail-tab ${activeTab === 'players' ? 'active' : ''}`}
             onClick={() => setActiveTab('players')}
           >
             Players
           </button>
-          <button 
+          <button
             className={`game-detail-tab ${activeTab === 'scoring' ? 'active' : ''}`}
             onClick={() => setActiveTab('scoring')}
           >
             Scoring Plays
           </button>
-          <button 
+          <button
             className={`game-detail-tab ${activeTab === 'info' ? 'active' : ''}`}
             onClick={() => setActiveTab('info')}
           >

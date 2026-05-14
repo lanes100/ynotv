@@ -104,6 +104,7 @@ export function LiveScoresTab({ onSearchChannels, onPlayChannel }: LiveScoresTab
             </span>
           )}
         </div>
+        <div className="live-header-divider" />
         <div className="live-controls">
           {lastUpdated && (
             <span className="live-last-updated">
@@ -111,18 +112,18 @@ export function LiveScoresTab({ onSearchChannels, onPlayChannel }: LiveScoresTab
               {isPolling && <span className="live-polling-indicator" title="Auto-refreshing" />}
             </span>
           )}
-          <button 
-            className="live-refresh-btn" 
-            onClick={refresh} 
+          <button
+            className="live-refresh-btn"
+            onClick={refresh}
             disabled={loading}
             title="Refresh scores"
           >
-            <svg 
-              width="16" 
-              height="16" 
-              viewBox="0 0 24 24" 
-              fill="none" 
-              stroke="currentColor" 
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
               strokeWidth="2"
               className={loading ? 'spinning' : ''}
             >
@@ -132,8 +133,9 @@ export function LiveScoresTab({ onSearchChannels, onPlayChannel }: LiveScoresTab
             </svg>
           </button>
         </div>
+        <div className="live-header-divider" />
         <div className="live-categories">
-          <button 
+          <button
             className={`live-category-btn ${selectedCategory === 'all' ? 'active' : ''}`}
             onClick={() => setSelectedCategory('all')}
           >

@@ -43,6 +43,10 @@ export function SportsHub({
   onChannelDown,
 }: SportsHubProps) {
   const previewRef = useRef<HTMLDivElement>(null);
+  const fillerLeftRef = useRef<HTMLDivElement>(null);
+  const fillerRightRef = useRef<HTMLDivElement>(null);
+  const fillerTopRef = useRef<HTMLDivElement>(null);
+  const fillerBottomRef = useRef<HTMLDivElement>(null);
   const activeTab = useSportsSelectedTab();
   const setActiveTab = useSetSportsSelectedTab();
   const [selectedSport, setSelectedSport] = useState<string | null>(null);
@@ -169,6 +173,15 @@ export function SportsHub({
 
       const actualVideoW = videoNativeW * scale;
       const actualVideoH = videoNativeH * scale;
+
+      // Calculate empty space around the video and update filler overlays
+      const hPad = Math.max(0, (rect.width - actualVideoW) / 2);
+      const vPad = Math.max(0, (rect.height - actualVideoH) / 2);
+
+      if (fillerLeftRef.current) fillerLeftRef.current.style.width = `${Math.round(hPad)}px`;
+      if (fillerRightRef.current) fillerRightRef.current.style.width = `${Math.round(hPad)}px`;
+      if (fillerTopRef.current) fillerTopRef.current.style.height = `${Math.round(vPad)}px`;
+      if (fillerBottomRef.current) fillerBottomRef.current.style.height = `${Math.round(vPad)}px`;
 
       const targetCenterX = rect.left + (rect.width / 2);
       const targetCenterY = rect.top + (rect.height / 2);
@@ -516,6 +529,12 @@ export function SportsHub({
                 }}
                 title="Double-click for fullscreen"
               >
+                {/* Opaque fillers that cover the empty space around the centered video */}
+                <div ref={fillerLeftRef} className="sports-preview-filler sports-preview-filler-left" />
+                <div ref={fillerRightRef} className="sports-preview-filler sports-preview-filler-right" />
+                <div ref={fillerTopRef} className="sports-preview-filler sports-preview-filler-top" />
+                <div ref={fillerBottomRef} className="sports-preview-filler sports-preview-filler-bottom" />
+
                 {/* Resizer Handle */}
                 <div
                   className="sports-preview-resizer"

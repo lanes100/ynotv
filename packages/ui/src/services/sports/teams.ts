@@ -138,7 +138,7 @@ export async function getTeamSchedule(teamId: string, leagueId: string): Promise
 
   const now = new Date();
   const allEvents = data.events.map(e => mapESPNEvent(e, leagueId));
-  
+
   return {
     upcoming: allEvents.filter(e => e.startTime >= now),
     past: allEvents.filter(e => e.startTime < now).reverse(),

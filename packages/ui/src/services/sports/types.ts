@@ -27,6 +27,11 @@ export interface ESPNEvent {
   };
   competitions: Array<{
     id: string;
+    uid?: string;
+    date?: string;
+    startDate?: string;
+    endDate?: string;
+    order?: number;
     competitors: Array<{
       id: string;
       uid: string;
@@ -63,6 +68,24 @@ export interface ESPNEvent {
     }>;
     venue?: {
       fullName: string;
+    };
+    status?: {
+      clock: number;
+      displayClock: string;
+      period: number;
+      type: {
+        id: string;
+        name: string;
+        state: string;
+        completed: boolean;
+        description: string;
+        detail: string;
+        shortDetail: string;
+      };
+    };
+    type?: {
+      id: string;
+      abbreviation: string;
     };
   }>;
   season?: {

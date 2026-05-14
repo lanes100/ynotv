@@ -327,9 +327,11 @@ export function GameCard({ event, onClick, onChannelClick, onSearchTeams, onPlay
     </div>
   );
 
+  const isUFC = event.league.id === 'ufc' && !!event.matches;
+
   const fullView = (
     <div
-      className={`game-card ${event.status}`}
+      className={`game-card ${event.status} ${isUFC ? 'ufc-card' : ''}`}
       onClick={onClick}
       onKeyDown={handleKeyDown}
       tabIndex={0}
@@ -351,39 +353,87 @@ export function GameCard({ event, onClick, onChannelClick, onSearchTeams, onPlay
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="gc-body">
-        {/* Away Team */}
-        <div className="gc-team-col away">
-          <TeamLogo name={event.awayTeam.name} logo={event.awayTeam.logo} size="lg" />
-          <TeamNameLabel name={event.awayTeam.name} />
-        </div>
+      {isUFC ? (
+        /* ─── UFC Event Card Layout ─── */
+        <>
+          {/* Event Title */}
+          <div className="gc-ufc-title">{event.title}</div>
 
-        {/* Center Scores */}
-        <div className="gc-score-col">
-          {isScheduled ? (
-            <>
-              <span className="gc-vs-big">VS</span>
-              <span className="gc-start-time">{formatEventTime(event.startTime)}</span>
-            </>
-          ) : (
-            <>
-              <div className="gc-score-pair">
-                <span className={`gc-score-big ${awayWinning ? 'winning' : ''}`}>{event.awayScore ?? '-'}</span>
-                <span className="gc-score-sep">:</span>
-                <span className={`gc-score-big ${homeWinning ? 'winning' : ''}`}>{event.homeScore ?? '-'}</span>
+          {/* Main Event Fighters */}
+          <div className="gc-ufc-main">
+            <div className="gc-ufc-fighter">
+              <TeamLogo name={event.awayTeam.name} logo={event.awayTeam.logo} size="lg" />
+              <span className="gc-ufc-fighter-name">{event.awayTeam.name}</span>
+            </div>
+            <div className="gc-ufc-vs">VS</div>
+            <div className="gc-ufc-fighter">
+              <TeamLogo name={event.homeTeam.name} logo={event.homeTeam.logo} size="lg" />
+              <span className="gc-ufc-fighter-name">{event.homeTeam.name}</span>
+            </div>
+          </div>
+
+          {/* Fight Card List */}
+          {event.matches && event.matches.length > 0 && (
+            <div className="gc-ufc-card">
+              <div className="gc-ufc-card-header">Fight Card</div>
+              <div className="gc-ufc-card-list">
+                {event.matches.map((match) => (
+                  <div key={match.id} className={`gc-ufc-match ${match.status === 'live' ? 'live' : ''}`}>
+                    <div className="gc-ufc-match-names">
+                      <span className="gc-ufc-match-away">{match.awayName}</span>
+                      <span className="gc-ufc-match-vs">vs</span>
+                      <span className="gc-ufc-match-home">{match.homeName}</span>
+                    </div>
+                    {match.subtitle && (
+                      <span className="gc-ufc-match-weight">{match.subtitle}</span>
+                    )}
+                    {match.status === 'live' && (
+                      <span className="gc-ufc-match-live-dot" />
+                    )}
+                  </div>
+                ))}
               </div>
-              {statusBelow && <span className="gc-status-below">{statusBelow}</span>}
-            </>
+            </div>
           )}
-        </div>
+        </>
+      ) : (
+        /* ─── Standard Sport Card Layout ─── */
+        <>
+          {/* Main Content */}
+          <div className="gc-body">
+            {/* Away Team */}
+            <div className="gc-team-col away">
+              <TeamLogo name={event.awayTeam.name} logo={event.awayTeam.logo} size="lg" />
+              <TeamNameLabel name={event.awayTeam.name} />
+            </div>
 
-        {/* Home Team */}
-        <div className="gc-team-col home">
-          <TeamLogo name={event.homeTeam.name} logo={event.homeTeam.logo} size="lg" />
-          <TeamNameLabel name={event.homeTeam.name} />
-        </div>
-      </div>
+            {/* Center Scores */}
+            <div className="gc-score-col">
+              {isScheduled ? (
+                <>
+                  <span className="gc-vs-big">VS</span>
+                  <span className="gc-start-time">{formatEventTime(event.startTime)}</span>
+                </>
+              ) : (
+                <>
+                  <div className="gc-score-pair">
+                    <span className={`gc-score-big ${awayWinning ? 'winning' : ''}`}>{event.awayScore ?? '-'}</span>
+                    <span className="gc-score-sep">:</span>
+                    <span className={`gc-score-big ${homeWinning ? 'winning' : ''}`}>{event.homeScore ?? '-'}</span>
+                  </div>
+                  {statusBelow && <span className="gc-status-below">{statusBelow}</span>}
+                </>
+              )}
+            </div>
+
+            {/* Home Team */}
+            <div className="gc-team-col home">
+              <TeamLogo name={event.homeTeam.name} logo={event.homeTeam.logo} size="lg" />
+              <TeamNameLabel name={event.homeTeam.name} />
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Footer */}
       {/* Channels */}

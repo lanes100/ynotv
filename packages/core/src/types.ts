@@ -222,6 +222,18 @@ export interface AppState {
 // Sports Hub Types
 // =============================================================================
 
+export interface SportsMatch {
+  id: string;
+  awayName: string;
+  homeName: string;
+  awayLogo?: string;
+  homeLogo?: string;
+  awayRecord?: string;
+  homeRecord?: string;
+  subtitle?: string;
+  status?: 'scheduled' | 'live' | 'finished';
+}
+
 export interface SportsEvent {
   id: string;
   title: string;
@@ -236,6 +248,7 @@ export interface SportsEvent {
   timeElapsed?: string;
   channels: SportsBroadcastChannel[];
   venue?: string;
+  matches?: SportsMatch[];
 }
 
 export interface SportsTeam {
