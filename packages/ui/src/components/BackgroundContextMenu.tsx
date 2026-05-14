@@ -5,11 +5,12 @@ import './BackgroundContextMenu.css';
 interface BackgroundContextMenuProps {
   position: { x: number; y: number };
   sportsWidget: 'autohide' | 'persistent' | null;
-  recentWidget: boolean;
+  recentWidget: '5' | '10' | null;
   onAddSportsAutohide: () => void;
   onAddSportsPersistent: () => void;
   onRemoveSports: () => void;
-  onAddRecent: () => void;
+  onAddRecent5: () => void;
+  onAddRecent10: () => void;
   onRemoveRecent: () => void;
   onClose: () => void;
 }
@@ -21,7 +22,8 @@ export function BackgroundContextMenu({
   onAddSportsAutohide,
   onAddSportsPersistent,
   onRemoveSports,
-  onAddRecent,
+  onAddRecent5,
+  onAddRecent10,
   onRemoveRecent,
   onClose,
 }: BackgroundContextMenuProps) {
@@ -72,7 +74,7 @@ export function BackgroundContextMenu({
     };
   }, [onClose]);
 
-  const hasAnyWidget = sportsWidget !== null || recentWidget;
+  const hasAnyWidget = sportsWidget !== null || recentWidget !== null;
 
   return createPortal(
     <div ref={menuRef} className="background-context-menu">
@@ -94,7 +96,7 @@ export function BackgroundContextMenu({
                 <polyline points="1 4 1 10 7 10" />
                 <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
               </svg>
-              Recent Channels
+              Recent Channels ({recentWidget})
             </div>
           )}
           <div className="context-menu-separator" />
@@ -121,13 +123,22 @@ export function BackgroundContextMenu({
         </>
       )}
       {!recentWidget && (
-        <div className="context-menu-item" onClick={() => { onAddRecent(); onClose(); }}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <polyline points="1 4 1 10 7 10" />
-            <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
-          </svg>
-          Recent Channels
-        </div>
+        <>
+          <div className="context-menu-item" onClick={() => { onAddRecent5(); onClose(); }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <polyline points="1 4 1 10 7 10" />
+              <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
+            </svg>
+            Recent Channels (5)
+          </div>
+          <div className="context-menu-item" onClick={() => { onAddRecent10(); onClose(); }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <polyline points="1 4 1 10 7 10" />
+              <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
+            </svg>
+            Recent Channels (10)
+          </div>
+        </>
       )}
 
       {hasAnyWidget && (

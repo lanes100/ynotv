@@ -1,7 +1,7 @@
 /* Recent Channels Widget - bottom left overlay above Now Playing Bar */
 .recent-channels-widget {
   position: absolute;
-  bottom: 120px;
+  bottom: 150px;
   left: 16px;
   z-index: 55;
   max-width: 340px;
@@ -110,7 +110,7 @@
 /* Responsive */
 @media (max-width: 600px) {
   .recent-channels-widget {
-    bottom: 110px;
+    bottom: 140px;
     left: 10px;
     max-width: 260px;
     min-width: 160px;

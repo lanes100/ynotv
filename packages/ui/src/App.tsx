@@ -434,9 +434,10 @@ function App() {
   // ==========================================================================
   // Recent Channels Overlay Widget State
   // ==========================================================================
-  const [recentOverlayWidget, setRecentOverlayWidget] = useState<boolean>(() => {
+  const [recentOverlayWidget, setRecentOverlayWidget] = useState<'5' | '10' | null>(() => {
     const saved = localStorage.getItem('recentOverlayWidget');
-    return saved === 'true';
+    if (saved === 'true') return '5';
+    return (saved === '5' || saved === '10') ? saved : null;
   });
 
   const [bgContextMenu, setBgContextMenu] = useState<{ x: number; y: number } | null>(null);
@@ -451,13 +452,18 @@ function App() {
     localStorage.removeItem('sportsOverlayWidget');
   }, []);
 
-  const handleAddRecentOverlay = useCallback(() => {
-    setRecentOverlayWidget(true);
-    localStorage.setItem('recentOverlayWidget', 'true');
+  const handleAddRecent5Overlay = useCallback(() => {
+    setRecentOverlayWidget('5');
+    localStorage.setItem('recentOverlayWidget', '5');
+  }, []);
+
+  const handleAddRecent10Overlay = useCallback(() => {
+    setRecentOverlayWidget('10');
+    localStorage.setItem('recentOverlayWidget', '10');
   }, []);
 
   const handleRemoveRecentOverlay = useCallback(() => {
-    setRecentOverlayWidget(false);
+    setRecentOverlayWidget(null);
     localStorage.removeItem('recentOverlayWidget');
   }, []);
 
@@ -1029,7 +1035,7 @@ function App() {
   // Render
   // ==========================================================================
   return (
-    <div className={`app${showControls ? '' : ' controls-hidden'}${sportsOverlayWidget === 'autohide' ? ' has-live-sports-autohide' : ''}${sportsOverlayWidget === 'persistent' ? ' has-live-sports-persistent' : ''}${recentOverlayWidget ? ' has-recent-widget' : ''}`} onMouseMove={handleMouseMove}>
+    <div className={`app${showControls ? '' : ' controls-hidden'}${sportsOverlayWidget === 'autohide' ? ' has-live-sports-autohide' : ''}${sportsOverlayWidget === 'persistent' ? ' has-live-sports-persistent' : ''}${recentOverlayWidget !== null ? ' has-recent-widget' : ''}`} onMouseMove={handleMouseMove}>
       {/* Custom title bar for frameless window */}
       <div className={`title-bar${showControls ? ' visible' : ''}`} data-tauri-drag-region>
         <div className="title-bar-left-group" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -1314,7 +1320,7 @@ function App() {
       )}
 
       {/* Live Sports Overlay Widget */}
-      {sportsOverlayWidget && (
+      {sportsOverlayWidget && !(currentChannel?.stream_id === 'vod' || currentChannel?.stream_id?.startsWith('recording_')) && (
         <LiveSportsOverlay
           mode={sportsOverlayWidget}
           showControls={showControls}
@@ -1323,12 +1329,14 @@ function App() {
       )}
 
       {/* Recent Channels Overlay Widget */}
-      {recentOverlayWidget && (
+      {recentOverlayWidget && !(currentChannel?.stream_id === 'vod' || currentChannel?.stream_id?.startsWith('recording_')) && (
         <RecentChannelsWidget
           showControls={showControls}
           activeView={activeView}
           channelInfoOverlayEnabled={channelInfoOverlayEnabled}
           onChannelClick={handlePlayChannelWrapper}
+          limit={recentOverlayWidget === '10' ? 10 : 5}
+          isVod={Boolean(currentChannel?.stream_id === 'vod' || currentChannel?.stream_id?.startsWith('recording_'))}
         />
       )}
 
@@ -1341,7 +1349,8 @@ function App() {
           onAddSportsAutohide={() => handleAddSportsOverlay('autohide')}
           onAddSportsPersistent={() => handleAddSportsOverlay('persistent')}
           onRemoveSports={handleRemoveSportsOverlay}
-          onAddRecent={handleAddRecentOverlay}
+          onAddRecent5={handleAddRecent5Overlay}
+          onAddRecent10={handleAddRecent10Overlay}
           onRemoveRecent={handleRemoveRecentOverlay}
           onClose={() => setBgContextMenu(null)}
         />
