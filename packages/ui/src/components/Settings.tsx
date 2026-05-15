@@ -152,6 +152,11 @@ export function Settings({
 
   // Widget scale state
   const [widgetScale, setWidgetScaleState] = useState(1);
+  const [widgetBgOpacity, setWidgetBgOpacityState] = useState(0.55);
+
+  // Sports overlay state
+  const [sportsScale, setSportsScaleState] = useState(1);
+  const [sportsBgOpacity, setSportsBgOpacityState] = useState(0.7);
 
   // Sync prop values to internal state so changes from App.tsx take effect immediately
   useEffect(() => { setChannelInfoOverlayEnabled(channelInfoOverlayEnabledProp ?? false); }, [channelInfoOverlayEnabledProp]);
@@ -270,6 +275,9 @@ export function Settings({
         popoutMpvParams?: string;
         subtitleSettings?: SubtitleSettings;
         widgetScale?: number;
+        widgetBgOpacity?: number;
+        sportsScale?: number;
+        sportsBgOpacity?: number;
       };
 
       // Load TMDB API key
@@ -403,6 +411,18 @@ export function Settings({
       const loadedScale = settings.widgetScale ?? 1;
       setWidgetScaleState(loadedScale);
       document.documentElement.style.setProperty('--widget-scale', String(loadedScale));
+
+      const loadedBgOpacity = settings.widgetBgOpacity ?? 0.55;
+      setWidgetBgOpacityState(loadedBgOpacity);
+      document.documentElement.style.setProperty('--widget-bg-opacity', String(loadedBgOpacity));
+
+      const loadedSportsScale = settings.sportsScale ?? 1;
+      setSportsScaleState(loadedSportsScale);
+      document.documentElement.style.setProperty('--sports-scale', String(loadedSportsScale));
+
+      const loadedSportsBgOpacity = settings.sportsBgOpacity ?? 0.7;
+      setSportsBgOpacityState(loadedSportsBgOpacity);
+      document.documentElement.style.setProperty('--sports-bg-opacity', String(loadedSportsBgOpacity));
     }
     setSettingsLoaded(true);
   }
@@ -609,6 +629,30 @@ export function Settings({
     document.documentElement.style.setProperty('--widget-scale', String(scale));
     if (window.storage) {
       await window.storage.updateSettings({ widgetScale: scale });
+    }
+  };
+
+  const handleWidgetBgOpacityChange = async (opacity: number) => {
+    setWidgetBgOpacityState(opacity);
+    document.documentElement.style.setProperty('--widget-bg-opacity', String(opacity));
+    if (window.storage) {
+      await window.storage.updateSettings({ widgetBgOpacity: opacity });
+    }
+  };
+
+  const handleSportsScaleChange = async (scale: number) => {
+    setSportsScaleState(scale);
+    document.documentElement.style.setProperty('--sports-scale', String(scale));
+    if (window.storage) {
+      await window.storage.updateSettings({ sportsScale: scale });
+    }
+  };
+
+  const handleSportsBgOpacityChange = async (opacity: number) => {
+    setSportsBgOpacityState(opacity);
+    document.documentElement.style.setProperty('--sports-bg-opacity', String(opacity));
+    if (window.storage) {
+      await window.storage.updateSettings({ sportsBgOpacity: opacity });
     }
   };
 
@@ -905,6 +949,12 @@ export function Settings({
           <WidgetsTab
             widgetScale={widgetScale}
             onWidgetScaleChange={handleWidgetScaleChange}
+            widgetBgOpacity={widgetBgOpacity}
+            onWidgetBgOpacityChange={handleWidgetBgOpacityChange}
+            sportsScale={sportsScale}
+            onSportsScaleChange={handleSportsScaleChange}
+            sportsBgOpacity={sportsBgOpacity}
+            onSportsBgOpacityChange={handleSportsBgOpacityChange}
           />
         );
       default:

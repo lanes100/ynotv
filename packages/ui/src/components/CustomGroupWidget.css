@@ -1,11 +1,11 @@
-/* Recent Channels Widget — lives inside WidgetBar, no absolute positioning */
-.recent-channels-widget {
+/* Custom Group Widget — same visual style as Recent & Favorites */
+.custom-group-widget {
   width: 340px;
   flex-shrink: 0;
   pointer-events: none;
 }
 
-.recent-channels-widget .recent-channels-header {
+.custom-group-widget .custom-group-header {
   background: rgba(0, 0, 0, var(--widget-bg-opacity, 0.55));
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
@@ -19,9 +19,13 @@
   text-transform: uppercase;
   letter-spacing: 0.5px;
   pointer-events: none;
+  /* Truncate very long group names */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.recent-channels-widget .recent-channels-list {
+.custom-group-widget .custom-group-list {
   background: rgba(0, 0, 0, var(--widget-bg-opacity, 0.55));
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
@@ -33,12 +37,12 @@
   display: flex;
   flex-direction: column;
   gap: 1px;
-  /* Fixed height = 5 items × 32px + 4 gaps × 1px + 4px top + 4px bottom padding */
+  /* Fixed height = 5 items to match Recent/Favorites */
   height: 172px;
   overflow-y: scroll;
 }
 
-.recent-channel-item {
+.group-channel-item {
   padding: 6px 10px;
   cursor: pointer;
   color: rgba(255, 255, 255, 0.85);
@@ -55,61 +59,46 @@
   flex-shrink: 0;
 }
 
-.recent-channel-item:hover {
-  background: rgba(0, 212, 255, 0.1);
-  color: var(--accent-primary, #00d4ff);
+.group-channel-item:hover {
+  background: rgba(139, 92, 246, 0.15);
+  color: #a78bfa;
 }
 
-.recent-channel-item:active {
-  background: rgba(0, 212, 255, 0.2);
+.group-channel-item:active {
+  background: rgba(139, 92, 246, 0.25);
 }
 
-.recent-channel-name {
+.group-channel-name {
   font-weight: 600;
   flex-shrink: 0;
 }
 
-.recent-channel-separator {
+.group-channel-separator {
   color: rgba(255, 255, 255, 0.35);
   flex-shrink: 0;
 }
 
-.recent-channel-program {
+.group-channel-program {
   color: rgba(255, 255, 255, 0.55);
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.recent-channel-item:hover .recent-channel-program {
+.group-channel-item:hover .group-channel-program {
   color: inherit;
 }
 
-/* Scrollbar styling for the list */
-.recent-channels-list::-webkit-scrollbar {
-  width: 4px;
-}
-
-.recent-channels-list::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.recent-channels-list::-webkit-scrollbar-thumb {
+/* Scrollbar */
+.custom-group-list::-webkit-scrollbar { width: 4px; }
+.custom-group-list::-webkit-scrollbar-track { background: transparent; }
+.custom-group-list::-webkit-scrollbar-thumb {
   background: rgba(255, 255, 255, 0.15);
   border-radius: 2px;
 }
 
 /* Responsive */
 @media (max-width: 600px) {
-  .recent-channels-widget {
-    width: 260px;
-  }
-
-  .recent-channel-item {
-    font-size: 0.78rem;
-    padding: 5px 8px;
-  }
-
-  .recent-channels-list {
-    height: 172px;
-  }
+  .custom-group-widget { width: 260px; }
+  .group-channel-item { font-size: 0.78rem; padding: 5px 8px; }
+  .custom-group-list { height: 172px; }
 }

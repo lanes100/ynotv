@@ -6,7 +6,7 @@
 }
 
 .favorites-widget .favorites-header {
-  background: rgba(0, 0, 0, 0.55);
+  background: rgba(0, 0, 0, var(--widget-bg-opacity, 0.55));
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border-radius: 10px 10px 0 0;
@@ -22,7 +22,7 @@
 }
 
 .favorites-widget .favorites-list {
-  background: rgba(0, 0, 0, 0.55);
+  background: rgba(0, 0, 0, var(--widget-bg-opacity, 0.55));
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border-radius: 0 0 10px 10px;

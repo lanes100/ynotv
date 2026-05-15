@@ -55,6 +55,11 @@ export interface AppSettings {
 
   // Widget scale
   widgetScale: number;
+  widgetBgOpacity: number; // 0–1
+
+  // Sports overlay
+  sportsScale: number;
+  sportsBgOpacity: number; // 0–1
 
   // Actions
   setTheme: (theme: ThemeId) => void;
@@ -76,6 +81,9 @@ export interface AppSettings {
     setPopoutMpvParamsEnabled: (enabled: boolean) => void;
     setPopoutMpvParams: (params: string) => void;
     setWidgetScale: (scale: number) => void;
+    setWidgetBgOpacity: (opacity: number) => void;
+    setSportsScale: (scale: number) => void;
+    setSportsBgOpacity: (opacity: number) => void;
 }
 
 /**
@@ -134,6 +142,11 @@ export function useAppSettings(): AppSettings {
 
   // Widget scale (1 = 100%)
   const [widgetScale, setWidgetScaleState] = useState(1);
+  const [widgetBgOpacity, setWidgetBgOpacityState] = useState(0.55);
+
+  // Sports overlay
+  const [sportsScale, setSportsScaleState] = useState(1);
+  const [sportsBgOpacity, setSportsBgOpacityState] = useState(0.7);
 
   // Apply theme effect
   useEffect(() => {
@@ -198,6 +211,18 @@ export function useAppSettings(): AppSettings {
           const savedScale = result.data.widgetScale ?? 1;
           setWidgetScaleState(savedScale);
           document.documentElement.style.setProperty('--widget-scale', String(savedScale));
+
+          const savedBgOpacity = result.data.widgetBgOpacity ?? 0.55;
+          setWidgetBgOpacityState(savedBgOpacity);
+          document.documentElement.style.setProperty('--widget-bg-opacity', String(savedBgOpacity));
+
+          const savedSportsScale = result.data.sportsScale ?? 1;
+          setSportsScaleState(savedSportsScale);
+          document.documentElement.style.setProperty('--sports-scale', String(savedSportsScale));
+
+          const savedSportsBgOpacity = result.data.sportsBgOpacity ?? 0.7;
+          setSportsBgOpacityState(savedSportsBgOpacity);
+          document.documentElement.style.setProperty('--sports-bg-opacity', String(savedSportsBgOpacity));
 
           // Apply EPG darken current setting on load
           if (result.data.epgDarkenCurrent) {
@@ -403,6 +428,42 @@ export function useAppSettings(): AppSettings {
     }
   }, []);
 
+  const setWidgetBgOpacity = useCallback(async (opacity: number) => {
+    setWidgetBgOpacityState(opacity);
+    document.documentElement.style.setProperty('--widget-bg-opacity', String(opacity));
+    if (window.storage) {
+      try {
+        await window.storage.updateSettings({ widgetBgOpacity: opacity });
+      } catch (e) {
+        console.error('[useAppSettings] Failed to save widgetBgOpacity:', e);
+      }
+    }
+  }, []);
+
+  const setSportsScale = useCallback(async (scale: number) => {
+    setSportsScaleState(scale);
+    document.documentElement.style.setProperty('--sports-scale', String(scale));
+    if (window.storage) {
+      try {
+        await window.storage.updateSettings({ sportsScale: scale });
+      } catch (e) {
+        console.error('[useAppSettings] Failed to save sportsScale:', e);
+      }
+    }
+  }, []);
+
+  const setSportsBgOpacity = useCallback(async (opacity: number) => {
+    setSportsBgOpacityState(opacity);
+    document.documentElement.style.setProperty('--sports-bg-opacity', String(opacity));
+    if (window.storage) {
+      try {
+        await window.storage.updateSettings({ sportsBgOpacity: opacity });
+      } catch (e) {
+        console.error('[useAppSettings] Failed to save sportsBgOpacity:', e);
+      }
+    }
+  }, []);
+
   return {
     rememberLastChannels,
     reopenLastOnStartup,
@@ -434,6 +495,9 @@ export function useAppSettings(): AppSettings {
     shortcuts,
     categoriesHidden,
     widgetScale,
+    widgetBgOpacity,
+    sportsScale,
+    sportsBgOpacity,
     setTheme,
     setShortcuts,
     setCategoriesHidden,
@@ -453,5 +517,8 @@ export function useAppSettings(): AppSettings {
     setPopoutMpvParamsEnabled,
     setPopoutMpvParams,
     setWidgetScale,
+    setWidgetBgOpacity,
+    setSportsScale,
+    setSportsBgOpacity,
   };
 }

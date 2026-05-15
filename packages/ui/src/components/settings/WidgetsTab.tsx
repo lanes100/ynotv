@@ -1,70 +1,92 @@
-import './PlaybackTab.css'; // Reuse existing tab styles
+import './PlaybackTab.css';
 import './WidgetsTab.css';
 
 interface WidgetsTabProps {
   widgetScale: number;
   onWidgetScaleChange: (scale: number) => void;
+  widgetBgOpacity: number; // 0–1
+  onWidgetBgOpacityChange: (opacity: number) => void;
+  sportsScale: number;
+  onSportsScaleChange: (scale: number) => void;
+  sportsBgOpacity: number; // 0–1
+  onSportsBgOpacityChange: (opacity: number) => void;
 }
 
-export function WidgetsTab({ widgetScale, onWidgetScaleChange }: WidgetsTabProps) {
-  const scalePercent = Math.round(widgetScale * 100);
+// ── Small reusable slider row ──────────────────────────────────────
+function SliderRow({
+  label,
+  hint,
+  min, max, step,
+  value,
+  display,
+  onChange,
+}: {
+  label: string; hint?: string;
+  min: number; max: number; step: number;
+  value: number; display: string;
+  onChange: (v: number) => void;
+}) {
+  return (
+    <div className="form-group" style={{ marginBottom: '18px' }}>
+      <label style={{ display: 'block', marginBottom: '0.5rem', color: 'rgba(255,255,255,0.9)' }}>
+        {label}
+      </label>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+        <input
+          type="range"
+          min={min} max={max} step={step}
+          value={value}
+          onChange={(e) => onChange(parseFloat(e.target.value))}
+          style={{ flex: 1 }}
+        />
+        <span style={{
+          minWidth: '52px', textAlign: 'center',
+          color: 'rgba(255,255,255,0.9)', fontWeight: 600, fontSize: '0.92rem',
+          background: 'rgba(255,255,255,0.07)', borderRadius: '6px', padding: '3px 8px',
+        }}>
+          {display}
+        </span>
+      </div>
+      {hint && <p className="form-hint" style={{ marginTop: '0.4rem' }}>{hint}</p>}
+    </div>
+  );
+}
+
+export function WidgetsTab({
+  widgetScale, onWidgetScaleChange,
+  widgetBgOpacity, onWidgetBgOpacityChange,
+  sportsScale, onSportsScaleChange,
+  sportsBgOpacity, onSportsBgOpacityChange,
+}: WidgetsTabProps) {
+  const scalePercent   = Math.round(widgetScale * 100);
+  const opacityPercent = Math.round(widgetBgOpacity * 100);
+  const sScalePct      = Math.round(sportsScale * 100);
+  const sOpacityPct    = Math.round(sportsBgOpacity * 100);
 
   return (
     <div className="settings-tab-content playback-tab-content">
 
-      {/* ── Overlay Widgets ── */}
+      {/* ══ Recent & Favorites Widgets ══════════════════════════════ */}
       <div className="settings-section">
-        <div className="section-header">
-          <h3>Overlay Widgets</h3>
-        </div>
+        <div className="section-header"><h3>Recent &amp; Favorites Widgets</h3></div>
         <p className="section-description">
-          Adjust the size of the Recent and Favorites overlay widgets that appear on the main
-          screen. Scaling up makes the boxes and text larger; scaling down makes them smaller —
-          useful for high-res or small displays.
+          Controls for the Recent and Favorites overlay widgets shown on the main screen.
         </p>
 
         <div className="timeshift-settings">
-          {/* Scale slider */}
-          <div className="form-group" style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', marginBottom: '0.5rem', color: 'rgba(255,255,255,0.9)' }}>
-              Widget Scale
-            </label>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-              <span style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.4)', minWidth: '28px' }}>50%</span>
-              <input
-                type="range"
-                min="50"
-                max="200"
-                step="5"
-                value={scalePercent}
-                onChange={(e) => onWidgetScaleChange(parseInt(e.target.value) / 100)}
-                style={{ flex: 1 }}
-              />
-              <span style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.4)', minWidth: '32px', textAlign: 'right' }}>200%</span>
-              <span
-                className="widget-scale-value"
-                style={{
-                  minWidth: '46px',
-                  textAlign: 'center',
-                  color: 'rgba(255,255,255,0.9)',
-                  fontWeight: 600,
-                  fontSize: '0.95rem',
-                  background: 'rgba(255,255,255,0.07)',
-                  borderRadius: '6px',
-                  padding: '3px 8px',
-                }}
-              >
-                {scalePercent}%
-              </span>
-            </div>
-            <p className="form-hint" style={{ marginTop: '0.5rem' }}>
-              Default is 100%. Changes apply instantly to the live overlay.
-            </p>
-          </div>
+          {/* Scale */}
+          <SliderRow
+            label="Widget Scale"
+            hint="Scales the entire widget box and text. Default 100%."
+            min={50} max={200} step={5}
+            value={scalePercent}
+            display={`${scalePercent}%`}
+            onChange={(v) => onWidgetScaleChange(v / 100)}
+          />
 
-          {/* Quick-preset buttons */}
-          <div className="timeshift-presets-label">Quick Presets</div>
-          <div className="timeshift-presets">
+          {/* Quick presets */}
+          <div className="timeshift-presets-label">Scale Presets</div>
+          <div className="timeshift-presets" style={{ marginBottom: '18px' }}>
             {[75, 100, 125, 150].map((pct) => (
               <button
                 key={pct}
@@ -76,80 +98,169 @@ export function WidgetsTab({ widgetScale, onWidgetScaleChange }: WidgetsTabProps
             ))}
           </div>
 
-          {/* Reset */}
-          <div style={{ marginTop: '20px' }}>
+          {/* Background Opacity */}
+          <SliderRow
+            label="Background Opacity"
+            hint="Controls how transparent the widget box background is. Lower = more see-through."
+            min={5} max={95} step={5}
+            value={opacityPercent}
+            display={`${opacityPercent}%`}
+            onChange={(v) => onWidgetBgOpacityChange(v / 100)}
+          />
+
+          {/* Resets */}
+          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginTop: '4px' }}>
             <button
               className="sync-btn"
-              onClick={() => onWidgetScaleChange(1)}
-              style={{ maxWidth: '180px' }}
+              onClick={() => { onWidgetScaleChange(1); onWidgetBgOpacityChange(0.55); }}
+              style={{ maxWidth: '200px' }}
             >
-              Reset to 100%
+              Reset to Defaults
             </button>
           </div>
         </div>
       </div>
 
-      {/* ── Live Preview ── */}
+      {/* ── Preview ── */}
       <div className="settings-section">
-        <div className="section-header">
-          <h3>Preview</h3>
-        </div>
-        <p className="section-description">
-          This is how the widgets will look at the selected scale.
-        </p>
+        <div className="section-header"><h3>Preview</h3></div>
+        <p className="section-description">Live preview at the current scale and opacity.</p>
 
         <div className="widget-preview-area">
-          {/* Scaled wrapper */}
           <div
             className="widget-preview-scaled"
             style={{ transform: `scale(${widgetScale})`, transformOrigin: 'top left' }}
           >
-            {/* Recent widget mock */}
+            {/* Recent mock */}
             <div className="widget-preview-box">
-              <div className="widget-preview-header">Recent 5</div>
-              <div className="widget-preview-list">
-                {['Animal Planet  -  I Was Prey', 'BET  -  Martin', 'Animal Planet HD  -  I Was Prey', 'ASPiRE TV  -  The Bernie Mac Show', 'US | ABC  -  The Golden Girls'].map((item, i) => (
+              <div className="widget-preview-header" style={{ background: `rgba(0,0,0,${widgetBgOpacity})` }}>
+                Recent 5
+              </div>
+              <div className="widget-preview-list" style={{ background: `rgba(0,0,0,${widgetBgOpacity})` }}>
+                {['Animal Planet  -  I Was Prey','BET  -  Martin','Animal Planet HD  -  I Was Prey','ASPiRE TV  -  The Bernie Mac Show','US | ABC  -  The Golden Girls'].map((item,i)=>(
                   <div key={i} className="widget-preview-item">
                     <span className="widget-preview-name">{item.split('  -  ')[0]}</span>
-                    {item.includes('  -  ') && (
-                      <>
-                        <span className="widget-preview-sep"> - </span>
-                        <span className="widget-preview-prog">{item.split('  -  ')[1]}</span>
-                      </>
-                    )}
+                    {item.includes('  -  ') && (<><span className="widget-preview-sep"> - </span><span className="widget-preview-prog">{item.split('  -  ')[1]}</span></>)}
                   </div>
                 ))}
               </div>
             </div>
-
-            {/* Favorites widget mock */}
-            <div className="widget-preview-box widget-preview-box--fav">
-              <div className="widget-preview-header">Favorites</div>
-              <div className="widget-preview-list">
-                {['US | ABC  -  The Golden Girls', 'BUZZER  -  Match Game Hollywood', 'US | Discovery Channel  -  Caught!', 'US | Comedy Central  -  Family Guy', 'US | Fox HD  -  Kelly Clarkson'].map((item, i) => (
+            {/* Favorites mock */}
+            <div className="widget-preview-box">
+              <div className="widget-preview-header" style={{ background: `rgba(0,0,0,${widgetBgOpacity})` }}>
+                Favorites
+              </div>
+              <div className="widget-preview-list" style={{ background: `rgba(0,0,0,${widgetBgOpacity})` }}>
+                {['US | ABC  -  The Golden Girls','BUZZER  -  Match Game Hollywood','US | Discovery  -  Caught!','Comedy Central  -  Family Guy','US | Fox HD  -  Kelly Clarkson'].map((item,i)=>(
                   <div key={i} className="widget-preview-item widget-preview-item--fav">
                     <span className="widget-preview-name">{item.split('  -  ')[0]}</span>
-                    {item.includes('  -  ') && (
-                      <>
-                        <span className="widget-preview-sep"> - </span>
-                        <span className="widget-preview-prog">{item.split('  -  ')[1]}</span>
-                      </>
-                    )}
+                    {item.includes('  -  ') && (<><span className="widget-preview-sep"> - </span><span className="widget-preview-prog">{item.split('  -  ')[1]}</span></>)}
                   </div>
                 ))}
               </div>
             </div>
           </div>
+          {/* Height spacer */}
+          <div aria-hidden="true" style={{
+            height: `calc(${Math.round((172 + 36) * widgetScale)}px + 8px)`,
+            width:  `calc(${Math.round(700      * widgetScale)}px)`,
+            pointerEvents: 'none',
+          }} />
+        </div>
+      </div>
 
-          {/* Spacer that matches the scaled content height so the section doesn't collapse */}
-          <div
-            aria-hidden="true"
-            style={{
-              height: `calc(${Math.round((172 + 36) * widgetScale)}px + 8px)`,
-              width: `calc(${Math.round(700 * widgetScale)}px)`,
-              pointerEvents: 'none',
-            }}
+      {/* ══ Sports Scores Overlay ═══════════════════════════════════ */}
+      <div className="settings-section">
+        <div className="section-header"><h3>Sports Scores Overlay</h3></div>
+        <p className="section-description">
+          Controls for the live sports scores bar that runs along the top of the screen.
+          Requires the Sports widget to be enabled via the right-click context menu.
+        </p>
+
+        <div className="timeshift-settings">
+          {/* Scale */}
+          <SliderRow
+            label="Overlay Scale"
+            hint="Scales the height of the scores bar. Default 100%."
+            min={50} max={200} step={5}
+            value={sScalePct}
+            display={`${sScalePct}%`}
+            onChange={(v) => onSportsScaleChange(v / 100)}
           />
+
+          {/* Quick presets */}
+          <div className="timeshift-presets-label">Scale Presets</div>
+          <div className="timeshift-presets" style={{ marginBottom: '18px' }}>
+            {[75, 100, 125, 150].map((pct) => (
+              <button
+                key={pct}
+                className={`timeshift-preset-btn${sScalePct === pct ? ' active' : ''}`}
+                onClick={() => onSportsScaleChange(pct / 100)}
+              >
+                {pct}%
+              </button>
+            ))}
+          </div>
+
+          {/* Background Opacity */}
+          <SliderRow
+            label="Background Opacity"
+            hint="Controls how dark the gradient background of the scores bar is. Lower = more transparent."
+            min={5} max={95} step={5}
+            value={sOpacityPct}
+            display={`${sOpacityPct}%`}
+            onChange={(v) => onSportsBgOpacityChange(v / 100)}
+          />
+
+          {/* Resets */}
+          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginTop: '4px' }}>
+            <button
+              className="sync-btn"
+              onClick={() => { onSportsScaleChange(1); onSportsBgOpacityChange(0.7); }}
+              style={{ maxWidth: '200px' }}
+            >
+              Reset to Defaults
+            </button>
+          </div>
+        </div>
+
+        {/* Sports preview */}
+        <div style={{ marginTop: '16px' }}>
+          <div style={{
+            background: `linear-gradient(to bottom, rgba(0,0,0,${sportsBgOpacity}) 0%, rgba(0,0,0,${(sportsBgOpacity*0.5).toFixed(2)}) 60%, transparent 100%)`,
+            padding: '8px 12px 20px',
+            borderRadius: '8px',
+            transform: `scaleY(${sportsScale})`,
+            transformOrigin: 'top center',
+            overflow: 'hidden',
+          }}>
+            <div style={{ display: 'flex', gap: '12px', overflowX: 'hidden' }}>
+              {[
+                { league: 'NFL', away: 'KC', awayScore: 17, home: 'SF', homeScore: 14, status: 'Q3 8:42' },
+                { league: 'NBA', away: 'LAL', awayScore: 89, home: 'BOS', homeScore: 92, status: 'Q4 2:15' },
+                { league: 'NHL', away: 'TBL', awayScore: 2, home: 'NYR', homeScore: 2, status: '3rd 6:30' },
+              ].map((g, i) => (
+                <div key={i} style={{
+                  background: 'rgba(0,0,0,0.5)',
+                  backdropFilter: 'blur(8px)',
+                  borderRadius: '8px',
+                  padding: '4px 10px',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0,
+                }}>
+                  <span style={{ fontSize: '9px', fontWeight: 600, textTransform: 'uppercase', color: 'rgba(255,255,255,0.6)' }}>{g.league}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span style={{ fontSize: '12px', fontWeight: 500, color: 'rgba(255,255,255,0.9)' }}>{g.away}</span>
+                    <span style={{ fontSize: '13px', fontWeight: 700, color: '#fff', minWidth: '16px', textAlign: 'center' }}>{g.awayScore}</span>
+                    <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)' }}>vs</span>
+                    <span style={{ fontSize: '13px', fontWeight: 700, color: '#fff', minWidth: '16px', textAlign: 'center' }}>{g.homeScore}</span>
+                    <span style={{ fontSize: '12px', fontWeight: 500, color: 'rgba(255,255,255,0.9)' }}>{g.home}</span>
+                  </div>
+                  <span style={{ fontSize: '10px', fontWeight: 600, color: '#ef4444' }}>{g.status}</span>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
 

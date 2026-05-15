@@ -7,6 +7,8 @@ interface BackgroundContextMenuProps {
   sportsWidget: 'autohide' | 'persistent' | null;
   recentWidget: '5' | '10' | null;
   favoritesWidget: boolean;
+  /** IDs of groups currently active as widgets */
+  customGroupIds: string[];
   onAddSportsAutohide: () => void;
   onAddSportsPersistent: () => void;
   onRemoveSports: () => void;
@@ -15,6 +17,8 @@ interface BackgroundContextMenuProps {
   onRemoveRecent: () => void;
   onAddFavorites: () => void;
   onRemoveFavorites: () => void;
+  /** Open the group picker modal */
+  onAddCustomGroup: () => void;
   onClose: () => void;
 }
 
@@ -23,6 +27,7 @@ export function BackgroundContextMenu({
   sportsWidget,
   recentWidget,
   favoritesWidget,
+  customGroupIds,
   onAddSportsAutohide,
   onAddSportsPersistent,
   onRemoveSports,
@@ -31,6 +36,7 @@ export function BackgroundContextMenu({
   onRemoveRecent,
   onAddFavorites,
   onRemoveFavorites,
+  onAddCustomGroup,
   onClose,
 }: BackgroundContextMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
@@ -80,7 +86,8 @@ export function BackgroundContextMenu({
     };
   }, [onClose]);
 
-  const hasAnyWidget = sportsWidget !== null || recentWidget !== null || favoritesWidget;
+  const hasCustomGroups = customGroupIds.length > 0;
+  const hasAnyWidget = sportsWidget !== null || recentWidget !== null || favoritesWidget || hasCustomGroups;
 
   return createPortal(
     <div ref={menuRef} className="background-context-menu">
@@ -113,6 +120,15 @@ export function BackgroundContextMenu({
               Favorites
             </div>
           )}
+          {hasCustomGroups && customGroupIds.map((gid) => (
+            <div key={gid} className="context-menu-item context-menu-item-info">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" />
+                <rect x="14" y="14" width="7" height="7" /><rect x="3" y="14" width="7" height="7" />
+              </svg>
+              Custom Group
+            </div>
+          ))}
           <div className="context-menu-separator" />
         </>
       )}
@@ -162,6 +178,14 @@ export function BackgroundContextMenu({
           Favorites
         </div>
       )}
+      {/* Custom Group — always available; opens the picker */}
+      <div className="context-menu-item" onClick={() => { onAddCustomGroup(); onClose(); }}>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" />
+          <rect x="14" y="14" width="7" height="7" /><rect x="3" y="14" width="7" height="7" />
+        </svg>
+        Custom Group…
+      </div>
 
       {hasAnyWidget && (
         <>
@@ -192,6 +216,16 @@ export function BackgroundContextMenu({
                 <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
               </svg>
               Favorites
+            </div>
+          )}
+          {/* Manage custom groups via the picker (re-opens so user can remove from there) */}
+          {hasCustomGroups && (
+            <div className="context-menu-item context-menu-item-danger" onClick={() => { onAddCustomGroup(); onClose(); }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" />
+                <rect x="14" y="14" width="7" height="7" /><rect x="3" y="14" width="7" height="7" />
+              </svg>
+              Manage Custom Groups…
             </div>
           )}
         </>

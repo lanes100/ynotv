@@ -26,6 +26,8 @@ import { RecentChannelsWidget } from './components/RecentChannelsWidget';
 import { FavoritesWidget } from './components/FavoritesWidget';
 import { WidgetBar } from './components/WidgetBar';
 import { BackgroundContextMenu } from './components/BackgroundContextMenu';
+import { CustomGroupWidget } from './components/CustomGroupWidget';
+import { GroupPickerModal } from './components/GroupPickerModal';
 import { useActiveRecordings } from './hooks/useActiveRecordings';
 import { RecordingIndicator } from './components/RecordingIndicator';
 import { Logo } from './components/Logo';
@@ -485,6 +487,43 @@ function App() {
   const handleRemoveFavoritesOverlay = useCallback(() => {
     setFavoritesOverlayWidget(false);
     localStorage.removeItem('favoritesOverlayWidget');
+  }, []);
+
+  // ==========================================================================
+  // Custom Group Overlay Widgets State
+  // Stored as a JSON array of group_id strings in localStorage.
+  // Multiple groups can be active simultaneously — each renders its own widget.
+  // ==========================================================================
+  const [customGroupWidgetIds, setCustomGroupWidgetIds] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('customGroupWidgetIds');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const [groupPickerOpen, setGroupPickerOpen] = useState(false);
+
+  const handleAddCustomGroupWidget = useCallback((group: { group_id: string; name: string }) => {
+    setCustomGroupWidgetIds((prev) => {
+      if (prev.includes(group.group_id)) return prev;
+      const next = [...prev, group.group_id];
+      localStorage.setItem('customGroupWidgetIds', JSON.stringify(next));
+      return next;
+    });
+  }, []);
+
+  const handleRemoveCustomGroupWidget = useCallback((groupId: string) => {
+    setCustomGroupWidgetIds((prev) => {
+      const next = prev.filter((id) => id !== groupId);
+      if (next.length === 0) {
+        localStorage.removeItem('customGroupWidgetIds');
+      } else {
+        localStorage.setItem('customGroupWidgetIds', JSON.stringify(next));
+      }
+      return next;
+    });
   }, []);
 
   // ==========================================================================
@@ -1351,7 +1390,7 @@ function App() {
       {/* Overlay Widgets — all sit inside a shared WidgetBar flex container.
            The bar owns positioning and scale; widgets are just flex children.
            Adding more widgets here is trivial — they automatically line up. */}
-      {(recentOverlayWidget || favoritesOverlayWidget) &&
+      {(recentOverlayWidget || favoritesOverlayWidget || customGroupWidgetIds.length > 0) &&
         !(currentChannel?.stream_id === 'vod' || currentChannel?.stream_id?.startsWith('recording_')) && (
         <WidgetBar cioEnabled={channelInfoOverlayEnabled}>
           {recentOverlayWidget && (
@@ -1371,6 +1410,16 @@ function App() {
               isVod={Boolean(currentChannel?.stream_id === 'vod' || currentChannel?.stream_id?.startsWith('recording_'))}
             />
           )}
+          {customGroupWidgetIds.map((groupId) => (
+            <CustomGroupWidget
+              key={groupId}
+              groupId={groupId}
+              showControls={showControls}
+              activeView={activeView}
+              onChannelClick={handlePlayChannelWrapper}
+              isVod={Boolean(currentChannel?.stream_id === 'vod' || currentChannel?.stream_id?.startsWith('recording_'))}
+            />
+          ))}
         </WidgetBar>
       )}
 
@@ -1381,6 +1430,7 @@ function App() {
           sportsWidget={sportsOverlayWidget}
           recentWidget={recentOverlayWidget}
           favoritesWidget={favoritesOverlayWidget}
+          customGroupIds={customGroupWidgetIds}
           onAddSportsAutohide={() => handleAddSportsOverlay('autohide')}
           onAddSportsPersistent={() => handleAddSportsOverlay('persistent')}
           onRemoveSports={handleRemoveSportsOverlay}
@@ -1389,7 +1439,18 @@ function App() {
           onRemoveRecent={handleRemoveRecentOverlay}
           onAddFavorites={handleAddFavoritesOverlay}
           onRemoveFavorites={handleRemoveFavoritesOverlay}
+          onAddCustomGroup={() => setGroupPickerOpen(true)}
           onClose={() => setBgContextMenu(null)}
+        />
+      )}
+
+      {/* Custom Group Picker Modal */}
+      {groupPickerOpen && (
+        <GroupPickerModal
+          activeGroupIds={customGroupWidgetIds}
+          onAdd={handleAddCustomGroupWidget}
+          onRemove={handleRemoveCustomGroupWidget}
+          onClose={() => setGroupPickerOpen(false)}
         />
       )}
 
