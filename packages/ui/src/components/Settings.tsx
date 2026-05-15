@@ -42,6 +42,8 @@ interface SettingsProps {
   onChannelInfoOverlayOpacityChange?: (opacity: number) => void;
   channelInfoOverlayHideDescription?: boolean;
   onChannelInfoOverlayHideDescriptionChange?: (hide: boolean) => void;
+  overlayAutohideTimer?: number;
+  onOverlayAutohideTimerChange?: (seconds: number) => void;
 }
 
 export function Settings({
@@ -63,6 +65,8 @@ export function Settings({
   onChannelInfoOverlayOpacityChange,
   channelInfoOverlayHideDescription: channelInfoOverlayHideDescriptionProp,
   onChannelInfoOverlayHideDescriptionChange,
+  overlayAutohideTimer: overlayAutohideTimerProp,
+  onOverlayAutohideTimerChange,
 }: SettingsProps) {
   const [activeTab, setActiveTab] = useState<SettingsTabId>(initialTab);
   const [sources, setSources] = useState<Source[]>([]);
@@ -105,9 +109,11 @@ export function Settings({
     dontSaveWindowSizeOnClose?: boolean;
     modernUiEnabled?: boolean;
     collapseSourceCategoriesOnStartup?: boolean;
+    overlayAutohideTimer?: number;
   }>({
     modernUiEnabled: true,
     collapseSourceCategoriesOnStartup: false,
+    overlayAutohideTimer: 3,
   });
 
   // Font size state (moved to LiveTV tab)
@@ -165,6 +171,13 @@ export function Settings({
   useEffect(() => { setChannelInfoOverlayBoxWidth(channelInfoOverlayBoxWidthProp ?? 380); }, [channelInfoOverlayBoxWidthProp]);
   useEffect(() => { setChannelInfoOverlayOpacity(channelInfoOverlayOpacityProp ?? 55); }, [channelInfoOverlayOpacityProp]);
   useEffect(() => { setChannelInfoOverlayHideDescription(channelInfoOverlayHideDescriptionProp ?? false); }, [channelInfoOverlayHideDescriptionProp]);
+  
+  // Sync overlay autohide timer prop to uiSettings if needed, though uiSettings has it
+  useEffect(() => { 
+    if (overlayAutohideTimerProp !== undefined && overlayAutohideTimerProp !== uiSettings.overlayAutohideTimer) {
+      setUiSettings(prev => ({ ...prev, overlayAutohideTimer: overlayAutohideTimerProp }));
+    }
+  }, [overlayAutohideTimerProp]);
 
   // Subtitle settings state
   const [subtitleSettings, setSubtitleSettings] = useState<SubtitleSettings>({
@@ -261,6 +274,7 @@ export function Settings({
         epgView?: 'traditional' | 'alternate';
         collapseSourceCategoriesOnStartup?: boolean;
         modernUiEnabled?: boolean;
+        overlayAutohideTimer?: number;
         epgTitleFontSize?: number;
         epgBodyFontSize?: number;
         channelInfoOverlayEnabled?: boolean;
@@ -333,6 +347,7 @@ export function Settings({
         dontSaveWindowSizeOnClose: settings.dontSaveWindowSizeOnClose ?? false,
         modernUiEnabled: loadedModernUi,
         collapseSourceCategoriesOnStartup: settings.collapseSourceCategoriesOnStartup ?? false,
+        overlayAutohideTimer: settings.overlayAutohideTimer ?? 3,
       };
       setUiSettings(loadedUiSettings);
 
@@ -672,6 +687,7 @@ export function Settings({
     dontSaveWindowSizeOnClose?: boolean;
     modernUiEnabled?: boolean;
     collapseSourceCategoriesOnStartup?: boolean;
+    overlayAutohideTimer?: number;
   }) => {
     const updated = { ...uiSettings, ...newSettings };
     setUiSettings(updated);
@@ -683,6 +699,10 @@ export function Settings({
       } else {
         document.documentElement.classList.remove('modern-ui');
       }
+    }
+
+    if (newSettings.overlayAutohideTimer !== undefined && onOverlayAutohideTimerChange) {
+      onOverlayAutohideTimerChange(newSettings.overlayAutohideTimer);
     }
 
     if (window.storage) {

@@ -52,10 +52,11 @@ interface UseNavigationOptions {
   multiviewLayout: import('./useLayoutPersistence').LayoutMode;
   multiviewExitTabMode: () => void;
   setCategoryId: (catId: string | null) => void;
+  overlayAutohideTimer: number;
 }
 
 export function useNavigation(options: UseNavigationOptions): NavigationState {
-  const { playing, multiviewLayout, multiviewExitTabMode, setCategoryId } = options;
+  const { playing, multiviewLayout, multiviewExitTabMode, setCategoryId, overlayAutohideTimer } = options;
 
   // View state
   const [activeView, setActiveView] = useState<View>('none');
@@ -140,7 +141,7 @@ export function useNavigation(options: UseNavigationOptions): NavigationState {
     }
   }, [activeView]);
 
-  // Auto-hide controls after 3 seconds of no activity
+  // Auto-hide controls after inactivity
   useEffect(() => {
     if (!playing || activeView !== 'none' || categoriesOpen) return;
 
@@ -148,10 +149,10 @@ export function useNavigation(options: UseNavigationOptions): NavigationState {
       if (!controlsHoveredRef.current) {
         setShowControls(false);
       }
-    }, CONTROLS_AUTO_HIDE_MS);
+    }, (overlayAutohideTimer ?? 3) * 1000);
 
     return () => clearTimeout(timer);
-  }, [lastActivity, playing, activeView, categoriesOpen]);
+  }, [lastActivity, playing, activeView, categoriesOpen, overlayAutohideTimer]);
 
   // Show controls on mouse move and reset hide timer
   const handleMouseMove = useCallback(() => {

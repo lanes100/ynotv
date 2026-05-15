@@ -52,6 +52,7 @@ export interface AppSettings {
 
   // UI visibility
   categoriesHidden: boolean;
+  overlayAutohideTimer: number;
 
   // Widget scale
   widgetScale: number;
@@ -65,6 +66,7 @@ export interface AppSettings {
   setTheme: (theme: ThemeId) => void;
   setShortcuts: (shortcuts: ShortcutsMap) => void;
   setCategoriesHidden: (hidden: boolean) => void;
+  setOverlayAutohideTimer: (seconds: number) => void;
   setAdvancedSearchScope: (scope: 'channels' | 'epg' | 'both') => void;
   setAdvancedSearchSourceIds: (ids: string[]) => void;
   setAdvancedSearchCategoryIds: (ids: string[]) => void;
@@ -139,6 +141,7 @@ export function useAppSettings(): AppSettings {
 
   // UI visibility
   const [categoriesHidden, setCategoriesHiddenState] = useState(false);
+  const [overlayAutohideTimer, setOverlayAutohideTimerState] = useState(3);
 
   // Widget scale (1 = 100%)
   const [widgetScale, setWidgetScaleState] = useState(1);
@@ -202,6 +205,7 @@ export function useAppSettings(): AppSettings {
           setChannelInfoOverlayOpacityState(result.data.channelInfoOverlayOpacity ?? 55);
           setChannelInfoOverlayHideDescriptionState(result.data.channelInfoOverlayHideDescription ?? false);
           setCategoriesHiddenState(result.data.categoriesHidden ?? false);
+          setOverlayAutohideTimerState(result.data.overlayAutohideTimer ?? 3);
           setPopoutStopMainState(result.data.popoutStopMain ?? true);
           setPopoutAlwaysOnTopState(result.data.popoutAlwaysOnTop ?? false);
           setPopoutMpvParamsEnabledState(result.data.popoutMpvParamsEnabled ?? false);
@@ -287,6 +291,17 @@ export function useAppSettings(): AppSettings {
         await window.storage.updateSettings({ categoriesHidden: hidden });
       } catch (e) {
         console.error('[useAppSettings] Failed to save categoriesHidden:', e);
+      }
+    }
+  }, []);
+
+  const setOverlayAutohideTimer = useCallback(async (seconds: number) => {
+    setOverlayAutohideTimerState(seconds);
+    if (window.storage) {
+      try {
+        await window.storage.updateSettings({ overlayAutohideTimer: seconds });
+      } catch (e) {
+        console.error('[useAppSettings] Failed to save overlayAutohideTimer:', e);
       }
     }
   }, []);
@@ -494,6 +509,7 @@ export function useAppSettings(): AppSettings {
     theme,
     shortcuts,
     categoriesHidden,
+    overlayAutohideTimer,
     widgetScale,
     widgetBgOpacity,
     sportsScale,
@@ -501,6 +517,7 @@ export function useAppSettings(): AppSettings {
     setTheme,
     setShortcuts,
     setCategoriesHidden,
+    setOverlayAutohideTimer,
     setAdvancedSearchScope,
     setAdvancedSearchSourceIds,
     setAdvancedSearchCategoryIds,

@@ -130,6 +130,8 @@ function App() {
     setChannelInfoOverlayOpacity,
     channelInfoOverlayHideDescription,
     setChannelInfoOverlayHideDescription,
+    overlayAutohideTimer,
+    setOverlayAutohideTimer,
     popoutStopMain,
     popoutAlwaysOnTop,
   } = useAppSettings();
@@ -324,6 +326,7 @@ function App() {
     multiviewLayout,
     multiviewExitTabMode: exitTabMode,
     setCategoryId,
+    overlayAutohideTimer,
   });
 
   const {
@@ -1731,6 +1734,8 @@ function App() {
           onChannelInfoOverlayOpacityChange={setChannelInfoOverlayOpacity}
           channelInfoOverlayHideDescription={channelInfoOverlayHideDescription}
           onChannelInfoOverlayHideDescriptionChange={setChannelInfoOverlayHideDescription}
+          overlayAutohideTimer={overlayAutohideTimer}
+          onOverlayAutohideTimerChange={setOverlayAutohideTimer}
         />
       )}
 

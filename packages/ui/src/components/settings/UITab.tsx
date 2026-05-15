@@ -9,6 +9,7 @@ interface UITabProps {
     dontSaveWindowSizeOnClose?: boolean;
     modernUiEnabled?: boolean;
     collapseSourceCategoriesOnStartup?: boolean;
+    overlayAutohideTimer?: number;
   };
   onSettingsChange: (settings: {
     startupWidth?: number;
@@ -16,6 +17,7 @@ interface UITabProps {
     dontSaveWindowSizeOnClose?: boolean;
     modernUiEnabled?: boolean;
     collapseSourceCategoriesOnStartup?: boolean;
+    overlayAutohideTimer?: number;
   }) => void;
 }
 
@@ -177,6 +179,30 @@ export function UITab({ settings, onSettingsChange }: UITabProps) {
               />
               <span className="toggle-slider" />
             </label>
+          </div>
+
+          {/* Autohide Overlay Timer */}
+          <div className="timeshift-toggle-row">
+            <div className="timeshift-toggle-info">
+              <span className="timeshift-toggle-label" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                Autohide Overlay Timer (seconds)
+                <div className="epg-tooltip">
+                  <span className="epg-tooltip-icon">?</span>
+                  <div className="epg-tooltip-content">
+                    How long to wait before automatically hiding the UI controls and overlay when inactive.
+                  </div>
+                </div>
+              </span>
+            </div>
+            <input
+              type="number"
+              min="1"
+              max="60"
+              value={settings.overlayAutohideTimer ?? 3}
+              onChange={(e) => onSettingsChange({ ...settings, overlayAutohideTimer: parseInt(e.target.value) || 3 })}
+              className="query-input"
+              style={{ width: '80px', textAlign: 'center' }}
+            />
           </div>
         </div>
       </div>

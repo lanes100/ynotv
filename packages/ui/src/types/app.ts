@@ -83,6 +83,7 @@ export interface AppSettings {
     startupWidth?: number;
     startupHeight?: number;
     dontSaveWindowSizeOnClose?: boolean;
+    overlayAutohideTimer?: number;
     rememberLastChannels?: boolean;
     savedLayoutState?: SavedLayoutState;
     searchResultsOrder?: 'default' | 'alphabetical';
