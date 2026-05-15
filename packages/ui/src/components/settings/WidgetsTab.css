@@ -1,0 +1,90 @@
+/* WidgetsTab — preview cards that mimic the real overlay widgets */
+
+.widget-preview-area {
+  margin-top: 20px;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.35);
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  overflow: hidden;
+  position: relative;
+}
+
+/* The scaled wrapper — both mock widgets sit inside here */
+.widget-preview-scaled {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  transition: transform 0.2s ease;
+}
+
+/* One mock widget card (header + list) */
+.widget-preview-box {
+  width: 340px;
+  flex-shrink: 0;
+}
+
+.widget-preview-header {
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-radius: 10px 10px 0 0;
+  padding: 8px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: none;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.6);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.widget-preview-list {
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-radius: 0 0 10px 10px;
+  padding: 4px 6px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.35);
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  height: 172px;
+  overflow: hidden; /* preview only, no scroll */
+}
+
+.widget-preview-item {
+  padding: 6px 10px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.82rem;
+  white-space: nowrap;
+  overflow: hidden;
+  color: rgba(255, 255, 255, 0.85);
+  flex-shrink: 0;
+}
+
+.widget-preview-item--fav:hover {
+  color: #fbbf24;
+}
+
+.widget-preview-name {
+  font-weight: 600;
+  flex-shrink: 0;
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.widget-preview-sep {
+  color: rgba(255, 255, 255, 0.35);
+  flex-shrink: 0;
+}
+
+.widget-preview-prog {
+  color: rgba(255, 255, 255, 0.55);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

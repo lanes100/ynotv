@@ -6,12 +6,15 @@ interface BackgroundContextMenuProps {
   position: { x: number; y: number };
   sportsWidget: 'autohide' | 'persistent' | null;
   recentWidget: '5' | '10' | null;
+  favoritesWidget: boolean;
   onAddSportsAutohide: () => void;
   onAddSportsPersistent: () => void;
   onRemoveSports: () => void;
   onAddRecent5: () => void;
   onAddRecent10: () => void;
   onRemoveRecent: () => void;
+  onAddFavorites: () => void;
+  onRemoveFavorites: () => void;
   onClose: () => void;
 }
 
@@ -19,12 +22,15 @@ export function BackgroundContextMenu({
   position,
   sportsWidget,
   recentWidget,
+  favoritesWidget,
   onAddSportsAutohide,
   onAddSportsPersistent,
   onRemoveSports,
   onAddRecent5,
   onAddRecent10,
   onRemoveRecent,
+  onAddFavorites,
+  onRemoveFavorites,
   onClose,
 }: BackgroundContextMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
@@ -74,7 +80,7 @@ export function BackgroundContextMenu({
     };
   }, [onClose]);
 
-  const hasAnyWidget = sportsWidget !== null || recentWidget !== null;
+  const hasAnyWidget = sportsWidget !== null || recentWidget !== null || favoritesWidget;
 
   return createPortal(
     <div ref={menuRef} className="background-context-menu">
@@ -97,6 +103,14 @@ export function BackgroundContextMenu({
                 <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
               </svg>
               Recent Channels ({recentWidget})
+            </div>
+          )}
+          {favoritesWidget && (
+            <div className="context-menu-item context-menu-item-info">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+              </svg>
+              Favorites
             </div>
           )}
           <div className="context-menu-separator" />
@@ -140,6 +154,14 @@ export function BackgroundContextMenu({
           </div>
         </>
       )}
+      {!favoritesWidget && (
+        <div className="context-menu-item" onClick={() => { onAddFavorites(); onClose(); }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+          </svg>
+          Favorites
+        </div>
+      )}
 
       {hasAnyWidget && (
         <>
@@ -161,6 +183,15 @@ export function BackgroundContextMenu({
                 <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
               </svg>
               Recent Channels
+            </div>
+          )}
+          {favoritesWidget && (
+            <div className="context-menu-item context-menu-item-danger" onClick={() => { onRemoveFavorites(); onClose(); }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <polyline points="3 6 5 6 21 6" />
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+              </svg>
+              Favorites
             </div>
           )}
         </>

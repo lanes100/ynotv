@@ -19,6 +19,7 @@ import { LiveTVTab } from './settings/LiveTVTab';
 import { LiveViewTab } from './settings/LiveViewTab';
 import { PopoutTab } from './settings/PopoutTab';
 import { SubtitlesTab, type SubtitleSettings } from './settings/SubtitlesTab';
+import { WidgetsTab } from './settings/WidgetsTab';
 import type { ShortcutsMap, ThemeId } from '../types/app';
 import './Settings.css';
 
@@ -149,6 +150,9 @@ export function Settings({
   const [popoutMpvParamsEnabled, setPopoutMpvParamsEnabled] = useState(false);
   const [popoutMpvParams, setPopoutMpvParams] = useState('');
 
+  // Widget scale state
+  const [widgetScale, setWidgetScaleState] = useState(1);
+
   // Sync prop values to internal state so changes from App.tsx take effect immediately
   useEffect(() => { setChannelInfoOverlayEnabled(channelInfoOverlayEnabledProp ?? false); }, [channelInfoOverlayEnabledProp]);
   useEffect(() => { setChannelInfoOverlayFontSize(channelInfoOverlayFontSizeProp ?? 16); }, [channelInfoOverlayFontSizeProp]);
@@ -265,6 +269,7 @@ export function Settings({
         popoutMpvParamsEnabled?: boolean;
         popoutMpvParams?: string;
         subtitleSettings?: SubtitleSettings;
+        widgetScale?: number;
       };
 
       // Load TMDB API key
@@ -393,6 +398,11 @@ export function Settings({
       if (settings.subtitleSettings) {
         setSubtitleSettings(settings.subtitleSettings);
       }
+
+      // Load widget scale and apply CSS variable immediately
+      const loadedScale = settings.widgetScale ?? 1;
+      setWidgetScaleState(loadedScale);
+      document.documentElement.style.setProperty('--widget-scale', String(loadedScale));
     }
     setSettingsLoaded(true);
   }
@@ -591,6 +601,14 @@ export function Settings({
     setSubtitleSettings(updated);
     if (window.storage) {
       await window.storage.updateSettings({ subtitleSettings: updated });
+    }
+  };
+
+  const handleWidgetScaleChange = async (scale: number) => {
+    setWidgetScaleState(scale);
+    document.documentElement.style.setProperty('--widget-scale', String(scale));
+    if (window.storage) {
+      await window.storage.updateSettings({ widgetScale: scale });
     }
   };
 
@@ -882,6 +900,13 @@ export function Settings({
         );
       case 'about':
         return <AboutTab />;
+      case 'widgets':
+        return (
+          <WidgetsTab
+            widgetScale={widgetScale}
+            onWidgetScaleChange={handleWidgetScaleChange}
+          />
+        );
       default:
         return null;
     }

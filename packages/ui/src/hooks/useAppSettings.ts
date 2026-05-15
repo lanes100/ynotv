@@ -53,6 +53,9 @@ export interface AppSettings {
   // UI visibility
   categoriesHidden: boolean;
 
+  // Widget scale
+  widgetScale: number;
+
   // Actions
   setTheme: (theme: ThemeId) => void;
   setShortcuts: (shortcuts: ShortcutsMap) => void;
@@ -72,6 +75,7 @@ export interface AppSettings {
     setPopoutAlwaysOnTop: (onTop: boolean) => void;
     setPopoutMpvParamsEnabled: (enabled: boolean) => void;
     setPopoutMpvParams: (params: string) => void;
+    setWidgetScale: (scale: number) => void;
 }
 
 /**
@@ -127,6 +131,9 @@ export function useAppSettings(): AppSettings {
 
   // UI visibility
   const [categoriesHidden, setCategoriesHiddenState] = useState(false);
+
+  // Widget scale (1 = 100%)
+  const [widgetScale, setWidgetScaleState] = useState(1);
 
   // Apply theme effect
   useEffect(() => {
@@ -186,6 +193,11 @@ export function useAppSettings(): AppSettings {
           setPopoutAlwaysOnTopState(result.data.popoutAlwaysOnTop ?? false);
           setPopoutMpvParamsEnabledState(result.data.popoutMpvParamsEnabled ?? false);
           setPopoutMpvParamsState(result.data.popoutMpvParams ?? '');
+
+          // Load widget scale and apply CSS variable
+          const savedScale = result.data.widgetScale ?? 1;
+          setWidgetScaleState(savedScale);
+          document.documentElement.style.setProperty('--widget-scale', String(savedScale));
 
           // Apply EPG darken current setting on load
           if (result.data.epgDarkenCurrent) {
@@ -379,6 +391,18 @@ export function useAppSettings(): AppSettings {
     }
   }, []);
 
+  const setWidgetScale = useCallback(async (scale: number) => {
+    setWidgetScaleState(scale);
+    document.documentElement.style.setProperty('--widget-scale', String(scale));
+    if (window.storage) {
+      try {
+        await window.storage.updateSettings({ widgetScale: scale });
+      } catch (e) {
+        console.error('[useAppSettings] Failed to save widgetScale:', e);
+      }
+    }
+  }, []);
+
   return {
     rememberLastChannels,
     reopenLastOnStartup,
@@ -409,6 +433,7 @@ export function useAppSettings(): AppSettings {
     theme,
     shortcuts,
     categoriesHidden,
+    widgetScale,
     setTheme,
     setShortcuts,
     setCategoriesHidden,
@@ -427,5 +452,6 @@ export function useAppSettings(): AppSettings {
     setPopoutAlwaysOnTop,
     setPopoutMpvParamsEnabled,
     setPopoutMpvParams,
+    setWidgetScale,
   };
 }

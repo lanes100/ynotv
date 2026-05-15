@@ -23,6 +23,8 @@ import { SportsHub } from './components/sports/SportsHub';
 import { TVCalendarPage } from './components/TVCalendarPage';
 import { LiveSportsOverlay } from './components/LiveSportsOverlay';
 import { RecentChannelsWidget } from './components/RecentChannelsWidget';
+import { FavoritesWidget } from './components/FavoritesWidget';
+import { WidgetBar } from './components/WidgetBar';
 import { BackgroundContextMenu } from './components/BackgroundContextMenu';
 import { useActiveRecordings } from './hooks/useActiveRecordings';
 import { RecordingIndicator } from './components/RecordingIndicator';
@@ -465,6 +467,24 @@ function App() {
   const handleRemoveRecentOverlay = useCallback(() => {
     setRecentOverlayWidget(null);
     localStorage.removeItem('recentOverlayWidget');
+  }, []);
+
+  // ==========================================================================
+  // Favorites Overlay Widget State
+  // ==========================================================================
+  const [favoritesOverlayWidget, setFavoritesOverlayWidget] = useState<boolean>(() => {
+    const saved = localStorage.getItem('favoritesOverlayWidget');
+    return saved === 'true';
+  });
+
+  const handleAddFavoritesOverlay = useCallback(() => {
+    setFavoritesOverlayWidget(true);
+    localStorage.setItem('favoritesOverlayWidget', 'true');
+  }, []);
+
+  const handleRemoveFavoritesOverlay = useCallback(() => {
+    setFavoritesOverlayWidget(false);
+    localStorage.removeItem('favoritesOverlayWidget');
   }, []);
 
   // ==========================================================================
@@ -1035,7 +1055,7 @@ function App() {
   // Render
   // ==========================================================================
   return (
-    <div className={`app${showControls ? '' : ' controls-hidden'}${sportsOverlayWidget === 'autohide' ? ' has-live-sports-autohide' : ''}${sportsOverlayWidget === 'persistent' ? ' has-live-sports-persistent' : ''}${recentOverlayWidget !== null ? ' has-recent-widget' : ''}`} onMouseMove={handleMouseMove}>
+    <div className={`app${showControls ? '' : ' controls-hidden'}${sportsOverlayWidget === 'autohide' ? ' has-live-sports-autohide' : ''}${sportsOverlayWidget === 'persistent' ? ' has-live-sports-persistent' : ''}${recentOverlayWidget !== null ? ' has-recent-widget' : ''}${favoritesOverlayWidget ? ' has-favorites-widget' : ''}`} onMouseMove={handleMouseMove}>
       {/* Custom title bar for frameless window */}
       <div className={`title-bar${showControls ? ' visible' : ''}`} data-tauri-drag-region>
         <div className="title-bar-left-group" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -1328,16 +1348,30 @@ function App() {
         />
       )}
 
-      {/* Recent Channels Overlay Widget */}
-      {recentOverlayWidget && !(currentChannel?.stream_id === 'vod' || currentChannel?.stream_id?.startsWith('recording_')) && (
-        <RecentChannelsWidget
-          showControls={showControls}
-          activeView={activeView}
-          channelInfoOverlayEnabled={channelInfoOverlayEnabled}
-          onChannelClick={handlePlayChannelWrapper}
-          limit={recentOverlayWidget === '10' ? 10 : 5}
-          isVod={Boolean(currentChannel?.stream_id === 'vod' || currentChannel?.stream_id?.startsWith('recording_'))}
-        />
+      {/* Overlay Widgets — all sit inside a shared WidgetBar flex container.
+           The bar owns positioning and scale; widgets are just flex children.
+           Adding more widgets here is trivial — they automatically line up. */}
+      {(recentOverlayWidget || favoritesOverlayWidget) &&
+        !(currentChannel?.stream_id === 'vod' || currentChannel?.stream_id?.startsWith('recording_')) && (
+        <WidgetBar cioEnabled={channelInfoOverlayEnabled}>
+          {recentOverlayWidget && (
+            <RecentChannelsWidget
+              showControls={showControls}
+              activeView={activeView}
+              onChannelClick={handlePlayChannelWrapper}
+              limit={recentOverlayWidget === '10' ? 10 : 5}
+              isVod={Boolean(currentChannel?.stream_id === 'vod' || currentChannel?.stream_id?.startsWith('recording_'))}
+            />
+          )}
+          {favoritesOverlayWidget && (
+            <FavoritesWidget
+              showControls={showControls}
+              activeView={activeView}
+              onChannelClick={handlePlayChannelWrapper}
+              isVod={Boolean(currentChannel?.stream_id === 'vod' || currentChannel?.stream_id?.startsWith('recording_'))}
+            />
+          )}
+        </WidgetBar>
       )}
 
       {/* Background Context Menu */}
@@ -1346,12 +1380,15 @@ function App() {
           position={bgContextMenu}
           sportsWidget={sportsOverlayWidget}
           recentWidget={recentOverlayWidget}
+          favoritesWidget={favoritesOverlayWidget}
           onAddSportsAutohide={() => handleAddSportsOverlay('autohide')}
           onAddSportsPersistent={() => handleAddSportsOverlay('persistent')}
           onRemoveSports={handleRemoveSportsOverlay}
           onAddRecent5={handleAddRecent5Overlay}
           onAddRecent10={handleAddRecent10Overlay}
           onRemoveRecent={handleRemoveRecentOverlay}
+          onAddFavorites={handleAddFavoritesOverlay}
+          onRemoveFavorites={handleRemoveFavoritesOverlay}
           onClose={() => setBgContextMenu(null)}
         />
       )}

@@ -48,7 +48,6 @@ function RecentChannelItem({ entry, onChannelClick }: RecentChannelItemProps) {
 interface RecentChannelsWidgetProps {
   showControls: boolean;
   activeView: string;
-  channelInfoOverlayEnabled: boolean;
   onChannelClick: (channel: StoredChannel) => void;
   limit: 5 | 10;
   isVod: boolean;
@@ -57,7 +56,6 @@ interface RecentChannelsWidgetProps {
 export function RecentChannelsWidget({
   showControls,
   activeView,
-  channelInfoOverlayEnabled,
   onChannelClick,
   limit,
   isVod,
@@ -87,7 +85,7 @@ export function RecentChannelsWidget({
   const limitedEntries = recentEntries.slice(0, limit);
 
   return (
-    <div className={`recent-channels-widget ${channelInfoOverlayEnabled ? 'cio-enabled' : ''}`}>
+    <div className="recent-channels-widget">
       <div className="recent-channels-header">Recent {limit}</div>
       <div className="recent-channels-list">
         {limitedEntries.map((entry) => (

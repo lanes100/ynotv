@@ -1,0 +1,42 @@
+/* WidgetBar — the shared positioned flex container for all overlay widgets */
+
+.widget-bar {
+  position: absolute;
+  bottom: 150px;
+  left: 16px;
+  z-index: 55;
+
+  /* Widgets flow naturally side-by-side with a small gap */
+  display: flex;
+  flex-direction: row;
+  align-items: flex-end;
+  gap: 8px;
+
+  /* Scale the entire bar at once — no widget ever overlaps regardless of scale */
+  transform: scale(var(--widget-scale, 1));
+  transform-origin: bottom left;
+
+  /* Bar itself never captures pointer events — each widget opts in */
+  pointer-events: none;
+
+  /* Smooth scale transitions */
+  transition: bottom 0.3s ease;
+}
+
+/* When Channel Info Overlay is active the Now Playing bar is shorter */
+.widget-bar.cio-enabled {
+  bottom: 76px;
+}
+
+/* ── Responsive ─────────────────────────────────────── */
+@media (max-width: 600px) {
+  .widget-bar {
+    bottom: 140px;
+    left: 10px;
+    gap: 6px;
+  }
+
+  .widget-bar.cio-enabled {
+    bottom: 68px;
+  }
+}
