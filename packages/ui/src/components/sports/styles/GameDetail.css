@@ -100,7 +100,6 @@
   align-items: center;
   gap: 24px;
   padding: 32px 24px;
-  background: var(--bg-secondary, #1a1a1a);
 }
 
 .game-detail-team {
@@ -204,7 +203,6 @@
   gap: 4px;
   padding: 0 24px;
   border-bottom: 1px solid var(--border-color, #2a2a2a);
-  background: var(--bg-secondary, #1a1a1a);
 }
 
 .game-detail-tab {
@@ -498,7 +496,6 @@
   padding: 20px 24px 16px;
   text-align: center;
   border-bottom: 1px solid var(--border-color, #2a2a2a);
-  background: var(--bg-secondary, #1a1a1a);
 }
 
 .ufc-detail-event-title {
@@ -556,7 +553,6 @@
   align-items: center;
   gap: 24px;
   padding: 28px 24px;
-  background: var(--bg-secondary, #1a1a1a);
 }
 
 .ufc-detail-fighter {

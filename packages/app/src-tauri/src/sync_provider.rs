@@ -439,24 +439,24 @@ pub async fn sync_m3u_source(
                 let stream_id = generate_stable_stream_id(&source_id, &tvg_id, line, &mut seen_ids);
 
                 let mut category_ids = Vec::new();
-                if !group_title.is_empty() {
-                    let cat_slug = group_title.to_lowercase().replace(|c: char| !c.is_ascii_alphanumeric(), "-").trim_matches('-').to_string();
-                    let category_id = format!("{}_{}", source_id, cat_slug);
-                    category_ids.push(category_id.clone());
+                let category_name = if group_title.is_empty() { "Uncategorized".to_string() } else { group_title.clone() };
+                
+                let cat_slug = category_name.to_lowercase().replace(|c: char| !c.is_ascii_alphanumeric(), "-").trim_matches('-').to_string();
+                let category_id = format!("{}_{}", source_id, cat_slug);
+                category_ids.push(category_id.clone());
 
-                    if !categories_map.contains_key(&category_id) {
-                        categories_map.insert(category_id.clone(), true);
-                        bulk_categories.push(BulkCategory {
-                            category_id,
-                            category_name: group_title.clone(),
-                            source_id: source_id.clone(),
-                            parent_id: None,
-                            enabled: None,
-                            display_order: None,
-                            channel_count: None,
-                            filter_words: None,
-                        });
-                    }
+                if !categories_map.contains_key(&category_id) {
+                    categories_map.insert(category_id.clone(), true);
+                    bulk_categories.push(BulkCategory {
+                        category_id,
+                        category_name,
+                        source_id: source_id.clone(),
+                        parent_id: None,
+                        enabled: None,
+                        display_order: None,
+                        channel_count: None,
+                        filter_words: None,
+                    });
                 }
 
                 bulk_channels.push(BulkChannel {
