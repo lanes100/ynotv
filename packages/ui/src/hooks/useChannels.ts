@@ -1088,7 +1088,7 @@ export function useNextProgram(streamId: string | null): StoredProgram | null {
 
       const rows = await dbInstance.select(
         `SELECT * FROM programs_effective
-         WHERE stream_id = ? AND start > ?
+         WHERE stream_id = ? AND start >= ?
          ORDER BY start ASC LIMIT 1`,
         [streamId, afterTime]
       ) as StoredProgram[];
