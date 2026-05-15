@@ -181,6 +181,28 @@ function CustomGroupButton({ group, selectedCategoryId, onSelectCategory, onCont
 
 export function CategoryStrip({ selectedCategoryId, onSelectCategory, visible, onEditSource, onClose, onShow, isLiveTV }: CategoryStripProps) {
   const groupedCategories = useCategoriesBySource();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchFocused, setSearchFocused] = useState(false);
+
+  const filteredGroupedCategories = useMemo(() => {
+    if (!searchQuery.trim()) {
+      return groupedCategories;
+    }
+    const query = searchQuery.toLowerCase();
+    
+    return groupedCategories.map(group => {
+      // Find categories that match the search query (case insensitive)
+      const filteredCategories = group.categories.filter(cat => 
+        (cat.alias || cat.category_name).toLowerCase().includes(query)
+      );
+      
+      return {
+        ...group,
+        categories: filteredCategories
+      };
+    }).filter(group => group.categories.length > 0); // Only keep groups that have matching categories
+  }, [groupedCategories, searchQuery]);
+
   const [sources, setSources] = useState<Record<string, string>>({});
   const [expandedSources, setExpandedSources] = useState<Record<string, boolean>>({});
   const { version } = useSourceVersion(); // Listen for source changes
@@ -459,6 +481,29 @@ export function CategoryStrip({ selectedCategoryId, onSelectCategory, visible, o
           </div>
         </div>
 
+        <div className="category-search-container">
+          <div className={`category-search-input-wrapper ${searchFocused ? 'focused' : ''}`}>
+            <svg className="search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <input
+              type="text"
+              className="category-search-input"
+              placeholder="Search categories..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onFocus={() => setSearchFocused(true)}
+              onBlur={() => setSearchFocused(false)}
+            />
+            {searchQuery && (
+              <button className="search-clear-btn" onClick={() => setSearchQuery('')}>
+                ✕
+              </button>
+            )}
+          </div>
+        </div>
+
       <div className="category-strip-top">
         {/* "All Channels" option */}
         <button
@@ -508,15 +553,17 @@ export function CategoryStrip({ selectedCategoryId, onSelectCategory, visible, o
 
       <div className="category-strip-scrollable">
         {/* Grouped Category list */}
-        {groupedCategories.map((group) => (
-          <div key={group.sourceId} className={`category-source-group ${expandedSources[group.sourceId] ? 'is-expanded' : ''}`}>
+        {filteredGroupedCategories.map((group) => {
+          const isExpanded = expandedSources[group.sourceId] || searchQuery.trim().length > 0;
+          return (
+          <div key={group.sourceId} className={`category-source-group ${isExpanded ? 'is-expanded' : ''}`}>
             <button
               className="category-source-header"
               onClick={() => toggleSource(group.sourceId)}
               onContextMenu={(e) => handleSourceContextMenu(e, group.sourceId, sources[group.sourceId] || 'Source')}
             >
               <div className="source-header-left">
-                <ChevronIcon expanded={expandedSources[group.sourceId]} />
+                <ChevronIcon expanded={isExpanded} />
                 <div className="source-name-container">
                   <ScrollingText className="source-name">{sources[group.sourceId] || 'Loading...'}</ScrollingText>
                 </div>
@@ -526,7 +573,7 @@ export function CategoryStrip({ selectedCategoryId, onSelectCategory, visible, o
               </span>
             </button>
 
-            {expandedSources[group.sourceId] && (
+            {isExpanded && (
               <div className="category-source-content">
                 {group.categories.map((category) => (
                   <button
@@ -542,9 +589,9 @@ export function CategoryStrip({ selectedCategoryId, onSelectCategory, visible, o
               </div>
             )}
           </div>
-        ))}
+        )})}
 
-        {groupedCategories.length === 0 && (
+        {filteredGroupedCategories.length === 0 && (
           <div className="category-empty">
             <p>No categories yet</p>
             <p className="hint">Add a source in Settings</p>
