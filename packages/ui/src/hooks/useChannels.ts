@@ -1069,6 +1069,44 @@ export function useCurrentProgram(streamId: string | null): StoredProgram | null
   return program ?? null;
 }
 
+// Hook to get the program airing after the current one on a channel
+export function useNextProgram(streamId: string | null): StoredProgram | null {
+  const program = useLiveQuery(
+    async () => {
+      if (!streamId) return null;
+      const now = new Date().toISOString();
+      const dbInstance = await (db as any).dbPromise;
+
+      const currentRows = await dbInstance.select(
+        `SELECT * FROM programs_effective
+         WHERE stream_id = ? AND start <= ? AND end > ?
+         ORDER BY start DESC LIMIT 1`,
+        [streamId, now, now]
+      ) as StoredProgram[];
+
+      const afterTime = currentRows[0]?.end ?? now;
+
+      const rows = await dbInstance.select(
+        `SELECT * FROM programs_effective
+         WHERE stream_id = ? AND start > ?
+         ORDER BY start ASC LIMIT 1`,
+        [streamId, afterTime]
+      ) as StoredProgram[];
+
+      const prog = rows[0] ?? null;
+      if (prog) {
+        return {
+          ...prog,
+          description: decompressEpgDescription(prog.description) ?? prog.description,
+        };
+      }
+      return null;
+    },
+    [streamId]
+  );
+  return program ?? null;
+}
+
 // Chunk size for SQLite IN clause limit (SQLite default max is 999, use 500 for safety)
 const SQL_CHUNK_SIZE = 500;
 

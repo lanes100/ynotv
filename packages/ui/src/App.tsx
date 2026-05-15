@@ -27,6 +27,7 @@ import { FavoritesWidget } from './components/FavoritesWidget';
 import { WidgetBar } from './components/WidgetBar';
 import { BackgroundContextMenu } from './components/BackgroundContextMenu';
 import { CustomGroupWidget } from './components/CustomGroupWidget';
+import { WhatsNextWidget } from './components/WhatsNextWidget';
 import { GroupPickerModal } from './components/GroupPickerModal';
 import { useActiveRecordings } from './hooks/useActiveRecordings';
 import { RecordingIndicator } from './components/RecordingIndicator';
@@ -487,6 +488,24 @@ function App() {
   const handleRemoveFavoritesOverlay = useCallback(() => {
     setFavoritesOverlayWidget(false);
     localStorage.removeItem('favoritesOverlayWidget');
+  }, []);
+
+  // ==========================================================================
+  // What's Next Overlay Widget State
+  // ==========================================================================
+  const [whatsNextOverlayWidget, setWhatsNextOverlayWidget] = useState<boolean>(() => {
+    const saved = localStorage.getItem('whatsNextOverlayWidget');
+    return saved === 'true';
+  });
+
+  const handleAddWhatsNextOverlay = useCallback(() => {
+    setWhatsNextOverlayWidget(true);
+    localStorage.setItem('whatsNextOverlayWidget', 'true');
+  }, []);
+
+  const handleRemoveWhatsNextOverlay = useCallback(() => {
+    setWhatsNextOverlayWidget(false);
+    localStorage.removeItem('whatsNextOverlayWidget');
   }, []);
 
   // ==========================================================================
@@ -1390,7 +1409,7 @@ function App() {
       {/* Overlay Widgets — all sit inside a shared WidgetBar flex container.
            The bar owns positioning and scale; widgets are just flex children.
            Adding more widgets here is trivial — they automatically line up. */}
-      {(recentOverlayWidget || favoritesOverlayWidget || customGroupWidgetIds.length > 0) &&
+      {(recentOverlayWidget || favoritesOverlayWidget || whatsNextOverlayWidget || customGroupWidgetIds.length > 0) &&
         !(currentChannel?.stream_id === 'vod' || currentChannel?.stream_id?.startsWith('recording_')) && (
         <WidgetBar cioEnabled={channelInfoOverlayEnabled}>
           {recentOverlayWidget && (
@@ -1407,6 +1426,14 @@ function App() {
               showControls={showControls}
               activeView={activeView}
               onChannelClick={handlePlayChannelWrapper}
+              isVod={Boolean(currentChannel?.stream_id === 'vod' || currentChannel?.stream_id?.startsWith('recording_'))}
+            />
+          )}
+          {whatsNextOverlayWidget && (
+            <WhatsNextWidget
+              channel={currentChannel}
+              showControls={showControls}
+              activeView={activeView}
               isVod={Boolean(currentChannel?.stream_id === 'vod' || currentChannel?.stream_id?.startsWith('recording_'))}
             />
           )}
@@ -1430,6 +1457,7 @@ function App() {
           sportsWidget={sportsOverlayWidget}
           recentWidget={recentOverlayWidget}
           favoritesWidget={favoritesOverlayWidget}
+          whatsNextWidget={whatsNextOverlayWidget}
           customGroupIds={customGroupWidgetIds}
           onAddSportsAutohide={() => handleAddSportsOverlay('autohide')}
           onAddSportsPersistent={() => handleAddSportsOverlay('persistent')}
@@ -1439,6 +1467,8 @@ function App() {
           onRemoveRecent={handleRemoveRecentOverlay}
           onAddFavorites={handleAddFavoritesOverlay}
           onRemoveFavorites={handleRemoveFavoritesOverlay}
+          onAddWhatsNext={handleAddWhatsNextOverlay}
+          onRemoveWhatsNext={handleRemoveWhatsNextOverlay}
           onAddCustomGroup={() => setGroupPickerOpen(true)}
           onClose={() => setBgContextMenu(null)}
         />

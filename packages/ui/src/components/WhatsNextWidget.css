@@ -1,0 +1,129 @@
+/* What's Next Widget — lives inside WidgetBar, same footprint as Favorites */
+.whats-next-widget {
+  width: 340px;
+  flex-shrink: 0;
+  pointer-events: none;
+}
+
+.whats-next-widget .whats-next-header {
+  background: rgba(0, 0, 0, var(--widget-bg-opacity, 0.55));
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-radius: 10px 10px 0 0;
+  padding: 8px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: none;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.6);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  pointer-events: none;
+}
+
+.whats-next-widget .whats-next-body {
+  background: rgba(0, 0, 0, var(--widget-bg-opacity, 0.55));
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-radius: 0 0 10px 10px;
+  padding: 4px 6px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.35);
+  box-sizing: border-box;
+  height: 172px;
+  overflow-y: scroll;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  pointer-events: auto;
+}
+
+.whats-next-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 2px 4px;
+  flex-shrink: 0;
+}
+
+.whats-next-channel {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.5);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-shrink: 0;
+}
+
+.whats-next-title {
+  font-size: 0.98rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.92);
+  line-height: 1.35;
+  flex-shrink: 0;
+}
+
+.whats-next-time {
+  font-size: 0.88rem;
+  color: rgba(251, 191, 36, 0.85);
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+.whats-next-desc {
+  font-size: 0.86rem;
+  color: rgba(255, 255, 255, 0.55);
+  line-height: 1.45;
+  flex-shrink: 0;
+}
+
+.whats-next-empty {
+  font-size: 0.82rem;
+  color: rgba(255, 255, 255, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100%;
+  padding: 6px 10px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.whats-next-body::-webkit-scrollbar {
+  width: 4px;
+}
+
+.whats-next-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.whats-next-body::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 2px;
+}
+
+@media (max-width: 600px) {
+  .whats-next-widget {
+    width: 260px;
+  }
+
+  .whats-next-body {
+    height: 172px;
+  }
+
+  .whats-next-title {
+    font-size: 0.92rem;
+  }
+
+  .whats-next-time {
+    font-size: 0.84rem;
+  }
+
+  .whats-next-desc {
+    font-size: 0.82rem;
+  }
+}

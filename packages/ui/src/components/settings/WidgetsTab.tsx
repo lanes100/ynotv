@@ -68,9 +68,9 @@ export function WidgetsTab({
 
       {/* ══ Recent & Favorites Widgets ══════════════════════════════ */}
       <div className="settings-section">
-        <div className="section-header"><h3>Recent &amp; Favorites Widgets</h3></div>
+        <div className="section-header"><h3>Overlay Widgets</h3></div>
         <p className="section-description">
-          Controls for the Recent and Favorites overlay widgets shown on the main screen.
+          Controls for the Recent, Favorites, Custom Group, and What&apos;s Next overlay widgets on the main screen.
         </p>
 
         <div className="timeshift-settings">
