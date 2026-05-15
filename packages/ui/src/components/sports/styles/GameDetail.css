@@ -47,6 +47,18 @@
   box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
 }
 
+/* Ensure top sections remain transparent in glass variant to override any theme backgrounds */
+.game-detail-modal.glass .game-detail-header,
+.game-detail-modal.glass .game-detail-scoreboard,
+.game-detail-modal.glass .game-detail-tabs,
+.game-detail-modal.glass .ufc-detail-title-bar,
+.game-detail-modal.glass .ufc-detail-main-event,
+.game-detail-modal.glass .racing-detail-title-bar,
+.game-detail-modal.glass .golf-detail-title-bar,
+.game-detail-modal.glass .tennis-detail-title-bar {
+  background: transparent;
+}
+
 .game-detail-header {
   display: flex;
   align-items: center;
