@@ -2116,8 +2116,28 @@ export function SourcesTab({ sources, isEncryptionAvailable, onSourcesChange, ed
             </div>
 
             <div className="form-group">
-              <label>Linked Sources</label>
-              <span className="hint" style={{ display: 'block', marginBottom: '10px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+                <label style={{ marginBottom: 0 }}>Linked Sources</label>
+                {sources.length > 0 && (
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button
+                      type="button"
+                      style={{ padding: '4px 8px', fontSize: '12px', cursor: 'pointer', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '4px', color: '#fff' }}
+                      onClick={() => setEpgFormData({ ...epgFormData, sourceIds: sources.map(s => s.id) })}
+                    >
+                      Select All
+                    </button>
+                    <button
+                      type="button"
+                      style={{ padding: '4px 8px', fontSize: '12px', cursor: 'pointer', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '4px', color: '#fff' }}
+                      onClick={() => setEpgFormData({ ...epgFormData, sourceIds: [] })}
+                    >
+                      Select None
+                    </button>
+                  </div>
+                )}
+              </div>
+              <span className="hint" style={{ display: 'block', marginBottom: '10px', marginTop: '8px' }}>
                 Select which sources should use this EPG (only fills channels without EPG)
               </span>
               {sources.length === 0 ? (
