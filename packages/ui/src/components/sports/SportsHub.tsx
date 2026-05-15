@@ -536,9 +536,6 @@ export function SportsHub({
                 <div ref={fillerTopRef} className="sports-preview-filler sports-preview-filler-top" />
                 <div ref={fillerBottomRef} className="sports-preview-filler sports-preview-filler-bottom" />
 
-                {/* Live Scores Overlay at top of preview */}
-                <SportsScoresOverlay />
-
                 {/* Resizer Handle */}
                 <div
                   className="sports-preview-resizer"
