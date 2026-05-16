@@ -7,6 +7,8 @@ interface WhatsNextWidgetProps {
   showControls: boolean;
   activeView: string;
   isVod: boolean;
+  onMoveLeft?: () => void;
+  onMoveRight?: () => void;
 }
 
 function formatTime(date: Date): string {
@@ -18,6 +20,8 @@ export function WhatsNextWidget({
   showControls,
   activeView,
   isVod,
+  onMoveLeft,
+  onMoveRight,
 }: WhatsNextWidgetProps) {
   const nextProgram = useNextProgram(channel?.stream_id ?? null);
 
@@ -32,7 +36,19 @@ export function WhatsNextWidget({
 
   return (
     <div className="whats-next-widget">
-      <div className="whats-next-header">What&apos;s Next</div>
+      <div className="whats-next-header" style={{ display: 'flex', alignItems: 'center' }}>
+        <span>What&apos;s Next</span>
+        {(onMoveLeft || onMoveRight) && (
+          <div className="widget-move-controls">
+            <button className="widget-move-btn" onClick={onMoveLeft} disabled={!onMoveLeft} title="Move Left">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+            </button>
+            <button className="widget-move-btn" onClick={onMoveRight} disabled={!onMoveRight} title="Move Right">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+            </button>
+          </div>
+        )}
+      </div>
       <div className="whats-next-body">
         {nextProgram ? (
           <div className="whats-next-content">

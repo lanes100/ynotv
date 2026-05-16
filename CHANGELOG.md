@@ -1,5 +1,23 @@
 # Changelog
 
+## v1.7.1
+
+### Added
+
+- **Overlay widgets** — Customisable widgets can now be added to the playback screen for additional information and navigation. Right-click the background or stream to add widgets. Size and background opacity are configurable under `Settings → Widgets`.
+  - **Live Sports Score widget** — Displays live scores for ongoing matches at the top of the overlay. Click a score to view detailed match information, or right-click to hide specific matches. Available in two modes: `Persistent` (remains visible when the UI overlay auto-hides) and `Autohide` (hides alongside the UI overlay).
+  - **Recent Channels widget** — Shows recently watched channels along with their currently airing programme. Click any entry to switch to that channel.
+  - **Custom Group widget** — Displays channels and their currently airing programmes from a selected custom group, enabling quick channel switching directly from the overlay.
+  - **What's Next widget** — Shows the next scheduled programme on the current channel.
+- **Category search** — A search bar has been added to the top of the Category sidebar for faster category navigation.
+- **Autohide overlay timer** — The duration of inactivity before the overlay auto-hides is now configurable under `Settings → UI → Autohide Overlay Timer`.
+
+### Fixed
+
+- **Sport match cards not displaying correctly** — Match cards for Racing, Golf, Tennis, and MMA now display correct layout.
+- **M3U links with no categories not displaying in sidebar** — Channels from M3U sources with no assigned categories are now correctly shown in the sidebar.
+
+
 ## v1.7.0
 
 ### Added

@@ -40,3 +40,43 @@
     bottom: 68px;
   }
 }
+
+/* ── Widget Move Controls (Shared by all widgets) ── */
+.widget-move-controls {
+  display: flex;
+  gap: 4px;
+  margin-left: auto;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  pointer-events: auto;
+}
+
+/* Show controls when the widget is hovered */
+[class$="-widget"]:hover .widget-move-controls {
+  opacity: 1;
+}
+
+.widget-move-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  color: rgba(255, 255, 255, 0.7);
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  transition: all 0.15s ease;
+}
+
+.widget-move-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.25);
+  color: white;
+}
+
+.widget-move-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}

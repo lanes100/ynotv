@@ -45,6 +45,7 @@ A feature-rich, open source IPTV player for Windows built on [Tauri v2](https://
 - **Catchup & Cache Time Shift** — instant replays on supported channels
 - **Automatic Stream Fallback** — detects and switches away from stalled or dead streams
 - **Sports Tab** — real-time scores and detailed game stats with instant search to find channel
+- **Widget System** — Display live sports score in overlay
 - **VOD Support** — rich metadata via TMDB and RPDB with saved progress
 - **Subtitle Integration** — Subsource support for VODs
 - **Popout Player** — play streams in a seperate MPV window

@@ -47,6 +47,8 @@ interface FavoritesWidgetProps {
   activeView: string;
   onChannelClick: (channel: StoredChannel) => void;
   isVod: boolean;
+  onMoveLeft?: () => void;
+  onMoveRight?: () => void;
 }
 
 export function FavoritesWidget({
@@ -54,6 +56,8 @@ export function FavoritesWidget({
   activeView,
   onChannelClick,
   isVod,
+  onMoveLeft,
+  onMoveRight,
 }: FavoritesWidgetProps) {
   const favoriteChannels = useLiveQuery(
     async () => {
@@ -83,7 +87,19 @@ export function FavoritesWidget({
 
   return (
     <div className="favorites-widget">
-      <div className="favorites-header">Favorites</div>
+      <div className="favorites-header" style={{ display: 'flex', alignItems: 'center' }}>
+        <span>Favorites</span>
+        {(onMoveLeft || onMoveRight) && (
+          <div className="widget-move-controls">
+            <button className="widget-move-btn" onClick={onMoveLeft} disabled={!onMoveLeft} title="Move Left">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+            </button>
+            <button className="widget-move-btn" onClick={onMoveRight} disabled={!onMoveRight} title="Move Right">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+            </button>
+          </div>
+        )}
+      </div>
       <div className="favorites-list">
         {favoriteChannels?.map((channel) => (
           <FavoriteChannelItem

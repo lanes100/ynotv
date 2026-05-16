@@ -642,8 +642,8 @@
 .live-sports-overlay {
   position: absolute;
   top: 32px;
-  left: 0;
-  right: 0;
+  left: 50%;
+  width: calc(100% / var(--sports-scale, 1));
   z-index: 70;
   background: linear-gradient(
     to bottom,
@@ -656,7 +656,7 @@
   overflow: hidden;
   transition: top 0.3s ease, opacity 0.3s ease;
   transform-origin: top center;
-  transform: scaleY(var(--sports-scale, 1));
+  transform: translateX(-50%) scale(var(--sports-scale, 1));
 }
 
 /* When controls are hidden, slide up to hug the top edge */
@@ -673,6 +673,22 @@
   -ms-overflow-style: none;
   mask-image: linear-gradient(to right, transparent, black 8px, black calc(100% - 8px), transparent);
   -webkit-mask-image: linear-gradient(to right, transparent, black 8px, black calc(100% - 8px), transparent);
+}
+
+.live-sports-track.is-ticker {
+  overflow-x: visible;
+  width: max-content;
+  animation: marquee var(--marquee-duration, 30s) linear infinite;
+  /* Remove mask from the track itself, move it to the container if needed, but since container has overflow: hidden and it spans full width, it's fine. Wait, the overlay itself can have the mask. */
+}
+
+.live-sports-track.is-ticker:hover {
+  animation-play-state: paused;
+}
+
+@keyframes marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(calc(-50% - 8px)); }
 }
 
 .live-sports-track::-webkit-scrollbar {

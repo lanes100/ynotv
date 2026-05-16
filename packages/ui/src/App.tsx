@@ -549,6 +549,49 @@ function App() {
   }, []);
 
   // ==========================================================================
+  // Widget Sorting State
+  // ==========================================================================
+  const [widgetOrder, setWidgetOrder] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('widgetOrder');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const handleMoveWidget = useCallback((widgetId: string, direction: -1 | 1) => {
+    setWidgetOrder((prev) => {
+      const activeWidgets: string[] = [];
+      if (recentOverlayWidget) activeWidgets.push('recent');
+      if (favoritesOverlayWidget) activeWidgets.push('favorites');
+      if (whatsNextOverlayWidget) activeWidgets.push('whats-next');
+      customGroupWidgetIds.forEach((id) => activeWidgets.push(`custom-${id}`));
+
+      const sortedActive = [...activeWidgets].sort((a, b) => {
+        let idxA = prev.indexOf(a);
+        let idxB = prev.indexOf(b);
+        if (idxA === -1) idxA = 999;
+        if (idxB === -1) idxB = 999;
+        return idxA - idxB;
+      });
+
+      const currentIndex = sortedActive.indexOf(widgetId);
+      if (currentIndex === -1) return prev;
+
+      const newIndex = currentIndex + direction;
+      if (newIndex < 0 || newIndex >= sortedActive.length) return prev;
+
+      const temp = sortedActive[currentIndex];
+      sortedActive[currentIndex] = sortedActive[newIndex];
+      sortedActive[newIndex] = temp;
+
+      localStorage.setItem('widgetOrder', JSON.stringify(sortedActive));
+      return sortedActive;
+    });
+  }, [recentOverlayWidget, favoritesOverlayWidget, whatsNextOverlayWidget, customGroupWidgetIds]);
+
+  // ==========================================================================
   // Sync State from Store
   // ==========================================================================
   const channelSyncing = useChannelSyncing();
@@ -1415,41 +1458,85 @@ function App() {
       {(recentOverlayWidget || favoritesOverlayWidget || whatsNextOverlayWidget || customGroupWidgetIds.length > 0) &&
         !(currentChannel?.stream_id === 'vod' || currentChannel?.stream_id?.startsWith('recording_')) && (
         <WidgetBar cioEnabled={channelInfoOverlayEnabled}>
-          {recentOverlayWidget && (
-            <RecentChannelsWidget
-              showControls={showControls}
-              activeView={activeView}
-              onChannelClick={handlePlayChannelWrapper}
-              limit={recentOverlayWidget === '10' ? 10 : 5}
-              isVod={Boolean(currentChannel?.stream_id === 'vod' || currentChannel?.stream_id?.startsWith('recording_'))}
-            />
-          )}
-          {favoritesOverlayWidget && (
-            <FavoritesWidget
-              showControls={showControls}
-              activeView={activeView}
-              onChannelClick={handlePlayChannelWrapper}
-              isVod={Boolean(currentChannel?.stream_id === 'vod' || currentChannel?.stream_id?.startsWith('recording_'))}
-            />
-          )}
-          {whatsNextOverlayWidget && (
-            <WhatsNextWidget
-              channel={currentChannel}
-              showControls={showControls}
-              activeView={activeView}
-              isVod={Boolean(currentChannel?.stream_id === 'vod' || currentChannel?.stream_id?.startsWith('recording_'))}
-            />
-          )}
-          {customGroupWidgetIds.map((groupId) => (
-            <CustomGroupWidget
-              key={groupId}
-              groupId={groupId}
-              showControls={showControls}
-              activeView={activeView}
-              onChannelClick={handlePlayChannelWrapper}
-              isVod={Boolean(currentChannel?.stream_id === 'vod' || currentChannel?.stream_id?.startsWith('recording_'))}
-            />
-          ))}
+          {(() => {
+            const activeWidgets: string[] = [];
+            if (recentOverlayWidget) activeWidgets.push('recent');
+            if (favoritesOverlayWidget) activeWidgets.push('favorites');
+            if (whatsNextOverlayWidget) activeWidgets.push('whats-next');
+            customGroupWidgetIds.forEach((id) => activeWidgets.push(`custom-${id}`));
+
+            const sortedActive = [...activeWidgets].sort((a, b) => {
+              let idxA = widgetOrder.indexOf(a);
+              let idxB = widgetOrder.indexOf(b);
+              if (idxA === -1) idxA = 999;
+              if (idxB === -1) idxB = 999;
+              return idxA - idxB;
+            });
+
+            return sortedActive.map((widgetId, index) => {
+              const isFirst = index === 0;
+              const isLast = index === sortedActive.length - 1;
+              const moveLeft = !isFirst ? () => handleMoveWidget(widgetId, -1) : undefined;
+              const moveRight = !isLast ? () => handleMoveWidget(widgetId, 1) : undefined;
+
+              if (widgetId === 'recent') {
+                return (
+                  <RecentChannelsWidget
+                    key={widgetId}
+                    showControls={showControls}
+                    activeView={activeView}
+                    onChannelClick={handlePlayChannelWrapper}
+                    limit={recentOverlayWidget === '10' ? 10 : 5}
+                    isVod={Boolean(currentChannel?.stream_id === 'vod' || currentChannel?.stream_id?.startsWith('recording_'))}
+                    onMoveLeft={moveLeft}
+                    onMoveRight={moveRight}
+                  />
+                );
+              }
+              if (widgetId === 'favorites') {
+                return (
+                  <FavoritesWidget
+                    key={widgetId}
+                    showControls={showControls}
+                    activeView={activeView}
+                    onChannelClick={handlePlayChannelWrapper}
+                    isVod={Boolean(currentChannel?.stream_id === 'vod' || currentChannel?.stream_id?.startsWith('recording_'))}
+                    onMoveLeft={moveLeft}
+                    onMoveRight={moveRight}
+                  />
+                );
+              }
+              if (widgetId === 'whats-next') {
+                return (
+                  <WhatsNextWidget
+                    key={widgetId}
+                    channel={currentChannel}
+                    showControls={showControls}
+                    activeView={activeView}
+                    isVod={Boolean(currentChannel?.stream_id === 'vod' || currentChannel?.stream_id?.startsWith('recording_'))}
+                    onMoveLeft={moveLeft}
+                    onMoveRight={moveRight}
+                  />
+                );
+              }
+              if (widgetId.startsWith('custom-')) {
+                const groupId = widgetId.replace('custom-', '');
+                return (
+                  <CustomGroupWidget
+                    key={widgetId}
+                    groupId={groupId}
+                    showControls={showControls}
+                    activeView={activeView}
+                    onChannelClick={handlePlayChannelWrapper}
+                    isVod={Boolean(currentChannel?.stream_id === 'vod' || currentChannel?.stream_id?.startsWith('recording_'))}
+                    onMoveLeft={moveLeft}
+                    onMoveRight={moveRight}
+                  />
+                );
+              }
+              return null;
+            });
+          })()}
         </WidgetBar>
       )}
 

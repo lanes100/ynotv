@@ -47,6 +47,8 @@ interface CustomGroupWidgetProps {
   activeView: string;
   onChannelClick: (channel: StoredChannel) => void;
   isVod: boolean;
+  onMoveLeft?: () => void;
+  onMoveRight?: () => void;
 }
 
 export function CustomGroupWidget({
@@ -55,6 +57,8 @@ export function CustomGroupWidget({
   activeView,
   onChannelClick,
   isVod,
+  onMoveLeft,
+  onMoveRight,
 }: CustomGroupWidgetProps) {
   // Single query: load group metadata + ordered channels in one shot
   const data = useLiveQuery(
@@ -91,7 +95,19 @@ export function CustomGroupWidget({
 
   return (
     <div className="custom-group-widget">
-      <div className="custom-group-header" title={groupName}>{groupName}</div>
+      <div className="custom-group-header" title={groupName} style={{ display: 'flex', alignItems: 'center' }}>
+        <span>{groupName}</span>
+        {(onMoveLeft || onMoveRight) && (
+          <div className="widget-move-controls">
+            <button className="widget-move-btn" onClick={onMoveLeft} disabled={!onMoveLeft} title="Move Left">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+            </button>
+            <button className="widget-move-btn" onClick={onMoveRight} disabled={!onMoveRight} title="Move Right">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+            </button>
+          </div>
+        )}
+      </div>
       <div className="custom-group-list">
         {data!.channels.map((ch) => (
           <GroupChannelItem

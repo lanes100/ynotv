@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useLayoutEffect, useMemo } from 'react';
 import type { SportsEvent } from '@ynotv/core';
 import { useSportsPolling } from '../hooks/useSportsPolling';
 import { useSportsSettingsStore } from '../stores/sportsSettingsStore';
@@ -52,6 +52,8 @@ export function LiveSportsOverlay({ mode, showControls, activeView }: LiveSports
   const menuRef = useRef<HTMLDivElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
   const restoreRef = useRef<HTMLDivElement>(null);
+  const trackRef = useRef<HTMLDivElement>(null);
+  const [isOverflowing, setIsOverflowing] = useState(false);
 
   // Load custom leagues from settings so we match the Sports page exactly
   const { liveLeagues, loaded, loadSettings } = useSportsSettingsStore();
@@ -136,7 +138,34 @@ export function LiveSportsOverlay({ mode, showControls, activeView }: LiveSports
   }, []);
 
   // Filter out hidden events
-  const visibleEvents = liveEvents.filter(e => !hiddenIds.includes(e.id));
+  const visibleEvents = useMemo(() => liveEvents.filter(e => !hiddenIds.includes(e.id)), [liveEvents, hiddenIds]);
+
+  // Check for overflow to enable ticker mode
+  useLayoutEffect(() => {
+    const checkOverflow = () => {
+      if (trackRef.current && overlayRef.current) {
+        // Calculate original content width exactly, ignoring duplicates or max-content
+        let contentWidth = 0;
+        const children = trackRef.current.children;
+        for (let i = 0; i < visibleEvents.length; i++) {
+          if (children[i]) {
+            contentWidth += (children[i] as HTMLElement).offsetWidth + 16;
+          }
+        }
+        if (contentWidth > 0) contentWidth -= 16;
+
+        setIsOverflowing(contentWidth > overlayRef.current.clientWidth);
+      }
+    };
+
+    // Need a tiny delay to allow DOM to layout flex items accurately if they just mounted
+    const timer = setTimeout(checkOverflow, 50);
+    window.addEventListener('resize', checkOverflow);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('resize', checkOverflow);
+    };
+  }, [visibleEvents]);
 
   // Visibility logic
   const isMainScreen = activeView === 'none';
@@ -156,15 +185,19 @@ export function LiveSportsOverlay({ mode, showControls, activeView }: LiveSports
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
       >
-        <div className="live-sports-track">
-          {visibleEvents.map(event => {
+        <div 
+          ref={trackRef} 
+          className={`live-sports-track ${isOverflowing ? 'is-ticker' : ''}`}
+          style={isOverflowing ? { '--marquee-duration': `${visibleEvents.length * 4}s` } as React.CSSProperties : undefined}
+        >
+          {[...visibleEvents, ...(isOverflowing ? visibleEvents : [])].map((event, index) => {
             const awayWinning = (event.awayScore ?? 0) > (event.homeScore ?? 0);
             const homeWinning = (event.homeScore ?? 0) > (event.awayScore ?? 0);
             const statusText = getStatusDisplay(event);
 
             return (
               <div
-                key={event.id}
+                key={`${event.id}-${index}`}
                 className="live-sports-score-item"
                 onClick={() => setSelectedEvent(event)}
                 onContextMenu={(e) => {
