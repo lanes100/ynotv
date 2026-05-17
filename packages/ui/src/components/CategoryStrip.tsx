@@ -12,7 +12,10 @@ import { CategoryManager } from './settings/CategoryManager';
 import { FavoriteManager } from './settings/FavoriteManager';
 import { SourceContextMenu } from './SourceContextMenu';
 import { CategoryContextMenu } from './CategoryContextMenu';
+import { FavoritesContextMenu } from './FavoritesContextMenu';
+import { RecentChannelsContextMenu } from './RecentChannelsContextMenu';
 import { EpgEditorModal } from './EpgEditorModal';
+import { clearRecentChannels } from '../utils/recentChannels';
 import './CategoryStrip.css';
 
 // Component that detects text overflow and only scrolls when necessary
@@ -133,7 +136,7 @@ function WatchlistButton({ selectedCategoryId, onSelectCategory }: { selectedCat
 }
 
 // Recently Viewed button component
-function RecentlyViewedButton({ selectedCategoryId, onSelectCategory }: { selectedCategoryId: string | null; onSelectCategory: (categoryId: string | null) => void }) {
+function RecentlyViewedButton({ selectedCategoryId, onSelectCategory, onContextMenu }: { selectedCategoryId: string | null; onSelectCategory: (categoryId: string | null) => void; onContextMenu?: (e: React.MouseEvent) => void }) {
   const recentCount = useLiveQuery(
     async () => {
       const { getRecentChannels } = await import('../utils/recentChannels');
@@ -145,6 +148,7 @@ function RecentlyViewedButton({ selectedCategoryId, onSelectCategory }: { select
     <button
       className={`category-item ${selectedCategoryId === '__recent__' ? 'selected' : ''}`}
       onClick={() => onSelectCategory('__recent__')}
+      onContextMenu={onContextMenu}
     >
       <ScrollingText className="category-name">🕐 Recently Viewed</ScrollingText>
       <span className="category-count">{recentCount ?? 0}</span>
@@ -271,6 +275,9 @@ export function CategoryStrip({ selectedCategoryId, onSelectCategory, visible, o
   const [favoritesContextMenu, setFavoritesContextMenu] = useState<{ x: number, y: number } | null>(null);
   const [managingFavorites, setManagingFavorites] = useState(false);
 
+  // Recently Viewed Context Menu additions
+  const [recentContextMenu, setRecentContextMenu] = useState<{ x: number, y: number } | null>(null);
+
   // Category Context Menu additions
   const [categoryContextMenu, setCategoryContextMenu] = useState<{ x: number, y: number, categoryId: string, categoryName: string, sourceId: string, sourceName: string } | null>(null);
 
@@ -318,6 +325,11 @@ export function CategoryStrip({ selectedCategoryId, onSelectCategory, visible, o
   const handleFavoritesContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
     setFavoritesContextMenu({ x: e.clientX, y: e.clientY });
+  };
+
+  const handleRecentContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setRecentContextMenu({ x: e.clientX, y: e.clientY });
   };
 
   const handleCategoryContextMenu = (e: React.MouseEvent, categoryId: string, categoryName: string, sourceId: string, sourceName: string) => {
@@ -531,6 +543,7 @@ export function CategoryStrip({ selectedCategoryId, onSelectCategory, visible, o
         <RecentlyViewedButton
           selectedCategoryId={selectedCategoryId}
           onSelectCategory={onSelectCategory}
+          onContextMenu={handleRecentContextMenu}
         />
 
         {/* Custom Groups Section */}
@@ -685,35 +698,31 @@ export function CategoryStrip({ selectedCategoryId, onSelectCategory, visible, o
 
       {/* Favorites Context Menu */}
       {favoritesContextMenu && (
-        <div
-          className="context-menu"
-          style={{
-            position: 'fixed',
-            top: favoritesContextMenu.y,
-            left: favoritesContextMenu.x,
-            zIndex: 2000,
-            background: 'var(--bg-secondary)',
-            border: '1px solid var(--surface-border)',
-            borderRadius: '6px',
-            padding: '4px',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.5)'
+        <FavoritesContextMenu
+          position={{ x: favoritesContextMenu.x, y: favoritesContextMenu.y }}
+          onClose={() => setFavoritesContextMenu(null)}
+          onManageFavorites={() => setManagingFavorites(true)}
+        />
+      )}
+
+      {/* Recently Viewed Context Menu */}
+      {recentContextMenu && (
+        <RecentChannelsContextMenu
+          position={{ x: recentContextMenu.x, y: recentContextMenu.y }}
+          onClose={() => setRecentContextMenu(null)}
+          onClearRecent={() => {
+            showConfirm(
+              'Clear Recent Channels',
+              'Are you sure you want to clear your Recently Viewed channels list?',
+              () => {
+                clearRecentChannels();
+                if (selectedCategoryId === '__recent__') {
+                  onSelectCategory(null);
+                }
+              }
+            );
           }}
-        >
-          <div
-            onClick={() => {
-              setManagingFavorites(true);
-              setFavoritesContextMenu(null);
-            }}
-            style={{ padding: '8px 12px', cursor: 'pointer', color: 'var(--text-primary)' }}
-          >
-            ⭐ Manage Favorites
-          </div>
-          {/* Overlay to close menu on click outside */}
-          <div
-            style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', zIndex: -1 }}
-            onClick={() => setFavoritesContextMenu(null)}
-          />
-        </div>
+        />
       )}
 
       {/* Favorite Manager Modal */}
