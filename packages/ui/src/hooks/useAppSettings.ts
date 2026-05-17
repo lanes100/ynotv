@@ -62,6 +62,9 @@ export interface AppSettings {
   sportsScale: number;
   sportsBgOpacity: number; // 0–1
 
+  // Startup view
+  startupView: 'none' | 'guide' | 'movies' | 'series' | 'dvr' | 'sports' | 'calendar';
+
   // Actions
   setTheme: (theme: ThemeId) => void;
   setShortcuts: (shortcuts: ShortcutsMap) => void;
@@ -86,6 +89,7 @@ export interface AppSettings {
     setWidgetBgOpacity: (opacity: number) => void;
     setSportsScale: (scale: number) => void;
     setSportsBgOpacity: (opacity: number) => void;
+    setStartupView: (view: 'none' | 'guide' | 'movies' | 'series' | 'dvr' | 'sports' | 'calendar') => void;
 }
 
 /**
@@ -150,6 +154,9 @@ export function useAppSettings(): AppSettings {
   // Sports overlay
   const [sportsScale, setSportsScaleState] = useState(1);
   const [sportsBgOpacity, setSportsBgOpacityState] = useState(0.7);
+
+  // Startup view
+  const [startupView, setStartupViewState] = useState<'none' | 'guide' | 'movies' | 'series' | 'dvr' | 'sports' | 'calendar'>('none');
 
   // Apply theme effect
   useEffect(() => {
@@ -227,6 +234,9 @@ export function useAppSettings(): AppSettings {
           const savedSportsBgOpacity = result.data.sportsBgOpacity ?? 0.7;
           setSportsBgOpacityState(savedSportsBgOpacity);
           document.documentElement.style.setProperty('--sports-bg-opacity', String(savedSportsBgOpacity));
+
+          // Load startup view
+          setStartupViewState(result.data.startupView ?? 'none');
 
           // Apply EPG darken current setting on load
           if (result.data.epgDarkenCurrent) {
@@ -479,6 +489,17 @@ export function useAppSettings(): AppSettings {
     }
   }, []);
 
+  const setStartupView = useCallback(async (view: 'none' | 'guide' | 'movies' | 'series' | 'dvr' | 'sports' | 'calendar') => {
+    setStartupViewState(view);
+    if (window.storage) {
+      try {
+        await window.storage.updateSettings({ startupView: view });
+      } catch (e) {
+        console.error('[useAppSettings] Failed to save startupView:', e);
+      }
+    }
+  }, []);
+
   return {
     rememberLastChannels,
     reopenLastOnStartup,
@@ -537,5 +558,7 @@ export function useAppSettings(): AppSettings {
     setWidgetBgOpacity,
     setSportsScale,
     setSportsBgOpacity,
+    startupView,
+    setStartupView,
   };
 }

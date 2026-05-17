@@ -86,6 +86,7 @@ export interface AppSettings {
     overlayAutohideTimer?: number;
     rememberLastChannels?: boolean;
     savedLayoutState?: SavedLayoutState;
+    startupView?: 'none' | 'guide' | 'movies' | 'series' | 'dvr' | 'sports' | 'calendar';
     searchResultsOrder?: 'default' | 'alphabetical';
     // Advanced search settings
     advancedSearchScope?: 'channels' | 'epg' | 'both';

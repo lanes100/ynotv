@@ -124,6 +124,7 @@ export function Settings({
   const [rememberLastChannels, setRememberLastChannels] = useState(false);
   const [reopenLastOnStartup, setReopenLastOnStartup] = useState(false);
   const [savedLayoutState, setSavedLayoutState] = useState<SavedLayoutState | null>(null);
+  const [startupView, setStartupView] = useState<'none' | 'guide' | 'movies' | 'series' | 'dvr' | 'sports' | 'calendar'>('none');
 
   // Playback settings state
   const [mpvParams, setMpvParams] = useState<string>('');
@@ -263,6 +264,7 @@ export function Settings({
         rememberLastChannels?: boolean;
         reopenLastOnStartup?: boolean;
         savedLayoutState?: SavedLayoutState;
+        startupView?: 'none' | 'guide' | 'movies' | 'series' | 'dvr' | 'sports' | 'calendar';
         mpvParams?: string;
         mpvDisableWhitelist?: boolean;
         timeshiftEnabled?: boolean;
@@ -374,6 +376,7 @@ export function Settings({
       setRememberLastChannels(settings.rememberLastChannels ?? false);
       setReopenLastOnStartup(settings.reopenLastOnStartup ?? false);
       setSavedLayoutState(settings.savedLayoutState ?? null);
+      setStartupView(settings.startupView ?? 'none');
 
       // Load playback settings
       setMpvParams(settings.mpvParams ?? '');
@@ -758,6 +761,13 @@ export function Settings({
     }
   };
 
+  const handleStartupViewChange = async (value: 'none' | 'guide' | 'movies' | 'series' | 'dvr' | 'sports' | 'calendar') => {
+    setStartupView(value);
+    if (window.storage) {
+      await window.storage.updateSettings({ startupView: value });
+    }
+  };
+
   const handleIncludeSourceInSearchChange = async (value: boolean) => {
     setIncludeSourceInSearch(value);
     if (window.storage) {
@@ -879,8 +889,10 @@ export function Settings({
             rememberLastChannels={rememberLastChannels}
             reopenLastOnStartup={reopenLastOnStartup}
             savedLayoutState={savedLayoutState}
+            startupView={startupView}
             onRememberLastChannelsChange={handleRememberLastChannelsChange}
             onReopenLastOnStartupChange={handleReopenLastOnStartupChange}
+            onStartupViewChange={handleStartupViewChange}
           />
         );
       case 'playback':

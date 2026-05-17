@@ -19,16 +19,20 @@ interface StartupTabProps {
   rememberLastChannels: boolean;
   reopenLastOnStartup: boolean;
   savedLayoutState: SavedLayoutState | null;
+  startupView: 'none' | 'guide' | 'movies' | 'series' | 'dvr' | 'sports' | 'calendar';
   onRememberLastChannelsChange: (value: boolean) => void;
   onReopenLastOnStartupChange: (value: boolean) => void;
+  onStartupViewChange: (value: 'none' | 'guide' | 'movies' | 'series' | 'dvr' | 'sports' | 'calendar') => void;
 }
 
 export function StartupTab({
   rememberLastChannels,
   reopenLastOnStartup,
   savedLayoutState,
+  startupView,
   onRememberLastChannelsChange,
   onReopenLastOnStartupChange,
+  onStartupViewChange,
 }: StartupTabProps) {
   const [localValue, setLocalValue] = useState(rememberLastChannels);
   const [localReopenValue, setLocalReopenValue] = useState(reopenLastOnStartup);
@@ -86,6 +90,49 @@ export function StartupTab({
         <p className="section-description" style={{ marginBottom: '12px' }}>
           Control what happens when the application starts and when switching between view layouts.
         </p>
+
+        {/* Startup View Selector */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '0.75rem 0',
+            borderBottom: '1px solid rgba(255,255,255,0.08)',
+          }}
+        >
+          <div style={{ flex: 1 }}>
+            <div style={{ color: 'rgba(255,255,255,0.9)', fontSize: '0.95rem' }}>
+              Startup View
+            </div>
+            <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.8rem', marginTop: '0.25rem' }}>
+              Choose which page opens when the app starts
+            </div>
+          </div>
+          <select
+            value={startupView}
+            onChange={(e) => onStartupViewChange(e.target.value as StartupTabProps['startupView'])}
+            style={{
+              marginLeft: '1rem',
+              padding: '0.4rem 0.6rem',
+              borderRadius: '6px',
+              border: '1px solid rgba(255,255,255,0.2)',
+              background: 'rgba(0,0,0,0.4)',
+              color: 'rgba(255,255,255,0.9)',
+              fontSize: '0.9rem',
+              cursor: 'pointer',
+              minWidth: '140px',
+            }}
+          >
+            <option value="none">Hero Page</option>
+            <option value="guide">Live TV</option>
+            <option value="movies">Movies</option>
+            <option value="series">Series</option>
+            <option value="sports">Sports</option>
+            <option value="calendar">TV Calendar</option>
+            <option value="dvr">DVR</option>
+          </select>
+        </div>
 
         {/* Remember Last Channels Toggle */}
         <div style={{ marginTop: '1rem' }}>

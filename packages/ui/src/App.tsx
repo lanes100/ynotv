@@ -134,6 +134,7 @@ function App() {
     setOverlayAutohideTimer,
     popoutStopMain,
     popoutAlwaysOnTop,
+    startupView,
   } = useAppSettings();
 
   // ==========================================================================
@@ -355,6 +356,23 @@ function App() {
     handleSelectCategory,
     handleMouseMove,
   } = nav;
+
+  // ==========================================================================
+  // Apply Startup View
+  // ==========================================================================
+  const startupAppliedRef = useRef(false);
+
+  useEffect(() => {
+    if (!layoutSettingsLoaded || startupAppliedRef.current) return;
+    startupAppliedRef.current = true;
+
+    if (startupView && startupView !== 'none') {
+      setActiveView(startupView);
+      if (startupView === 'guide') {
+        setCategoriesOpen(!categoriesHidden);
+      }
+    }
+  }, [layoutSettingsLoaded, startupView, setActiveView, setCategoriesOpen, categoriesHidden]);
 
   // ==========================================================================
   // Channel Info Overlay
