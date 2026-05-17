@@ -30,6 +30,7 @@ interface StalkerGenre {
     id: string;
     title: string;
     alias?: string;
+    censored?: string | number;
 }
 
 export class StalkerClient {
@@ -44,6 +45,14 @@ export class StalkerClient {
     private originalUrl: string = ''; // Store original URL for fallback attempts
     private fallbackUrls: string[] = []; // List of URLs to try
     private tokenRefreshPromise: Promise<void> | null = null; // Lock to prevent concurrent token refreshes
+
+    /**
+     * Normalize Stalker censored/lock fields to boolean.
+     * Stalker APIs inconsistently return censored as "1", 1, 0, or "".
+     */
+    private isCensored(censored?: string | number, lock?: number): boolean {
+        return censored === 1 || censored === '1' || lock === 1;
+    }
 
     constructor(config: StalkerConfig, sourceId: string) {
         this.sourceId = sourceId;
@@ -527,7 +536,11 @@ export class StalkerClient {
 
     async getLiveCategories(): Promise<Category[]> {
         await this.ensureToken();
-        const rawData = await this.fetchStalker<any>('get_genres', 'itv');
+        // include_censored=1 (and censored=1 fallback) ensures adult genres are returned by the server
+        const rawData = await this.fetchStalker<any>('get_genres', 'itv', {
+            include_censored: '1',
+            censored: '1'
+        });
         const genres = this.safeJsonList<StalkerGenre>(rawData);
 
         console.log(`[Stalker] Fetched ${genres.length} live categories`);
@@ -545,7 +558,11 @@ export class StalkerClient {
 
         try {
             // Use get_all_channels to fetch ALL channels in ONE request
-            const rawData = await this.fetchStalker<any>('get_all_channels', 'itv');
+            // include_censored=1 ensures adult/locked channels are returned by the server
+            const rawData = await this.fetchStalker<any>('get_all_channels', 'itv', {
+                include_censored: '1',
+                censored: '1'
+            });
 
             // Use safeJsonList to handle both {js: []} and {js: {}} responses
             // For get_all_channels, data is often in 'data' key instead of 'js'
@@ -557,10 +574,67 @@ export class StalkerClient {
             const rawGenres = await this.fetchStalker<any>('get_genres', 'itv');
             const genres = this.safeJsonList<StalkerGenre>(rawGenres);
             const genreMap = new Map<string, string>();
+            const censoredGenreIds: string[] = [];
+            
             if (Array.isArray(genres)) {
                 for (const genre of genres) {
                     genreMap.set(genre.id, `${this.sourceId}_${genre.id}`);
+                    
+                    // Identify adult genres (using flags or keyword matching)
+                    const titleStr = (genre.title || '').toLowerCase();
+                    const aliasStr = (genre.alias || '').toLowerCase();
+                    const hasAdultKeyword = /(adult|xxx|18\+|\+18|\b18\b|18 rated|sex|porn|voksen|volwassen|aikuinen|erwachsene|dorosly|взрослый|vuxen|дорослий|£дорослий)/i.test(titleStr) || 
+                                            /(adult|xxx|18\+|\+18|\b18\b|18 rated|sex|porn|voksen|volwassen|aikuinen|erwachsene|dorosly|взрослый|vuxen|дорослий|£дорослий)/i.test(aliasStr);
+                    
+                    if (this.isCensored(genre.censored, 0) || hasAdultKeyword) {
+                        censoredGenreIds.push(genre.id);
+                    }
                 }
+            }
+
+            // CRITICAL: Stalker portals often hide adult channels from get_all_channels even with include_censored=1
+            // We must explicitly fetch channels for each adult genre to bypass common-list hiding
+            // We must ALSO paginate through them, as get_ordered_list often defaults to returning only 14 items (p=1)
+            if (censoredGenreIds.length > 0) {
+                console.log(`[Stalker] Fetching explicitly for ${censoredGenreIds.length} adult categories to bypass common-list hiding`);
+                
+                for (const genreId of censoredGenreIds) {
+                    let page = 1;
+                    let hasMore = true;
+                    
+                    while (hasMore) {
+                        try {
+                            const resp = await this.fetchStalker<any>('get_ordered_list', 'itv', {
+                                genre: genreId,
+                                force_ch_link_check: '0',
+                                include_censored: '1',
+                                censored: '1',
+                                p: page.toString()
+                            });
+                            
+                            const adultChannels = this.safeJsonList<any>(resp, 'data');
+                            if (adultChannels && adultChannels.length > 0) {
+                                // Force adult flag for these channels just in case the server marked them 0
+                                for (const ac of adultChannels) {
+                                    ac._forced_adult = true;
+                                }
+                                channelsData.push(...adultChannels);
+                                page++;
+                                
+                                // Standard stalker page size is 14. If we get less, there are no more pages.
+                                if (adultChannels.length < 14) {
+                                    hasMore = false;
+                                }
+                            } else {
+                                hasMore = false;
+                            }
+                        } catch (e) {
+                            console.warn(`[Stalker] Failed to fetch adult category ${genreId} page ${page}:`, e);
+                            hasMore = false;
+                        }
+                    }
+                }
+                console.log(`[Stalker] Total channels after adding adult categories: ${channelsData.length}`);
             }
 
             // Process all channels
@@ -607,6 +681,7 @@ export class StalkerClient {
                     source_id: this.sourceId,
                     epg_channel_id: ch.xmltv_id,
                     provider_order: providerOrder,
+                    is_adult: this.isCensored(ch.censored, ch.lock) || ch._forced_adult === true,
                 };
                 providerOrder++;
 
@@ -666,7 +741,9 @@ export class StalkerClient {
                 batchPromises.push(
                     this.fetchStalker<any>('get_ordered_list', 'vod', {
                         category: catId,
-                        p: (page + i).toString()
+                        p: (page + i).toString(),
+                        include_censored: '1',
+                        censored: '1'
                     })
                 );
             }
@@ -785,7 +862,9 @@ export class StalkerClient {
                 batchPromises.push(
                     this.fetchStalker<any>('get_ordered_list', 'series', {
                         category: catId,
-                        p: (page + i).toString()
+                        p: (page + i).toString(),
+                        include_censored: '1',
+                        censored: '1'
                     })
                 );
             }
@@ -891,7 +970,9 @@ export class StalkerClient {
             movie_id: rawMovieId,
             season_id: '0',
             episode_id: '0',
-            p: '0'
+            p: '0',
+            include_censored: '1',
+            censored: '1'
         });
 
         let seasonsData = response?.data || response;
@@ -975,7 +1056,9 @@ export class StalkerClient {
             movie_id: rawMovieId,
             season_id: seasonId,
             episode_id: '0',
-            p: '0'
+            p: '0',
+            include_censored: '1',
+            censored: '1'
         });
 
         let episodesData = response?.data || response;
@@ -1051,7 +1134,9 @@ export class StalkerClient {
                 console.log(`[Stalker] No stored cmd, fetching via get_ordered_list for movie_id ${movieId}`);
                 const listResp = await this.fetchStalker<any>('get_ordered_list', 'vod', {
                     movie_id: movieId,
-                    p: '1'
+                    p: '1',
+                    include_censored: '1',
+                    censored: '1'
                 });
                 const listData = listResp?.data || listResp?.js?.data;
                 if (Array.isArray(listData) && listData.length > 0) {
@@ -1254,6 +1339,7 @@ export class StalkerClient {
 interface StalkerGenre {
     id: string;
     title: string;
+    censored?: string | number;
 }
 
 interface StalkerChannel {
@@ -1266,4 +1352,6 @@ interface StalkerChannel {
     url?: string;
     cmd?: string;
     xmltv_id: string;
+    censored?: string | number;
+    lock?: number;
 }

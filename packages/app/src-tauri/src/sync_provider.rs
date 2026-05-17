@@ -172,6 +172,7 @@ pub async fn sync_xtream_source(
             xmltv_id: None,
             series_no: None,
             live: Some(1),
+            is_adult: None,
         });
     }
 
@@ -479,6 +480,7 @@ pub async fn sync_m3u_source(
                     xmltv_id: None,
                     series_no: None,
                     live: Some(1),
+                    is_adult: None,
                 });
             }
         }

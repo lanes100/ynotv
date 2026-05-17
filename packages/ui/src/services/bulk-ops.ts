@@ -49,6 +49,7 @@ export interface BulkChannel {
   xmltv_id?: string;
   series_no?: number;
   live?: number;
+  is_adult?: boolean;
 }
 
 export interface BulkCategory {
@@ -179,6 +180,7 @@ export async function upsertChannels(channels: BulkChannel[]): Promise<BulkResul
       // Ensure boolean fields are sent as booleans
       is_favorite: ch.is_favorite ?? false,
       enabled: ch.enabled ?? true,
+      is_adult: ch.is_adult ?? false,
     }));
 
     const result = await invoke<BulkResult>('bulk_upsert_channels', {

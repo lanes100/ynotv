@@ -149,6 +149,21 @@ export const ChannelRow = memo(function ChannelRow({
             {(Boolean(channel.tv_archive) || channel.tv_archive === 1) && (
               <span style={{ color: '#e5a00d', marginLeft: '4px', fontSize: '1.1em', verticalAlign: 'middle' }}>↺</span>
             )}
+            {channel.is_adult && (
+              <span className="adult-badge" title="Adult channel" style={{
+                backgroundColor: 'rgba(220, 53, 69, 0.85)',
+                color: '#fff',
+                fontSize: '0.65em',
+                fontWeight: 700,
+                padding: '1px 4px',
+                borderRadius: '3px',
+                marginLeft: '5px',
+                verticalAlign: 'middle',
+                letterSpacing: '0.3px',
+                lineHeight: 1,
+                display: 'inline-block',
+              }}>18+</span>
+            )}
           </span>
         </div>
         <div className="channel-row-metadata">

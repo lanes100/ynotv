@@ -501,7 +501,7 @@ pub async fn stream_parse_epg_multi<R: tauri::Runtime>(
     );
 
     // Determine if any source needs advanced matching (build display mapping once if so)
-    let any_advanced = source_configs.iter().any(|c| c.advanced_epg_matching);
+    let _any_advanced = source_configs.iter().any(|c| c.advanced_epg_matching);
 
     // Check if URL is gzipped
     let is_gzipped = epg_url.ends_with(".gz");
@@ -1159,7 +1159,7 @@ async fn parse_and_stream_batches<R: tauri::Runtime>(
     timeshift_hours: f64,
 ) -> Result<StreamingParserResult> {
     // Pre-compute offset in whole seconds so we avoid repeated float math in the hot loop
-    let timeshift_secs = (timeshift_hours * 3600.0).round() as i64;
+    let _timeshift_secs = (timeshift_hours * 3600.0).round() as i64;
     // Conditionally build display name mapping for advanced EPG matching
     let channel_lookup = if advanced_epg_matching {
         info!("[EPG] Advanced EPG matching enabled - building display name mappings");

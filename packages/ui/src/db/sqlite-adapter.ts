@@ -71,7 +71,7 @@ export const dbEvents = new DbEvents();
 // ─── Shared field-type maps (single source of truth) ─────────────────────────
 // Boolean fields that are stored as 0/1 in SQLite but should be JS booleans
 const BOOLEAN_FIELDS: Record<string, string[]> = {
-    'channels': ['is_favorite', 'enabled'],
+    'channels': ['is_favorite', 'enabled', 'is_adult'],
     'categories': ['enabled'],
     'vodCategories': ['enabled'],
     'watchlist': ['reminder_enabled', 'autoswitch_enabled', 'reminder_shown', 'autoswitch_triggered'],

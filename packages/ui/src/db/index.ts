@@ -432,14 +432,15 @@ class YnotvDatabase extends SqliteDatabase {
         direct_url TEXT,
         xmltv_id TEXT,
         series_no INTEGER,
-        live INTEGER
+        live INTEGER,
+        is_adult BOOLEAN
       )`);
 
     // ─── Versioned migrations via PRAGMA user_version ─────────────────────────
     // Each version block runs exactly ONCE. To add new columns in the future,
     // increment DB_VERSION and add a new case (do NOT modify existing cases).
     // ─────────────────────────────────────────────────────────────────────────
-    const DB_VERSION = 10;
+    const DB_VERSION = 11;
     const versionResult = await db.select('PRAGMA user_version') as Array<{ user_version: number }>;
     const currentVersion = versionResult[0]?.user_version ?? 0;
 
@@ -527,6 +528,15 @@ class YnotvDatabase extends SqliteDatabase {
           try { await db.execute(`ALTER TABLE ${table} ADD COLUMN ${col} ${type}`); } catch { /* already exists */ }
         };
         await addColumn('channels', 'provider_order', 'INTEGER');
+      }
+
+      if (currentVersion < 11) {
+        // v11: is_adult for Stalker portal censored/lock channel tracking
+        console.log('[DB] v11 migration: Adding is_adult column to channels');
+        const addColumn = async (table: string, col: string, type: string) => {
+          try { await db.execute(`ALTER TABLE ${table} ADD COLUMN ${col} ${type}`); } catch { /* already exists */ }
+        };
+        await addColumn('channels', 'is_adult', 'BOOLEAN');
       }
 
       if (currentVersion < 2) {
