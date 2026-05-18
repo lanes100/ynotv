@@ -1,8 +1,9 @@
 /**
  * SeriesDetail - Full page series detail view with season/episode picker
  *
- * Shows series information with backdrop, metadata, season dropdown,
- * and episode list. Slides in as a full page, not a modal.
+ * Shows series information with backdrop, metadata, season button row,
+ * and episode cards with images, summaries, air dates, and ratings.
+ * Slides in as a full page, not a modal.
  */
 
 import { useState, useEffect, useCallback } from 'react';
@@ -10,6 +11,7 @@ import { getTmdbImageUrl, TMDB_POSTER_SIZES } from '../../services/tmdb';
 import { useLazyBackdrop } from '../../hooks/useLazyBackdrop';
 import { useLazyPlot } from '../../hooks/useLazyPlot';
 import { useLazyCredits } from '../../hooks/useLazyCredits';
+import { useLazySeriesExtras } from '../../hooks/useLazySeriesExtras';
 import { useSeriesDetails, useSeriesEpisodeProgress } from '../../hooks/useVod';
 import { useRpdbSettings } from '../../hooks/useRpdbSettings';
 import { getRpdbPosterUrl } from '../../services/rpdb';
@@ -27,14 +29,16 @@ export interface SeriesDetailProps {
 }
 
 export function SeriesDetail({ series, onClose, onPlayEpisode, apiKey, initialSeason }: SeriesDetailProps) {
-  // console.log('[SeriesDetail] Rendered for:', series.series_id, series);
   const [selectedSeason, setSelectedSeason] = useState<number>(initialSeason ?? 1);
 
   // Fetch episodes
   const { seasons, loading, error, refetch } = useSeriesDetails(series.series_id);
-  
+
   // Fetch episode progress
   const { episodeProgress, loading: progressLoading } = useSeriesEpisodeProgress(series.series_id);
+
+  // Fetch episode extras (images, summaries, air dates, ratings) and series logo
+  const { logoUrl, episodeExtras, loading: extrasLoading } = useLazySeriesExtras(series, apiKey);
 
   // Get sorted season numbers
   const seasonNumbers = Object.keys(seasons)
@@ -72,7 +76,7 @@ export function SeriesDetail({ series, onClose, onPlayEpisode, apiKey, initialSe
       console.log('[SeriesDetail] Episode progress lookup:', episode.id, progress);
       const resumePosition = progress && progress.progressSeconds > 10 ? progress.progressSeconds : 0;
       console.log('[SeriesDetail] Resume position:', resumePosition);
-      
+
       // Record series watch for Recently Watched with episode info
       void recordVodWatch(
         series.series_id,
@@ -84,7 +88,7 @@ export function SeriesDetail({ series, onClose, onPlayEpisode, apiKey, initialSe
         episode.episode_num,
         episode.title || `Episode ${episode.episode_num}`
       );
-      
+
       // Record episode progress for tracking
       // Calculate duration carefully to avoid NaN
       let episodeDuration = episode.duration ?? 0;
@@ -93,7 +97,7 @@ export function SeriesDetail({ series, onClose, onPlayEpisode, apiKey, initialSe
         episodeDuration = isNaN(parsedDuration) ? 0 : parsedDuration;
       }
       console.log('[SeriesDetail] Episode duration:', episodeDuration, '(from duration:', episode.duration, ', info.duration:', episode.info?.duration + ')');
-      
+
       void recordEpisodeWatch(
         episode.id,
         series.series_id,
@@ -104,7 +108,7 @@ export function SeriesDetail({ series, onClose, onPlayEpisode, apiKey, initialSe
         resumePosition, // Will be updated when stopped
         episodeDuration
       );
-      
+
       onPlayEpisode?.({
         url: episode.direct_url,
         title: series.title || series.name,
@@ -144,7 +148,6 @@ export function SeriesDetail({ series, onClose, onPlayEpisode, apiKey, initialSe
   const backdropUrl = tmdbBackdropUrl || series.cover;
 
   // Priority: RPDB poster > local cover > TMDB/TVMaze fallback
-  // Note: backdrop_path could be TMDB path (e.g., "/abc.jpg") or TVMaze full URL
   const posterUrl = rpdbPosterUrl || series.cover ||
     (series.backdrop_path
       ? series.backdrop_path.startsWith('http')
@@ -159,11 +162,8 @@ export function SeriesDetail({ series, onClose, onPlayEpisode, apiKey, initialSe
   const year = series.year || series.release_date?.slice(0, 4);
 
   // Rating - use lazy rating from hook if available, otherwise use stored rating
-  // Only show if it's a meaningful value (not 0, not NaN, not empty string)
-  // Handle JSON-encoded strings like '"7"' (with quotes)
   const rawRating = series.rating;
   let storedRating = rawRating && typeof rawRating === 'string' ? rawRating.trim() : null;
-  // Remove surrounding quotes if present (e.g., "7" -> 7)
   if (storedRating && storedRating.startsWith('"') && storedRating.endsWith('"')) {
     storedRating = storedRating.slice(1, -1);
   }
@@ -200,7 +200,8 @@ export function SeriesDetail({ series, onClose, onPlayEpisode, apiKey, initialSe
 
       {/* Content */}
       <div className="series-detail__content">
-        <div className="series-detail__main">
+        {/* Hero Section */}
+        <div className="series-detail__hero">
           {/* Poster */}
           <div className="series-detail__poster">
             {posterUrl ? (
@@ -214,7 +215,14 @@ export function SeriesDetail({ series, onClose, onPlayEpisode, apiKey, initialSe
 
           {/* Info */}
           <div className="series-detail__info">
-            <h1 className="series-detail__title">{displayTitle}</h1>
+            {/* Logo or Title */}
+            {logoUrl ? (
+              <div className="series-detail__logo">
+                <img src={logoUrl} alt={displayTitle} />
+              </div>
+            ) : (
+              <h1 className="series-detail__title">{displayTitle}</h1>
+            )}
 
             <div className="series-detail__meta">
               {year && <span className="series-detail__year">{year}</span>}
@@ -259,25 +267,17 @@ export function SeriesDetail({ series, onClose, onPlayEpisode, apiKey, initialSe
 
         {/* Episodes section */}
         <div className="series-detail__episodes-section">
-          {/* Season selector */}
+          {/* Season selector - row of buttons */}
           <div className="series-detail__season-selector">
-            <label htmlFor="season-select">Season</label>
-            <div className="series-detail__select-wrapper">
-              <select
-                id="season-select"
-                value={selectedSeason}
-                onChange={(e) => setSelectedSeason(Number(e.target.value))}
+            {seasonNumbers.map((num) => (
+              <button
+                key={num}
+                className={`series-detail__season-btn ${selectedSeason === num ? 'active' : ''}`}
+                onClick={() => setSelectedSeason(num)}
               >
-                {seasonNumbers.map((num) => (
-                  <option key={num} value={num}>
-                    Season {num}
-                  </option>
-                ))}
-              </select>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M6 9l6 6 6-6" />
-              </svg>
-            </div>
+                Season {num}
+              </button>
+            ))}
           </div>
 
           {/* Episode list */}
@@ -297,61 +297,96 @@ export function SeriesDetail({ series, onClose, onPlayEpisode, apiKey, initialSe
                 <p>No episodes found for Season {selectedSeason}</p>
               </div>
             ) : (
-              <div className="series-detail__episode-list">
+              <div className="series-detail__episode-grid">
                 {currentEpisodes.map((episode) => {
                   const progress = episodeProgress.get(episode.id);
                   const hasProgress = progress && progress.progressPercent > 0 && !progress.completed;
                   const isCompleted = progress?.completed || false;
-                  
+                  const extra = episodeExtras.get(`${episode.season_num}_${episode.episode_num}`);
+
                   return (
-                    <div 
-                      key={episode.id} 
-                      className={`series-detail__episode-row ${hasProgress ? 'has-progress' : ''} ${isCompleted ? 'completed' : ''}`}
+                    <div
+                      key={episode.id}
+                      className={`series-detail__episode-card ${hasProgress ? 'has-progress' : ''} ${isCompleted ? 'completed' : ''}`}
+                      onClick={() => handlePlayEpisode(episode)}
                     >
-                      <button
-                        className="series-detail__episode"
-                        onClick={() => handlePlayEpisode(episode)}
-                      >
-                        <span className="series-detail__episode-number">
-                          {isCompleted ? (
-                            <svg className="series-detail__episode-checkmark" viewBox="0 0 24 24" fill="currentColor">
+                      {/* Episode Image */}
+                      <div className="series-detail__episode-image">
+                        {extra?.image ? (
+                          <img src={extra.image} alt={episode.title || `Episode ${episode.episode_num}`} loading="lazy" />
+                        ) : (
+                          <div className="series-detail__episode-image-placeholder">
+                            <span>E{episode.episode_num}</span>
+                          </div>
+                        )}
+                        {/* Play overlay */}
+                        <div className="series-detail__episode-play-overlay">
+                          <svg viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M8 5v14l11-7z" />
+                          </svg>
+                        </div>
+                        {/* Progress bar */}
+                        {hasProgress && (
+                          <div className="series-detail__episode-progress-bar">
+                            <div
+                              className="series-detail__episode-progress-fill"
+                              style={{ width: `${progress.progressPercent}%` }}
+                            />
+                          </div>
+                        )}
+                        {/* Completed checkmark */}
+                        {isCompleted && (
+                          <div className="series-detail__episode-completed-badge">
+                            <svg viewBox="0 0 24 24" fill="currentColor">
                               <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
                             </svg>
-                          ) : (
-                            episode.episode_num
-                          )}
-                        </span>
-                        <div className="series-detail__episode-info">
-                          <span className="series-detail__episode-title">
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Episode Info */}
+                      <div className="series-detail__episode-card-info">
+                        <div className="series-detail__episode-card-header">
+                          <span className="series-detail__episode-card-number">
+                            {episode.episode_num}
+                          </span>
+                          <span className="series-detail__episode-card-title">
                             {episode.title || `Episode ${episode.episode_num}`}
                           </span>
-                          <div className="series-detail__episode-meta">
-                            {(episode.duration ?? (episode.info?.duration as number | undefined)) ? (
-                              <span className="series-detail__episode-duration">
-                                {Math.round((episode.duration ?? Number(episode.info?.duration) ?? 0) / 60)}m
-                              </span>
-                            ) : null}
-                            {hasProgress && (
-                              <div className="series-detail__episode-progress-bar">
-                                <div 
-                                  className="series-detail__episode-progress-fill"
-                                  style={{ width: `${progress.progressPercent}%` }}
-                                />
-                              </div>
-                            )}
-                          </div>
                         </div>
-                        <svg
-                          className="series-detail__episode-play"
-                          viewBox="0 0 24 24"
-                          fill="currentColor"
-                        >
-                          <path d="M8 5v14l11-7z" />
-                        </svg>
-                      </button>
+
+                        {/* Meta: air date, rating, duration */}
+                        <div className="series-detail__episode-card-meta">
+                          {extra?.airDate && (
+                            <span className="series-detail__episode-card-airdate">
+                              {formatAirDate(extra.airDate)}
+                            </span>
+                          )}
+                          {extra?.rating && (
+                            <span className="series-detail__episode-card-rating">
+                              <svg viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                              </svg>
+                              {extra.rating.toFixed(1)}
+                            </span>
+                          )}
+                          {(episode.duration ?? (episode.info?.duration as number | undefined)) ? (
+                            <span className="series-detail__episode-card-duration">
+                              {Math.round((episode.duration ?? Number(episode.info?.duration) ?? 0) / 60)}m
+                            </span>
+                          ) : null}
+                        </div>
+
+                        {/* Summary */}
+                        {extra?.summary && (
+                          <p className="series-detail__episode-card-summary">{extra.summary}</p>
+                        )}
+                      </div>
+
+                      {/* Copy URL button */}
                       {episode.direct_url && (
                         <button
-                          className={`series-detail__episode-copy ${copiedId === episode.id ? 'copied' : ''}`}
+                          className={`series-detail__episode-card-copy ${copiedId === episode.id ? 'copied' : ''}`}
                           onClick={(e) => handleCopy(episode, e)}
                           title="Copy Stream URL"
                         >
@@ -376,6 +411,19 @@ export function SeriesDetail({ series, onClose, onPlayEpisode, apiKey, initialSe
       </div>
     </div>
   );
+}
+
+function formatAirDate(dateStr: string): string {
+  try {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    });
+  } catch {
+    return dateStr;
+  }
 }
 
 export default SeriesDetail;
