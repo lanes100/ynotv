@@ -464,6 +464,56 @@ export const Bridge = {
     }
 };
 
+export type AspectRatioMode = 'fit' | 'fill' | 'stretch' | '4:3' | '16:9';
+
+export async function applyAspectRatio(mode: AspectRatioMode) {
+    switch (mode) {
+        case 'fit':
+            await Bridge.setProperties({
+                'video-aspect-override': -1,
+                'panscan': 0,
+                'keepaspect': true,
+            });
+            break;
+        case 'fill':
+            await Bridge.setProperties({
+                'video-aspect-override': -1,
+                'panscan': 1,
+                'keepaspect': true,
+            });
+            break;
+        case 'stretch':
+            await Bridge.setProperties({
+                'video-aspect-override': -1,
+                'panscan': 0,
+                'keepaspect': false,
+            });
+            break;
+        case '4:3':
+            await Bridge.setProperties({
+                'video-aspect-override': '4:3',
+                'panscan': 0,
+                'keepaspect': true,
+            });
+            break;
+        case '16:9':
+            await Bridge.setProperties({
+                'video-aspect-override': '16:9',
+                'panscan': 0,
+                'keepaspect': true,
+            });
+            break;
+    }
+}
+
+export function getAspectRatioLabel(mode: AspectRatioMode): string {
+    switch (mode) {
+        case '4:3': return '4:3';
+        case '16:9': return '16:9';
+        default: return mode.charAt(0).toUpperCase() + mode.slice(1);
+    }
+}
+
 export async function initPolyfills() {
     if ((window as any).__polyfillsInitialized) return;
     (window as any).__polyfillsInitialized = true;

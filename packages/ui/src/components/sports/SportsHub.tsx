@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { SportsEvent, SportsTeam, SportsLeague, SportsTabId } from '@ynotv/core';
-import { Bridge } from '../../services/tauri-bridge';
+import { Bridge, type AspectRatioMode, getAspectRatioLabel } from '../../services/tauri-bridge';
 import {
   getLeaguesBySport,
   getAvailableSports,
@@ -29,6 +29,8 @@ interface SportsHubProps {
   onStop?: () => void;
   onChannelUp?: () => void;
   onChannelDown?: () => void;
+  aspectRatio?: AspectRatioMode;
+  onSetAspectRatio?: (mode: AspectRatioMode) => void;
 }
 
 export function SportsHub({
@@ -42,6 +44,8 @@ export function SportsHub({
   onStop,
   onChannelUp,
   onChannelDown,
+  aspectRatio = 'fit',
+  onSetAspectRatio,
 }: SportsHubProps) {
   const previewRef = useRef<HTMLDivElement>(null);
   const fillerLeftRef = useRef<HTMLDivElement>(null);
@@ -63,6 +67,22 @@ export function SportsHub({
   // Volume/mute state for mini media bar
   const [previewVolume, setPreviewVolume] = useState(100);
   const [previewMuted, setPreviewMuted] = useState(false);
+
+  // Aspect ratio menu state for mini media bar
+  const [showAspectMenu, setShowAspectMenu] = useState(false);
+  const aspectMenuRef = useRef<HTMLDivElement>(null);
+
+  // Close aspect ratio menu on outside click
+  useEffect(() => {
+    if (!showAspectMenu) return;
+    const handleClick = (e: MouseEvent) => {
+      if (aspectMenuRef.current && !aspectMenuRef.current.contains(e.target as Node)) {
+        setShowAspectMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [showAspectMenu]);
 
   // Handle preview pane hover for mini media bar visibility
   const handlePreviewPaneMouseEnter = useCallback(() => {
@@ -137,7 +157,9 @@ export function SportsHub({
           Bridge.setProperties({
             'video-zoom': 0,
             'video-align-x': 0,
-            'video-align-y': 0
+            'video-align-y': 0,
+            'video-aspect-override': -1,
+            'keepaspect': true,
           }).catch(() => { });
         }
         return;
@@ -155,21 +177,46 @@ export function SportsHub({
       const windowW = window.innerWidth;
       const windowH = window.innerHeight;
 
-      // MPV natively fits the 16:9 video inside the window.
-      let videoNativeW = windowW;
-      let videoNativeH = windowW * (9 / 16);
-
-      if (videoNativeH > windowH) {
-        // Window is wider than 16:9, so the video is constrained by window height
-        videoNativeH = windowH;
-        videoNativeW = windowH * (16 / 9);
+      // Determine target aspect ratio based on mode
+      let targetAspect: number;
+      let aspectOverride: number | string;
+      switch (aspectRatio) {
+        case 'stretch':
+          targetAspect = rect.width / rect.height;
+          aspectOverride = targetAspect;
+          break;
+        case '4:3':
+          targetAspect = 4 / 3;
+          aspectOverride = '4:3';
+          break;
+        case '16:9':
+          targetAspect = 16 / 9;
+          aspectOverride = '16:9';
+          break;
+        case 'fill':
+        case 'fit':
+        default:
+          targetAspect = 16 / 9; // assume native 16:9
+          aspectOverride = -1;
+          break;
       }
 
-      // Find the scale that fits the video fully inside the rect
+      // MPV natively fits the video at targetAspect inside the window.
+      let videoNativeW = windowW;
+      let videoNativeH = windowW / targetAspect;
+
+      if (videoNativeH > windowH) {
+        videoNativeH = windowH;
+        videoNativeW = windowH * targetAspect;
+      }
+
       const scaleX = rect.width / videoNativeW;
       const scaleY = rect.height / videoNativeH;
-      const scale = Math.min(scaleX, scaleY);
-      
+
+      // Fit / Stretch: ensure whole video is visible (letterbox or exact fill)
+      // Fill: crop to fill rect
+      const scale = aspectRatio === 'fill' ? Math.max(scaleX, scaleY) : Math.min(scaleX, scaleY);
+
       const zoom = Math.log2(scale);
 
       const actualVideoW = videoNativeW * scale;
@@ -198,9 +245,11 @@ export function SportsHub({
 
       try {
         await Bridge.setProperties({
+          'video-aspect-override': aspectOverride,
+          'keepaspect': true,
           'video-zoom': zoom,
           'video-align-x': alignX,
-          'video-align-y': alignY
+          'video-align-y': alignY,
         });
       } catch (e) {
         console.warn('[SportsPreview] Geometry Sync Failed', e);
@@ -244,10 +293,12 @@ export function SportsHub({
       Bridge.setProperties({
         'video-zoom': 0,
         'video-align-x': 0,
-        'video-align-y': 0
+        'video-align-y': 0,
+        'video-aspect-override': -1,
+        'keepaspect': true,
       }).catch(() => { });
     };
-  }, [previewEnabled]);
+  }, [previewEnabled, aspectRatio]);
 
   const handleSearchChannels = useCallback((channelName: string) => {
     if (onSearchChannels) {
@@ -611,6 +662,38 @@ export function SportsHub({
                           <path d="M6 9l6 6 6-6" />
                         </svg>
                       </button>
+                    )}
+                    {/* Aspect Ratio button — hidden but kept for easy re-enable */}
+                    {false && onSetAspectRatio && (
+                      <div className="sports-minibar-aspect" ref={aspectMenuRef}>
+                        <button
+                          className="sports-minibar-btn"
+                          onClick={() => setShowAspectMenu(v => !v)}
+                          onDoubleClick={(e) => e.stopPropagation()}
+                          title="Aspect Ratio"
+                        >
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <rect x="2" y="5" width="20" height="14" rx="2" />
+                            <path d="M7 9h2M7 15h2M15 9h2M15 15h2" strokeLinecap="round" />
+                          </svg>
+                        </button>
+                        {showAspectMenu && (
+                          <div className="sports-minibar-aspect-menu">
+                            {(['fit', 'fill', 'stretch', '4:3', '16:9'] as AspectRatioMode[]).map((mode) => (
+                              <button
+                                key={mode}
+                                className={`sports-minibar-aspect-item ${aspectRatio === mode ? 'active' : ''}`}
+                                onClick={() => {
+                                  onSetAspectRatio?.(mode);
+                                  setShowAspectMenu(false);
+                                }}
+                              >
+                                {getAspectRatioLabel(mode)}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     )}
                     {/* Volume button with expandable slider */}
                     <div className="sports-minibar-volume" onDoubleClick={(e) => e.stopPropagation()}>

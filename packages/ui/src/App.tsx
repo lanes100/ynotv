@@ -59,7 +59,7 @@ import { StreamRetryOverlay } from './components/StreamRetryOverlay';
 import { FailoverOverlay } from './components/FailoverOverlay';
 import { syncSource, syncVodForSource, isEpgStale, isVodStale, syncAllStaleGlobalEpgLinks } from './db/sync';
 import { bulkOps } from './services/bulk-ops';
-import { Bridge } from './services/tauri-bridge';
+import { Bridge, type AspectRatioMode, applyAspectRatio } from './services/tauri-bridge';
 import { getCurrentWindow, LogicalSize } from '@tauri-apps/api/window';
 import { addToRecentChannels } from './utils/recentChannels';
 import { WatchlistNotificationContainer } from './components/WatchlistNotification';
@@ -356,6 +356,35 @@ function App() {
     handleSelectCategory,
     handleMouseMove,
   } = nav;
+
+  // ==========================================================================
+  // Aspect Ratio — tracked separately for the hero screen
+  // ==========================================================================
+  const [heroAspectRatio, setHeroAspectRatio] = useState<AspectRatioMode>('fit');
+
+  const handleSetAspectRatio = useCallback(async (mode: AspectRatioMode) => {
+    setHeroAspectRatio(mode);
+    if (mpvReady && activeView === 'none') {
+      await applyAspectRatio(mode).catch(() => {});
+    }
+  }, [mpvReady, activeView]);
+
+  // Re-apply aspect ratio when a new video is loaded while on hero screen
+  useEffect(() => {
+    if (mpvReady && currentChannel && activeView === 'none') {
+      applyAspectRatio(heroAspectRatio).catch(() => {});
+    }
+  }, [currentChannel, mpvReady, heroAspectRatio, activeView]);
+
+  // Switch to fit when leaving hero screen, restore hero ratio when returning
+  useEffect(() => {
+    if (!mpvReady) return;
+    if (activeView === 'none') {
+      applyAspectRatio(heroAspectRatio).catch(() => {});
+    } else {
+      applyAspectRatio('fit').catch(() => {});
+    }
+  }, [activeView, mpvReady, heroAspectRatio]);
 
   // ==========================================================================
   // Apply Startup View
@@ -1637,6 +1666,8 @@ function App() {
         }}
         onChannelUp={handleChannelUp}
         onChannelDown={handleChannelDown}
+        aspectRatio={heroAspectRatio}
+        onSetAspectRatio={handleSetAspectRatio}
         overlay={
           <FailoverGroupOverlay
             currentChannel={currentChannel}

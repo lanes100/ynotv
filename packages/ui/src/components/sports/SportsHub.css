@@ -404,6 +404,50 @@
   transform: scale(0.95);
 }
 
+/* Aspect ratio menu for sports mini bar */
+.sports-minibar-aspect {
+  position: relative;
+}
+
+.sports-minibar-aspect-menu {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  right: 0;
+  background: rgba(20, 20, 20, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 100px;
+  z-index: 100;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+.sports-minibar-aspect-item {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.8);
+  padding: 6px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  text-align: left;
+  transition: all 0.15s;
+}
+
+.sports-minibar-aspect-item:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.sports-minibar-aspect-item.active {
+  background: rgba(0, 212, 255, 0.15);
+  color: #00d4ff;
+  font-weight: 600;
+}
+
 /* ==========================================================================
    SPORTS SCORES OVERLAY (top of preview pane)
    ========================================================================== */

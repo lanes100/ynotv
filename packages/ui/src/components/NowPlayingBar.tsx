@@ -9,6 +9,7 @@ import { MetadataBadge } from './MetadataBadge';
 import { scheduleRecording, getDvrSettings, updatePlayingStream, db, type DvrSchedule } from '../db';
 import { StalkerClient } from '@ynotv/local-adapter';
 import { useModal } from './Modal';
+import { type AspectRatioMode, getAspectRatioLabel } from '../services/tauri-bridge';
 import './NowPlayingBar.css';
 
 interface NowPlayingBarProps {
@@ -58,6 +59,8 @@ interface NowPlayingBarProps {
   onTimeshiftCatchUp?: () => void;
   onChannelUp?: () => void;
   onChannelDown?: () => void;
+  aspectRatio?: AspectRatioMode;
+  onSetAspectRatio?: (mode: AspectRatioMode) => void;
   overlay?: React.ReactNode;
 }
 
@@ -109,6 +112,8 @@ export function NowPlayingBar({
   onTimeshiftCatchUp,
   onChannelUp,
   onChannelDown,
+  aspectRatio = 'fit',
+  onSetAspectRatio,
   overlay,
 }: NowPlayingBarProps) {
   // scrubMode: 'timeshift' | 'epgcatchup' — local toggle when channel supports both
@@ -121,6 +126,22 @@ export function NowPlayingBar({
   const canControl = mpvReady && channel !== null;
   const currentProgram = useCurrentProgram(channel?.stream_id ?? null);
   const { showSuccess, showError, ModalComponent } = useModal();
+
+  // Aspect ratio menu state
+  const [showAspectMenu, setShowAspectMenu] = useState(false);
+  const aspectMenuRef = useRef<HTMLDivElement>(null);
+
+  // Close aspect ratio menu on outside click
+  useEffect(() => {
+    if (!showAspectMenu) return;
+    const handleClick = (e: MouseEvent) => {
+      if (aspectMenuRef.current && !aspectMenuRef.current.contains(e.target as Node)) {
+        setShowAspectMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [showAspectMenu]);
 
   // When channel info overlay is enabled, hide channel details from the bar for live TV
   const hideChannelInfo = channelInfoOverlayEnabled && !isVod;
@@ -743,6 +764,36 @@ export function NowPlayingBar({
               )}
             </div>
 
+            {/* Aspect Ratio controls */}
+            {onSetAspectRatio && (
+              <div className="npb-controls npb-aspect-controls" ref={aspectMenuRef}>
+                <button
+                  className="npb-btn"
+                  onClick={() => setShowAspectMenu(v => !v)}
+                  disabled={!canControl}
+                  title="Aspect Ratio"
+                >
+                  <AspectRatioIcon />
+                </button>
+                {showAspectMenu && (
+                  <div className="npb-aspect-menu">
+                    {(['fit', 'fill', 'stretch', '4:3', '16:9'] as AspectRatioMode[]).map((mode) => (
+                      <button
+                        key={mode}
+                        className={`npb-aspect-item ${aspectRatio === mode ? 'active' : ''}`}
+                        onClick={() => {
+                          onSetAspectRatio(mode);
+                          setShowAspectMenu(false);
+                        }}
+                      >
+                        {getAspectRatioLabel(mode)}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Volume controls */}
             <div className="npb-volume">
               <button
@@ -965,6 +1016,15 @@ function VolumeIcon({ muted, volume }: VolumeIconProps) {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
       <path d="M18.5 12c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM5 9v6h4l5 5V4L9 9H5z" />
+    </svg>
+  );
+}
+
+function AspectRatioIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <rect x="2" y="5" width="20" height="14" rx="2" />
+      <path d="M7 9h2M7 15h2M15 9h2M15 15h2" strokeLinecap="round" />
     </svg>
   );
 }

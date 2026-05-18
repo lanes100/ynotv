@@ -22,7 +22,7 @@ import { VideoErrorOverlay } from './VideoErrorOverlay';
 import { StreamRetryOverlay, type RetryState } from './StreamRetryOverlay';
 import { FailoverOverlay } from './FailoverOverlay';
 import type { FailoverState } from '../hooks/usePlayback';
-import { Bridge } from '../services/tauri-bridge';
+import { Bridge, type AspectRatioMode, getAspectRatioLabel } from '../services/tauri-bridge';
 import { MetadataBadge } from './MetadataBadge';
 import { EpgShiftModal } from './EpgShiftModal';
 import { dbEvents } from '../db/sqlite-adapter';
@@ -150,6 +150,8 @@ interface ChannelPanelProps {
     cachedDuration: number;
   } | null;
   onTimeshiftCatchUp?: () => void;
+  aspectRatio?: AspectRatioMode;
+  onSetAspectRatio?: (mode: AspectRatioMode) => void;
   /** Retry state for Live TV — shown in preview pane */
   retryState?: RetryState | null;
   /** Failover state for Live TV — shown in preview pane */
@@ -209,6 +211,8 @@ export function ChannelPanel({
   timeshiftEnabled = false,
   timeshiftState = null,
   onTimeshiftCatchUp,
+  aspectRatio = 'fit',
+  onSetAspectRatio,
   retryState = null,
   failoverState = null,
   popoutMode = false,
@@ -378,6 +382,22 @@ export function ChannelPanel({
   // Volume/mute state for mini media bar
   const [previewVolume, setPreviewVolume] = useState(100);
   const [previewMuted, setPreviewMuted] = useState(false);
+
+  // Aspect ratio menu state for mini media bar
+  const [showAspectMenu, setShowAspectMenu] = useState(false);
+  const aspectMenuRef = useRef<HTMLDivElement>(null);
+
+  // Close aspect ratio menu on outside click
+  useEffect(() => {
+    if (!showAspectMenu) return;
+    const handleClick = (e: MouseEvent) => {
+      if (aspectMenuRef.current && !aspectMenuRef.current.contains(e.target as Node)) {
+        setShowAspectMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [showAspectMenu]);
 
   // Ref for measuring the grid container width
   const gridContainerRef = useRef<HTMLDivElement>(null);
@@ -1432,6 +1452,38 @@ export function ChannelPanel({
                     <path d="M6 9l6 6 6-6" />
                   </svg>
                 </button>
+              )}
+              {/* Aspect Ratio button — hidden but kept for easy re-enable */}
+              {false && onSetAspectRatio && (
+                <div className="guide-minibar-aspect" ref={aspectMenuRef}>
+                  <button
+                    className="guide-minibar-btn"
+                    onClick={() => setShowAspectMenu(v => !v)}
+                    onDoubleClick={(e) => e.stopPropagation()}
+                    title="Aspect Ratio"
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <rect x="2" y="5" width="20" height="14" rx="2" />
+                      <path d="M7 9h2M7 15h2M15 9h2M15 15h2" strokeLinecap="round" />
+                    </svg>
+                  </button>
+                  {showAspectMenu && (
+                    <div className="guide-minibar-aspect-menu">
+                      {(['fit', 'fill', 'stretch', '4:3', '16:9'] as AspectRatioMode[]).map((mode) => (
+                        <button
+                          key={mode}
+                          className={`guide-minibar-aspect-item ${aspectRatio === mode ? 'active' : ''}`}
+                          onClick={() => {
+                            onSetAspectRatio?.(mode);
+                            setShowAspectMenu(false);
+                          }}
+                        >
+                          {getAspectRatioLabel(mode)}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
               )}
               {/* Volume button with expandable slider */}
               <div className="guide-minibar-volume" onDoubleClick={(e) => e.stopPropagation()}>
