@@ -2527,6 +2527,15 @@ export async function syncSeriesEpisodes(source: Source, seriesId: string): Prom
 
 // Exported VOD sync wrapper with backup URL failover support
 export async function syncVodForSource(source: Source): Promise<VodSyncResult> {
+  if (source.live_tv_only) {
+    return {
+      success: true,
+      movieCount: 0,
+      seriesCount: 0,
+      movieCategoryCount: 0,
+      seriesCategoryCount: 0,
+    };
+  }
   const result = await _doSyncVodForSource(source);
   if (result.success) return result;
 
@@ -2633,9 +2642,9 @@ export async function syncAllVod(): Promise<Map<string, VodSyncResult>> {
     return results;
   }
 
-  // Get enabled VOD sources (Xtream or Stalker)
+  // Get enabled VOD sources (Xtream or Stalker) that are not LiveTV-only
   const vodSources = sourcesResult.data.filter(
-    s => s.enabled && (s.type === 'xtream' || s.type === 'stalker')
+    s => s.enabled && (s.type === 'xtream' || s.type === 'stalker') && !s.live_tv_only
   );
 
   // Sync VOD with concurrency limit of 5

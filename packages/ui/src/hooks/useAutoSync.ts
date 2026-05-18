@@ -130,7 +130,7 @@ export function useAutoSync(callbacks: AutoSyncSettings = {}) {
 
                 // ── VOD sync (Xtream only) ──────────────────────────────────────────
                 if (vodRefreshHours > 0) {
-                    const xtreamSources = result.data.filter((s: any) => s.type === 'xtream' && s.enabled);
+                    const xtreamSources = result.data.filter((s: any) => s.type === 'xtream' && s.enabled && !s.live_tv_only);
                     if (xtreamSources.length > 0) {
                         const staleVod: any[] = [];
                         for (const source of xtreamSources) {
@@ -251,7 +251,7 @@ export function useAutoSync(callbacks: AutoSyncSettings = {}) {
                 }
 
                 // ── VOD sync (Xtream only) ──────────────────────────────────────────
-                const xtreamSources = result.data.filter((s: any) => s.type === 'xtream' && s.enabled);
+                const xtreamSources = result.data.filter((s: any) => s.type === 'xtream' && s.enabled && !s.live_tv_only);
                 if (xtreamSources.length > 0) {
                     const staleVod: any[] = [];
                     for (const source of xtreamSources) {

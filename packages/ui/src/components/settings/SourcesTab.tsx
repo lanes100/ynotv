@@ -37,6 +37,7 @@ interface SourceFormData {
   password: string;
   mac: string;
   autoLoadEpg: boolean;
+  liveTvOnly: boolean;
   vodOnly: boolean;
   epgUrl: string;
   additionalEpgUrls: string[];
@@ -58,6 +59,7 @@ const emptyForm: SourceFormData = {
   password: '',
   mac: '',
   autoLoadEpg: true,
+  liveTvOnly: false,
   vodOnly: false,
   epgUrl: '',
   additionalEpgUrls: [],
@@ -289,6 +291,7 @@ export function SourcesTab({ sources, isEncryptionAvailable, onSourcesChange, ed
       password: source.password || '',
       mac: source.mac || '',
       autoLoadEpg: source.auto_load_epg ?? (source.type === 'xtream'),
+      liveTvOnly: source.live_tv_only ?? false,
       vodOnly: source.vod_only ?? false,
       epgUrl: source.epg_url || '',
       additionalEpgUrls: source.additional_epg_urls || [],
@@ -423,6 +426,7 @@ export function SourcesTab({ sources, isEncryptionAvailable, onSourcesChange, ed
       password: formData.type === 'xtream' ? formData.password.trim() : undefined,
       mac: formData.type === 'stalker' ? formData.mac.trim() : undefined,
       auto_load_epg: formData.autoLoadEpg,
+      live_tv_only: formData.liveTvOnly,
       vod_only: formData.vodOnly,
       epg_url: fixDuplicatedUrl(formData.epgUrl.trim()) || undefined,
       additional_epg_urls: formData.additionalEpgUrls.length > 0 ? formData.additionalEpgUrls : undefined,
@@ -816,7 +820,7 @@ export function SourcesTab({ sources, isEncryptionAvailable, onSourcesChange, ed
 
   async function handleSourceVodSync(sourceId: string) {
     const source = sources.find(s => s.id === sourceId);
-    if (!source || (source.type !== 'xtream' && source.type !== 'stalker')) return;
+    if (!source || (source.type !== 'xtream' && source.type !== 'stalker') || source.live_tv_only) return;
 
     setVodSyncingSourceId(sourceId);
     try {
@@ -1252,7 +1256,7 @@ export function SourcesTab({ sources, isEncryptionAvailable, onSourcesChange, ed
                       {syncingSourceId === source.id ? (syncStatusMsg || '⟳') : ''} {syncingSourceId === source.id ? '' : 'Sync Channels'}
                     </button>
 
-                    {(source.type === 'xtream' || source.type === 'stalker') && (
+                    {(source.type === 'xtream' || source.type === 'stalker') && !source.live_tv_only && (
                       <button
                         className="sync-source-btn"
                         onClick={() => handleSourceVodSync(source.id)}
@@ -1804,6 +1808,21 @@ export function SourcesTab({ sources, isEncryptionAvailable, onSourcesChange, ed
                   + Add Backup URL
                 </button>
               )}
+            </div>
+
+            {/* LiveTV Only Setting */}
+            <div className="form-group livetv-settings">
+              <label className="checkbox-label">
+                <input
+                  type="checkbox"
+                  checked={formData.liveTvOnly}
+                  onChange={(e) => setFormData({ ...formData, liveTvOnly: e.target.checked })}
+                />
+                LiveTV Only
+              </label>
+              <span className="hint">
+                Skip VOD/Series sync - only sync LiveTV channels from this source
+              </span>
             </div>
 
             {/* VOD Only Setting */}

@@ -21,6 +21,7 @@ export interface Source {
   auto_load_epg?: boolean; // Auto-fetch EPG from source (default: true for xtream)
   additional_epg_urls?: string[]; // Additional EPG URLs for waterfall filling
   vod_only?: boolean;     // Only sync VOD/Series, skip channels (default: false)
+  live_tv_only?: boolean;  // Only sync LiveTV, skip VOD/Series (default: false)
   user_agent?: string;    // Custom User-Agent for requests
   epg_timeshift_hours?: number; // EPG time offset in hours (e.g., -1, 0, +1)
   backup_macs?: string[];  // Stalker backup MAC addresses
