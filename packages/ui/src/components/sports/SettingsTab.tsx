@@ -14,7 +14,7 @@ export function SettingsTab({}: SettingsTabProps) {
     }
   }, [loaded, loadSettings]);
 
-  const categoryOrder = ['football', 'basketball', 'baseball', 'hockey', 'soccer', 'mma', 'golf', 'tennis', 'racing'];
+  const categoryOrder = ['football', 'basketball', 'baseball', 'hockey', 'soccer', 'mma', 'golf', 'tennis', 'racing', 'rugby', 'rugby-league'];
   const categoryLabels: Record<string, string> = {
     football: 'Football',
     basketball: 'Basketball',
@@ -25,6 +25,8 @@ export function SettingsTab({}: SettingsTabProps) {
     golf: 'Golf',
     tennis: 'Tennis',
     racing: 'Racing',
+    rugby: 'Rugby Union',
+    'rugby-league': 'Rugby League',
   };
 
   const renderLeagueGrid = (section: 'live' | 'upcoming' | 'news', selected: string[]) => {

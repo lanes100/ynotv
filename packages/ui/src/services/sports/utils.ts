@@ -81,7 +81,7 @@ export function isEventFinished<T extends { status: string }>(event: T): boolean
 
 // League/Sport helpers
 export function getAvailableSports(): string[] {
-  return ['Football', 'Basketball', 'Baseball', 'Hockey', 'Soccer', 'MMA', 'Golf', 'Tennis', 'Racing'];
+  return ['Football', 'Basketball', 'Baseball', 'Hockey', 'Soccer', 'MMA', 'Golf', 'Tennis', 'Racing', 'Rugby Union', 'Rugby League'];
 }
 
 import { SPORT_CONFIG } from './config';
@@ -115,8 +115,10 @@ export function getAvailableCategories(): { id: string; name: string; leagues: s
     golf: 'Golf',
     tennis: 'Tennis',
     racing: 'Racing',
+    rugby: 'Rugby Union',
+    'rugby-league': 'Rugby League',
   };
-  
+
   return Object.entries(categories).map(([id, leagues]) => ({
     id,
     name: categoryNames[id] || id,
@@ -144,6 +146,8 @@ export async function getLeaguesBySport(sport: string): Promise<SportsLeague[]> 
     'hockey': ['nhl'],
     'soccer': ['soccer-eng.1', 'soccer-esp.1', 'soccer-ger.1', 'soccer-ita.1', 'soccer-usa.1'],
     'american football': ['nfl', 'college-football'],
+    'rugby union': ['rugby-180659', 'rugby-164205', 'rugby-267979', 'rugby-242041', 'rugby-270559'],
+    'rugby league': ['rugby-league-3'],
   };
 
   const keys = mapping[sportLower] || [];

@@ -859,3 +859,210 @@
   color: var(--text-muted, #666);
   text-transform: uppercase;
 }
+
+/* ─── Rugby Detail View ─── */
+.rugby-detail-modal {
+  max-width: 720px;
+}
+
+/* Rugby Timeline */
+.rugby-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.rugby-timeline-event {
+  display: grid;
+  grid-template-columns: 80px 40px 1fr 70px;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  border-left: 3px solid transparent;
+  transition: background 0.15s ease;
+}
+
+.rugby-timeline-event:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.rugby-timeline-event.home {
+  border-left-color: var(--accent-color, #3b82f6);
+}
+
+.rugby-timeline-event.away {
+  border-left-color: var(--text-secondary, #888);
+}
+
+.rugby-event-try {
+  background: rgba(59, 130, 246, 0.06);
+}
+
+.rugby-event-conversion {
+  background: rgba(34, 197, 94, 0.06);
+}
+
+.rugby-event-penalty {
+  background: rgba(251, 191, 36, 0.06);
+}
+
+.rugby-event-yellow {
+  background: rgba(234, 179, 8, 0.08);
+}
+
+.rugby-event-red {
+  background: rgba(239, 68, 68, 0.08);
+}
+
+.rugby-event-sub {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.rugby-timeline-left {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  text-align: right;
+}
+
+.rugby-timeline-clock {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary, #fff);
+  font-variant-numeric: tabular-nums;
+}
+
+.rugby-timeline-period {
+  font-size: 10px;
+  color: var(--text-muted, #666);
+  text-transform: uppercase;
+}
+
+.rugby-timeline-marker {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.rugby-timeline-icon {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.rugby-timeline-body {
+  min-width: 0;
+}
+
+.rugby-timeline-text {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.rugby-timeline-logo {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.rugby-timeline-desc {
+  font-size: 13px;
+  color: var(--text-primary, #fff);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rugby-timeline-score {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-secondary, #888);
+}
+
+.rugby-timeline-score-div {
+  color: var(--text-muted, #666);
+}
+
+/* Rugby Lineups */
+.rugby-lineups {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.rugby-lineup-team {
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 10px;
+  padding: 16px;
+}
+
+.rugby-lineup-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-color, #2a2a2a);
+  margin-bottom: 12px;
+}
+
+.rugby-lineup-logo {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+}
+
+.rugby-lineup-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary, #fff);
+}
+
+.rugby-lineup-category {
+  margin-bottom: 16px;
+}
+
+.rugby-lineup-category-title {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-secondary, #888);
+  margin: 0 0 10px 0;
+}
+
+.rugby-lineup-players {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.rugby-lineup-player {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.rugby-lineup-headshot {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.rugby-lineup-player-name {
+  font-size: 13px;
+  color: var(--text-primary, #fff);
+}

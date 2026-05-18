@@ -48,6 +48,7 @@ export interface ESPNEvent {
         abbreviation: string;
         displayName: string;
         shortDisplayName: string;
+        logo?: string;
         logos?: Array<{ href: string; }>;
       };
       type?: string;
@@ -152,6 +153,7 @@ export interface ESPTeam {
   abbreviation: string;
   displayName: string;
   shortDisplayName: string;
+  logo?: string;
   logos?: Array<{ href: string; }>;
   record?: { items: Array<{ summary: string; }>; };
   nextEvent?: ESPNEvent[];
@@ -305,6 +307,18 @@ export interface ScoringPlay {
   teamId?: string;
 }
 
+export interface MatchEvent {
+  id: string;
+  type: string;
+  period: string;
+  clock: string;
+  text: string;
+  homeScore: number;
+  awayScore: number;
+  teamId?: string;
+  isScoring: boolean;
+}
+
 export interface GameSummary {
   id: string;
   title: string;
@@ -321,6 +335,7 @@ export interface GameSummary {
   homeTeam: GameSummaryTeam;
   awayTeam: GameSummaryTeam;
   scoringPlays: ScoringPlay[];
+  matchEvents?: MatchEvent[];
   winProbability?: Array<{
     homeWinPercentage: number;
     playId: string;

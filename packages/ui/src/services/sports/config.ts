@@ -54,6 +54,16 @@ export const SPORT_CONFIG: Record<string, SportConfig> = {
   'f1': { sport: 'racing', league: 'f1', name: 'Formula 1', category: 'racing' },
   'nascar': { sport: 'racing', league: 'nascar-premier', name: 'NASCAR Cup', category: 'racing' },
   'indycar': { sport: 'racing', league: 'irl', name: 'IndyCar', category: 'racing' },
+
+  // Rugby
+  'rugby-180659': { sport: 'rugby', league: '180659', name: 'Six Nations', category: 'rugby' },
+  'rugby-164205': { sport: 'rugby', league: '164205', name: 'Rugby World Cup', category: 'rugby' },
+  'rugby-267979': { sport: 'rugby', league: '267979', name: 'Premiership', category: 'rugby' },
+  'rugby-242041': { sport: 'rugby', league: '242041', name: 'Super Rugby', category: 'rugby' },
+  'rugby-270559': { sport: 'rugby', league: '270559', name: 'Top 14', category: 'rugby' },
+
+  // Rugby League
+  'rugby-league-3': { sport: 'rugby-league', league: '3', name: 'NRL', category: 'rugby-league' },
 };
 
 export const DEFAULT_LIVE_LEAGUES = [
@@ -67,6 +77,8 @@ export const DEFAULT_LIVE_LEAGUES = [
   'soccer-uefa.champions',
   'soccer-usa.1',
   'ufc',
+  'rugby-180659',
+  'rugby-league-3',
 ];
 
 export const DEFAULT_UPCOMING_LEAGUES = [
@@ -84,6 +96,12 @@ export const DEFAULT_UPCOMING_LEAGUES = [
   'soccer-usa.1',
   'ufc',
   'f1',
+  'rugby-180659',
+  'rugby-164205',
+  'rugby-267979',
+  'rugby-242041',
+  'rugby-270559',
+  'rugby-league-3',
 ];
 
 export const CATEGORY_NAMES: Record<string, string> = {
@@ -96,6 +114,8 @@ export const CATEGORY_NAMES: Record<string, string> = {
   golf: 'Golf',
   tennis: 'Tennis',
   racing: 'Racing',
+  rugby: 'Rugby Union',
+  'rugby-league': 'Rugby League',
 };
 
 export const LEADERS_LEAGUES = [

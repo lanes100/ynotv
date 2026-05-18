@@ -46,6 +46,12 @@ function buildESPNLogoUrl(teamId: string, sportKey: string): string | undefined 
     'f1': 'racing',
     'nascar': 'racing',
     'indycar': 'racing',
+    'rugby-180659': 'rugby/teams',
+    'rugby-164205': 'rugby/teams',
+    'rugby-267979': 'rugby/teams',
+    'rugby-242041': 'rugby/teams',
+    'rugby-270559': 'rugby/teams',
+    'rugby-league-3': 'rugby/teams',
   };
 
   const sportPath = sportPathMap[sportKey];
@@ -76,7 +82,7 @@ function getTeamInfo(competitor: ESPNEvent['competitions'][0]['competitors'][0] 
   }
 
   if (competitor.team) {
-    const apiLogo = competitor.team.logos?.[0]?.href;
+    const apiLogo = competitor.team.logos?.[0]?.href || competitor.team.logo;
     const fallbackLogo = buildESPNLogoUrl(competitor.team.id, sportKey);
     return {
       id: competitor.team.id,
@@ -489,7 +495,7 @@ export function mapESPNTeam(team: ESPTeam, leagueId: string): SportsTeam {
     id: team.id,
     name: team.displayName,
     shortName: team.abbreviation,
-    logo: team.logos?.[0]?.href,
+    logo: team.logos?.[0]?.href || team.logo,
     leagueId,
   };
 }
@@ -509,6 +515,8 @@ export function getCategoryDisplayName(categoryId: string): string {
     golf: 'Golf',
     tennis: 'Tennis',
     racing: 'Racing',
+    rugby: 'Rugby Union',
+    'rugby-league': 'Rugby League',
   };
   return categoryNames[categoryId] || categoryId;
 }

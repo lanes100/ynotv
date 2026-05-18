@@ -45,6 +45,7 @@ export type {
   PlayerStatCategory,
   GameSummaryTeam,
   ScoringPlay,
+  MatchEvent,
   GameSummary,
   PlayByPlay,
   PlayPeriod,

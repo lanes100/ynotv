@@ -11,6 +11,7 @@ import type {
   TeamStatistics,
   PlayerStatCategory,
   ScoringPlay,
+  MatchEvent,
   PlayByPlay,
 } from './types';
 import { SPORT_CONFIG } from './config';
@@ -38,9 +39,26 @@ export async function getGameSummary(eventId: string, leagueId: string): Promise
           score: string;
           record?: Array<{ summary: string }>;
           records?: Array<{ summary: string }>;
+          linescores?: Array<{ value: number; displayValue: string; period: number }>;
         }>;
         officials?: Array<{ displayName: string }>;
         broadcasts?: Array<{ names: string[] }>;
+        details?: Array<{
+          id?: string;
+          sequenceNumber?: number;
+          type?: { id?: string; text?: string };
+          clock?: { value?: number; displayValue?: string };
+          period?: number;
+          team?: { id?: string };
+          athletesInvolved?: Array<{
+            displayName?: string;
+            shortName?: string;
+            position?: string;
+          }>;
+          homeScore?: number;
+          awayScore?: number;
+          addedClock?: { value?: number; displayValue?: string };
+        }>;
       }>;
     };
     boxscore?: {
@@ -83,6 +101,7 @@ export async function getGameSummary(eventId: string, leagueId: string): Promise
     };
     rosters?: Array<{
       team: { id: string; displayName: string };
+      homeAway?: string;
       roster?: Array<{
         athlete: {
           id: string;
@@ -93,6 +112,10 @@ export async function getGameSummary(eventId: string, leagueId: string): Promise
         position?: { displayName: string; abbreviation?: string };
         stats?: Array<{ name: string; value: string | number; displayValue?: string }>;
         starter?: boolean;
+        captain?: boolean;
+        active?: boolean;
+        subbedIn?: boolean;
+        subbedOut?: boolean;
       }>;
     }>;
     gameInfo?: {
@@ -160,6 +183,7 @@ export async function getGameSummary(eventId: string, leagueId: string): Promise
     homeTeam: buildGameSummaryTeam(homeCompetitor, data),
     awayTeam: buildGameSummaryTeam(awayCompetitor, data),
     scoringPlays: extractScoringPlays(data, homeCompetitor?.team?.id || ''),
+    matchEvents: extractMatchEvents(data),
     winProbability: data.winprobability,
   };
 }
@@ -233,8 +257,54 @@ function extractPlayerStats(teamId: string, boxscore?: any, rosters?: any): Play
     }));
   }
 
-  // Soccer: Build dynamic player stat table from roster
+  // Rugby: Build lineup categories from roster (no stats, just player info)
   const teamRoster = rosters?.find((r: any) => r.team.id === teamId);
+  if (teamRoster?.roster?.length > 0 && !teamRoster.roster[0].stats) {
+    const categories: PlayerStatCategory[] = [];
+
+    const allPlayers = teamRoster.roster
+      .filter((p: any) => p.athlete)
+      .map((p: any) => {
+        const pos = p.position?.abbreviation || p.position?.displayName || '';
+        const prefix = p.captain ? '(C) ' : '';
+        return {
+          athleteId: p.athlete.id,
+          name: pos ? `${prefix}[${pos}] ${p.athlete.displayName}` : `${prefix}${p.athlete.displayName}`,
+          headshot: p.athlete.headshot?.href,
+          jersey: p.athlete.jersey,
+          stats: [] as string[],
+          starter: p.starter,
+          subbedIn: p.subbedIn,
+          subbedOut: p.subbedOut,
+        };
+      });
+
+    const starters = allPlayers.filter((p: any) => p.starter);
+    if (starters.length > 0) {
+      categories.push({
+        name: 'starting-xv',
+        text: 'Starting XV',
+        labels: [],
+        descriptions: [],
+        athletes: starters,
+      });
+    }
+
+    const subs = allPlayers.filter((p: any) => !p.starter);
+    if (subs.length > 0) {
+      categories.push({
+        name: 'substitutes',
+        text: 'Substitutes',
+        labels: [],
+        descriptions: [],
+        athletes: subs,
+      });
+    }
+
+    return categories;
+  }
+
+  // Soccer: Build dynamic player stat table from roster
   if (teamRoster?.roster?.length > 0) {
     // Collect all unique stat names and their metadata
     const statMeta = new Map<string, { shortName: string; fullName: string }>();
@@ -371,6 +441,50 @@ function extractScoringPlays(data: any, homeTeamId: string): ScoringPlay[] {
   }
 
   return scoringPlays;
+}
+
+function extractMatchEvents(data: any): MatchEvent[] | undefined {
+  const details = data.header?.competitions?.[0]?.details;
+  if (!details || !Array.isArray(details)) return undefined;
+
+  const scoringTypes = new Set(['try', 'conversion', 'penalty goal', 'drop goal']);
+
+  return details
+    .filter((d: any) => {
+      const t = (d.type?.text || '').toLowerCase();
+      return !t.includes('substituted') && !t.includes('substitute on');
+    })
+    .map((d: any, idx: number) => {
+    const eventType = d.type?.text || 'event';
+    const isScoring = scoringTypes.has(eventType.toLowerCase());
+
+    // Parse period — can be a number or an object { number, displayValue }
+    let periodText = '';
+    if (typeof d.period === 'number') {
+      periodText = d.period === 1 ? '1st Half' : d.period === 2 ? '2nd Half' : `Half ${d.period}`;
+    } else if (d.period && typeof d.period === 'object') {
+      periodText = d.period.displayValue || String(d.period.number || '');
+    }
+
+    // Build description text
+    let text = eventType;
+    if (d.athletesInvolved && d.athletesInvolved.length > 0) {
+      const names = d.athletesInvolved.map((a: any) => a.shortName || a.displayName).join(', ');
+      text = `${eventType} — ${names}`;
+    }
+
+    return {
+      id: d.id || String(d.sequenceNumber || idx),
+      type: eventType,
+      period: periodText,
+      clock: d.clock?.displayValue || '',
+      text,
+      homeScore: d.homeScore ?? 0,
+      awayScore: d.awayScore ?? 0,
+      teamId: d.team?.id,
+      isScoring,
+    };
+  });
 }
 
 export async function getPlayByPlay(eventId: string, leagueId: string): Promise<PlayByPlay | null> {

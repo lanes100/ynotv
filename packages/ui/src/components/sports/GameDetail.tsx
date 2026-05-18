@@ -29,6 +29,7 @@ export function GameDetail({ event, onClose, onChannelClick, onPlayChannel, vari
   const isRacing = (event.league.id === 'f1' || event.league.id === 'nascar' || event.league.id === 'indycar') && !!event.matches;
   const isGolf = (event.league.id === 'pga' || event.league.id === 'lpga') && !!event.matches;
   const isTennis = (event.league.id === 'atp' || event.league.id === 'wta') && !!event.matches;
+  const isRugby = event.league.sport === 'rugby';
 
   useEffect(() => {
     const loadDetails = async () => {
@@ -305,6 +306,246 @@ export function GameDetail({ event, onClose, onChannelClick, onPlayChannel, vari
             </div>
           </div>
         )}
+      </div>
+    );
+  };
+
+  const renderRugbyDetail = () => {
+    const [rugbyTab, setRugbyTab] = useState<'timeline' | 'lineups' | 'info'>('timeline');
+    const matchEvents = summary?.matchEvents || [];
+
+    const getEventIcon = (type: string) => {
+      const t = type.toLowerCase();
+      if (t.includes('try')) return '🏉';
+      if (t.includes('conversion')) return '✓';
+      if (t.includes('penalty')) return '🥅';
+      if (t.includes('drop')) return '⬇️';
+      if (t.includes('yellow')) return '🟨';
+      if (t.includes('red')) return '🟥';
+      if (t.includes('substitut')) return '↔️';
+      return '•';
+    };
+
+    const getEventClass = (type: string) => {
+      const t = type.toLowerCase();
+      if (t.includes('try')) return 'rugby-event-try';
+      if (t.includes('conversion')) return 'rugby-event-conversion';
+      if (t.includes('penalty')) return 'rugby-event-penalty';
+      if (t.includes('drop')) return 'rugby-event-drop';
+      if (t.includes('yellow')) return 'rugby-event-yellow';
+      if (t.includes('red')) return 'rugby-event-red';
+      if (t.includes('substitut')) return 'rugby-event-sub';
+      return 'rugby-event-other';
+    };
+
+    const renderTimeline = () => {
+      if (matchEvents.length === 0) {
+        return (
+          <div className="game-detail-no-data">
+            <span>Match events not available.</span>
+          </div>
+        );
+      }
+
+      return (
+        <div className="rugby-timeline">
+          {matchEvents.map((ev) => {
+            const isHome = ev.teamId === event.homeTeam.id;
+            const teamName = isHome ? event.homeTeam.name : event.awayTeam.name;
+            const teamLogo = isHome ? event.homeTeam.logo : event.awayTeam.logo;
+
+            return (
+              <div key={ev.id} className={`rugby-timeline-event ${getEventClass(ev.type)} ${isHome ? 'home' : 'away'}`}>
+                <div className="rugby-timeline-left">
+                  <span className="rugby-timeline-clock">{ev.clock}</span>
+                  {ev.period && <span className="rugby-timeline-period">{ev.period}</span>}
+                </div>
+                <div className="rugby-timeline-marker">
+                  <span className="rugby-timeline-icon">{getEventIcon(ev.type)}</span>
+                </div>
+                <div className="rugby-timeline-body">
+                  <div className="rugby-timeline-text">
+                    {teamLogo && (
+                      <img src={teamLogo} alt={teamName} className="rugby-timeline-logo" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                    )}
+                    <span className="rugby-timeline-desc">{ev.text}</span>
+                  </div>
+                </div>
+                <div className="rugby-timeline-score">
+                  <span>{ev.awayScore}</span>
+                  <span className="rugby-timeline-score-div">-</span>
+                  <span>{ev.homeScore}</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      );
+    };
+
+    const renderLineups = () => {
+      const homeStats = summary?.homeTeam.playerStats || [];
+      const awayStats = summary?.awayTeam.playerStats || [];
+
+      if (homeStats.length === 0 && awayStats.length === 0) {
+        return (
+          <div className="game-detail-no-data">
+            <span>Lineups not available.</span>
+          </div>
+        );
+      }
+
+      const renderTeamLineup = (categories: typeof homeStats, teamName: string, teamLogo?: string) => {
+        if (categories.length === 0) return null;
+        return (
+          <div className="rugby-lineup-team">
+            <div className="rugby-lineup-header">
+              {teamLogo && <img src={teamLogo} alt={teamName} className="rugby-lineup-logo" onError={(e) => { e.currentTarget.style.display = 'none'; }} />}
+              <span className="rugby-lineup-name">{teamName}</span>
+            </div>
+            {categories.map((cat, idx) => (
+              <div key={idx} className="rugby-lineup-category">
+                <h4 className="rugby-lineup-category-title">{cat.text}</h4>
+                <div className="rugby-lineup-players">
+                  {cat.athletes.map((a, aIdx) => (
+                    <div key={aIdx} className="rugby-lineup-player">
+                      {a.headshot && <img src={a.headshot} alt={a.name} className="rugby-lineup-headshot" onError={(e) => { e.currentTarget.style.display = 'none'; }} />}
+                      <span className="rugby-lineup-player-name">{a.name}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        );
+      };
+
+      return (
+        <div className="rugby-lineups">
+          {renderTeamLineup(awayStats, event.awayTeam.name, event.awayTeam.logo)}
+          {renderTeamLineup(homeStats, event.homeTeam.name, event.homeTeam.logo)}
+        </div>
+      );
+    };
+
+    const renderRugbyInfo = () => {
+      return (
+        <div className="game-detail-info">
+          {summary?.venue && (
+            <div className="game-detail-info-section">
+              <h4>Venue</h4>
+              <div className="game-detail-info-content">
+                <span className="game-detail-info-venue-name">{summary.venue.name}</span>
+                {summary.venue.city && <span className="game-detail-info-venue-city">{summary.venue.city}</span>}
+              </div>
+            </div>
+          )}
+          {summary?.attendance !== undefined && summary.attendance > 0 && (
+            <div className="game-detail-info-section">
+              <h4>Attendance</h4>
+              <span className="game-detail-info-attendance">{summary.attendance.toLocaleString()}</span>
+            </div>
+          )}
+          {summary?.officials && summary.officials.length > 0 && (
+            <div className="game-detail-info-section">
+              <h4>Officials</h4>
+              <div className="game-detail-info-officials">
+                {summary.officials.map((o, i) => <span key={i} className="game-detail-info-official">{o}</span>)}
+              </div>
+            </div>
+          )}
+          {event.channels.length > 0 && (
+            <div className="game-detail-info-section">
+              <h4>Watch On</h4>
+              <div className="game-detail-channels">
+                {event.channels.map((ch, i) => (
+                  <button key={i} className="game-detail-channel-btn" onClick={() => onChannelClick?.(ch.name)}>
+                    {ch.name}
+                    {ch.country && <span className="game-detail-channel-country">{ch.country}</span>}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    };
+
+    return (
+      <div className={`game-detail-overlay${variant === 'glass' ? ' glass' : ''}`} onClick={handleOverlayClick} onKeyDown={handleKeyDown}>
+        <div className={`game-detail-modal rugby-detail-modal${variant === 'glass' ? ' glass' : ''}`}>
+          {/* Header */}
+          <div className="game-detail-header">
+            <div className="game-detail-header-info">
+              <span className="game-detail-sport">{event.league.sport.toUpperCase()}</span>
+              <span className="game-detail-league">{event.league.name}</span>
+            </div>
+            <button className="game-detail-close" onClick={onClose}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+          </div>
+
+          {/* Scoreboard */}
+          <div className="game-detail-scoreboard">
+            <div className="game-detail-team away">
+              {event.awayTeam.logo && (
+                <img src={event.awayTeam.logo} alt={event.awayTeam.name} className="game-detail-team-logo" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+              )}
+              <div className="game-detail-team-info">
+                <span className="game-detail-team-name">{event.awayTeam.name}</span>
+              </div>
+              <span className={`game-detail-score ${awayWinning ? 'winning' : ''}`}>{event.awayScore ?? 0}</span>
+            </div>
+            <div className="game-detail-status">
+              {isLive ? (
+                <div className="game-detail-live">
+                  <span className="game-detail-live-dot" />
+                  <span className="game-detail-live-text">{event.timeElapsed || 'LIVE'}</span>
+                </div>
+              ) : (
+                <span className="game-detail-datetime">{formatEventDateTime(event.startTime)}</span>
+              )}
+              {event.venue && <span className="game-detail-venue">{event.venue}</span>}
+            </div>
+            <div className="game-detail-team home">
+              {event.homeTeam.logo && (
+                <img src={event.homeTeam.logo} alt={event.homeTeam.name} className="game-detail-team-logo" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+              )}
+              <div className="game-detail-team-info">
+                <span className="game-detail-team-name">{event.homeTeam.name}</span>
+              </div>
+              <span className={`game-detail-score ${homeWinning ? 'winning' : ''}`}>{event.homeScore ?? 0}</span>
+            </div>
+          </div>
+
+          {/* Tabs */}
+          <div className="game-detail-tabs">
+            <button className={`game-detail-tab ${rugbyTab === 'timeline' ? 'active' : ''}`} onClick={() => setRugbyTab('timeline')}>
+              Timeline
+            </button>
+            <button className={`game-detail-tab ${rugbyTab === 'lineups' ? 'active' : ''}`} onClick={() => setRugbyTab('lineups')}>
+              Lineups
+            </button>
+            <button className={`game-detail-tab ${rugbyTab === 'info' ? 'active' : ''}`} onClick={() => setRugbyTab('info')}>
+              Info
+            </button>
+          </div>
+
+          <div className="game-detail-content">
+            {loading ? (
+              <div className="game-detail-loading"><div className="game-detail-spinner" /></div>
+            ) : rugbyTab === 'timeline' ? (
+              renderTimeline()
+            ) : rugbyTab === 'lineups' ? (
+              renderLineups()
+            ) : (
+              renderRugbyInfo()
+            )}
+          </div>
+        </div>
       </div>
     );
   };
@@ -785,6 +1026,10 @@ export function GameDetail({ event, onClose, onChannelClick, onPlayChannel, vari
 
   if (isTennis) {
     return renderTennisDetail();
+  }
+
+  if (isRugby) {
+    return renderRugbyDetail();
   }
 
   return (
