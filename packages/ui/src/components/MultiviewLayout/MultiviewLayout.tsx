@@ -18,6 +18,7 @@ interface MultiviewLayoutProps {
     onMainToggleMute: () => void;
     onMainSetVolume: (vol: number) => void;
     onSwapWithMain: (slotId: 2 | 3 | 4) => void;
+    onMainStop: () => void;
     onStop: (slotId: 2 | 3 | 4) => void;
     onSetProperty: (slotId: 2 | 3 | 4, property: string, value: any) => void;
     onReposition: () => void;
@@ -37,6 +38,7 @@ export function MultiviewLayout({
     onMainToggleMute,
     onMainSetVolume,
     onSwapWithMain,
+    onMainStop,
     onStop,
     onSetProperty,
     onReposition,
@@ -140,6 +142,9 @@ export function MultiviewLayout({
                     ) : (
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>
                     )}
+                </button>
+                <button className="multiview-cell-controls-btn danger" onClick={onMainStop} title="Stop">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h12v12H6z" /></svg>
                 </button>
             </div>
         </div>

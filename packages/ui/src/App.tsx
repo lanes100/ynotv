@@ -1701,10 +1701,11 @@ function App() {
           mainPlaying={playing}
           mainMuted={muted}
           mainVolume={volume}
-          onMainTogglePlayPause={playback.togglePlayPause}
-          onMainToggleMute={playback.toggleMute}
-          onMainSetVolume={playback.setVolume}
+          onMainTogglePlayPause={handleTogglePlay}
+          onMainToggleMute={handleToggleMute}
+          onMainSetVolume={(vol) => handleVolumeChange({ target: { value: vol.toString() } } as any)}
           onSwapWithMain={(slotId) => swapWithMain(slotId, multiviewSlots)}
+          onMainStop={handleStop}
           onStop={stopSlot}
           onSetProperty={setSlotProperty}
           onReposition={repositionSecondarySlots}

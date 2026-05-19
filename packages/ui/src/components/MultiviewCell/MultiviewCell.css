@@ -111,6 +111,8 @@
 /* ── Control Bar (MPV mode) ── */
 /* In MPV mode the bar is a normal-flow element below the video */
 .multiview-cell-controls {
+    position: relative;
+    z-index: 10;
     height: 36px;
     background: rgba(17, 17, 17, 0.95);
     display: flex;
