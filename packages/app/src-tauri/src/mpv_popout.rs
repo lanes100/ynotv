@@ -291,6 +291,7 @@ pub async fn spawn_and_load<R: Runtime>(
         "--cache=yes".into(),
         "--volume=100".into(),
         "--mute=no".into(),
+        "--no-border".into(),
     ];
 
     // On Windows, omit --wid to get a standalone window.
