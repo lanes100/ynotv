@@ -208,8 +208,8 @@ export function useMultiview() {
                     await Bridge.setProperty('video-zoom', 0);
                     await Bridge.setProperty('video-align-x', 0);
                     await Bridge.setProperty('video-align-y', 0);
-                    // Stretch to fill the cell in 2x2 grid; preserve aspect in bigbottom/pip.
-                    await Bridge.setProperty('keepaspect', m === '2x2');
+                    // Stretch to fill the cell in 2x2 grid; preserve aspect in bigbottom/pip/sbs.
+                    await Bridge.setProperty('keepaspect', m !== '2x2');
                 } catch (e) {
                     // Ignore reset errors
                 }
