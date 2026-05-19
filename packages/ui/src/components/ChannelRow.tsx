@@ -174,13 +174,24 @@ export const ChannelRow = memo(function ChannelRow({
       {/* Program grid */}
       <div className="guide-program-grid">
         {programs.length > 0 ? (
-          programs.map((program) => {
+          programs.map((program, index, arr) => {
             // Check if this specific program is being recorded or scheduled
             // Use programStartTime/programEndTime for precise matching (without padding)
             const progStartMs = program.start instanceof Date ? program.start.getTime() : new Date(program.start).getTime();
-            const progEndMs = program.end instanceof Date ? program.end.getTime() : new Date(program.end).getTime();
+            const originalEndMs = program.end instanceof Date ? program.end.getTime() : new Date(program.end).getTime();
+            
+            let progEndMs = originalEndMs;
+            if (index < arr.length - 1) {
+              const nextStartMs = arr[index + 1].start instanceof Date ? arr[index + 1].start.getTime() : new Date(arr[index + 1].start).getTime();
+              if (progEndMs > nextStartMs) {
+                progEndMs = nextStartMs;
+              }
+            }
+
+            const clampedProgram = progEndMs !== originalEndMs ? { ...program, end: new Date(progEndMs) } : program;
+
             const progStartSec = Math.floor(progStartMs / 1000);
-            const progEndSec = Math.floor(progEndMs / 1000);
+            const progEndSec = Math.floor(originalEndMs / 1000);
 
             const matchingRecording = activeRecordings.find(r =>
               r.channelId === channel.stream_id &&
@@ -198,7 +209,7 @@ export const ChannelRow = memo(function ChannelRow({
             return (
               <ProgramBlock
                 key={program.id}
-                program={program}
+                program={clampedProgram}
                 channel={channel}
                 windowStart={windowStart}
                 windowEnd={windowEnd}
