@@ -754,14 +754,6 @@ function App() {
   // Tab Mode: enter when EPG, Sports, DVR, Settings, Movies, or Series opens
   // ==========================================================================
   useEffect(() => {
-    // In HLS mode, secondary cells are just DOM elements that can be naturally
-    // covered by overlays like the Guide or Settings, so Tab Mode (which pushes
-    // native MPV windows off-screen) is unnecessary and can cause state issues.
-    if (multiviewEngineMode === 'hls') {
-      exitTabMode();
-      return;
-    }
-
     if (activeView === 'guide' || activeView === 'sports' || activeView === 'dvr' ||
         activeView === 'settings' || activeView === 'movies' || activeView === 'series' ||
         activeView === 'calendar') {
@@ -769,7 +761,7 @@ function App() {
     } else {
       exitTabMode();
     }
-  }, [activeView, enterTabMode, exitTabMode, multiviewEngineMode]);
+  }, [activeView, enterTabMode, exitTabMode]);
 
   // ==========================================================================
   // Popout-aware channel/VOD play wrappers

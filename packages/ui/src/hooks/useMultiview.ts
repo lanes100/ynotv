@@ -113,9 +113,10 @@ export function secondaryRect(slotId: 2 | 3 | 4, mode: LayoutMode): { x: number;
         const cellW = Math.floor((W - 2 * gap) / 3);
         const cellH = Math.floor(cellW * 9 / 16);
         const mainH = availableH - cellH;
+        const cbh = Math.round(CONTROL_BAR_HEIGHT * d);
         const slotMap: Record<2 | 3 | 4, number> = { 2: 0, 3: 1, 4: 2 };
         const idx = slotMap[slotId];
-        return { x: idx * (cellW + gap), y: titleBarH + mainH + gap, w: cellW, h: cellH - gap };
+        return { x: idx * (cellW + gap), y: titleBarH + mainH + gap, w: cellW, h: cellH - cbh };
     }
 
     return { x: 0, y: 0, w: 0, h: 0 };

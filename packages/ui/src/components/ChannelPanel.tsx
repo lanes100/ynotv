@@ -1240,16 +1240,18 @@ export function ChannelPanel({
       // Safety check for zero dimensions (e.g. hidden)
       if (rect.width === 0 || rect.height === 0) return;
 
-      // Determine the effective MPV window size for zoom calculations.
-      // In multiview (2x2 / bigbottom), the primary MPV window is positioned
-      // in a sub-rect of the screen. We must use that sub-rect's CSS size as the
-      // base for the zoom math, not the full window.innerWidth/Height.
+      // When the LiveTV guide is open in multiview, the primary MPV is temporarily
+      // resized to fullscreen so the EPG preview scaling works exactly like normal
+      // view. Use full window dimensions in that case.
       let windowW = window.innerWidth;
       let windowH = window.innerHeight;
 
       const isMultiviewGrid = (currentLayout === '2x2' || currentLayout === 'bigbottom');
 
-      if (isMultiviewGrid) {
+      // Only use the smaller primary-rect dimensions when the guide is closed
+      // (this branch is effectively unused today because the function returns
+      // early above when !visible, but kept for explicitness/clarity).
+      if (isMultiviewGrid && !visible) {
         const d = window.devicePixelRatio || 1;
         const pr = primaryRect(currentLayout as LayoutMode, multiviewEngineMode);
         if (pr.w > 0 && pr.h > 0) {
