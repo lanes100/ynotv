@@ -110,8 +110,8 @@
     position: absolute;
     top: 32px;
     /* Below title bar */
-    bottom: 124px;
-    /* Above media bar */
+    bottom: 0;
+    /* Removed media bar gap */
     left: 0;
     right: 0;
     display: grid;
@@ -126,10 +126,30 @@
 
 /* Top-left quadrant is occupied by MPV (transparent placeholder) */
 .layout-2x2-mpv {
+    position: relative;
     grid-column: 1;
     grid-row: 1;
     pointer-events: none;
     box-shadow: 0 0 0 4000px #000;
+}
+
+/* Allow pointer events for the primary MPV controls */
+.layout-2x2-mpv .primary-mpv-controls,
+.layout-bigbottom-mpv .primary-mpv-controls {
+    pointer-events: all;
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    /* Controls autohide like the secondary cells — controlled by .app:not(.controls-hidden) */
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+/* Show main player controls when mouse is active */
+.app:not(.controls-hidden) .layout-2x2-mpv .primary-mpv-controls,
+.app:not(.controls-hidden) .layout-bigbottom-mpv .primary-mpv-controls {
+    opacity: 1;
 }
 
 /* HLS cells need pointer events */
@@ -143,12 +163,12 @@
     position: absolute;
     top: 32px;
     /* Below title bar */
-    bottom: 124px;
-    /* Above media bar */
+    bottom: 0;
+    /* Removed media bar gap */
     left: 0;
     right: 0;
     display: grid;
-    grid-template-rows: 1fr 240px;
+    grid-template-rows: 1fr 320px;
     gap: 2px;
     background: transparent;
     /* Transparent so MPV windows show through */
@@ -157,6 +177,7 @@
 }
 
 .layout-bigbottom-mpv {
+    position: relative;
     grid-row: 1;
     pointer-events: none;
     box-shadow: 0 0 0 4000px #000;
@@ -169,3 +190,19 @@
     gap: 2px;
     pointer-events: all;
 }
+
+/* ── HLS ENGINE MODE overrides ──────────────────────────────────────── */
+
+/*
+ * In HLS mode, secondary cells are real DOM <video> elements so the whole
+ * grid container must receive pointer events (the container itself is
+ * pointer-events:none in MPV mode to let clicks pass through to native windows).
+ * Also, the grid can stretch into the titlebar area (top: 0) because the 
+ * titlebar has a higher z-index in the DOM.
+ */
+.layout-2x2-cells[data-engine="hls"],
+.layout-bigbottom-cells[data-engine="hls"] {
+    pointer-events: all;
+    top: 0;
+}
+

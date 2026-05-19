@@ -231,6 +231,8 @@ function App() {
     notifyMainLoaded,
     syncMpvGeometry,
     isRestoring,
+    engineMode: multiviewEngineMode,
+    setEngineMode: setMultiviewEngineMode,
   } = multiview;
 
   // Refs for multiview (used by keyboard shortcuts)
@@ -752,6 +754,14 @@ function App() {
   // Tab Mode: enter when EPG, Sports, DVR, Settings, Movies, or Series opens
   // ==========================================================================
   useEffect(() => {
+    // In HLS mode, secondary cells are just DOM elements that can be naturally
+    // covered by overlays like the Guide or Settings, so Tab Mode (which pushes
+    // native MPV windows off-screen) is unnecessary and can cause state issues.
+    if (multiviewEngineMode === 'hls') {
+      exitTabMode();
+      return;
+    }
+
     if (activeView === 'guide' || activeView === 'sports' || activeView === 'dvr' ||
         activeView === 'settings' || activeView === 'movies' || activeView === 'series' ||
         activeView === 'calendar') {
@@ -759,7 +769,7 @@ function App() {
     } else {
       exitTabMode();
     }
-  }, [activeView, enterTabMode, exitTabMode]);
+  }, [activeView, enterTabMode, exitTabMode, multiviewEngineMode]);
 
   // ==========================================================================
   // Popout-aware channel/VOD play wrappers
@@ -1214,6 +1224,8 @@ function App() {
           <LayoutPicker
             currentLayout={multiviewLayout}
             onSelect={switchLayout}
+            engineMode={multiviewEngineMode}
+            onEngineChange={setMultiviewEngineMode}
           />
         </div>
 
@@ -1626,7 +1638,9 @@ function App() {
         visible={
           showControls &&
           activeView !== 'guide' &&
-          !categoriesOpen
+          !categoriesOpen &&
+          multiviewLayout !== '2x2' &&
+          multiviewLayout !== 'bigbottom'
         }
         channel={currentChannel}
         playing={playing}
@@ -1685,10 +1699,19 @@ function App() {
       />
 
       {/* Multiview Layout */}
-      {multiviewLayout !== 'main' && activeView === 'none' && (
+      {multiviewLayout !== 'main' && (
         <MultiviewLayout
+          hidden={activeView !== 'none'}
           layout={multiviewLayout}
           slots={multiviewSlots}
+          engineMode={multiviewEngineMode}
+          mainChannelName={currentChannel?.name || null}
+          mainPlaying={playing}
+          mainMuted={muted}
+          mainVolume={volume}
+          onMainTogglePlayPause={playback.togglePlayPause}
+          onMainToggleMute={playback.toggleMute}
+          onMainSetVolume={playback.setVolume}
           onSwapWithMain={(slotId) => swapWithMain(slotId, multiviewSlots)}
           onStop={stopSlot}
           onSetProperty={setSlotProperty}
@@ -1805,6 +1828,7 @@ function App() {
         watchlistItems={watchlistItems}
         onWatchlistRefresh={refreshWatchlist}
         currentLayout={multiviewLayout}
+        multiviewEngineMode={multiviewEngineMode}
         onSendToSlot={sendToSlot}
         includeSourceInSearch={includeSourceInSearch}
         searchResultsOrder={searchResultsOrder}

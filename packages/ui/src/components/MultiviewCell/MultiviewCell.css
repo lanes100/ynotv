@@ -108,16 +108,34 @@
     flex-shrink: 0;
 }
 
-/* ── Control Bar ── */
+/* ── Control Bar (MPV mode) ── */
+/* In MPV mode the bar is a normal-flow element below the video */
 .multiview-cell-controls {
     height: 36px;
-    background: #111;
+    background: rgba(17, 17, 17, 0.95);
     display: flex;
     align-items: center;
     justify-content: space-between;
     padding: 0 10px;
     box-sizing: border-box;
     border-top: 1px solid rgba(255, 255, 255, 0.1);
+    flex-shrink: 0;
+}
+
+/* HLS cells: override controls to be an absolute hover-overlay instead */
+.hls-cell-container .multiview-cell-controls {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    z-index: 10;
+}
+
+.app:not(.controls-hidden) .hls-cell-container .multiview-cell-controls,
+.hls-cell-container:hover .multiview-cell-controls {
+    opacity: 1;
 }
 
 .multiview-cell-controls-name {

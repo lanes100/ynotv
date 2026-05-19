@@ -3,14 +3,17 @@ import { invoke } from '@tauri-apps/api/core';
 import {
   useMultiview,
   type LayoutMode,
+  type MultiviewEngineMode,
   type ViewerSlot,
   type MainSlot,
 } from './useMultiview';
 
 // Re-export SavedLayoutState for convenience
 export type { LayoutMode } from './useMultiview';
+export type { MultiviewEngineMode } from './useMultiview';
 export interface SavedLayoutState {
   layout: LayoutMode;
+  engineMode?: MultiviewEngineMode; // optional — absent in older saves defaults to 'mpv'
   mainChannel: {
     channelName: string | null;
     channelUrl: string | null;
@@ -53,6 +56,8 @@ export function useLayoutPersistence(options: UseLayoutPersistenceOptions) {
     swapWithMain: baseSwapWithMain,
     stopSlot: baseStopSlot,
     notifyMainLoaded: baseNotifyMainLoaded,
+    setEngineMode,
+    engineMode,
   } = multiview;
 
   // Track main slot state locally for persistence
@@ -88,10 +93,11 @@ export function useLayoutPersistence(options: UseLayoutPersistenceOptions) {
   const buildCurrentState = useCallback((): SavedLayoutState => {
     return {
       layout,
+      engineMode,
       mainChannel: { ...mainSlotRef.current },
       slots: slotsRef.current.map((s) => ({ ...s })),
     };
-  }, [layout]);
+  }, [layout, engineMode]);
 
   /**
    * Helper to merge current active slots down to the master state
@@ -323,16 +329,21 @@ export function useLayoutPersistence(options: UseLayoutPersistenceOptions) {
       if (hasRestoredRef.current) return;
       hasRestoredRef.current = true;
 
+      const restoredEngineMode = state.engineMode ?? 'mpv';
 
-      // Step 1: Switch to the saved layout first (this mounts MultiviewLayout)
+      // Step 1: Restore engine mode FIRST so engineModeRef is correct before any slot loading.
+      // setEngineMode is now async (kills MPV windows when switching MPV→HLS).
+      await setEngineMode(restoredEngineMode);
+
+      // Step 2: Switch to the saved layout (this mounts MultiviewLayout)
       // Use baseSwitchLayout directly to avoid triggering the post-switch restore logic
       await baseSwitchLayout(state.layout);
 
-      // Step 2: Wait for layout to fully render
+      // Step 3: Wait for layout to fully render
       // Need to wait for MultiviewLayout to mount and DOM elements to exist
       await new Promise((resolve) => setTimeout(resolve, 1500));
 
-      // Step 3: Load main channel if present
+      // Step 4: Load main channel if present
       if (state.mainChannel.channelUrl) {
         if (onLoadMainChannel) {
           onLoadMainChannel(
@@ -351,35 +362,36 @@ export function useLayoutPersistence(options: UseLayoutPersistenceOptions) {
           state.mainChannel.channelUrl,
           state.mainChannel.sourceName
         );
-      } else {
       }
 
-      // Step 4: Wait for main to load and React to render
+      // Step 5: Wait for main to load and React to render
       await new Promise((resolve) => setTimeout(resolve, 500));
 
-      // Step 5: Load secondary slots - now MultiviewLayout should be fully rendered
-      // Filter for slots that should be active
+      // Step 6: Load secondary slots - now MultiviewLayout should be fully rendered
       const slotsToRestore = state.slots.filter((s) => s.active && s.channelUrl);
 
+      // In HLS mode secondary slots are in-DOM <video> elements — no native window creation,
+      // so a much shorter inter-slot delay is sufficient.
+      const slotDelay = restoredEngineMode === 'hls' ? 50 : 300;
+
       for (const slot of slotsToRestore) {
-          await baseSendToSlot(
+        await baseSendToSlot(
           slot.id,
           slot.channelName || '',
           slot.channelUrl || '',
-          slot.sourceName || null, // Pass sourceName for display in mini media bar
+          slot.sourceName || null,
           true // force - bypass tab mode check during restore
         );
-        // Wait between slots for React to render mini media bars
-        await new Promise((resolve) => setTimeout(resolve, 300));
+        await new Promise((resolve) => setTimeout(resolve, slotDelay));
       }
 
       // Update saved state refs to match restored state
       savedStateRef.current = state;
       masterStateRef.current = state;
-
     },
-    [baseSwitchLayout, baseNotifyMainLoaded, baseSendToSlot, onLoadMainChannel]
+    [baseSwitchLayout, baseNotifyMainLoaded, baseSendToSlot, onLoadMainChannel, setEngineMode]
   );
+
 
   // Restore on mount - run once when all conditions are met
   const restoreAttemptedRef = useRef(false);

@@ -1,10 +1,12 @@
 import { useState, useRef, useEffect } from 'react';
-import { LayoutMode } from '../../hooks/useMultiview';
+import { LayoutMode, type MultiviewEngineMode } from '../../hooks/useMultiview';
 import './LayoutPicker.css';
 
 interface LayoutPickerProps {
     currentLayout: LayoutMode;
     onSelect: (layout: LayoutMode) => void;
+    engineMode: MultiviewEngineMode;
+    onEngineChange: (mode: MultiviewEngineMode) => void;
 }
 
 const LAYOUTS: { mode: LayoutMode; label: string; description: string }[] = [
@@ -30,7 +32,7 @@ const LAYOUTS: { mode: LayoutMode; label: string; description: string }[] = [
     },
 ];
 
-export function LayoutPicker({ currentLayout, onSelect }: LayoutPickerProps) {
+export function LayoutPicker({ currentLayout, onSelect, engineMode, onEngineChange }: LayoutPickerProps) {
     const [open, setOpen] = useState(false);
     const ref = useRef<HTMLDivElement>(null);
 
@@ -62,6 +64,30 @@ export function LayoutPicker({ currentLayout, onSelect }: LayoutPickerProps) {
             {open && (
                 <div className="layout-picker-dropdown">
                     <div className="layout-picker-header">View Layout</div>
+
+                    {/* Viewer Engine toggle */}
+                    <div className="lp-engine-row">
+                        <span className="lp-engine-label">Viewer Engine</span>
+                        <div className="lp-engine-pills">
+                            <button
+                                className={`lp-engine-pill ${engineMode === 'mpv' ? 'lp-engine-pill-active' : ''}`}
+                                onClick={() => onEngineChange('mpv')}
+                                title="Native MPV secondary windows"
+                            >
+                                MPV
+                            </button>
+                            <button
+                                className={`lp-engine-pill lp-engine-pill-hls ${engineMode === 'hls' ? 'lp-engine-pill-active lp-engine-pill-hls-active' : ''}`}
+                                onClick={() => onEngineChange('hls')}
+                                title="In-browser HLS player — supports overlays"
+                            >
+                                HLS
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="layout-picker-divider" />
+
                     {LAYOUTS.map(layout => (
                         <button
                             key={layout.mode}

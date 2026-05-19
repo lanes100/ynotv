@@ -1,0 +1,110 @@
+/* ── HLS Multiview Cell ─────────────────────────────────────────────────── */
+
+/*
+ * The .hls-cell-container stacks three layers:
+ *   1. <video>              — absolute, fills the entire cell
+ *   2. .hls-cell-overlay   — absolute, transparent interaction layer over video
+ *   3. .multiview-cell-controls — absolute overlay at bottom, visible on hover
+ */
+
+.hls-cell-container {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: #000;
+}
+
+/* The actual <video> element always fills the full cell — no reserved bar space */
+.hls-cell-video {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    /* Stretch to fill — no letterboxing */
+    object-fit: fill;
+    background: #000;
+    z-index: 1;
+    pointer-events: none;
+}
+
+/* Transparent interaction overlay covers the full video area */
+.hls-cell-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    cursor: pointer;
+    background: transparent !important;
+}
+
+/* When no active content: show dark placeholder bg */
+.hls-cell-overlay.multiview-cell-empty {
+    background: rgba(0, 0, 0, 0.75) !important;
+    cursor: default;
+}
+
+/*
+ * Controls bar — absolute overlay at the bottom of the cell.
+ * Inherits the opacity:0 / hover:opacity:1 from MultiviewCell.css
+ * but we add pointer-events so clicks work even without the container hover trick.
+ */
+.hls-cell-container .multiview-cell-controls {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 36px;
+    z-index: 4;
+    pointer-events: all;
+}
+
+/* Badge: override opacity so it shows on hover of the overlay */
+.hls-cell-overlay.multiview-cell-active:hover .multiview-cell-badge {
+    opacity: 1;
+}
+
+/* HLS engine badge pill */
+.hls-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 5px;
+    border-radius: 3px;
+    font-size: 0.6rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    background: linear-gradient(135deg, #7c3aed, #4f46e5);
+    color: #fff;
+    text-transform: uppercase;
+    flex-shrink: 0;
+    vertical-align: middle;
+}
+
+/* Error badge — covers the full video area when hls.js has a fatal error */
+.hls-error-badge {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background: rgba(0, 0, 0, 0.85);
+    color: rgba(255, 90, 90, 0.9);
+    font-size: 0.8rem;
+    text-align: center;
+    padding: 12px;
+    z-index: 3;
+    pointer-events: none;
+}
+
+.hls-error-badge svg {
+    flex-shrink: 0;
+}
+
+.hls-error-name {
+    color: rgba(255, 255, 255, 0.45);
+    font-size: 0.72rem;
+    margin-top: 2px;
+}

@@ -26,6 +26,8 @@ import { Bridge, type AspectRatioMode, getAspectRatioLabel } from '../services/t
 import { MetadataBadge } from './MetadataBadge';
 import { EpgShiftModal } from './EpgShiftModal';
 import { dbEvents } from '../db/sqlite-adapter';
+import { primaryRect } from '../hooks/useMultiview';
+import type { LayoutMode } from '../hooks/useMultiview';
 import './ChannelPanel.css';
 
 
@@ -104,6 +106,7 @@ interface ChannelPanelProps {
   onWatchlistRefresh?: () => void;
   // Multiview props
   currentLayout?: string;
+  multiviewEngineMode?: 'mpv' | 'hls';
   onSendToSlot?: (slotId: 2 | 3 | 4, channelName: string, channelUrl: string, sourceName?: string | null) => void;
   // Search display props
   includeSourceInSearch?: boolean;
@@ -180,6 +183,7 @@ export function ChannelPanel({
   watchlistItems,
   onWatchlistRefresh,
   currentLayout,
+  multiviewEngineMode = 'mpv',
   onSendToSlot,
   includeSourceInSearch,
   searchResultsOrder,
@@ -1236,8 +1240,23 @@ export function ChannelPanel({
       // Safety check for zero dimensions (e.g. hidden)
       if (rect.width === 0 || rect.height === 0) return;
 
-      const windowW = window.innerWidth;
-      const windowH = window.innerHeight;
+      // Determine the effective MPV window size for zoom calculations.
+      // In multiview (2x2 / bigbottom), the primary MPV window is positioned
+      // in a sub-rect of the screen. We must use that sub-rect's CSS size as the
+      // base for the zoom math, not the full window.innerWidth/Height.
+      let windowW = window.innerWidth;
+      let windowH = window.innerHeight;
+
+      const isMultiviewGrid = (currentLayout === '2x2' || currentLayout === 'bigbottom');
+
+      if (isMultiviewGrid) {
+        const d = window.devicePixelRatio || 1;
+        const pr = primaryRect(currentLayout as LayoutMode, multiviewEngineMode);
+        if (pr.w > 0 && pr.h > 0) {
+          windowW = pr.w / d;
+          windowH = pr.h / d;
+        }
+      }
 
       if (epgView === 'alternate') {
         let videoNativeW = windowW;

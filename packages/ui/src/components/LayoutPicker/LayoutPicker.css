@@ -51,6 +51,67 @@
     margin-bottom: 4px;
 }
 
+/* ── Viewer Engine row ─────────────────────── */
+
+.lp-engine-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 10px 4px;
+    gap: 8px;
+}
+
+.lp-engine-label {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.5);
+    white-space: nowrap;
+}
+
+.lp-engine-pills {
+    display: flex;
+    gap: 3px;
+    background: rgba(255, 255, 255, 0.06);
+    border-radius: 6px;
+    padding: 2px;
+}
+
+.lp-engine-pill {
+    padding: 3px 10px;
+    border: none;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.45);
+    transition: background 0.15s, color 0.15s;
+    font-family: inherit;
+}
+
+.lp-engine-pill:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.lp-engine-pill-active {
+    background: rgba(0, 212, 255, 0.2) !important;
+    color: #00d4ff !important;
+}
+
+/* HLS pill uses a purple accent when active */
+.lp-engine-pill-hls-active {
+    background: rgba(124, 58, 237, 0.25) !important;
+    color: #a78bfa !important;
+}
+
+.layout-picker-divider {
+    height: 1px;
+    background: rgba(255, 255, 255, 0.07);
+    margin: 4px 6px 4px;
+}
+
+
 .layout-picker-option {
     display: flex;
     align-items: center;
