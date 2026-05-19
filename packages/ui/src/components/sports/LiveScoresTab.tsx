@@ -24,7 +24,7 @@ export function LiveScoresTab({ onSearchChannels, onPlayChannel }: LiveScoresTab
 
   const { events, loading, error, lastUpdated, refresh, isPolling } = useSportsPolling({
     pollingInterval: 30000,
-    enabled: true,
+    enabled: loaded,
     leagues: loaded ? liveLeagues : undefined,
   });
   

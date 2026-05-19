@@ -355,7 +355,7 @@ export function SeriesDetail({ series, onClose, onPlayEpisode, apiKey, initialSe
                           </span>
                         </div>
 
-                        {/* Meta: air date, rating, duration */}
+                        {/* Meta: air date, rating */}
                         <div className="series-detail__episode-card-meta">
                           {extra?.airDate && (
                             <span className="series-detail__episode-card-airdate">
@@ -370,11 +370,6 @@ export function SeriesDetail({ series, onClose, onPlayEpisode, apiKey, initialSe
                               {extra.rating.toFixed(1)}
                             </span>
                           )}
-                          {(episode.duration ?? (episode.info?.duration as number | undefined)) ? (
-                            <span className="series-detail__episode-card-duration">
-                              {Math.round((episode.duration ?? Number(episode.info?.duration) ?? 0) / 60)}m
-                            </span>
-                          ) : null}
                         </div>
 
                         {/* Summary */}

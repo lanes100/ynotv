@@ -13,6 +13,7 @@ import { db, type StoredMovie, type StoredSeries } from '../db';
 import { getMovieCredits, getTvShowCredits, searchMovies, searchTvShows } from '../services/tmdb';
 import { getTvShowMetadataWithCast } from '../services/tvmaze';
 import { type MediaItem, isMovie } from '../types/media';
+import { cleanTitleForSearch } from '../utils/cleanTitle';
 
 interface Credits {
   cast: string | null;
@@ -79,7 +80,7 @@ export function useLazyCredits(
         let foundTmdbId: number | null = item.tmdb_id || null;
 
         // Get search query
-        const searchQuery = (item.title || item.name || '').trim();
+        const searchQuery = cleanTitleForSearch(item.title || item.name);
 
         if (!searchQuery) {
           fetchingRef.current = false;

@@ -13,6 +13,7 @@ import { useState, useEffect, useRef } from 'react';
 import { db, type StoredSeries } from '../db';
 import { getTmdb, getTmdbImageUrl, searchTvShows } from '../services/tmdb';
 import { getShowEpisodes, getTvShowMetadata } from '../services/tvmaze';
+import { cleanTitleForSearch } from '../utils/cleanTitle';
 
 export interface EpisodeExtra {
   image: string | null;
@@ -62,7 +63,7 @@ export function useLazySeriesExtras(
       setLoading(true);
 
       try {
-        const searchQuery = (series.title || series.name || '').trim();
+        const searchQuery = cleanTitleForSearch(series.title || series.name);
         if (!searchQuery) {
           fetchingRef.current = false;
           setLoading(false);

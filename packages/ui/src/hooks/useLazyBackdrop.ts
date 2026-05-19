@@ -22,6 +22,7 @@ import { getTvShowMetadata, getShowBackdropUrl } from '../services/tvmaze';
 import { getRpdbBackdropUrl } from '../services/rpdb';
 import { useRpdbSettings } from './useRpdbSettings';
 import { type MediaItem, isMovie } from '../types/media';
+import { cleanTitleForSearch } from '../utils/cleanTitle';
 
 /**
  * Lazy-load backdrop for a movie or series from TMDB or TVMaze
@@ -97,7 +98,7 @@ export function useLazyBackdrop(
         let foundTmdbId: number | null = item.tmdb_id || null;
 
         // Get search query
-        const searchQuery = (item.title || item.name || '').trim();
+        const searchQuery = cleanTitleForSearch(item.title || item.name);
 
         if (!searchQuery) {
           fetchingRef.current = false;

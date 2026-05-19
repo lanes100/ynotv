@@ -1,15 +1,15 @@
 /**
  * MovieDetail - Full page movie detail view
  *
- * Shows movie information with backdrop, metadata, and play button.
- * Slides in as a full page, not a modal.
+ * Shows movie information with backdrop, logo, metadata, cast photos,
+ * and play button. Slides in as a full page, not a modal.
  */
 
 import { useEffect, useCallback, useState } from 'react';
 import { getTmdbImageUrl, TMDB_POSTER_SIZES } from '../../services/tmdb';
 import { useLazyBackdrop } from '../../hooks/useLazyBackdrop';
 import { useLazyPlot } from '../../hooks/useLazyPlot';
-import { useLazyCredits } from '../../hooks/useLazyCredits';
+import { useLazyMovieExtras } from '../../hooks/useLazyMovieExtras';
 import { useRpdbSettings } from '../../hooks/useRpdbSettings';
 import { getRpdbPosterUrl } from '../../services/rpdb';
 import type { StoredMovie } from '../../db';
@@ -35,10 +35,12 @@ export function MovieDetail({ movie, onClose, onPlay, apiKey }: MovieDetailProps
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [onClose]);
 
-  // Lazy-load backdrop, plot, genre, and credits from TMDB if available
+  // Lazy-load backdrop, plot, genre from TMDB if available
   const tmdbBackdropUrl = useLazyBackdrop(movie, apiKey);
-  const { plot: lazyPlot, genre: lazyGenre } = useLazyPlot(movie, apiKey);
-  const lazyCredits = useLazyCredits(movie, apiKey);
+  const { plot: lazyPlot, genre: lazyGenre, rating: lazyRating } = useLazyPlot(movie, apiKey);
+
+  // Lazy-load cast photos, logo, imdb_id
+  const { cast, logoUrl, imdbId, loading: extrasLoading } = useLazyMovieExtras(movie, apiKey);
 
   const handlePlay = useCallback(() => {
     onPlay?.(movie, lazyPlot || movie.plot);
@@ -74,10 +76,17 @@ export function MovieDetail({ movie, onClose, onPlay, apiKey }: MovieDetailProps
   // Use year field if available, otherwise extract from release_date
   const year = movie.year || movie.release_date?.slice(0, 4);
 
-  // Rating - only show if it's a meaningful value (not 0, not NaN)
-  const parsedRating = movie.rating ? parseFloat(movie.rating) : NaN;
+  // Rating - prefer lazy rating, then stored rating
+  const rawRating = movie.rating;
+  let storedRating = rawRating && typeof rawRating === 'string' ? rawRating.trim() : null;
+  if (storedRating && storedRating.startsWith('"') && storedRating.endsWith('"')) {
+    storedRating = storedRating.slice(1, -1);
+  }
+  const ratingSource = storedRating || (lazyRating ? lazyRating.toString() : null);
+  const parsedRating = ratingSource ? parseFloat(ratingSource) : NaN;
   const rating = !isNaN(parsedRating) && parsedRating > 0 ? parsedRating : null;
-  // Use provider metadata if available (even if empty string), otherwise fall back to TMDB
+
+  // Use provider metadata if available, otherwise fall back to TMDB
   const genreSource = movie.genre != null ? movie.genre : lazyGenre;
   const genres = genreSource?.split(',').map((g) => g.trim()).filter(Boolean) ?? [];
   const duration = movie.duration && movie.duration > 0
@@ -108,7 +117,7 @@ export function MovieDetail({ movie, onClose, onPlay, apiKey }: MovieDetailProps
 
       {/* Content */}
       <div className="movie-detail__content">
-        <div className="movie-detail__main">
+        <div className="movie-detail__hero">
           {/* Poster */}
           <div className="movie-detail__poster">
             {posterUrl ? (
@@ -122,7 +131,14 @@ export function MovieDetail({ movie, onClose, onPlay, apiKey }: MovieDetailProps
 
           {/* Info */}
           <div className="movie-detail__info">
-            <h1 className="movie-detail__title">{displayTitle}</h1>
+            {/* Logo or Title */}
+            {logoUrl ? (
+              <div className="movie-detail__logo">
+                <img src={logoUrl} alt={displayTitle} />
+              </div>
+            ) : (
+              <h1 className="movie-detail__title">{displayTitle}</h1>
+            )}
 
             <div className="movie-detail__meta">
               {year && <span className="movie-detail__year">{year}</span>}
@@ -137,6 +153,17 @@ export function MovieDetail({ movie, onClose, onPlay, apiKey }: MovieDetailProps
               {duration && (
                 <span className="movie-detail__duration">{duration}</span>
               )}
+              {imdbId && (
+                <a
+                  className="movie-detail__imdb-link"
+                  href={`https://www.imdb.com/title/${imdbId}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  IMDb
+                </a>
+              )}
             </div>
 
             {genres.length > 0 && (
@@ -149,7 +176,7 @@ export function MovieDetail({ movie, onClose, onPlay, apiKey }: MovieDetailProps
               </div>
             )}
 
-            {/* Use provider plot if available (even if empty string), otherwise fall back to TMDB */}
+            {/* Plot */}
             {(movie.plot != null ? movie.plot : lazyPlot) && (
               <p className="movie-detail__description">{movie.plot != null ? movie.plot : lazyPlot}</p>
             )}
@@ -165,7 +192,7 @@ export function MovieDetail({ movie, onClose, onPlay, apiKey }: MovieDetailProps
                 </svg>
                 Play
               </button>
-              
+
               {movie.direct_url && (
                 <button
                   className={`movie-detail__btn movie-detail__btn--secondary ${copied ? 'copied' : ''}`}
@@ -183,24 +210,32 @@ export function MovieDetail({ movie, onClose, onPlay, apiKey }: MovieDetailProps
                 </button>
               )}
             </div>
-
-            {/* Credits */}
-            <div className="movie-detail__credits">
-              {lazyCredits.cast && (
-                <div className="movie-detail__credit-row">
-                  <span className="movie-detail__credit-label">Cast</span>
-                  <span className="movie-detail__credit-value">{lazyCredits.cast}</span>
-                </div>
-              )}
-              {lazyCredits.director && (
-                <div className="movie-detail__credit-row">
-                  <span className="movie-detail__credit-label">Director</span>
-                  <span className="movie-detail__credit-value">{lazyCredits.director}</span>
-                </div>
-              )}
-            </div>
           </div>
         </div>
+
+        {/* Cast Section */}
+        {cast.length > 0 && (
+          <div className="movie-detail__cast-section">
+            <h2 className="movie-detail__section-title">Cast</h2>
+            <div className="movie-detail__cast-row">
+              {cast.map((member, idx) => (
+                <div key={`${member.name}-${idx}`} className="movie-detail__cast-member">
+                  <div className="movie-detail__cast-photo">
+                    {member.photo ? (
+                      <img src={member.photo} alt={member.name} loading="lazy" />
+                    ) : (
+                      <div className="movie-detail__cast-photo-placeholder">
+                        <span>{member.name.charAt(0)}</span>
+                      </div>
+                    )}
+                  </div>
+                  <span className="movie-detail__cast-name">{member.name}</span>
+                  <span className="movie-detail__cast-character">{member.character}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

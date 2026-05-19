@@ -68,7 +68,7 @@ export function LiveSportsOverlay({ mode, showControls, activeView }: LiveSports
   // never visited the Sports page, because the hook runs its own interval.
   const { events } = useSportsPolling({
     pollingInterval: 30000,
-    enabled: true,
+    enabled: loaded,
     leagues: loaded ? liveLeagues : undefined,
   });
 
