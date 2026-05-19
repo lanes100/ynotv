@@ -21,6 +21,11 @@ const LAYOUTS: { mode: LayoutMode; label: string; description: string }[] = [
         description: 'Full player + 1 overlay',
     },
     {
+        mode: 'sbs',
+        label: 'Side by Side',
+        description: 'Two 16:9 players side by side',
+    },
+    {
         mode: 'bigbottom',
         label: 'Big + Bottom Bar',
         description: 'Large main + 3 below',
@@ -131,6 +136,15 @@ function LayoutIcon({ mode }: { mode: LayoutMode }) {
             </svg>
         );
     }
+    if (mode === 'sbs') {
+        // Side by side
+        return (
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="1" y="4" width="6.5" height="8" rx="1" fill="currentColor" opacity="0.9" />
+                <rect x="8.5" y="4" width="6.5" height="8" rx="1" fill="currentColor" opacity="0.5" />
+            </svg>
+        );
+    }
     if (mode === '2x2') {
         // 4-cell grid
         return (
@@ -166,6 +180,12 @@ function LayoutPreview({ mode }: { mode: LayoutMode }) {
                 <div className="lp-pip">
                     <div className="lp-cell lp-cell-main" />
                     <div className="lp-cell lp-cell-pip" />
+                </div>
+            )}
+            {mode === 'sbs' && (
+                <div className="lp-sbs">
+                    <div className="lp-cell lp-cell-main" />
+                    <div className="lp-cell lp-cell-secondary" />
                 </div>
             )}
             {mode === '2x2' && (

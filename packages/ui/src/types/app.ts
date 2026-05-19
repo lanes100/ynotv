@@ -48,7 +48,7 @@ export interface SavedSlotState {
 }
 
 export interface SavedLayoutState {
-    layout: 'main' | 'pip' | '2x2' | 'bigbottom';
+    layout: 'main' | 'pip' | '2x2' | 'bigbottom' | 'sbs';
     mainChannel: SavedChannelState;
     slots: SavedSlotState[];
 }

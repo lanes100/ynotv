@@ -577,7 +577,7 @@ export function ChannelContextMenu({
     // Determine which secondary slots are available based on the current layout
     const viewerSlots: Array<2 | 3 | 4> = (() => {
         if (!onSendToSlot || !currentLayout || currentLayout === 'main') return [];
-        if (currentLayout === 'pip') return [2];
+        if (currentLayout === 'pip' || currentLayout === 'sbs') return [2];
         return [2, 3, 4]; // 2x2 and bigbottom have 3 secondary slots
     })();
 

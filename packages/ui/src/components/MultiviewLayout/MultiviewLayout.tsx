@@ -7,7 +7,7 @@ import { useResizable } from '../../hooks/useResizable';
 import './MultiviewLayout.css';
 
 interface MultiviewLayoutProps {
-    layout: 'main' | 'pip' | '2x2' | 'bigbottom';
+    layout: 'main' | 'pip' | '2x2' | 'bigbottom' | 'sbs';
     slots: ViewerSlot[];
     engineMode: MultiviewEngineMode;
     mainChannelName: string | null;
@@ -22,7 +22,7 @@ interface MultiviewLayoutProps {
     onStop: (slotId: 2 | 3 | 4) => void;
     onSetProperty: (slotId: 2 | 3 | 4, property: string, value: any) => void;
     onReposition: () => void;
-    onSwitchLayout?: (layout: 'main' | 'pip' | '2x2' | 'bigbottom') => void;
+    onSwitchLayout?: (layout: 'main' | 'pip' | '2x2' | 'bigbottom' | 'sbs') => void;
     hidden?: boolean;
 }
 
@@ -162,6 +162,17 @@ export function MultiviewLayout({
                 {cell(slot2)}
                 {cell(slot3)}
                 {cell(slot4)}
+            </div>
+        );
+    }
+
+    if (layout === 'sbs') {
+        return (
+            <div className="layout-sbs-cells" data-engine={engineMode} style={{ display: hidden ? 'none' : undefined }}>
+                <div className="layout-mpv-placeholder layout-sbs-mpv">
+                    {mainControls}
+                </div>
+                {cell(slot2)}
             </div>
         );
     }

@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 
-export type LayoutMode = 'main' | 'pip' | '2x2' | 'bigbottom';
+export type LayoutMode = 'main' | 'pip' | '2x2' | 'bigbottom' | 'sbs';
 export type MultiviewEngineMode = 'mpv' | 'hls';
 
 export interface ViewerSlot {
@@ -43,9 +43,8 @@ export function primaryRect(mode: LayoutMode, engineMode: MultiviewEngineMode = 
     const H = Math.round(window.innerHeight * d);
     const gap = Math.round(2 * d);
 
-    // Account for UI elements that multiview must avoid
     const titleBarH = engineMode === 'hls' ? 0 : Math.round(TITLE_BAR_HEIGHT * d);
-    const mediaBarH = (mode === '2x2' || mode === 'bigbottom') ? 0 : Math.round(MEDIA_BAR_HEIGHT * d);
+    const mediaBarH = (mode === '2x2' || mode === 'bigbottom' || mode === 'sbs') ? 0 : Math.round(MEDIA_BAR_HEIGHT * d);
     const availableH = H - titleBarH - mediaBarH;
 
     switch (mode) {
@@ -58,6 +57,20 @@ export function primaryRect(mode: LayoutMode, engineMode: MultiviewEngineMode = 
             const cellW = Math.floor((W - 2 * gap) / 3);
             const cellH = Math.floor(cellW * 9 / 16);
             return { x: 0, y: titleBarH, w: W, h: availableH - cellH };
+        }
+        case 'sbs': {
+            const maxW = Math.floor((W - gap) / 2);
+            const maxH = availableH;
+            let cellW = maxW;
+            let cellH = Math.floor(cellW * 9 / 16);
+            if (cellH > maxH) {
+                cellH = maxH;
+                cellW = Math.floor(cellH * 16 / 9);
+            }
+            const totalW = cellW * 2 + gap;
+            const offsetX = Math.floor((W - totalW) / 2);
+            const offsetY = titleBarH + Math.floor((availableH - cellH) / 2);
+            return { x: offsetX, y: offsetY, w: cellW, h: cellH };
         }
         default:
             // main / pip — fill window
@@ -86,7 +99,7 @@ export function secondaryRect(slotId: 2 | 3 | 4, mode: LayoutMode): { x: number;
     const H = Math.round(window.innerHeight * d);
     const gap = Math.round(2 * d);
     const titleBarH = Math.round(TITLE_BAR_HEIGHT * d);
-    const mediaBarH = (mode === '2x2' || mode === 'bigbottom') ? 0 : Math.round(MEDIA_BAR_HEIGHT * d);
+    const mediaBarH = (mode === '2x2' || mode === 'bigbottom' || mode === 'sbs') ? 0 : Math.round(MEDIA_BAR_HEIGHT * d);
     const availableH = H - titleBarH - mediaBarH;
 
     if (mode === 'pip') {
@@ -117,6 +130,22 @@ export function secondaryRect(slotId: 2 | 3 | 4, mode: LayoutMode): { x: number;
         const slotMap: Record<2 | 3 | 4, number> = { 2: 0, 3: 1, 4: 2 };
         const idx = slotMap[slotId];
         return { x: idx * (cellW + gap), y: titleBarH + mainH + gap, w: cellW, h: cellH - cbh };
+    }
+
+    if (mode === 'sbs') {
+        const maxW = Math.floor((W - gap) / 2);
+        const maxH = availableH;
+        let cellW = maxW;
+        let cellH = Math.floor(cellW * 9 / 16);
+        if (cellH > maxH) {
+            cellH = maxH;
+            cellW = Math.floor(cellH * 16 / 9);
+        }
+        const totalW = cellW * 2 + gap;
+        const offsetX = Math.floor((W - totalW) / 2);
+        const offsetY = titleBarH + Math.floor((availableH - cellH) / 2);
+        const cbh = Math.round(CONTROL_BAR_HEIGHT * d);
+        return { x: offsetX + cellW + gap, y: offsetY, w: cellW, h: cellH - cbh };
     }
 
     return { x: 0, y: 0, w: 0, h: 0 };
@@ -326,9 +355,9 @@ export function useMultiview() {
                 // Extra delay for native window destruction before restoring main MPV
                 await new Promise(resolve => setTimeout(resolve, 200));
             }
-        } else if (newLayout === 'pip') {
+        } else if (newLayout === 'pip' || newLayout === 'sbs') {
             if (!isHls) {
-                // When switching to PiP, we must manually kill slots 3 and 4 since PiP only uses slot 2
+                // When switching to PiP or SBS, we must manually kill slots 3 and 4 since they only use slot 2
                 const ops = [];
                 for (const id of [3, 4]) {
                     if (slotsRef.current.find(s => s.id === id)?.active) {
@@ -626,6 +655,7 @@ export function useMultiview() {
     const visibleSlotIds = ((): Array<2 | 3 | 4> => {
         switch (layout) {
             case 'pip': return [2];
+            case 'sbs': return [2];
             case '2x2': return [2, 3, 4];
             case 'bigbottom': return [2, 3, 4];
             default: return [];
