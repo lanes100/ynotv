@@ -170,15 +170,23 @@ export function useMultiview() {
         const m = mode ?? layoutRef.current;
         const r = primaryRect(m, engineModeRef.current);
         try {
+            const { Bridge } = await import('../services/tauri-bridge');
 
             // CRITICAL: Reset video zoom/align when switching to multiview layouts.
             // EPG preview may have set these, causing black screen if not reset.
             if (m !== 'main') {
-                const { Bridge } = await import('../services/tauri-bridge');
                 try {
                     await Bridge.setProperty('video-zoom', 0);
                     await Bridge.setProperty('video-align-x', 0);
                     await Bridge.setProperty('video-align-y', 0);
+                    // Stretch to fill the cell in 2x2 grid; preserve aspect in bigbottom/pip.
+                    await Bridge.setProperty('keepaspect', m === '2x2');
+                } catch (e) {
+                    // Ignore reset errors
+                }
+            } else {
+                try {
+                    await Bridge.setProperty('keepaspect', true);
                 } catch (e) {
                     // Ignore reset errors
                 }
@@ -372,29 +380,43 @@ export function useMultiview() {
 
         const mode = layoutRef.current;
         const r = secondaryRect(slotId, mode);
+        // Reserve space for the 36px control bar upfront so the MPV window never
+        // covers it while React is rendering the active state.
+        const wasInactive = !slotsRef.current.find(s => s.id === slotId)?.active;
+        let loadH = r.h;
+        if (wasInactive) {
+            const cbh = Math.round(CONTROL_BAR_HEIGHT * dpr());
+            loadH = Math.max(1, loadH - cbh);
+        }
         try {
             await invoke('multiview_load_slot', {
                 slotId,
                 url: channelUrl,
-                x: r.x, y: r.y, width: r.w, height: r.h,
+                x: r.x, y: r.y, width: r.w, height: loadH,
             });
             activeUrlsRef.current[slotId] = channelUrl;
             setSlots(prev => prev.map(s =>
                 s.id === slotId ? { ...s, channelName, channelUrl, sourceName, active: true } : s
             ));
 
-            // Allow React to render the active DOM element (adding the 36px control bar)
-            // then reposition the slot so MPV shrinks to fit exactly.
-            setTimeout(() => {
-                const updatedRect = secondaryRect(slotId, layoutRef.current);
-                invoke('multiview_reposition_slot', {
-                    slotId,
-                    x: updatedRect.x,
-                    y: updatedRect.y,
-                    width: updatedRect.w,
-                    height: updatedRect.h,
-                }).catch(() => { });
-            }, 100);
+            // Stretch video to fill the cell in grid layouts.
+            if (mode === '2x2' || mode === 'bigbottom') {
+                invoke('multiview_set_property_slot', { slotId, property: 'keepaspect', value: false }).catch(() => { });
+            }
+
+            // Wait for the browser to paint the controls bar, then refine position.
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    const updatedRect = secondaryRect(slotId, layoutRef.current);
+                    invoke('multiview_reposition_slot', {
+                        slotId,
+                        x: updatedRect.x,
+                        y: updatedRect.y,
+                        width: updatedRect.w,
+                        height: updatedRect.h,
+                    }).catch(() => { });
+                });
+            });
         } catch (e) {
             // Ignore sendToSlot errors
         }
@@ -560,6 +582,13 @@ export function useMultiview() {
             await syncMpvGeometry(saved.layout);
             setSlots(saved.slots.map(s => ({ ...s })));
 
+            // Stretch secondary slots to fill the cell in grid layouts
+            const setStretch = (id: 2 | 3 | 4) => {
+                if (engineModeRef.current !== 'hls' && (saved.layout === '2x2' || saved.layout === 'bigbottom')) {
+                    invoke('multiview_set_property_slot', { slotId: id, property: 'keepaspect', value: false }).catch(() => { });
+                }
+            };
+
             for (const slot of saved.slots) {
                 if (slot.active && slot.channelUrl) {
                     const r = secondaryRect(slot.id, saved.layout);
@@ -570,6 +599,7 @@ export function useMultiview() {
                                 slotId: slot.id, x: r.x, y: r.y, width: r.w, height: r.h
                             }).catch(() => { });
                         }
+                        setStretch(slot.id);
                     } else {
                         // It was assigned a NEW stream while the tab was open, so load it
                         if (engineModeRef.current !== 'hls') {
@@ -577,6 +607,7 @@ export function useMultiview() {
                                 slotId: slot.id, url: slot.channelUrl, x: r.x, y: r.y, width: r.w, height: r.h
                             }).catch(() => { });
                         }
+                        setStretch(slot.id);
                         activeUrlsRef.current[slot.id] = slot.channelUrl;
                     }
                 } else if (!slot.active && activeUrlsRef.current[slot.id]) {
