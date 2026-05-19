@@ -182,7 +182,8 @@ export const ChannelRow = memo(function ChannelRow({
             
             let progEndMs = originalEndMs;
             if (index < arr.length - 1) {
-              const nextStartMs = arr[index + 1].start instanceof Date ? arr[index + 1].start.getTime() : new Date(arr[index + 1].start).getTime();
+              const nextProgram = arr[index + 1];
+              const nextStartMs = nextProgram.start instanceof Date ? nextProgram.start.getTime() : new Date(nextProgram.start).getTime();
               if (progEndMs > nextStartMs) {
                 progEndMs = nextStartMs;
               }
