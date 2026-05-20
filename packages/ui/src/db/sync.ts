@@ -428,13 +428,36 @@ async function syncEpgForStalker(source: Source, channels: Channel[]): Promise<n
     // M3U and Xtream sources. Baking the shift here would cause a double-application.
 
     for (const [channelId, programList] of epgMap.entries()) {
+      // Helper to parse Stalker date string formatted in user's local timezone (via timezone cookie)
+      const parseStalkerDate = (dateStr: string | undefined): Date | null => {
+        if (!dateStr || typeof dateStr !== 'string') return null;
+        // Format is typically "YYYY-MM-DD HH:mm:ss". Replace space with 'T' to parse as local ISO string.
+        const formatted = dateStr.trim().replace(' ', 'T');
+        const d = new Date(formatted);
+        return isNaN(d.getTime()) ? null : d;
+      };
+
       for (const prog of programList) {
-        // Store raw UTC timestamps — timeshift is applied at display time via SQL view
-        const startDate = new Date(prog.start_timestamp * 1000);
-        const stopDate = new Date(prog.stop_timestamp * 1000);
+        let startDate: Date;
+        let stopDate: Date;
+        let startTs = prog.start_timestamp;
+
+        // Try timezone-adjusted string times first (similar to Enigma2 EStalker)
+        const parsedStart = parseStalkerDate(prog.time);
+        const parsedStop = parseStalkerDate(prog.time_to);
+
+        if (parsedStart && parsedStop) {
+          startDate = parsedStart;
+          stopDate = parsedStop;
+          startTs = Math.floor(parsedStart.getTime() / 1000);
+        } else {
+          // Fallback to Unix timestamps if string times are not available/parsable
+          startDate = new Date(prog.start_timestamp * 1000);
+          stopDate = new Date(prog.stop_timestamp * 1000);
+        }
 
         storedPrograms.push({
-          id: `${channelId}_${prog.start_timestamp}`,
+          id: `${channelId}_${startTs}`,
           stream_id: channelId,
           title: prog.name || '',
           description: prog.descr || '',
