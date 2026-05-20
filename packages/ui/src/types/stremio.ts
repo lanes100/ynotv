@@ -75,6 +75,7 @@ export interface StremioVideo {
   episode?: number;
   thumbnail?: string;
   description?: string;
+  overview?: string;
   streams?: StremioStream[];
 }
 

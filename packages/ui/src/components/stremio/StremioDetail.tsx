@@ -319,6 +319,11 @@ export function StremioDetail({ meta, onBack, onPlay, streamPickerMode }: Stremi
                             {formatReleaseDate(ep.released)}
                           </div>
                         )}
+                        {(ep.description || ep.overview) && (
+                          <div className="stremio-detail-video-desc">
+                            {ep.description || ep.overview}
+                          </div>
+                        )}
                       </div>
                     </div>
                   ))

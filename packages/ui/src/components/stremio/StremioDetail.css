@@ -443,6 +443,17 @@
   color: rgba(255, 255, 255, 0.4);
 }
 
+.stremio-detail-video-desc {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.55);
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin-top: 2px;
+}
+
 /* ─── Streams Selection View ───────────────────────────────── */
 
 .stremio-detail-streams-header {
