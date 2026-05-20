@@ -74,6 +74,8 @@ interface UIState {
   setStremioSearchQuery: (query: string) => void;
   stremioSelectedSeason: number | undefined;
   setStremioSelectedSeason: (season: number | undefined) => void;
+  stremioCatalogScrollPositions: Record<string, number>;
+  setStremioCatalogScrollPosition: (key: string, value: number) => void;
 }
 
 export const useUIStore = create<UIState>((set) => ({
@@ -144,6 +146,14 @@ export const useUIStore = create<UIState>((set) => ({
   setStremioSearchQuery: (query) => set({ stremioSearchQuery: query }),
   stremioSelectedSeason: undefined,
   setStremioSelectedSeason: (season) => set({ stremioSelectedSeason: season }),
+  stremioCatalogScrollPositions: {},
+  setStremioCatalogScrollPosition: (key, value) =>
+    set((state) => ({
+      stremioCatalogScrollPositions: {
+        ...state.stremioCatalogScrollPositions,
+        [key]: value,
+      },
+    })),
 
 }));
 
@@ -207,3 +217,5 @@ export const useStremioSearchQuery = () => useUIStore((s) => s.stremioSearchQuer
 export const useSetStremioSearchQuery = () => useUIStore((s) => s.setStremioSearchQuery);
 export const useStremioSelectedSeason = () => useUIStore((s) => s.stremioSelectedSeason);
 export const useSetStremioSelectedSeason = () => useUIStore((s) => s.setStremioSelectedSeason);
+export const useStremioCatalogScrollPositions = () => useUIStore((s) => s.stremioCatalogScrollPositions);
+export const useSetStremioCatalogScrollPosition = () => useUIStore((s) => s.setStremioCatalogScrollPosition);

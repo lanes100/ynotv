@@ -1,7 +1,16 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import type { InstalledAddon, StremioMetaPreview, StremioMeta } from '../../types/stremio';
 import { fetchCatalog, fetchMeta } from '../../services/stremio-addon';
-import { useStremioSearchQuery, useSetStremioSearchQuery, useStremioView, useSetStremioView, useStremioSelectedAddonId, useStremioSelectedCatalogId } from '../../stores/uiStore';
+import {
+  useStremioSearchQuery,
+  useSetStremioSearchQuery,
+  useStremioView,
+  useSetStremioView,
+  useStremioSelectedAddonId,
+  useSetStremioSelectedAddonId,
+  useStremioSelectedCatalogId,
+  useSetStremioSelectedCatalogId,
+} from '../../stores/uiStore';
 import { StremioCatalogRow } from './StremioCatalogRow';
 import { CatalogDetailView } from './CatalogDetailView';
 import './StremioHome.css';
@@ -11,21 +20,41 @@ interface StremioHomeProps {
   onItemClick: (meta: StremioMeta) => void;
 }
 
+type StremioSearchResult = StremioMetaPreview & {
+  sourceAddonId: string;
+};
+
+type StremioSearchRow = {
+  id: string;
+  title: string;
+  items: StremioSearchResult[];
+};
+
+function addonHasResource(addon: InstalledAddon, resource: string): boolean {
+  return addon.manifest.resources.some((r) => {
+    if (typeof r === 'string') return r === resource;
+    return r.name === resource;
+  });
+}
+
 export function StremioHome({ addons, onItemClick }: StremioHomeProps) {
   const searchQuery = useStremioSearchQuery();
   const setSearchQuery = useSetStremioSearchQuery();
   const view = useStremioView();
   const setView = useSetStremioView();
   const selectedAddonId = useStremioSelectedAddonId();
+  const setSelectedAddonId = useSetStremioSelectedAddonId();
   const selectedCatalogId = useStremioSelectedCatalogId();
-  const [catalogs, setCatalogs] = useState<{ title: string; items: StremioMetaPreview[] }[]>([]);
+  const setSelectedCatalogId = useSetStremioSelectedCatalogId();
+  const [catalogs, setCatalogs] = useState<{ addonId: string; catalogId: string; title: string; items: StremioMetaPreview[] }[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchResults, setSearchResults] = useState<StremioMetaPreview[]>([]);
+  const [searchRows, setSearchRows] = useState<StremioSearchRow[]>([]);
+  const [expandedSearchRowId, setExpandedSearchRowId] = useState<string | null>(null);
   const [searching, setSearching] = useState(false);
 
   const loadCatalogs = useCallback(async () => {
     setLoading(true);
-    const rows: { title: string; items: StremioMetaPreview[] }[] = [];
+    const rows: { addonId: string; catalogId: string; title: string; items: StremioMetaPreview[] }[] = [];
 
     for (const addon of addons) {
       for (const cat of addon.manifest.catalogs || []) {
@@ -33,6 +62,8 @@ export function StremioHome({ addons, onItemClick }: StremioHomeProps) {
           const resp = await fetchCatalog(addon.baseUrl, cat.type, cat.id, { limit: '20' });
           if (resp?.metas?.length) {
             rows.push({
+              addonId: addon.id,
+              catalogId: cat.id,
               title: cat.name || `${addon.manifest.name} - ${cat.type}`,
               items: resp.metas.slice(0, 20),
             });
@@ -54,25 +85,37 @@ export function StremioHome({ addons, onItemClick }: StremioHomeProps) {
 
   const doSearch = useCallback(async (query: string) => {
     if (!query || query.length < 2) {
-      setSearchResults([]);
+      setSearchRows([]);
+      setExpandedSearchRowId(null);
       setSearching(false);
       return;
     }
     setSearching(true);
-    const results: StremioMetaPreview[] = [];
-    const seen = new Set<string>();
+    const rows: StremioSearchRow[] = [];
 
     for (const addon of addons) {
+      // Match Stremio-like metadata search: query metadata providers, not stream-only addons.
+      if (!addonHasResource(addon, 'catalog') || !addonHasResource(addon, 'meta')) continue;
       for (const cat of addon.manifest.catalogs || []) {
         if (cat.extra?.some(e => e.name === 'search') || cat.extraSupported?.includes('search')) {
           try {
             const resp = await fetchCatalog(addon.baseUrl, cat.type, cat.id, { search: query });
             if (resp?.metas) {
+              const rowItems: StremioSearchResult[] = [];
+              const seenInRow = new Set<string>();
               for (const m of resp.metas) {
-                if (!seen.has(m.id)) {
-                  seen.add(m.id);
-                  results.push(m);
+                const key = `${m.type}:${m.id}`;
+                if (!seenInRow.has(key)) {
+                  seenInRow.add(key);
+                  rowItems.push({ ...m, sourceAddonId: addon.id });
                 }
+              }
+              if (rowItems.length > 0) {
+                rows.push({
+                  id: `${addon.id}:${cat.type}:${cat.id}`,
+                  title: cat.name || `${addon.manifest.name} - ${cat.type}`,
+                  items: rowItems,
+                });
               }
             }
           } catch {
@@ -81,7 +124,11 @@ export function StremioHome({ addons, onItemClick }: StremioHomeProps) {
         }
       }
     }
-    setSearchResults(results);
+    setSearchRows(rows);
+    setExpandedSearchRowId((prev) => {
+      if (!prev) return null;
+      return rows.some((r) => r.id === prev) ? prev : null;
+    });
     setSearching(false);
   }, [addons]);
 
@@ -99,16 +146,18 @@ export function StremioHome({ addons, onItemClick }: StremioHomeProps) {
       setView('search');
       debouncedSearch(value);
     } else {
-      setSearchResults([]);
+      setSearchRows([]);
+      setExpandedSearchRowId(null);
       setSearching(false);
       if (value.length === 0) setView('home');
     }
   };
 
-  const handleItemClickWrapper = useCallback(async (preview: StremioMetaPreview) => {
-    const addon = addons.find(a =>
-      a.manifest.catalogs?.some(c => c.type === preview.type)
-    );
+  const handleItemClickWrapper = useCallback(async (preview: StremioMetaPreview | StremioSearchResult) => {
+    const sourceAddonId = (preview as StremioSearchResult).sourceAddonId;
+    const addon = sourceAddonId
+      ? addons.find(a => a.id === sourceAddonId)
+      : addons.find(a => a.manifest.catalogs?.some(c => c.type === preview.type));
     if (addon) {
       const meta = await fetchMeta([addon], preview.type, preview.id);
       if (meta) onItemClick(meta);
@@ -152,24 +201,41 @@ export function StremioHome({ addons, onItemClick }: StremioHomeProps) {
         <div className="stremio-search-results">
           {searching ? (
             <div className="stremio-loading-text">Searching...</div>
-          ) : searchResults.length > 0 ? (
-            <div className="stremio-meta-grid">
-              {searchResults.map((item) => (
-                <div key={item.id} className="stremio-meta-card" onClick={() => handleItemClickWrapper(item)}>
-                  {item.poster && (
-                    <img
-                      className="stremio-meta-poster"
-                      src={item.poster}
-                      alt={item.name}
-                      loading="lazy"
-                      onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                    />
+          ) : searchRows.length > 0 ? (
+            <div className="stremio-catalog-rows">
+              {searchRows.map((row) => (
+                <div key={row.id}>
+                  <StremioCatalogRow
+                    title={row.title}
+                    items={row.items.slice(0, 20)}
+                    onItemClick={handleItemClickWrapper}
+                    onSeeAll={() => setExpandedSearchRowId((prev) => (prev === row.id ? null : row.id))}
+                    seeAllLabel={expandedSearchRowId === row.id ? 'Collapse' : `See all (${row.items.length})`}
+                  />
+                  {expandedSearchRowId === row.id && (
+                    <div className="stremio-search-expanded">
+                      <div className="stremio-search-expanded-grid">
+                        {row.items.map((item) => (
+                          <div key={`${row.id}:${item.type}:${item.id}`} className="stremio-meta-card" onClick={() => handleItemClickWrapper(item)}>
+                            {item.poster && (
+                              <img
+                                className="stremio-meta-poster"
+                                src={item.poster}
+                                alt={item.name}
+                                loading="lazy"
+                                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                              />
+                            )}
+                            <div className="stremio-meta-card-info">
+                              <div className="stremio-meta-card-title">{item.name}</div>
+                              {item.releaseInfo && <div className="stremio-meta-card-year">{item.releaseInfo}</div>}
+                              {item.imdbRating && <div className="stremio-meta-card-rating">★ {item.imdbRating}</div>}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   )}
-                  <div className="stremio-meta-card-info">
-                    <div className="stremio-meta-card-title">{item.name}</div>
-                    {item.releaseInfo && <div className="stremio-meta-card-year">{item.releaseInfo}</div>}
-                    {item.imdbRating && <div className="stremio-meta-card-rating">★ {item.imdbRating}</div>}
-                  </div>
                 </div>
               ))}
             </div>
@@ -188,6 +254,7 @@ export function StremioHome({ addons, onItemClick }: StremioHomeProps) {
     return (
       <div className="stremio-home">
         <CatalogDetailView
+          key={`${selAddon.id}:${selCat.id}`}
           addon={selAddon}
           catalog={selCat}
           onItemClick={handleItemClickWrapper}
@@ -222,7 +289,17 @@ export function StremioHome({ addons, onItemClick }: StremioHomeProps) {
           <div className="stremio-loading-text">No catalogs available. Install an addon to get started.</div>
         ) : (
           catalogs.map((row, i) => (
-            <StremioCatalogRow key={i} title={row.title} items={row.items} onItemClick={handleItemClickWrapper} />
+            <StremioCatalogRow
+              key={`${row.addonId}:${row.catalogId}:${i}`}
+              title={row.title}
+              items={row.items}
+              onItemClick={handleItemClickWrapper}
+              onSeeAll={() => {
+                setSelectedAddonId(row.addonId);
+                setSelectedCatalogId(row.catalogId);
+                setView('home');
+              }}
+            />
           ))
         )}
       </div>

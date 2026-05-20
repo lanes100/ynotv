@@ -7,7 +7,8 @@ async function fetchJson(url: string): Promise<any> {
   const proxy = window.fetchProxy;
   if (proxy?.fetch) {
     const res = await proxy.fetch(url, { method: 'GET', headers: { 'Accept': 'application/json' } });
-    if (!res.success || !res.data) throw new Error(res.error || `Failed to fetch ${url}`);
+    if (res.error) throw new Error(res.error);
+    if (!res.data) throw new Error(`Failed to fetch ${url}`);
     if (!res.data.ok) throw new Error(`HTTP ${res.data.status} for ${url}`);
     return await res.data.json();
   }
@@ -43,13 +44,17 @@ export async function fetchCatalog(
   id: string,
   extra?: Record<string, string>
 ): Promise<StremioCatalogResponse> {
-  let url = `${normalizeBaseUrl(baseUrl)}/catalog/${type}/${id}.json`;
-  if (extra) {
-    const params = Object.entries(extra)
+  let url = `${normalizeBaseUrl(baseUrl)}/catalog/${type}/${id}`;
+  const extraArgs = extra
+    ? Object.entries(extra)
       .filter(([, v]) => v)
-      .map(([k, v]) => `${k}=${encodeURIComponent(v)}`);
-    if (params.length > 0) url += `?${params.join('&')}`;
+      .map(([k, v]) => `${k}=${encodeURIComponent(v)}`)
+      .join('&')
+    : '';
+  if (extraArgs) {
+    url += `/${extraArgs}`;
   }
+  url += '.json';
   return await fetchJson(url) as StremioCatalogResponse;
 }
 

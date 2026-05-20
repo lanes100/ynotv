@@ -6,9 +6,11 @@ interface StremioCatalogRowProps {
   title: string;
   items: StremioMetaPreview[];
   onItemClick: (item: StremioMetaPreview) => void;
+  onSeeAll?: () => void;
+  seeAllLabel?: string;
 }
 
-export function StremioCatalogRow({ title, items, onItemClick }: StremioCatalogRowProps) {
+export function StremioCatalogRow({ title, items, onItemClick, onSeeAll, seeAllLabel = 'See all' }: StremioCatalogRowProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
@@ -40,6 +42,11 @@ export function StremioCatalogRow({ title, items, onItemClick }: StremioCatalogR
       <div className="stremio-row-header">
         <h3 className="stremio-row-title">{title}</h3>
         <div className="stremio-row-nav">
+          {onSeeAll && (
+            <button className="stremio-row-see-all-btn" onClick={onSeeAll}>
+              {seeAllLabel}
+            </button>
+          )}
           <button className="stremio-row-nav-btn" onClick={() => scroll('left')} disabled={!canScrollLeft}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 18l-6-6 6-6" /></svg>
           </button>
