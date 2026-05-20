@@ -3,13 +3,14 @@ import type { StremioMeta, StremioStream, StremioVideo } from '../../types/strem
 import { useStremioAddonStore } from '../../stores/stremioAddonStore';
 import { useStremioSelectedSeason, useSetStremioSelectedSeason } from '../../stores/uiStore';
 import { useStremioLibraryStore } from '../../stores/stremioLibraryStore';
+import { useStremioWatchStore } from '../../stores/stremioWatchStore';
 import { fetchStreams } from '../../services/stremio-addon';
 import './StremioDetail.css';
 
 interface StremioDetailProps {
   meta: StremioMeta;
   onBack: () => void;
-  onPlay: (stream: StremioStream, meta: StremioMeta) => void;
+  onPlay: (stream: StremioStream, meta: StremioMeta, episodeVideo?: StremioVideo) => void;
   streamPickerMode: 'modal' | 'autoplay';
 }
 
@@ -32,6 +33,8 @@ export function StremioDetail({ meta, onBack, onPlay, streamPickerMode }: Stremi
   const addToLibrary = useStremioLibraryStore((s) => s.addToLibrary);
   const removeFromLibrary = useStremioLibraryStore((s) => s.removeFromLibrary);
   const isInLibrary = useStremioLibraryStore((s) => s.isInLibrary);
+
+  const episodeProgress = useStremioWatchStore((s) => s.episodeProgress);
 
   const [streams, setStreams] = useState<StremioStream[]>([]);
   const [selectedVideo, setSelectedVideo] = useState<StremioVideo | null>(null);
@@ -94,6 +97,17 @@ export function StremioDetail({ meta, onBack, onPlay, streamPickerMode }: Stremi
     }
   }, [isSeries, meta.id, meta.type, addons, streamPickerMode, onPlay, meta]);
 
+  /** Find the next episode in the series after the given one */
+  const getNextEpisode = useCallback((ep: StremioVideo): StremioVideo | undefined => {
+    if (!meta.videos) return undefined;
+    const sorted = [...meta.videos].sort((a, b) => {
+      if ((a.season ?? 0) !== (b.season ?? 0)) return (a.season ?? 0) - (b.season ?? 0);
+      return (a.episode ?? 0) - (b.episode ?? 0);
+    });
+    const idx = sorted.findIndex((v) => v.id === ep.id);
+    return idx >= 0 && idx < sorted.length - 1 ? sorted[idx + 1] : undefined;
+  }, [meta.videos]);
+
   const handleEpisodeClick = useCallback(async (ep: StremioVideo) => {
     setSelectedVideo(ep);
     setLoadingStreams(true);
@@ -104,7 +118,7 @@ export function StremioDetail({ meta, onBack, onPlay, streamPickerMode }: Stremi
     if (streamPickerMode === 'autoplay' && result.length > 0) {
       const direct = result.find((s) => s.url && !s.behaviorHints?.notWebReady) || result[0];
       if (direct) {
-        onPlay(direct, meta);
+        onPlay(direct, meta, ep);
         setSelectedVideo(null); // Reset back to list on play
       }
     }
@@ -296,37 +310,60 @@ export function StremioDetail({ meta, onBack, onPlay, streamPickerMode }: Stremi
                 {filteredEpisodes.length === 0 ? (
                   <div className="stremio-detail-no-episodes">No episodes found.</div>
                 ) : (
-                  filteredEpisodes.map((ep) => (
-                    <div
-                      key={ep.id}
-                      className="stremio-detail-video-card"
-                      onClick={() => handleEpisodeClick(ep)}
-                    >
-                      <div className="stremio-detail-video-thumb-container">
-                        {ep.thumbnail ? (
-                          <img className="stremio-detail-video-thumb" src={ep.thumbnail} alt="" loading="lazy" />
-                        ) : (
-                          <div className="stremio-detail-video-thumb-placeholder">E{ep.episode}</div>
-                        )}
-                      </div>
-                      <div className="stremio-detail-video-info">
-                        <div className="stremio-detail-video-title">
-                          {ep.episode !== undefined ? `${ep.episode}. ` : ''}
-                          {ep.title || `Episode ${ep.episode}`}
+                  filteredEpisodes.map((ep) => {
+                    const epProg = episodeProgress[ep.id];
+                    const epFraction = epProg?.progressFraction ?? 0;
+                    const epFinished = epProg?.finished ?? false;
+                    const showEpProgress = epFraction > 0.02 && !epFinished;
+                    return (
+                      <div
+                        key={ep.id}
+                        className={`stremio-detail-video-card${epFinished ? ' stremio-ep-watched' : ''}`}
+                        onClick={() => handleEpisodeClick(ep)}
+                      >
+                        <div className="stremio-detail-video-thumb-container stremio-ep-thumb-wrap">
+                          {ep.thumbnail ? (
+                            <img className="stremio-detail-video-thumb" src={ep.thumbnail} alt="" loading="lazy" />
+                          ) : (
+                            <div className="stremio-detail-video-thumb-placeholder">E{ep.episode}</div>
+                          )}
+                          {/* Episode progress bar */}
+                          {showEpProgress && (
+                            <div className="stremio-ep-progress-track">
+                              <div
+                                className="stremio-ep-progress-fill"
+                                style={{ width: `${Math.round(epFraction * 100)}%` }}
+                              />
+                            </div>
+                          )}
+                          {/* Watched checkmark badge */}
+                          {epFinished && (
+                            <div className="stremio-ep-watched-badge" title="Watched">
+                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                                <polyline points="20 6 9 17 4 12" />
+                              </svg>
+                            </div>
+                          )}
                         </div>
-                        {ep.released && (
-                          <div className="stremio-detail-video-date">
-                            {formatReleaseDate(ep.released)}
+                        <div className="stremio-detail-video-info">
+                          <div className="stremio-detail-video-title">
+                            {ep.episode !== undefined ? `${ep.episode}. ` : ''}
+                            {ep.title || `Episode ${ep.episode}`}
                           </div>
-                        )}
-                        {(ep.description || ep.overview) && (
-                          <div className="stremio-detail-video-desc">
-                            {ep.description || ep.overview}
-                          </div>
-                        )}
+                          {ep.released && (
+                            <div className="stremio-detail-video-date">
+                              {formatReleaseDate(ep.released)}
+                            </div>
+                          )}
+                          {(ep.description || ep.overview) && (
+                            <div className="stremio-detail-video-desc">
+                              {ep.description || ep.overview}
+                            </div>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ))
+                    );
+                  })
                 )}
               </div>
             </div>
@@ -366,7 +403,7 @@ export function StremioDetail({ meta, onBack, onPlay, streamPickerMode }: Stremi
                       <div
                         key={idx}
                         className="stremio-detail-stream-card"
-                        onClick={() => onPlay(stream, meta)}
+                        onClick={() => onPlay(stream, meta, selectedVideo ?? undefined)}
                       >
                         <div className="stremio-detail-stream-header-row">
                           <div className="stremio-detail-stream-card-title">

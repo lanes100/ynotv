@@ -13,6 +13,7 @@ import {
 } from '../../stores/uiStore';
 import { StremioCatalogRow } from './StremioCatalogRow';
 import { CatalogDetailView } from './CatalogDetailView';
+import { StremioRecentlyWatched } from './StremioRecentlyWatched';
 import './StremioHome.css';
 
 interface StremioHomeProps {
@@ -259,6 +260,12 @@ export function StremioHome({ addons, onItemClick }: StremioHomeProps) {
       </div>
 
       <div className="stremio-catalog-rows">
+        {/* Continue Watching — always shown if there's history */}
+        <StremioRecentlyWatched
+          addons={addons}
+          onItemClick={onItemClick}
+        />
+
         {renderedRows.length === 0 ? (
           <div className="stremio-loading-text">No catalogs available. Install an addon to get started.</div>
         ) : (

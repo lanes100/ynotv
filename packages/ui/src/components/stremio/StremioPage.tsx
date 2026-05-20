@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import type { StremioStreamPickerMode, StremioMeta, StremioStream } from '../../types/stremio';
+import type { StremioStreamPickerMode, StremioMeta, StremioStream, StremioVideo } from '../../types/stremio';
 import { useStremioAddonStore } from '../../stores/stremioAddonStore';
 import {
   useStremioView,
@@ -73,9 +73,9 @@ export function StremioPage({ onClose, stremioStreamPickerMode, onStreamPickerMo
     }
   }, [activeMeta, setActiveMeta, setStremioView, setSelectedSeason]);
 
-  const handlePlayStream = useCallback((stream: StremioStream, meta: StremioMeta) => {
+  const handlePlayStream = useCallback((stream: StremioStream, meta: StremioMeta, episodeVideo?: StremioVideo) => {
     window.dispatchEvent(new CustomEvent('ynotv:stremio-play', {
-      detail: { stream, meta, season: selectedSeason },
+      detail: { stream, meta, season: selectedSeason, episodeVideo },
     }));
   }, [selectedSeason]);
 

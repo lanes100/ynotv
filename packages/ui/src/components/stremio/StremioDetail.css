@@ -589,3 +589,60 @@
 @keyframes stremio-spin {
   to { transform: rotate(360deg); }
 }
+
+/* ─── Episode Progress & Watched Overlays ──────────────────── */
+
+/* The thumb container needs relative positioning for overlays */
+.stremio-ep-thumb-wrap {
+  position: relative;
+}
+
+/* Progress bar at the bottom of the episode thumbnail */
+.stremio-ep-progress-track {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.stremio-ep-progress-fill {
+  height: 100%;
+  background: #00d4ff;
+  border-radius: 0 2px 2px 0;
+  transition: width 0.3s ease;
+}
+
+/* Watched checkmark badge — green circle in top-right corner of thumbnail */
+.stremio-ep-watched-badge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 18px;
+  height: 18px;
+  background: #22c55e;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+}
+
+.stremio-ep-watched-badge svg {
+  width: 10px;
+  height: 10px;
+  stroke: white;
+  stroke-width: 3;
+}
+
+/* Watched episode card — subtle green tint on the border */
+.stremio-detail-video-card.stremio-ep-watched {
+  border-color: rgba(34, 197, 94, 0.18);
+  background: rgba(34, 197, 94, 0.04);
+}
+
+.stremio-detail-video-card.stremio-ep-watched .stremio-detail-video-title {
+  color: rgba(255, 255, 255, 0.55);
+}
+

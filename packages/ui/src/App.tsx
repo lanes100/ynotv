@@ -79,6 +79,7 @@ import { useMpvListeners } from './hooks/useMpvListeners';
 import { AdvancedSearchModal, type AdvancedSearchConfig } from './components/AdvancedSearchModal';
 import { StremioPage } from './components/stremio/StremioPage';
 import { useStremioAddonStore } from './stores/stremioAddonStore';
+import { useStremioWatchStore } from './stores/stremioWatchStore';
 import { useUIStore } from './stores/uiStore';
 import { fetchSubtitles } from './services/stremio-addon';
 
@@ -851,14 +852,71 @@ function App() {
   const setActiveViewRef = useRef(setActiveView);
   useEffect(() => { setActiveViewRef.current = setActiveView; }, [setActiveView]);
 
+  // Ref to hold current stremio episode info for the progress updater
+  const stremioEpisodeRef = useRef<{
+    metaId: string;
+    name: string;
+    poster?: string;
+    videoId: string;
+    season: number;
+    episode: number;
+    nextVideoId?: string;
+    nextSeason?: number;
+    nextEpisode?: number;
+  } | null>(null);
+  const stremioMovieRef = useRef<{ metaId: string; name: string; poster?: string } | null>(null);
+
   useEffect(() => {
     const handler = async (e: Event) => {
       const detail = (e as CustomEvent).detail;
       if (!detail?.stream || !detail?.meta) return;
 
-      const { stream, meta } = detail;
+      const { stream, meta, episodeVideo } = detail;
       const url = stream.url || (stream.infoHash ? `infoHash:${stream.infoHash}${stream.fileIdx !== undefined ? `:${stream.fileIdx}` : ''}` : null);
       if (!url) return;
+
+      // Record watch in stremio watch store
+      const watchStore = useStremioWatchStore.getState();
+      if (meta.type === 'series' && episodeVideo) {
+        // Compute next episode: iterate videos sorted by season/episode
+        let nextVideoId: string | undefined;
+        let nextSeason: number | undefined;
+        let nextEpisode: number | undefined;
+        if (meta.videos && Array.isArray(meta.videos)) {
+          const sorted = [...meta.videos].sort((a: any, b: any) => {
+            if ((a.season ?? 0) !== (b.season ?? 0)) return (a.season ?? 0) - (b.season ?? 0);
+            return (a.episode ?? 0) - (b.episode ?? 0);
+          });
+          const idx = sorted.findIndex((v: any) => v.id === episodeVideo.id);
+          if (idx >= 0 && idx < sorted.length - 1) {
+            const nxt = sorted[idx + 1];
+            nextVideoId = nxt.id;
+            nextSeason = nxt.season;
+            nextEpisode = nxt.episode;
+          }
+        }
+        watchStore.recordEpisodeStart(
+          meta.id, meta.name, meta.poster,
+          episodeVideo.id, episodeVideo.season ?? 0, episodeVideo.episode ?? 0,
+          nextVideoId, nextSeason, nextEpisode
+        );
+        stremioEpisodeRef.current = {
+          metaId: meta.id,
+          name: meta.name,
+          poster: meta.poster,
+          videoId: episodeVideo.id,
+          season: episodeVideo.season ?? 0,
+          episode: episodeVideo.episode ?? 0,
+          nextVideoId,
+          nextSeason,
+          nextEpisode,
+        };
+        stremioMovieRef.current = null;
+      } else {
+        watchStore.recordMovieWatch(meta.id, meta.name, meta.poster);
+        stremioMovieRef.current = { metaId: meta.id, name: meta.name, poster: meta.poster };
+        stremioEpisodeRef.current = null;
+      }
 
       setActiveViewRef.current('none');
       await handlePlayVodRef.current({
@@ -896,6 +954,49 @@ function App() {
     window.addEventListener('ynotv:stremio-play', handler);
     return () => window.removeEventListener('ynotv:stremio-play', handler);
   }, []);
+
+  // ==========================================================================
+  // Stremio Progress Updater — saves watch progress every 10 seconds
+  // ==========================================================================
+  const positionRef = useRef(position);
+  const durationRef = useRef(duration);
+  useEffect(() => { positionRef.current = position; }, [position]);
+  useEffect(() => { durationRef.current = duration; }, [duration]);
+
+  useEffect(() => {
+    if (vodInfo?.source_id !== 'stremio' || !playing || duration <= 0) return;
+
+    const saveStremioProgress = () => {
+      const pos = positionRef.current;
+      const dur = durationRef.current;
+      if (dur <= 0 || pos <= 0) return;
+      const fraction = Math.min(1, pos / dur);
+      const watchStore = useStremioWatchStore.getState();
+
+      const epInfo = stremioEpisodeRef.current;
+      const movieInfo = stremioMovieRef.current;
+
+      if (epInfo) {
+        watchStore.updateEpisodeProgress(
+          epInfo.metaId,
+          epInfo.videoId,
+          fraction,
+          epInfo.season,
+          epInfo.episode,
+          epInfo.nextVideoId,
+          epInfo.nextSeason,
+          epInfo.nextEpisode
+        );
+      } else if (movieInfo) {
+        watchStore.updateMovieProgress(movieInfo.metaId, fraction);
+      }
+    };
+
+    // Save immediately and then every 10 seconds
+    saveStremioProgress();
+    const interval = setInterval(saveStremioProgress, 10_000);
+    return () => clearInterval(interval);
+  }, [vodInfo, playing, duration]);
 
   // ==========================================================================
   // Handle Channel Navigation (Up/Down) - with Series Episode Support
