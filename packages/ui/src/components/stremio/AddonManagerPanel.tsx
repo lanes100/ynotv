@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { invoke } from '@tauri-apps/api/core';
 import { useStremioAddonStore } from '../../stores/stremioAddonStore';
 import type { InstalledAddon } from '../../types/stremio';
 import './AddonManagerPanel.css';
@@ -16,6 +17,16 @@ export function AddonManagerPanel({ onClose }: AddonManagerPanelProps) {
   const [manifestUrl, setManifestUrl] = useState('');
   const [error, setError] = useState('');
   const [installing, setInstalling] = useState<string | boolean>(false);
+
+  const openConfigureUrl = async (baseUrl: string) => {
+    const url = `${baseUrl.replace(/\/$/, '')}/configure`;
+    try {
+      await invoke('open_external_url', { url });
+    } catch (e) {
+      console.error('[AddonManager] Failed to open configure URL:', e);
+      window.open(url, '_blank', 'noopener,noreferrer');
+    }
+  };
 
   const handleInstall = async (url: string) => {
     if (!url.trim()) return;
@@ -112,15 +123,13 @@ export function AddonManagerPanel({ onClose }: AddonManagerPanelProps) {
 
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
                         {!addon.isDefault && (
-                          <a
-                            href={`${addon.baseUrl.replace(/\/$/, '')}/configure`}
-                            target="_blank"
-                            rel="noopener noreferrer"
+                          <button
                             className="stremio-addon-configure-btn"
                             title="Configure Addon"
+                            onClick={() => openConfigureUrl(addon.baseUrl)}
                           >
                             ⚙
-                          </a>
+                          </button>
                         )}
                         {!addon.isDefault && (
                           <button

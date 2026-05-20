@@ -831,12 +831,15 @@ export function NowPlayingBar({
             </button>
           </div>
 
-          {/* Audio Track Selection Modal */}
-          <TrackSelectionModal
-            isOpen={showAudioModal}
-            type="audio"
-            onClose={() => setShowAudioModal(false)}
-          />
+          {/* Audio Track Selection Modal - rendered via portal to center in viewport */}
+          {showAudioModal && createPortal(
+            <TrackSelectionModal
+              isOpen={showAudioModal}
+              type="audio"
+              onClose={() => setShowAudioModal(false)}
+            />,
+            document.body
+          )}
 
           {/* Quick Record Modal - rendered via portal to center in viewport */}
           {showRecordModal && createPortal(
