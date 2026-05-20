@@ -68,10 +68,11 @@ export function StremioDetail({ meta, onBack, onPlay, streamPickerMode }: Stremi
     );
   }, [seasonEpisodes, videoSearch]);
 
-  // Handle season initialization
+  // Handle season initialization — prefer Season 1 over Season 0 (specials)
   useEffect(() => {
     if (isSeries && seasons.length > 0 && selectedSeason === undefined) {
-      setSelectedSeason(seasons[0]);
+      const preferred = seasons.find((s) => s >= 1) ?? seasons[0];
+      setSelectedSeason(preferred);
     }
   }, [isSeries, seasons, selectedSeason, setSelectedSeason]);
 

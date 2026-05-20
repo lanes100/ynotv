@@ -63,7 +63,7 @@ export interface AppSettings {
   sportsBgOpacity: number; // 0–1
 
   // Startup view
-  startupView: 'none' | 'guide' | 'movies' | 'series' | 'dvr' | 'sports' | 'calendar';
+  startupView: 'none' | 'guide' | 'movies' | 'series' | 'dvr' | 'sports' | 'calendar' | 'stremio';
 
   // Actions
   setTheme: (theme: ThemeId) => void;

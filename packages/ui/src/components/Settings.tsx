@@ -125,7 +125,7 @@ export function Settings({
   const [rememberLastChannels, setRememberLastChannels] = useState(false);
   const [reopenLastOnStartup, setReopenLastOnStartup] = useState(false);
   const [savedLayoutState, setSavedLayoutState] = useState<SavedLayoutState | null>(null);
-  const [startupView, setStartupView] = useState<'none' | 'guide' | 'movies' | 'series' | 'dvr' | 'sports' | 'calendar'>('none');
+  const [startupView, setStartupView] = useState<'none' | 'guide' | 'movies' | 'series' | 'dvr' | 'sports' | 'calendar' | 'stremio'>('none');
 
   // Playback settings state
   const [mpvParams, setMpvParams] = useState<string>('');
@@ -773,7 +773,7 @@ export function Settings({
     }
   };
 
-  const handleStartupViewChange = async (value: 'none' | 'guide' | 'movies' | 'series' | 'dvr' | 'sports' | 'calendar') => {
+  const handleStartupViewChange = async (value: 'none' | 'guide' | 'movies' | 'series' | 'dvr' | 'sports' | 'calendar' | 'stremio') => {
     setStartupView(value);
     if (window.storage) {
       await window.storage.updateSettings({ startupView: value });
