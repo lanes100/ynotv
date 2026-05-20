@@ -39,10 +39,12 @@ export function CatalogDetailView({ addon, catalog, onItemClick }: CatalogDetail
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const loadingMoreRef = useRef(loadingMore);
   const hasMoreRef = useRef(hasMore);
+  const itemsRef = useRef<StremioMetaPreview[]>(items);
   const PAGE_SIZE = 50;
 
   useEffect(() => { loadingMoreRef.current = loadingMore; }, [loadingMore]);
   useEffect(() => { hasMoreRef.current = hasMore; }, [hasMore]);
+  useEffect(() => { itemsRef.current = items; }, [items]);
 
   // Compute navigation filters
   const types = useMemo(() => {
@@ -116,17 +118,30 @@ export function CatalogDetailView({ addon, catalog, onItemClick }: CatalogDetail
       const resp = await fetchCatalog(addon.baseUrl, catalog.type, catalog.id, extraParams);
       if (requestId !== latestRequestRef.current) return;
       const metas = resp?.metas || [];
-      setItems((prev) => {
-        const combined = replace ? metas : [...prev, ...metas];
-        const seen = new Set<string>();
-        return combined.filter((m) => {
-          const key = `${m.type}:${m.id}`;
-          if (seen.has(key)) return false;
-          seen.add(key);
-          return true;
-        });
+      
+      const prevItems = itemsRef.current;
+      const combined = replace ? metas : [...prevItems, ...metas];
+      const seen = new Set<string>();
+      const filtered = combined.filter((m) => {
+        const key = `${m.type}:${m.id}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
       });
-      if (metas.length < PAGE_SIZE) setHasMore(false);
+
+      const receivedAnyNew = filtered.length > prevItems.length;
+      setItems(filtered);
+
+      // If we are appending items but didn't actually add any new unique elements,
+      // it means the source has no more unique elements (or is repeating them).
+      if (!replace && !receivedAnyNew) {
+        setHasMore(false);
+      }
+
+      // If the response returns exactly 0 metas, we have reached the end.
+      if (metas.length === 0) {
+        setHasMore(false);
+      }
     } catch {
       if (requestId === latestRequestRef.current && replace) setError('Failed to load catalog.');
     } finally {
