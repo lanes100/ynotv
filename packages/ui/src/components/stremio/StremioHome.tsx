@@ -46,42 +46,18 @@ export function StremioHome({ addons, onItemClick }: StremioHomeProps) {
   const setSelectedAddonId = useSetStremioSelectedAddonId();
   const selectedCatalogId = useStremioSelectedCatalogId();
   const setSelectedCatalogId = useSetStremioSelectedCatalogId();
-  const [catalogs, setCatalogs] = useState<{ addonId: string; catalogId: string; title: string; items: StremioMetaPreview[] }[]>([]);
-  const [loading, setLoading] = useState(true);
   const [searchRows, setSearchRows] = useState<StremioSearchRow[]>([]);
   const [expandedSearchRowId, setExpandedSearchRowId] = useState<string | null>(null);
   const [searching, setSearching] = useState(false);
 
-  const loadCatalogs = useCallback(async () => {
-    setLoading(true);
-    const rows: { addonId: string; catalogId: string; title: string; items: StremioMetaPreview[] }[] = [];
-
-    for (const addon of addons) {
-      for (const cat of addon.manifest.catalogs || []) {
-        try {
-          const resp = await fetchCatalog(addon.baseUrl, cat.type, cat.id, { limit: '20' });
-          if (resp?.metas?.length) {
-            rows.push({
-              addonId: addon.id,
-              catalogId: cat.id,
-              title: cat.name || `${addon.manifest.name} - ${cat.type}`,
-              items: resp.metas.slice(0, 20),
-            });
-          }
-        } catch {
-          // Skip
-        }
-      }
-    }
-    setCatalogs(rows);
-    setLoading(false);
+  const renderedRows = useMemo(() => {
+    return addons.flatMap((addon) =>
+      (addon.manifest.catalogs || []).map((cat) => ({
+        addon,
+        catalog: cat,
+      }))
+    );
   }, [addons]);
-
-  useEffect(() => {
-    if (addons.length > 0) {
-      loadCatalogs();
-    }
-  }, [addons, loadCatalogs]);
 
   const doSearch = useCallback(async (query: string) => {
     if (!query || query.length < 2) {
@@ -283,20 +259,19 @@ export function StremioHome({ addons, onItemClick }: StremioHomeProps) {
       </div>
 
       <div className="stremio-catalog-rows">
-        {loading ? (
-          <div className="stremio-loading-text">Loading catalogs...</div>
-        ) : catalogs.length === 0 ? (
+        {renderedRows.length === 0 ? (
           <div className="stremio-loading-text">No catalogs available. Install an addon to get started.</div>
         ) : (
-          catalogs.map((row, i) => (
+          renderedRows.map(({ addon, catalog }) => (
             <StremioCatalogRow
-              key={`${row.addonId}:${row.catalogId}:${i}`}
-              title={row.title}
-              items={row.items}
+              key={`${addon.id}:${catalog.type}:${catalog.id}`}
+              title={catalog.name || `${addon.manifest.name} - ${catalog.type}`}
+              addon={addon}
+              catalog={catalog}
               onItemClick={handleItemClickWrapper}
               onSeeAll={() => {
-                setSelectedAddonId(row.addonId);
-                setSelectedCatalogId(row.catalogId);
+                setSelectedAddonId(addon.id);
+                setSelectedCatalogId(catalog.id);
                 setView('home');
               }}
             />

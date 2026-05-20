@@ -6,7 +6,6 @@ import { fetchManifest } from '../services/stremio-addon';
 const STORAGE_KEY = 'stremio-addons';
 
 const DEFAULT_ADDONS = [
-  { url: 'https://v3-cinemeta.strem.io/manifest.json', isDefault: true },
   { url: 'https://opensubtitles-v3.strem.io/manifest.json', isDefault: true },
 ];
 
@@ -17,6 +16,7 @@ interface StremioAddonStore {
   addAddon: (url: string) => Promise<void>;
   removeAddon: (id: string) => void;
   getAddonsWithResource: (resource: string) => InstalledAddon[];
+  reorderAddons: (currentIndex: number, direction: 'up' | 'down') => void;
 }
 
 export const useStremioAddonStore = create<StremioAddonStore>()(
@@ -24,6 +24,18 @@ export const useStremioAddonStore = create<StremioAddonStore>()(
     (set, get) => ({
       addons: [],
       initialized: false,
+      reorderAddons: (currentIndex: number, direction: 'up' | 'down') => {
+        const state = get();
+        const nextIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+        if (nextIndex < 0 || nextIndex >= state.addons.length) return;
+
+        const newAddons = [...state.addons];
+        const temp = newAddons[currentIndex];
+        newAddons[currentIndex] = newAddons[nextIndex];
+        newAddons[nextIndex] = temp;
+
+        set({ addons: newAddons });
+      },
 
       initializeDefaults: async () => {
         const state = get();

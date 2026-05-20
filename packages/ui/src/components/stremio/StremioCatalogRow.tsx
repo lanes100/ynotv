@@ -1,19 +1,32 @@
 import { useRef, useState, useCallback, useEffect } from 'react';
-import type { StremioMetaPreview } from '../../types/stremio';
+import type { InstalledAddon, StremioManifestCatalog, StremioMetaPreview } from '../../types/stremio';
+import { fetchCatalog } from '../../services/stremio-addon';
 import './StremioHome.css';
 
 interface StremioCatalogRowProps {
   title: string;
-  items: StremioMetaPreview[];
+  addon?: InstalledAddon;
+  catalog?: StremioManifestCatalog;
+  items?: StremioMetaPreview[];
   onItemClick: (item: StremioMetaPreview) => void;
   onSeeAll?: () => void;
   seeAllLabel?: string;
 }
 
-export function StremioCatalogRow({ title, items, onItemClick, onSeeAll, seeAllLabel = 'See all' }: StremioCatalogRowProps) {
+export function StremioCatalogRow({
+  title,
+  addon,
+  catalog,
+  items: staticItems,
+  onItemClick,
+  onSeeAll,
+  seeAllLabel = 'See all',
+}: StremioCatalogRowProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
+  const [items, setItems] = useState<StremioMetaPreview[]>(staticItems || []);
+  const [loading, setLoading] = useState(!staticItems && !!addon && !!catalog);
 
   const update = useCallback(() => {
     const el = scrollRef.current;
@@ -23,10 +36,38 @@ export function StremioCatalogRow({ title, items, onItemClick, onSeeAll, seeAllL
   }, []);
 
   useEffect(() => {
+    if (staticItems) {
+      setItems(staticItems);
+      setLoading(false);
+      return;
+    }
+    if (!addon || !catalog) return;
+
+    let active = true;
+    setLoading(true);
+    fetchCatalog(addon.baseUrl, catalog.type, catalog.id, { limit: '20' })
+      .then((resp) => {
+        if (!active) return;
+        setItems(resp?.metas?.slice(0, 20) || []);
+        setLoading(false);
+      })
+      .catch((e) => {
+        console.warn('[StremioCatalogRow] Failed to load catalog:', catalog.name, e);
+        if (!active) return;
+        setItems([]);
+        setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [addon?.baseUrl, catalog?.type, catalog?.id, staticItems]);
+
+  useEffect(() => {
     update();
     window.addEventListener('resize', update);
     return () => window.removeEventListener('resize', update);
-  }, [update, items.length]);
+  }, [update, items.length, loading]);
 
   const scroll = (dir: 'left' | 'right') => {
     const el = scrollRef.current;
@@ -34,6 +75,29 @@ export function StremioCatalogRow({ title, items, onItemClick, onSeeAll, seeAllL
     const amount = el.clientWidth * 0.75;
     el.scrollTo({ left: el.scrollLeft + (dir === 'left' ? -amount : amount), behavior: 'smooth' });
   };
+
+  if (loading) {
+    return (
+      <section className="stremio-row">
+        <div className="stremio-row-header">
+          <div className="stremio-row-title skeleton-text" style={{ width: '180px', height: '22px', background: 'rgba(255,255,255,0.06)', borderRadius: '4px' }} />
+        </div>
+        <div className="stremio-row-scroll" style={{ overflowX: 'hidden' }}>
+          <div className="stremio-row-track">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="stremio-row-card skeleton-card" style={{ pointerEvents: 'none' }}>
+                <div className="stremio-row-poster skeleton-poster" />
+                <div className="stremio-row-card-info" style={{ marginTop: '8px' }}>
+                  <div className="skeleton-line" style={{ height: '14px', background: 'rgba(255,255,255,0.04)', borderRadius: '4px', width: '80%', marginBottom: '6px' }} />
+                  <div className="skeleton-line" style={{ height: '10px', background: 'rgba(255,255,255,0.04)', borderRadius: '3px', width: '40%' }} />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   if (items.length === 0) return null;
 

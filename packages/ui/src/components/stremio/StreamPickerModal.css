@@ -105,7 +105,10 @@
 .stremio-picker-item-desc {
   font-size: 0.8rem;
   color: rgba(255, 255, 255, 0.5);
-  margin-top: 2px;
+  margin-top: 4px;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 .stremio-picker-item-hash {

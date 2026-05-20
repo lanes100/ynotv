@@ -72,6 +72,23 @@
   flex: 1;
 }
 
+.stremio-sidebar-item-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+}
+
+.stremio-sidebar-icon {
+  color: inherit;
+  opacity: 0.7;
+  flex-shrink: 0;
+}
+
+.stremio-sidebar-item.active .stremio-sidebar-icon {
+  opacity: 1;
+}
+
 .stremio-sidebar-item-type {
   font-size: 0.7rem;
   color: rgba(255, 255, 255, 0.3);

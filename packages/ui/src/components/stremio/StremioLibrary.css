@@ -1,0 +1,78 @@
+.stremio-library {
+  padding: 32px 24px;
+  min-height: 100%;
+}
+
+.stremio-library-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.stremio-library-title {
+  margin: 0;
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: white;
+}
+
+.stremio-library-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.stremio-library-search {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: white;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 0.85rem;
+  outline: none;
+  width: 200px;
+  transition: all 0.15s;
+}
+
+.stremio-library-search:focus {
+  border-color: rgba(0, 212, 255, 0.5);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.stremio-library-select {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: white;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 0.85rem;
+  outline: none;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.stremio-library-select:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.stremio-library-select option {
+  background: #14141e;
+  color: white;
+}
+
+.stremio-library-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 20px;
+}
+
+.stremio-library-empty {
+  text-align: center;
+  color: rgba(255, 255, 255, 0.4);
+  padding: 80px 0;
+  font-size: 1rem;
+}

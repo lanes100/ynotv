@@ -1,7 +1,13 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import type { InstalledAddon, StremioManifestCatalog, StremioMetaPreview } from '../../types/stremio';
 import { fetchCatalog } from '../../services/stremio-addon';
-import { useStremioCatalogScrollPositions, useSetStremioCatalogScrollPosition } from '../../stores/uiStore';
+import { useStremioAddonStore } from '../../stores/stremioAddonStore';
+import {
+  useStremioCatalogScrollPositions,
+  useSetStremioCatalogScrollPosition,
+  useSetStremioSelectedAddonId,
+  useSetStremioSelectedCatalogId,
+} from '../../stores/uiStore';
 import './StremioHome.css';
 
 interface CatalogDetailViewProps {
@@ -14,11 +20,18 @@ export function CatalogDetailView({ addon, catalog, onItemClick }: CatalogDetail
   const catalogKey = `${addon.id}:${catalog.type}:${catalog.id}`;
   const scrollPositions = useStremioCatalogScrollPositions();
   const setScrollPosition = useSetStremioCatalogScrollPosition();
+  const setSelectedAddonId = useSetStremioSelectedAddonId();
+  const setSelectedCatalogId = useSetStremioSelectedCatalogId();
+
+  const addons = useStremioAddonStore((s) => s.addons);
+
   const [items, setItems] = useState<StremioMetaPreview[]>([]);
   const [loadingInitial, setLoadingInitial] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedGenre, setSelectedGenre] = useState('');
+
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const latestRequestRef = useRef(0);
@@ -30,6 +43,55 @@ export function CatalogDetailView({ addon, catalog, onItemClick }: CatalogDetail
 
   useEffect(() => { loadingMoreRef.current = loadingMore; }, [loadingMore]);
   useEffect(() => { hasMoreRef.current = hasMore; }, [hasMore]);
+
+  // Compute navigation filters
+  const types = useMemo(() => {
+    const set = new Set<string>();
+    for (const a of addons) {
+      for (const c of a.manifest.catalogs || []) {
+        set.add(c.type);
+      }
+    }
+    return Array.from(set);
+  }, [addons]);
+
+  const availableCatalogs = useMemo(() => {
+    const list: { addon: InstalledAddon; catalog: StremioManifestCatalog }[] = [];
+    for (const a of addons) {
+      for (const c of a.manifest.catalogs || []) {
+        if (c.type === catalog.type) {
+          list.push({ addon: a, catalog: c });
+        }
+      }
+    }
+    return list;
+  }, [addons, catalog.type]);
+
+  const genreExtra = useMemo(() => {
+    return catalog.extra?.find((e) => e.name === 'genre');
+  }, [catalog]);
+
+  const genreOptions = useMemo(() => {
+    return genreExtra?.options || [];
+  }, [genreExtra]);
+
+  const handleTypeChange = (newType: string) => {
+    const match = addons
+      .flatMap((a) => (a.manifest.catalogs || []).map((c) => ({ addon: a, catalog: c })))
+      .find((x) => x.catalog.type === newType);
+    if (match) {
+      setSelectedAddonId(match.addon.id);
+      setSelectedCatalogId(match.catalog.id);
+      setSelectedGenre('');
+    }
+  };
+
+  const handleCatalogChange = (compositeKey: string) => {
+    const [addonId, catalogId] = compositeKey.split('|');
+    setSelectedAddonId(addonId);
+    setSelectedCatalogId(catalogId);
+    setSelectedGenre('');
+  };
 
   const loadPage = useCallback(async (skip: number, replace = false) => {
     if (!replace && (loadingMoreRef.current || !hasMoreRef.current)) return;
@@ -43,10 +105,15 @@ export function CatalogDetailView({ addon, catalog, onItemClick }: CatalogDetail
     }
 
     try {
-      const resp = await fetchCatalog(addon.baseUrl, catalog.type, catalog.id, {
+      const extraParams: Record<string, string> = {
         skip: String(skip),
         limit: String(PAGE_SIZE),
-      });
+      };
+      if (selectedGenre) {
+        extraParams.genre = selectedGenre;
+      }
+
+      const resp = await fetchCatalog(addon.baseUrl, catalog.type, catalog.id, extraParams);
       if (requestId !== latestRequestRef.current) return;
       const metas = resp?.metas || [];
       setItems((prev) => {
@@ -68,7 +135,7 @@ export function CatalogDetailView({ addon, catalog, onItemClick }: CatalogDetail
         else setLoadingMore(false);
       }
     }
-  }, [addon.baseUrl, catalog.type, catalog.id]);
+  }, [addon.baseUrl, catalog.type, catalog.id, selectedGenre]);
 
   useEffect(() => {
     latestRequestRef.current += 1;
@@ -89,31 +156,37 @@ export function CatalogDetailView({ addon, catalog, onItemClick }: CatalogDetail
         debounceTimerRef.current = null;
       }
     };
-  }, [catalogKey, loadPage]);
+  }, [catalogKey, selectedGenre, loadPage]);
 
+  // Observe sentinel intersection relative to the .stremio-main scrolling container
   useEffect(() => {
     if (!sentinelRef.current || loadingInitial || loadingMore || !hasMore) return;
+    const mainEl = document.querySelector('.stremio-main');
     const observer = new IntersectionObserver((entries) => {
       const first = entries[0];
       if (first?.isIntersecting) {
         void loadPage(items.length, false);
       }
-    }, { rootMargin: '300px' });
+    }, { root: mainEl, rootMargin: '400px' });
     observer.observe(sentinelRef.current);
     return () => observer.disconnect();
   }, [items.length, hasMore, loadingInitial, loadingMore, loadPage]);
 
+  // Restore scroll position on the actual scroll container (.stremio-main)
   useEffect(() => {
-    if (loadingInitial || restoredScrollRef.current || !containerRef.current) return;
+    if (loadingInitial || restoredScrollRef.current) return;
+    const el = document.querySelector('.stremio-main');
+    if (!el) return;
     const saved = scrollPositions[catalogKey];
     if (typeof saved === 'number' && saved > 0) {
-      containerRef.current.scrollTop = saved;
+      el.scrollTop = saved;
     }
     restoredScrollRef.current = true;
   }, [catalogKey, loadingInitial, scrollPositions]);
 
+  // Track scroll position on the actual scroll container (.stremio-main)
   useEffect(() => {
-    const el = containerRef.current;
+    const el = document.querySelector('.stremio-main');
     if (!el) return;
     const onScroll = () => {
       setScrollPosition(catalogKey, el.scrollTop);
@@ -121,52 +194,108 @@ export function CatalogDetailView({ addon, catalog, onItemClick }: CatalogDetail
     el.addEventListener('scroll', onScroll, { passive: true });
     return () => {
       el.removeEventListener('scroll', onScroll);
-      setScrollPosition(catalogKey, el.scrollTop);
+      if (el) setScrollPosition(catalogKey, el.scrollTop);
     };
   }, [catalogKey, setScrollPosition]);
-
-  if (loadingInitial) {
-    return <div className="stremio-loading-text" style={{ padding: '40px' }}>Loading catalog...</div>;
-  }
-
-  if (error) {
-    return <div className="stremio-loading-text" style={{ padding: '40px' }}>{error}</div>;
-  }
-
-  if (items.length === 0 && !hasMore) {
-    return <div className="stremio-loading-text" style={{ padding: '40px' }}>No items in this catalog.</div>;
-  }
 
   return (
     <div className="stremio-catalog-detail-view" ref={containerRef}>
       <div style={{ padding: '24px' }}>
-      <div className="stremio-row-header" style={{ marginBottom: '16px' }}>
-        <h3 className="stremio-row-title">{catalog.name || `${addon.manifest.name} - ${catalog.type}`}</h3>
-      </div>
-      <div className="stremio-meta-grid">
-        {items.map((item) => (
-          <div key={`${item.type}:${item.id}`} className="stremio-meta-card" onClick={() => onItemClick(item)}>
-            {item.poster && (
-              <img
-                className="stremio-meta-poster"
-                src={item.poster}
-                alt={item.name}
-                loading="lazy"
-                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-              />
-            )}
-            <div className="stremio-meta-card-info">
-              <div className="stremio-meta-card-title">{item.name}</div>
-              {item.releaseInfo && <div className="stremio-meta-card-year">{item.releaseInfo}</div>}
-              {item.imdbRating && <div className="stremio-meta-card-rating">★ {item.imdbRating}</div>}
-            </div>
+        <div className="stremio-discover-header">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <button
+              className="stremio-row-see-all-btn"
+              style={{ display: 'flex', alignItems: 'center', gap: '6px', height: '36px' }}
+              onClick={() => {
+                setSelectedAddonId(null);
+                setSelectedCatalogId(null);
+              }}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14">
+                <path d="M19 12H5" /><path d="M12 19l-7-7 7-7" />
+              </svg>
+              Back
+            </button>
+            <h3 className="stremio-row-title" style={{ fontSize: '1.2rem' }}>Discover</h3>
           </div>
-        ))}
-      </div>
 
-      {loadingMore && <div className="stremio-loading-text">Loading more...</div>}
-      <div ref={sentinelRef} style={{ height: '1px' }} />
-    </div>
+          <div className="stremio-discover-filters">
+            {/* Type selector */}
+            <select
+              className="stremio-discover-select"
+              value={catalog.type}
+              onChange={(e) => handleTypeChange(e.target.value)}
+            >
+              {types.map((t) => (
+                <option key={t} value={t}>
+                  {t.charAt(0).toUpperCase() + t.slice(1)}s
+                </option>
+              ))}
+            </select>
+
+            {/* Catalog selector */}
+            <select
+              className="stremio-discover-select"
+              value={`${addon.id}|${catalog.id}`}
+              onChange={(e) => handleCatalogChange(e.target.value)}
+            >
+              {availableCatalogs.map(({ addon: a, catalog: c }) => (
+                <option key={`${a.id}|${c.id}`} value={`${a.id}|${c.id}`}>
+                  {c.name || `${a.manifest.name} - ${c.type}`}
+                </option>
+              ))}
+            </select>
+
+            {/* Genre selector (if options available) */}
+            {genreOptions.length > 0 && (
+              <select
+                className="stremio-discover-select"
+                value={selectedGenre}
+                onChange={(e) => setSelectedGenre(e.target.value)}
+              >
+                <option value="">All Genres</option>
+                {genreOptions.map((g) => (
+                  <option key={g} value={g}>
+                    {g}
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
+        </div>
+
+        {loadingInitial ? (
+          <div className="stremio-loading-text" style={{ padding: '80px 0' }}>Loading catalog...</div>
+        ) : error ? (
+          <div className="stremio-loading-text" style={{ padding: '80px 0' }}>{error}</div>
+        ) : items.length === 0 ? (
+          <div className="stremio-loading-text" style={{ padding: '80px 0' }}>No items in this catalog.</div>
+        ) : (
+          <div className="stremio-meta-grid">
+            {items.map((item) => (
+              <div key={`${item.type}:${item.id}`} className="stremio-meta-card" onClick={() => onItemClick(item)}>
+                {item.poster && (
+                  <img
+                    className="stremio-meta-poster"
+                    src={item.poster}
+                    alt={item.name}
+                    loading="lazy"
+                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                  />
+                )}
+                <div className="stremio-meta-card-info">
+                  <div className="stremio-meta-card-title">{item.name}</div>
+                  {item.releaseInfo && <div className="stremio-meta-card-year">{item.releaseInfo}</div>}
+                  {item.imdbRating && <div className="stremio-meta-card-rating">★ {item.imdbRating}</div>}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {loadingMore && <div className="stremio-loading-text">Loading more...</div>}
+        <div ref={sentinelRef} style={{ height: '1px' }} />
+      </div>
     </div>
   );
 }

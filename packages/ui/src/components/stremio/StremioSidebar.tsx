@@ -1,4 +1,3 @@
-import { useMemo } from 'react';
 import type { InstalledAddon } from '../../types/stremio';
 import {
   useStremioSelectedAddonId,
@@ -23,26 +22,31 @@ export function StremioSidebar({ addons, onOpenAddonManager }: StremioSidebarPro
   const setView = useSetStremioView();
   const view = useStremioView();
 
-  const catalogs = useMemo(() => {
-    const result: { addonId: string; addonName: string; type: string; id: string; name: string }[] = [];
-    for (const addon of addons) {
-      for (const cat of (addon.manifest.catalogs || [])) {
-        result.push({
-          addonId: addon.id,
-          addonName: addon.manifest.name,
-          type: cat.type,
-          id: cat.id,
-          name: cat.name || `${addon.manifest.name} - ${cat.type}`,
-        });
+  const isHomeActive = view === 'home' && !selectedAddonId && !selectedCatalogId;
+  const isDiscoverActive = view === 'home' && !!selectedAddonId && !!selectedCatalogId;
+  const isLibraryActive = view === 'library';
+
+  const handleHomeClick = () => {
+    setSelectedAddonId(null);
+    setSelectedCatalogId(null);
+    setView('home');
+  };
+
+  const handleDiscoverClick = () => {
+    setView('home');
+    if (!selectedAddonId || !selectedCatalogId) {
+      // Find first movie or other catalog from installed addons
+      const firstAddon = addons.find((a) => (a.manifest.catalogs?.length ?? 0) > 0);
+      const firstCat = firstAddon?.manifest.catalogs?.[0];
+      if (firstAddon && firstCat) {
+        setSelectedAddonId(firstAddon.id);
+        setSelectedCatalogId(firstCat.id);
       }
     }
-    return result;
-  }, [addons]);
+  };
 
-  const handleCatalogClick = (addonId: string, catalogId: string) => {
-    setSelectedAddonId(addonId);
-    setSelectedCatalogId(catalogId);
-    setView('home');
+  const handleLibraryClick = () => {
+    setView('library');
   };
 
   return (
@@ -52,42 +56,57 @@ export function StremioSidebar({ addons, onOpenAddonManager }: StremioSidebarPro
       </div>
 
       <div className="stremio-sidebar-section">
-        <div className="stremio-sidebar-section-title">Catalogs</div>
-        {catalogs.length === 0 && (
-          <div className="stremio-sidebar-empty">No addons installed. Add one to browse catalogs.</div>
-        )}
-        {catalogs.map((cat) => (
-          <button
-            key={`${cat.addonId}-${cat.type}-${cat.id}`}
-            className={`stremio-sidebar-item ${selectedAddonId === cat.addonId && selectedCatalogId === cat.id ? 'active' : ''}`}
-            onClick={() => handleCatalogClick(cat.addonId, cat.id)}
-          >
-            <span className="stremio-sidebar-item-name">{cat.name}</span>
-            <span className="stremio-sidebar-item-type">{cat.type}</span>
-          </button>
-        ))}
-      </div>
-
-      <div className="stremio-sidebar-section">
-        <div className="stremio-sidebar-section-title">Addons</div>
-        {addons.map((addon) => (
-          <div key={addon.id} className="stremio-sidebar-addon-row">
-            <span className="stremio-sidebar-addon-name">{addon.manifest.name}</span>
-            {addon.isDefault && <span className="stremio-sidebar-addon-badge">default</span>}
+        <button
+          className={`stremio-sidebar-item ${isHomeActive ? 'active' : ''}`}
+          onClick={handleHomeClick}
+        >
+          <div className="stremio-sidebar-item-label">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16" className="stremio-sidebar-icon">
+              <rect x="3" y="3" width="7" height="7" />
+              <rect x="14" y="3" width="7" height="7" />
+              <rect x="14" y="14" width="7" height="7" />
+              <rect x="3" y="14" width="7" height="7" />
+            </svg>
+            <span className="stremio-sidebar-item-name">Home / Board</span>
           </div>
-        ))}
+        </button>
+
+        <button
+          className={`stremio-sidebar-item ${isDiscoverActive ? 'active' : ''}`}
+          onClick={handleDiscoverClick}
+        >
+          <div className="stremio-sidebar-item-label">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16" className="stremio-sidebar-icon">
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+            <span className="stremio-sidebar-item-name">Discover</span>
+          </div>
+        </button>
+
+        <button
+          className={`stremio-sidebar-item ${isLibraryActive ? 'active' : ''}`}
+          onClick={handleLibraryClick}
+        >
+          <div className="stremio-sidebar-item-label">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16" className="stremio-sidebar-icon">
+              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+            </svg>
+            <span className="stremio-sidebar-item-name">Library</span>
+          </div>
+        </button>
       </div>
 
       <div className="stremio-sidebar-footer">
         <button className="stremio-sidebar-add-btn" onClick={onOpenAddonManager}>
-          + Add Addon
+          ⚙ Manage Addons
         </button>
         <button
           className="stremio-sidebar-add-btn"
-          style={{ marginTop: '6px' }}
+          style={{ marginTop: '8px' }}
           onClick={() => setView(view === 'search' ? 'home' : 'search')}
         >
-          {view === 'search' ? 'Cancel Search' : 'Search'}
+          {view === 'search' ? '✕ Cancel Search' : '🔍 Search'}
         </button>
       </div>
     </div>

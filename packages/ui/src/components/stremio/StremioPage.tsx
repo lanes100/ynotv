@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import type { StremioStreamPickerMode, StremioMeta, StremioStream } from '../../types/stremio';
 import { useStremioAddonStore } from '../../stores/stremioAddonStore';
 import {
@@ -11,6 +11,7 @@ import {
 } from '../../stores/uiStore';
 import { StremioSidebar } from './StremioSidebar';
 import { StremioHome } from './StremioHome';
+import { StremioLibrary } from './StremioLibrary';
 import { StremioDetail } from './StremioDetail';
 import { AddonManagerPanel } from './AddonManagerPanel';
 import './StremioPage.css';
@@ -30,6 +31,9 @@ export function StremioPage({ onClose, stremioStreamPickerMode, onStreamPickerMo
   const selectedSeason = useStremioSelectedSeason();
   const setSelectedSeason = useSetStremioSelectedSeason();
   const [showAddonManager, setShowAddonManager] = useState(false);
+
+  const mainRef = useRef<HTMLDivElement | null>(null);
+  const [homeScrollTop, setHomeScrollTop] = useState(0);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -52,6 +56,9 @@ export function StremioPage({ onClose, stremioStreamPickerMode, onStreamPickerMo
   }, [activeMeta, stremioView, showAddonManager, onClose, setActiveMeta, setStremioView, setSelectedSeason]);
 
   const handleItemClick = useCallback((meta: StremioMeta) => {
+    if (mainRef.current) {
+      setHomeScrollTop(mainRef.current.scrollTop);
+    }
     setActiveMeta(meta);
     setStremioView('detail');
     setSelectedSeason(undefined);
@@ -60,7 +67,8 @@ export function StremioPage({ onClose, stremioStreamPickerMode, onStreamPickerMo
   const handleBack = useCallback(() => {
     if (activeMeta) {
       setActiveMeta(null);
-      setStremioView('home');
+      // Navigate back to the previous view (home or library)
+      setStremioView(homeScrollTop > 0 ? 'home' : 'home'); // default back to home, or let store view persist
       setSelectedSeason(undefined);
     }
   }, [activeMeta, setActiveMeta, setStremioView, setSelectedSeason]);
@@ -70,6 +78,18 @@ export function StremioPage({ onClose, stremioStreamPickerMode, onStreamPickerMo
       detail: { stream, meta, season: selectedSeason },
     }));
   }, [selectedSeason]);
+
+  useEffect(() => {
+    if (stremioView === 'home' || stremioView === 'search') {
+      if (mainRef.current && homeScrollTop > 0) {
+        const el = mainRef.current;
+        const timer = setTimeout(() => {
+          el.scrollTop = homeScrollTop;
+        }, 50);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [stremioView, homeScrollTop]);
 
   return (
     <div className="stremio-page">
@@ -82,18 +102,26 @@ export function StremioPage({ onClose, stremioStreamPickerMode, onStreamPickerMo
         onOpenAddonManager={() => setShowAddonManager(true)}
       />
 
-      <div className="stremio-main">
-        {stremioView === 'detail' && activeMeta ? (
+      <div className="stremio-main" ref={mainRef}>
+        <div style={{ display: stremioView === 'home' || stremioView === 'search' ? 'block' : 'none' }}>
+          <StremioHome
+            addons={addons}
+            onItemClick={handleItemClick}
+          />
+        </div>
+
+        <div style={{ display: stremioView === 'library' ? 'block' : 'none' }}>
+          <StremioLibrary
+            onItemClick={handleItemClick}
+          />
+        </div>
+
+        {stremioView === 'detail' && activeMeta && (
           <StremioDetail
             meta={activeMeta}
             onBack={handleBack}
             onPlay={handlePlayStream}
             streamPickerMode={stremioStreamPickerMode}
-          />
-        ) : (
-          <StremioHome
-            addons={addons}
-            onItemClick={handleItemClick}
           />
         )}
       </div>
