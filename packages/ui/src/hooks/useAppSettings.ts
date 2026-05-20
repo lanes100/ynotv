@@ -163,7 +163,7 @@ export function useAppSettings(): AppSettings {
   const [sportsBgOpacity, setSportsBgOpacityState] = useState(0.7);
 
   // Startup view
-  const [startupView, setStartupViewState] = useState<'none' | 'guide' | 'movies' | 'series' | 'dvr' | 'sports' | 'calendar'>('none');
+  const [startupView, setStartupViewState] = useState<'none' | 'guide' | 'movies' | 'series' | 'dvr' | 'sports' | 'calendar' | 'stremio'>('none');
 
   // Apply theme effect
   useEffect(() => {
