@@ -79,6 +79,7 @@ import { useMpvListeners } from './hooks/useMpvListeners';
 import { AdvancedSearchModal, type AdvancedSearchConfig } from './components/AdvancedSearchModal';
 import { StremioPage } from './components/stremio/StremioPage';
 import { useStremioAddonStore } from './stores/stremioAddonStore';
+import { useUIStore } from './stores/uiStore';
 import { fetchSubtitles } from './services/stremio-addon';
 
 // NEW: Extracted hooks
@@ -138,8 +139,11 @@ function App() {
     setOverlayAutohideTimer,
     popoutStopMain,
     popoutAlwaysOnTop,
+    navHiddenTabs: settingsNavHiddenTabs,
     startupView,
   } = useAppSettings();
+  const navHiddenTabs = useUIStore((s) => s.navHiddenTabs);
+  const setNavHiddenStore = useUIStore((s) => s.setNavHiddenTabs);
 
   // Stremio stream picker mode
   const [stremioStreamPickerMode, setStremioStreamPickerMode] = useState<StremioStreamPickerMode>('modal');
@@ -431,6 +435,14 @@ function App() {
       }
     }
   }, [layoutSettingsLoaded, startupView, setActiveView, setCategoriesOpen, categoriesHidden]);
+
+  // Initialize navHiddenTabs in the shared store once settings are loaded
+  const navStoreInitRef = useRef(false);
+  useEffect(() => {
+    if (!layoutSettingsLoaded || navStoreInitRef.current) return;
+    navStoreInitRef.current = true;
+    setNavHiddenStore(settingsNavHiddenTabs);
+  }, [layoutSettingsLoaded, settingsNavHiddenTabs, setNavHiddenStore]);
 
   // ==========================================================================
   // Initialize Stremio addons
@@ -1342,91 +1354,101 @@ function App() {
                 <span>Live TV</span>
               </button>
 
-              <button
-                className={`segmented-btn ${activeView === 'movies' ? 'active' : ''}`}
-                onClick={() => {
-                  setCategoriesOpen(false);
-                  setActiveView(activeView === 'movies' ? 'none' : 'movies');
-                }}
-                title="Movies"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M4 6a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2l0 -12"></path>
-                  <path d="M8 4l0 16"></path>
-                  <path d="M16 4l0 16"></path>
-                  <path d="M4 8l4 0"></path>
-                  <path d="M4 16l4 0"></path>
-                  <path d="M4 12l16 0"></path>
-                  <path d="M16 8l4 0"></path>
-                  <path d="M16 16l4 0"></path>
-                </svg>
-                <span>Movies</span>
-              </button>
+              {!navHiddenTabs.includes('movies') && (
+                <button
+                  className={`segmented-btn ${activeView === 'movies' ? 'active' : ''}`}
+                  onClick={() => {
+                    setCategoriesOpen(false);
+                    setActiveView(activeView === 'movies' ? 'none' : 'movies');
+                  }}
+                  title="Movies"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M4 6a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2l0 -12"></path>
+                    <path d="M8 4l0 16"></path>
+                    <path d="M16 4l0 16"></path>
+                    <path d="M4 8l4 0"></path>
+                    <path d="M4 16l4 0"></path>
+                    <path d="M4 12l16 0"></path>
+                    <path d="M16 8l4 0"></path>
+                    <path d="M16 16l4 0"></path>
+                  </svg>
+                  <span>Movies</span>
+                </button>
+              )}
 
-              <button
-                className={`segmented-btn ${activeView === 'series' ? 'active' : ''}`}
-                onClick={() => {
-                  setCategoriesOpen(false);
-                  setActiveView(activeView === 'series' ? 'none' : 'series');
-                }}
-                title="Series"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M3 9a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v9a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2l0 -9"></path>
-                  <path d="M16 3l-4 4l-4 -4"></path>
-                </svg>
-                <span>Series</span>
-              </button>
+              {!navHiddenTabs.includes('series') && (
+                <button
+                  className={`segmented-btn ${activeView === 'series' ? 'active' : ''}`}
+                  onClick={() => {
+                    setCategoriesOpen(false);
+                    setActiveView(activeView === 'series' ? 'none' : 'series');
+                  }}
+                  title="Series"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M3 9a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v9a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2l0 -9"></path>
+                    <path d="M16 3l-4 4l-4 -4"></path>
+                  </svg>
+                  <span>Series</span>
+                </button>
+              )}
 
-              <button
-                className={`segmented-btn ${activeView === 'dvr' ? 'active' : ''}`}
-                onClick={() => {
-                  setCategoriesOpen(false);
-                  setActiveView(activeView === 'dvr' ? 'none' : 'dvr');
-                }}
-                title="DVR"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M15 10l4.553-2.276A1 1 0 0 1 21 8.618v6.764a1 1 0 0 1-1.447.894L15 14M5 18h8a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2z"></path>
-                </svg>
-                <span>DVR</span>
-              </button>
+              {!navHiddenTabs.includes('dvr') && (
+                <button
+                  className={`segmented-btn ${activeView === 'dvr' ? 'active' : ''}`}
+                  onClick={() => {
+                    setCategoriesOpen(false);
+                    setActiveView(activeView === 'dvr' ? 'none' : 'dvr');
+                  }}
+                  title="DVR"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M15 10l4.553-2.276A1 1 0 0 1 21 8.618v6.764a1 1 0 0 1-1.447.894L15 14M5 18h8a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2z"></path>
+                  </svg>
+                  <span>DVR</span>
+                </button>
+              )}
 
-              <button
-                className={`segmented-btn ${activeView === 'sports' ? 'active' : ''}`}
-                onClick={() => {
-                  setCategoriesOpen(false);
-                  setActiveView(activeView === 'sports' ? 'none' : 'sports');
-                }}
-                title="Sports Hub"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M8 21h8"></path>
-                  <path d="M12 17v4"></path>
-                  <path d="M7 4h10"></path>
-                  <path d="M17 4v8a5 5 0 0 1-10 0V4"></path>
-                  <path d="M5 9c-1.5 0-3 .6-3 2 0 1.4 1.5 2 3 2"></path>
-                  <path d="M19 9c1.5 0 3 .6 3 2 0 1.4-1.5 2-3 2"></path>
-                </svg>
-                <span>Sports</span>
-              </button>
+              {!navHiddenTabs.includes('sports') && (
+                <button
+                  className={`segmented-btn ${activeView === 'sports' ? 'active' : ''}`}
+                  onClick={() => {
+                    setCategoriesOpen(false);
+                    setActiveView(activeView === 'sports' ? 'none' : 'sports');
+                  }}
+                  title="Sports Hub"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M8 21h8"></path>
+                    <path d="M12 17v4"></path>
+                    <path d="M7 4h10"></path>
+                    <path d="M17 4v8a5 5 0 0 1-10 0V4"></path>
+                    <path d="M5 9c-1.5 0-3 .6-3 2 0 1.4 1.5 2 3 2"></path>
+                    <path d="M19 9c1.5 0 3 .6 3 2 0 1.4-1.5 2-3 2"></path>
+                  </svg>
+                  <span>Sports</span>
+                </button>
+              )}
 
-              <button
-                className={`segmented-btn ${activeView === 'stremio' ? 'active' : ''}`}
-                onClick={() => {
-                  setCategoriesOpen(false);
-                  setActiveView(activeView === 'stremio' ? 'none' : 'stremio');
-                }}
-                title="Stremio Addons"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M4 4h16v16H4z" />
-                  <path d="M8 8h8v8H8z" />
-                  <path d="M8 12h8" />
-                  <path d="M12 8v8" />
-                </svg>
-                <span>Stremio</span>
-              </button>
+              {!navHiddenTabs.includes('stremio') && (
+                <button
+                  className={`segmented-btn ${activeView === 'stremio' ? 'active' : ''}`}
+                  onClick={() => {
+                    setCategoriesOpen(false);
+                    setActiveView(activeView === 'stremio' ? 'none' : 'stremio');
+                  }}
+                  title="Stremio Addons"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M4 4h16v16H4z" />
+                    <path d="M8 8h8v8H8z" />
+                    <path d="M8 12h8" />
+                    <path d="M12 8v8" />
+                  </svg>
+                  <span>Stremio</span>
+                </button>
+              )}
             </div>
 
             <div className="unified-divider"></div>

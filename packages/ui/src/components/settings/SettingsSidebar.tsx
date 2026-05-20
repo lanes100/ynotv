@@ -10,6 +10,7 @@ export type SettingsTabId =
   | 'shortcuts'
   | 'export-import'
   | 'ui'
+  | 'navigation'
   | 'theme'
   | 'startup'
   | 'playback'
@@ -38,6 +39,7 @@ const SETTINGS_TABS: SettingsTab[] = [
   { id: 'popout', label: 'Popout Player' },
   { id: 'theme', label: 'Theme' },
   { id: 'ui', label: 'UI' },
+  { id: 'navigation', label: 'Navigation' },
   { id: 'startup', label: 'Startup' },
   { id: 'playback', label: 'Playback' },
   { id: 'cache', label: 'Cache' },

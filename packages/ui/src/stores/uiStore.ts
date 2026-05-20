@@ -61,6 +61,10 @@ interface UIState {
   epgView: 'traditional' | 'alternate';
   setEpgView: (value: 'traditional' | 'alternate') => void;
 
+  // Navigation tab visibility (shared reactive state)
+  navHiddenTabs: string[];
+  setNavHiddenTabs: (tabs: string[]) => void;
+
   // Stremio
   stremioView: StremioView;
   setStremioView: (view: StremioView) => void;
@@ -132,6 +136,10 @@ export const useUIStore = create<UIState>((set) => ({
   setCategorySortOrder: (value) => set({ categorySortOrder: value }),
   epgView: 'traditional',
   setEpgView: (value) => set({ epgView: value }),
+
+  // Navigation tab visibility
+  navHiddenTabs: [],
+  setNavHiddenTabs: (tabs) => set({ navHiddenTabs: tabs }),
 
   // Stremio
   stremioView: 'home',

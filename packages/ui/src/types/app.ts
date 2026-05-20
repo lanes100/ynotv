@@ -95,6 +95,8 @@ export interface AppSettings {
     useAdvancedSearchForRegular?: boolean;
     // Global EPG links that can be shared across multiple sources
     globalEpgLinks?: GlobalEpgLink[];
+    // Navigation tab visibility — tabs hidden from titlebar
+    navHiddenTabs?: string[];
     [key: string]: any;
 }
 

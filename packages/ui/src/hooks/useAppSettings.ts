@@ -50,6 +50,9 @@ export interface AppSettings {
   // Shortcuts
   shortcuts: ShortcutsMap;
 
+  // Navigation tab visibility
+  navHiddenTabs: string[];
+
   // UI visibility
   categoriesHidden: boolean;
   overlayAutohideTimer: number;
@@ -66,6 +69,7 @@ export interface AppSettings {
   startupView: 'none' | 'guide' | 'movies' | 'series' | 'dvr' | 'sports' | 'calendar' | 'stremio';
 
   // Actions
+  setNavHiddenTabs: (tabs: string[]) => void;
   setTheme: (theme: ThemeId) => void;
   setShortcuts: (shortcuts: ShortcutsMap) => void;
   setCategoriesHidden: (hidden: boolean) => void;
@@ -142,6 +146,9 @@ export function useAppSettings(): AppSettings {
 
   // Shortcuts state
   const [shortcuts, setShortcutsState] = useState<ShortcutsMap>({});
+
+  // Navigation tab visibility — hidden tabs start empty (all visible)
+  const [navHiddenTabs, setNavHiddenTabsState] = useState<string[]>([]);
 
   // UI visibility
   const [categoriesHidden, setCategoriesHiddenState] = useState(false);
@@ -234,6 +241,9 @@ export function useAppSettings(): AppSettings {
           const savedSportsBgOpacity = result.data.sportsBgOpacity ?? 0.7;
           setSportsBgOpacityState(savedSportsBgOpacity);
           document.documentElement.style.setProperty('--sports-bg-opacity', String(savedSportsBgOpacity));
+
+          // Load navigation hidden tabs
+          setNavHiddenTabsState(result.data.navHiddenTabs ?? []);
 
           // Load startup view
           setStartupViewState(result.data.startupView ?? 'none');
@@ -489,6 +499,17 @@ export function useAppSettings(): AppSettings {
     }
   }, []);
 
+  const setNavHiddenTabs = useCallback(async (tabs: string[]) => {
+    setNavHiddenTabsState(tabs);
+    if (window.storage) {
+      try {
+        await window.storage.updateSettings({ navHiddenTabs: tabs });
+      } catch (e) {
+        console.error('[useAppSettings] Failed to save navHiddenTabs:', e);
+      }
+    }
+  }, []);
+
   const setStartupView = useCallback(async (view: 'none' | 'guide' | 'movies' | 'series' | 'dvr' | 'sports' | 'calendar') => {
     setStartupViewState(view);
     if (window.storage) {
@@ -530,11 +551,13 @@ export function useAppSettings(): AppSettings {
     theme,
     shortcuts,
     categoriesHidden,
+    navHiddenTabs,
     overlayAutohideTimer,
     widgetScale,
     widgetBgOpacity,
     sportsScale,
     sportsBgOpacity,
+    setNavHiddenTabs,
     setTheme,
     setShortcuts,
     setCategoriesHidden,

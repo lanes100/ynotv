@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { Source } from '@ynotv/core';
-import { useEpgView, useSetEpgView } from '../stores/uiStore';
+import { useEpgView, useSetEpgView, useUIStore } from '../stores/uiStore';
 import { SettingsSidebar, type SettingsTabId } from './settings/SettingsSidebar';
 import { SourcesTab } from './settings/SourcesTab';
 import { TmdbTab } from './settings/TmdbTab';
@@ -12,6 +12,7 @@ import { ImportExportTab } from './settings/ImportExportTab';
 import { UITab } from './settings/UITab';
 import { ThemeTab } from './settings/ThemeTab';
 import { StartupTab, type SavedLayoutState } from './settings/StartupTab';
+import { NavigationTab } from './settings/NavigationTab';
 import { PlaybackTab } from './settings/PlaybackTab';
 import { CacheTab } from './settings/CacheTab';
 import { AboutTab } from './settings/AboutTab';
@@ -126,6 +127,8 @@ export function Settings({
   const [reopenLastOnStartup, setReopenLastOnStartup] = useState(false);
   const [savedLayoutState, setSavedLayoutState] = useState<SavedLayoutState | null>(null);
   const [startupView, setStartupView] = useState<'none' | 'guide' | 'movies' | 'series' | 'dvr' | 'sports' | 'calendar' | 'stremio'>('none');
+  const navHiddenTabs = useUIStore((s) => s.navHiddenTabs);
+  const navHiddenTabsStore = useUIStore((s) => s.setNavHiddenTabs);
 
   // Playback settings state
   const [mpvParams, setMpvParams] = useState<string>('');
@@ -298,6 +301,7 @@ export function Settings({
         sportsScale?: number;
         sportsBgOpacity?: number;
         stremioStreamPickerMode?: 'modal' | 'autoplay';
+        navHiddenTabs?: string[];
       };
 
       // Load TMDB API key
@@ -381,6 +385,7 @@ export function Settings({
       setReopenLastOnStartup(settings.reopenLastOnStartup ?? false);
       setSavedLayoutState(settings.savedLayoutState ?? null);
       setStartupView(settings.startupView ?? 'none');
+      navHiddenTabsStore(settings.navHiddenTabs ?? []);
 
       // Load playback settings
       setMpvParams(settings.mpvParams ?? '');
@@ -773,6 +778,13 @@ export function Settings({
     }
   };
 
+  const handleNavHiddenTabsChange = async (tabs: string[]) => {
+    navHiddenTabsStore(tabs);
+    if (window.storage) {
+      await window.storage.updateSettings({ navHiddenTabs: tabs });
+    }
+  };
+
   const handleStartupViewChange = async (value: 'none' | 'guide' | 'movies' | 'series' | 'dvr' | 'sports' | 'calendar' | 'stremio') => {
     setStartupView(value);
     if (window.storage) {
@@ -886,6 +898,13 @@ export function Settings({
           <UITab
             settings={uiSettings}
             onSettingsChange={handleUiSettingsChange}
+          />
+        );
+      case 'navigation':
+        return (
+          <NavigationTab
+            navHiddenTabs={navHiddenTabs}
+            onNavHiddenTabsChange={handleNavHiddenTabsChange}
           />
         );
       case 'theme':
