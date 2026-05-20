@@ -21,6 +21,7 @@ import { PopoutTab } from './settings/PopoutTab';
 import { SubtitlesTab, type SubtitleSettings } from './settings/SubtitlesTab';
 import { WidgetsTab } from './settings/WidgetsTab';
 import type { ShortcutsMap, ThemeId } from '../types/app';
+import type { StremioStreamPickerMode } from '../types/stremio';
 import './Settings.css';
 
 interface SettingsProps {
@@ -135,6 +136,8 @@ export function Settings({
   // Stream retry settings
   const [streamWatchdogSeconds, setStreamWatchdogSeconds] = useState(10);
   const [streamMaxRetries, setStreamMaxRetries] = useState(20);
+  // Stremio settings
+  const [stremioStreamPickerMode, setStremioStreamPickerMode] = useState<StremioStreamPickerMode>('modal');
 
   // LiveTV settings state
   const [epgDarkenCurrent, setEpgDarkenCurrent] = useState(false);
@@ -294,6 +297,7 @@ export function Settings({
         widgetBgOpacity?: number;
         sportsScale?: number;
         sportsBgOpacity?: number;
+        stremioStreamPickerMode?: 'modal' | 'autoplay';
       };
 
       // Load TMDB API key
@@ -386,6 +390,7 @@ export function Settings({
       setLiveBufferOffset(settings.liveBufferOffset ?? 0);
       setStreamWatchdogSeconds(settings.streamWatchdogSeconds ?? 10);
       setStreamMaxRetries(settings.streamMaxRetries ?? 20);
+      setStremioStreamPickerMode(settings.stremioStreamPickerMode ?? 'modal');
 
       // Load LiveTV settings
       const darkenCurrent = settings.epgDarkenCurrent ?? false;
@@ -480,6 +485,13 @@ export function Settings({
     window.dispatchEvent(new CustomEvent('ynotv:retry-settings-changed', {
       detail: { streamMaxRetries: retries }
     }));
+  };
+
+  const handleStremioStreamPickerModeChange = async (mode: StremioStreamPickerMode) => {
+    setStremioStreamPickerMode(mode);
+    if (window.storage) {
+      await window.storage.updateSettings({ stremioStreamPickerMode: mode });
+    }
   };
 
   const handleTimeshiftChange = async (enabled: boolean, cacheBytes: number, bufferOffset?: number) => {
@@ -906,6 +918,8 @@ export function Settings({
             streamMaxRetries={streamMaxRetries}
             onStreamWatchdogSecondsChange={handleStreamWatchdogSecondsChange}
             onStreamMaxRetriesChange={handleStreamMaxRetriesChange}
+            stremioStreamPickerMode={stremioStreamPickerMode}
+            onStremioStreamPickerModeChange={handleStremioStreamPickerModeChange}
           />
         );
       case 'cache':

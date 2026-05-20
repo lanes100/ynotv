@@ -8,6 +8,9 @@
 import { create } from 'zustand';
 import type { SportsTabId } from '@ynotv/core';
 import type { MediaItem } from '../types/media';
+import type { StremioMetaPreview, StremioMeta } from '../types/stremio';
+
+export type StremioView = 'home' | 'detail' | 'search';
 
 interface UIState {
   // Movies page
@@ -57,6 +60,20 @@ interface UIState {
   setCategorySortOrder: (value: 'default' | 'alphabetical') => void;
   epgView: 'traditional' | 'alternate';
   setEpgView: (value: 'traditional' | 'alternate') => void;
+
+  // Stremio
+  stremioView: StremioView;
+  setStremioView: (view: StremioView) => void;
+  stremioSelectedAddonId: string | null;
+  setStremioSelectedAddonId: (id: string | null) => void;
+  stremioSelectedCatalogId: string | null;
+  setStremioSelectedCatalogId: (id: string | null) => void;
+  stremioActiveMeta: StremioMeta | null;
+  setStremioActiveMeta: (meta: StremioMeta | null) => void;
+  stremioSearchQuery: string;
+  setStremioSearchQuery: (query: string) => void;
+  stremioSelectedSeason: number | undefined;
+  setStremioSelectedSeason: (season: number | undefined) => void;
 }
 
 export const useUIStore = create<UIState>((set) => ({
@@ -114,6 +131,20 @@ export const useUIStore = create<UIState>((set) => ({
   epgView: 'traditional',
   setEpgView: (value) => set({ epgView: value }),
 
+  // Stremio
+  stremioView: 'home',
+  setStremioView: (view) => set({ stremioView: view }),
+  stremioSelectedAddonId: null,
+  setStremioSelectedAddonId: (id) => set({ stremioSelectedAddonId: id }),
+  stremioSelectedCatalogId: null,
+  setStremioSelectedCatalogId: (id) => set({ stremioSelectedCatalogId: id }),
+  stremioActiveMeta: null,
+  setStremioActiveMeta: (meta) => set({ stremioActiveMeta: meta }),
+  stremioSearchQuery: '',
+  setStremioSearchQuery: (query) => set({ stremioSearchQuery: query }),
+  stremioSelectedSeason: undefined,
+  setStremioSelectedSeason: (season) => set({ stremioSelectedSeason: season }),
+
 }));
 
 // Selectors for cleaner component code
@@ -162,3 +193,17 @@ export const useSportsSelectedLeague = () => useUIStore((s) => s.sportsSelectedL
 export const useSetSportsSelectedLeague = () => useUIStore((s) => s.setSportsSelectedLeague);
 export const useSportsSelectedChannels = () => useUIStore((s) => s.sportsSelectedChannels);
 export const useSetSportsSelectedChannel = () => useUIStore((s) => s.setSportsSelectedChannel);
+
+// Stremio selectors
+export const useStremioView = () => useUIStore((s) => s.stremioView);
+export const useSetStremioView = () => useUIStore((s) => s.setStremioView);
+export const useStremioSelectedAddonId = () => useUIStore((s) => s.stremioSelectedAddonId);
+export const useSetStremioSelectedAddonId = () => useUIStore((s) => s.setStremioSelectedAddonId);
+export const useStremioSelectedCatalogId = () => useUIStore((s) => s.stremioSelectedCatalogId);
+export const useSetStremioSelectedCatalogId = () => useUIStore((s) => s.setStremioSelectedCatalogId);
+export const useStremioActiveMeta = () => useUIStore((s) => s.stremioActiveMeta);
+export const useSetStremioActiveMeta = () => useUIStore((s) => s.setStremioActiveMeta);
+export const useStremioSearchQuery = () => useUIStore((s) => s.stremioSearchQuery);
+export const useSetStremioSearchQuery = () => useUIStore((s) => s.setStremioSearchQuery);
+export const useStremioSelectedSeason = () => useUIStore((s) => s.stremioSelectedSeason);
+export const useSetStremioSelectedSeason = () => useUIStore((s) => s.setStremioSelectedSeason);

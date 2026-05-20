@@ -396,3 +396,33 @@
   margin-top: 2px;
   stroke: rgba(255, 200, 80, 0.9);
 }
+
+/* ─── Stremio Stream Picker Toggle ──────────────────────────── */
+
+.stremio-picker-toggle {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.stremio-picker-btn {
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.18s;
+}
+
+.stremio-picker-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.stremio-picker-btn.active {
+  background: rgba(0, 212, 255, 0.15);
+  border-color: rgba(0, 212, 255, 0.5);
+  color: #00d4ff;
+}

@@ -14,7 +14,7 @@ import type { ShortcutAction, ShortcutsMap } from '../types/app';
 import { DEFAULT_SHORTCUTS } from '../constants/shortcuts';
 import type { StoredChannel } from '../db';
 import type { LayoutMode } from './useMultiview';
-type View = 'none' | 'guide' | 'movies' | 'series' | 'dvr' | 'sports' | 'calendar' | 'settings';
+type View = 'none' | 'guide' | 'movies' | 'series' | 'dvr' | 'sports' | 'calendar' | 'settings' | 'stremio';
 
 export interface UseKeyboardShortcutsOptions {
     // --- Current state values (accessed via latest ref pattern) ---

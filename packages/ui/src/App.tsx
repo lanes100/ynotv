@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 const AUTO_SYNC_CHECK_INTERVAL_MS = 10 * 60 * 1000;
 let hasStartupAutoSyncTriggered = false;
 import { invoke } from '@tauri-apps/api/core';
+import type { StremioStreamPickerMode } from './types/stremio';
 import './services/tauri-bridge'; // Initialize Tauri bridge and polyfills
 import { checkForUpdates, checkForUpdatesSilent } from './services/updater';
 import { Settings } from './components/Settings';
@@ -76,6 +77,9 @@ import { registerUpdateModal } from './services/updater';
 import { useLayoutPersistence, type LayoutMode } from './hooks/useLayoutPersistence';
 import { useMpvListeners } from './hooks/useMpvListeners';
 import { AdvancedSearchModal, type AdvancedSearchConfig } from './components/AdvancedSearchModal';
+import { StremioPage } from './components/stremio/StremioPage';
+import { useStremioAddonStore } from './stores/stremioAddonStore';
+import { fetchSubtitles } from './services/stremio-addon';
 
 // NEW: Extracted hooks
 import { useAppSettings } from './hooks/useAppSettings';
@@ -136,6 +140,29 @@ function App() {
     popoutAlwaysOnTop,
     startupView,
   } = useAppSettings();
+
+  // Stremio stream picker mode
+  const [stremioStreamPickerMode, setStremioStreamPickerMode] = useState<StremioStreamPickerMode>('modal');
+  const handleStremioStreamPickerModeChange = useCallback(async (mode: StremioStreamPickerMode) => {
+    setStremioStreamPickerMode(mode);
+    if (window.storage) {
+      await window.storage.updateSettings({ stremioStreamPickerMode: mode });
+    }
+  }, []);
+
+  // Load stremioStreamPickerMode from storage
+  useEffect(() => {
+    if (!layoutSettingsLoaded) return;
+    const loadStremioMode = async () => {
+      try {
+        const res = await window.storage.getSettings();
+        if (res.data?.stremioStreamPickerMode) {
+          setStremioStreamPickerMode(res.data.stremioStreamPickerMode as StremioStreamPickerMode);
+        }
+      } catch {}
+    };
+    loadStremioMode();
+  }, [layoutSettingsLoaded]);
 
   // ==========================================================================
   // Clear Live Query Cache on App Start
@@ -404,6 +431,17 @@ function App() {
       }
     }
   }, [layoutSettingsLoaded, startupView, setActiveView, setCategoriesOpen, categoriesHidden]);
+
+  // ==========================================================================
+  // Initialize Stremio addons
+  // ==========================================================================
+  const initializeStremioAddons = useStremioAddonStore((s) => s.initializeDefaults);
+
+  useEffect(() => {
+    if (layoutSettingsLoaded) {
+      initializeStremioAddons();
+    }
+  }, [layoutSettingsLoaded, initializeStremioAddons]);
 
   // ==========================================================================
   // Channel Info Overlay
@@ -756,7 +794,7 @@ function App() {
   useEffect(() => {
     if (activeView === 'guide' || activeView === 'sports' || activeView === 'dvr' ||
         activeView === 'settings' || activeView === 'movies' || activeView === 'series' ||
-        activeView === 'calendar') {
+        activeView === 'calendar' || activeView === 'stremio') {
       enterTabMode(activeView);
     } else {
       exitTabMode();
@@ -792,6 +830,60 @@ function App() {
       handlePlayChannelWrapper(channel);
     }
   }, [handlePlayChannelWrapper]);
+
+  // ==========================================================================
+  // Stremio Playback Handler (listens for ynotv:stremio-play events)
+  // ==========================================================================
+  const handlePlayVodRef = useRef(handlePlayVod);
+  useEffect(() => { handlePlayVodRef.current = handlePlayVod; }, [handlePlayVod]);
+  const setActiveViewRef = useRef(setActiveView);
+  useEffect(() => { setActiveViewRef.current = setActiveView; }, [setActiveView]);
+
+  useEffect(() => {
+    const handler = async (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (!detail?.stream || !detail?.meta) return;
+
+      const { stream, meta } = detail;
+      const url = stream.url || (stream.infoHash ? `infoHash:${stream.infoHash}${stream.fileIdx !== undefined ? `:${stream.fileIdx}` : ''}` : null);
+      if (!url) return;
+
+      setActiveViewRef.current('none');
+      await handlePlayVodRef.current({
+        url,
+        title: meta.name,
+        year: meta.year ? String(meta.year) : undefined,
+        plot: meta.description,
+        type: meta.type === 'series' ? 'series' : 'movie',
+        source_id: 'stremio',
+        mediaId: meta.id,
+      });
+
+      if (stream.infoHash) {
+        console.log('[Stremio] Playing torrent stream:', stream.infoHash);
+      }
+
+      try {
+        const addons = useStremioAddonStore.getState().addons;
+        const subs = await fetchSubtitles(addons, meta.type, meta.id);
+        if (subs.length > 0 && window.mpv?.addSubtitleFile) {
+          for (const sub of subs) {
+            try {
+              const res = await window.fetchProxy.fetch(sub.url);
+              if (res.data?.ok) {
+                const text = res.data.text;
+                const subBlob = new Blob([text], { type: 'text/vtt' });
+                const url = URL.createObjectURL(subBlob);
+                window.mpv.addSubtitleFile(url).catch(() => {});
+              }
+            } catch {}
+          }
+        }
+      } catch {}
+    };
+    window.addEventListener('ynotv:stremio-play', handler);
+    return () => window.removeEventListener('ynotv:stremio-play', handler);
+  }, []);
 
   // ==========================================================================
   // Handle Channel Navigation (Up/Down) - with Series Episode Support
@@ -1317,6 +1409,23 @@ function App() {
                   <path d="M19 9c1.5 0 3 .6 3 2 0 1.4-1.5 2-3 2"></path>
                 </svg>
                 <span>Sports</span>
+              </button>
+
+              <button
+                className={`segmented-btn ${activeView === 'stremio' ? 'active' : ''}`}
+                onClick={() => {
+                  setCategoriesOpen(false);
+                  setActiveView(activeView === 'stremio' ? 'none' : 'stremio');
+                }}
+                title="Stremio Addons"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M4 4h16v16H4z" />
+                  <path d="M8 8h8v8H8z" />
+                  <path d="M8 12h8" />
+                  <path d="M12 8v8" />
+                </svg>
+                <span>Stremio</span>
               </button>
             </div>
 
@@ -1938,6 +2047,15 @@ function App() {
           onStop={handleStop}
           onChannelUp={handleChannelUp}
           onChannelDown={handleChannelDown}
+        />
+      )}
+
+      {/* Stremio Page */}
+      {activeView === 'stremio' && (
+        <StremioPage
+          onClose={() => setActiveView('none')}
+          stremioStreamPickerMode={stremioStreamPickerMode}
+          onStreamPickerModeChange={handleStremioStreamPickerModeChange}
         />
       )}
 

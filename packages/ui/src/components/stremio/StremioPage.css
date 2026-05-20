@@ -1,0 +1,21 @@
+.stremio-page {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 100;
+  display: flex;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  overflow: hidden;
+}
+
+.stremio-main {
+  flex: 1;
+  margin-left: 240px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 0;
+}

@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import type { SettingsTabId } from '../components/settings/SettingsSidebar';
 import { Bridge } from '../services/tauri-bridge';
 
-export type View = 'none' | 'guide' | 'movies' | 'series' | 'dvr' | 'sports' | 'calendar' | 'settings';
+export type View = 'none' | 'guide' | 'movies' | 'series' | 'dvr' | 'sports' | 'calendar' | 'settings' | 'stremio';
 
 // Auto-hide controls after this many milliseconds of inactivity
 const CONTROLS_AUTO_HIDE_MS = 3000;
@@ -125,7 +125,7 @@ export function useNavigation(options: UseNavigationOptions): NavigationState {
   useEffect(() => {
     if (activeView === 'guide' || activeView === 'sports' || activeView === 'dvr' ||
         activeView === 'settings' || activeView === 'movies' || activeView === 'series' ||
-        activeView === 'calendar' || showSettingsPopup) {
+        activeView === 'calendar' || activeView === 'stremio' || showSettingsPopup) {
       // Note: enterTabMode is called via the multiview hook in App.tsx
     } else {
       multiviewExitTabMode();

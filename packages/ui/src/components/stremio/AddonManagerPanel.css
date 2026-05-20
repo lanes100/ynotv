@@ -1,0 +1,212 @@
+.stremio-addon-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.stremio-addon-modal {
+  width: 560px;
+  max-width: 90vw;
+  max-height: 80vh;
+  background: rgba(20, 20, 30, 0.98);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  backdrop-filter: blur(20px);
+  overflow: hidden;
+}
+
+.stremio-addon-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.stremio-addon-title {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: white;
+}
+
+.stremio-addon-close {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.stremio-addon-close:hover {
+  color: white;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.stremio-addon-body {
+  padding: 20px 24px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.stremio-addon-section-title {
+  margin: 0 0 6px 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.stremio-addon-section-desc {
+  margin: 0 0 12px 0;
+  font-size: 0.82rem;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.stremio-addon-input-row {
+  display: flex;
+  gap: 8px;
+}
+
+.stremio-addon-input {
+  flex: 1;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.3);
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.85rem;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.stremio-addon-input:focus {
+  border-color: rgba(0, 212, 255, 0.5);
+}
+
+.stremio-addon-input::placeholder {
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.stremio-addon-install-btn {
+  padding: 10px 20px;
+  border-radius: 8px;
+  border: none;
+  background: linear-gradient(135deg, rgba(0, 212, 255, 0.2), rgba(0, 212, 255, 0.1));
+  color: #00d4ff;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.stremio-addon-install-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, rgba(0, 212, 255, 0.3), rgba(0, 212, 255, 0.15));
+}
+
+.stremio-addon-install-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.stremio-addon-error {
+  margin-top: 8px;
+  padding: 8px 12px;
+  background: rgba(255, 80, 80, 0.1);
+  border: 1px solid rgba(255, 80, 80, 0.2);
+  border-radius: 6px;
+  color: rgba(255, 120, 120, 0.9);
+  font-size: 0.8rem;
+}
+
+.stremio-addon-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.stremio-addon-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+  gap: 12px;
+}
+
+.stremio-addon-item-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.stremio-addon-item-name {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.9);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.stremio-addon-item-badge {
+  font-size: 0.65rem;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(0, 212, 255, 0.15);
+  color: #00d4ff;
+  text-transform: uppercase;
+}
+
+.stremio-addon-item-desc {
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.5);
+  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stremio-addon-item-url {
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.3);
+  font-family: monospace;
+  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stremio-addon-remove-btn {
+  padding: 6px 14px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 80, 80, 0.2);
+  background: rgba(255, 80, 80, 0.08);
+  color: rgba(255, 120, 120, 0.9);
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+
+.stremio-addon-remove-btn:hover {
+  background: rgba(255, 80, 80, 0.15);
+}
+
+.stremio-addon-empty {
+  text-align: center;
+  color: rgba(255, 255, 255, 0.4);
+  padding: 24px 0;
+  font-size: 0.85rem;
+}
