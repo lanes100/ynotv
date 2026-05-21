@@ -184,8 +184,8 @@ export function StremioHoverCard() {
                 <div key={i} className="stremio-hover-cast-card-skeleton">
                   <div className="skeleton-circle-pulse" />
                   <div className="skeleton-text-lines">
-                    <div className="skeleton-line-pulse" style={{ width: '60px', height: '10px' }} />
-                    <div className="skeleton-line-pulse" style={{ width: '45px', height: '8px', marginTop: '4px' }} />
+                    <div className="skeleton-line-pulse" style={{ width: '75px', height: '10px' }} />
+                    <div className="skeleton-line-pulse" style={{ width: '55px', height: '8px', marginTop: '6px' }} />
                   </div>
                 </div>
               ))}
