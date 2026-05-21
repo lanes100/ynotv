@@ -19,6 +19,12 @@
   overflow-x: hidden;
   padding: 0;
   position: relative;
+  scrollbar-width: thin;
+  scrollbar-color: var(--surface-hover, rgba(255, 255, 255, 0.15)) transparent;
+}
+
+.stremio-main:hover {
+  scrollbar-color: var(--accent-primary, rgba(0, 212, 255, 0.5)) transparent;
 }
 
 /* Custom themed scrollbar for main content area */

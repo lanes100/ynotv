@@ -97,6 +97,8 @@ export interface StremioSubtitle {
   id: string;
   url: string;
   lang: string;
+  label?: string;
+  addonName?: string;
 }
 
 export type StremioStreamPickerMode = 'modal' | 'autoplay';

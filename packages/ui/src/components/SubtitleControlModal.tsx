@@ -91,6 +91,67 @@ const LANG_LABELS: Record<string, string> = {
   ga: 'Irish', eu: 'Basque', gl: 'Galician', is: 'Icelandic', mt: 'Maltese',
 };
 
+function normalizeLangCode(code?: string): string {
+  if (!code) return '';
+  return fromSubSourceLang(toSubSourceLang(code));
+}
+
+function getTrackLanguage(track: Track): string {
+  if (track.external && track['external-filename']) {
+    const parts = track['external-filename'].split(/[/\\]/);
+    const base = parts[parts.length - 1];
+    if (base.startsWith('stremio__')) {
+      const subParts = base.split('__');
+      if (subParts.length >= 5) {
+        return normalizeLangCode(subParts[4]);
+      }
+    } else if (base.startsWith('subsource__')) {
+      const subParts = base.split('__');
+      if (subParts.length >= 3) {
+        return normalizeLangCode(subParts[2]);
+      }
+    }
+  }
+  return normalizeLangCode(track.lang);
+}
+
+function parseExternalTrack(filePath: string): { label: string; origin: string } {
+  const parts = filePath.split(/[/\\]/);
+  const base = parts[parts.length - 1];
+  
+  if (base.startsWith('stremio__')) {
+    const subParts = base.split('__');
+    if (subParts.length >= 5) {
+      const addon = subParts[1].replace(/_/g, ' ');
+      const label = subParts[2].replace(/_/g, ' ');
+      return { label, origin: addon };
+    }
+    return { label: 'Stremio Subtitle', origin: 'Stremio Addon' };
+  }
+  
+  if (base.startsWith('subsource__')) {
+    const subParts = base.split('__');
+    if (subParts.length >= 4) {
+      const releaseInfo = subParts[1].replace(/_/g, ' ');
+      return { label: releaseInfo, origin: 'SubSource' };
+    }
+    return { label: 'Downloaded Subtitle', origin: 'SubSource' };
+  }
+  
+  // Fallback for legacy format
+  if (base.includes('_')) {
+    const subParts = base.split('_');
+    if (subParts.length >= 3) {
+      const label = subParts.slice(0, subParts.length - 2).join(' ').replace(/_/g, ' ');
+      return { label, origin: 'Downloaded Sub' };
+    }
+  }
+
+  const nameOnly = base.replace(/\.[^/.]+$/, '');
+  return { label: nameOnly.replace(/_/g, ' '), origin: 'Local File' };
+}
+
+
 export function SubtitleControlModal({
   isOpen,
   onClose,
@@ -321,6 +382,15 @@ export function SubtitleControlModal({
       const current = filteredTracks.find((t: Track) => t.selected);
       if (current) {
         setSelectedId(current.id);
+        const norm = getTrackLanguage(current);
+        if (norm) {
+          setSearchLang(norm);
+        } else {
+          setSearchLang('off');
+        }
+      } else {
+        setSelectedId(0);
+        setSearchLang('off');
       }
     } catch (e) {
       console.error('Failed to load subtitle tracks:', e);
@@ -558,8 +628,13 @@ export function SubtitleControlModal({
       const { writeTextFile, mkdir, BaseDirectory } = await import('@tauri-apps/plugin-fs');
       const { appLocalDataDir, join } = await import('@tauri-apps/api/path');
       const appDir = await appLocalDataDir();
-      const safeTitle = (selectedMovie?.title || 'subtitle').replace(/[^a-zA-Z0-9]/g, '_');
-      const relPath = `subtitles/${safeTitle}_${sub.language}_${sub.subtitleId}.srt`;
+      const sanitizePart = (val?: string) => {
+        if (!val) return 'unknown';
+        return val.replace(/__/g, '_').replace(/ /g, '_').replace(/[^a-zA-Z0-9_]/g, '');
+      };
+      const cleanRelease = sanitizePart(sub.releaseInfo?.join('_') || 'subtitle');
+      const cleanLang = sanitizePart(sub.language);
+      const relPath = `subtitles/subsource__${cleanRelease}__${cleanLang}__${sub.subtitleId}.srt`;
       const filePath = await join(appDir, relPath);
 
       await mkdir('subtitles', { baseDir: BaseDirectory.AppLocalData, recursive: true }).catch(() => {});
@@ -620,20 +695,25 @@ export function SubtitleControlModal({
 
   const allSubTracks = tracks.filter(t => t.type === 'sub');
 
-  // Derive available languages from actual subtitle tracks
+  // Derive available languages from actual subtitle tracks, normalized to canonical 2-letter codes
   const availableLangs = Array.from(
-    new Set(allSubTracks.map(t => t.lang).filter(Boolean))
+    new Set(allSubTracks.map(t => getTrackLanguage(t)).filter(Boolean))
   ).map(code => ({
-    code: code!,
-    label: LANG_LABELS[code!] || code!.toUpperCase(),
+    code: code,
+    label: LANG_LABELS[code] || code.toUpperCase(),
   }));
 
-  // Sort: put the currently selected language first, then alphabetically
-  availableLangs.sort((a, b) => {
-    if (a.code === searchLang) return -1;
-    if (b.code === searchLang) return 1;
-    return a.label.localeCompare(b.label);
-  });
+  // Sort alphabetically
+  availableLangs.sort((a, b) => a.label.localeCompare(b.label));
+
+  // Determine active track language
+  const activeTrack = allSubTracks.find(t => t.selected);
+  const selectedTrackLang = activeTrack ? getTrackLanguage(activeTrack) : 'off';
+
+  // Filter subtitle tracks for Column 2 based on selected language
+  const filteredSubTracks = allSubTracks.filter(
+    track => getTrackLanguage(track) === normalizeLangCode(searchLang)
+  );
 
   // Filter subtitles by episode if filter is active
   const filteredSubtitles = episodeFilter !== null
@@ -674,25 +754,30 @@ export function SubtitleControlModal({
         </div>
 
         <div className="subtitle-modal-body">
-          {/* ── Column 1: Language + Search ── */}
+          {/* ── Column 1: Language ── */}
           <div className="subtitle-col subtitle-col-lang">
-            <div className="subtitle-col-title">Language</div>
+            <div className="subtitle-col-title">Subtitles Languages</div>
             <div className="subtitle-lang-list">
-              {availableLangs.length > 0 ? (
-                availableLangs.map((lang) => (
-                  <button
-                    key={lang.code}
-                    className={`subtitle-lang-btn ${searchLang === lang.code ? 'active' : ''}`}
-                    onClick={() => handleLangChange(lang.code)}
-                  >
-                    {lang.label}
-                  </button>
-                ))
-              ) : loading ? (
-                <div className="subtitle-empty">Loading…</div>
-              ) : (
-                <div className="subtitle-empty">No languages</div>
-              )}
+              <button
+                className={`subtitle-lang-btn ${searchLang === 'off' ? 'active' : ''}`}
+                onClick={() => {
+                  handleDisable();
+                  setSearchLang('off');
+                }}
+              >
+                OFF
+                {selectedTrackLang === 'off' && <span className="subtitle-active-dot"></span>}
+              </button>
+              {availableLangs.map((lang) => (
+                <button
+                  key={lang.code}
+                  className={`subtitle-lang-btn ${searchLang === lang.code ? 'active' : ''}`}
+                  onClick={() => handleLangChange(lang.code)}
+                >
+                  {lang.label}
+                  {selectedTrackLang === lang.code && <span className="subtitle-active-dot"></span>}
+                </button>
+              ))}
             </div>
           </div>
 
@@ -700,7 +785,7 @@ export function SubtitleControlModal({
           <div className="subtitle-col subtitle-col-tracks">
             {/* Dynamic header */}
             <div className="subtitle-col-title">
-              {viewState === 'tracks' && 'Subtitle'}
+              {viewState === 'tracks' && 'Subtitles Variants'}
               {viewState === 'movies' && (
                 <button className="subtitle-back-btn" onClick={() => setViewState('tracks')}>
                   ← Back
@@ -728,39 +813,66 @@ export function SubtitleControlModal({
                   <div className="subtitle-empty">Loading tracks…</div>
                 ) : (
                   <div className="subtitle-track-list">
-                    <button
-                      className={`subtitle-track-btn ${selectedId === 0 ? 'active' : ''}`}
-                      onClick={handleDisable}
-                    >
-                      <span className="subtitle-track-label">None</span>
-                    </button>
-                    {allSubTracks.map((track) => (
+                    {searchLang === 'off' ? (
                       <button
-                        key={track.id}
-                        className={`subtitle-track-btn ${selectedId === track.id ? 'active' : ''}`}
-                        onClick={() => handleSelect(track.id)}
+                        className={`subtitle-track-btn ${selectedId === 0 ? 'active' : ''}`}
+                        onClick={handleDisable}
                       >
-                        <span className="subtitle-track-label">
-                          {track.title || `Subtitle ${track.id}`}
-                          {track.external && <span className="subtitle-track-tag">EXT</span>}
-                        </span>
-                        <span className="subtitle-track-meta">
-                          {track.lang?.toUpperCase()}
-                          {track.external && (
-                            <span
-                              className="subtitle-track-remove"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleRemoveExternal(track.id);
-                              }}
-                              title="Remove"
-                            >
-                              ×
-                            </span>
-                          )}
-                        </span>
+                        <div className="subtitle-track-variant-wrapper">
+                          <div className="subtitle-track-variant-title">
+                            None
+                          </div>
+                          <div className="subtitle-track-variant-origin">
+                            Subtitles disabled
+                          </div>
+                        </div>
+                        {selectedId === 0 && <span className="subtitle-active-dot"></span>}
                       </button>
-                    ))}
+                    ) : (
+                      <>
+                        {filteredSubTracks.map((track) => {
+                          const info = track.external && track['external-filename']
+                            ? parseExternalTrack(track['external-filename'])
+                            : { label: track.title || `Track ${track.id}`, origin: 'Embedded' };
+                          
+                          return (
+                            <button
+                              key={track.id}
+                              className={`subtitle-track-btn ${selectedId === track.id ? 'active' : ''}`}
+                              onClick={() => handleSelect(track.id)}
+                            >
+                              <div className="subtitle-track-variant-wrapper">
+                                <div className="subtitle-track-variant-title">
+                                  {info.label}
+                                </div>
+                                <div className="subtitle-track-variant-origin">
+                                  {info.origin}
+                                </div>
+                              </div>
+                              <span className="subtitle-track-meta">
+                                {track.lang?.toUpperCase()}
+                                {track.external && (
+                                  <span
+                                    className="subtitle-track-remove"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleRemoveExternal(track.id);
+                                    }}
+                                    title="Remove"
+                                  >
+                                    ×
+                                  </span>
+                                )}
+                              </span>
+                              {selectedId === track.id && <span className="subtitle-active-dot"></span>}
+                            </button>
+                          );
+                        })}
+                        {filteredSubTracks.length === 0 && (
+                          <div className="subtitle-empty">No subtitles loaded for this language</div>
+                        )}
+                      </>
+                    )}
                   </div>
                 )}
 
@@ -874,9 +986,9 @@ export function SubtitleControlModal({
             )}
           </div>
 
-          {/* ── Column 3: Controls ── */}
+          {/* ── Column 3: Subtitles Settings ── */}
           <div className="subtitle-col subtitle-col-controls">
-            <div className="subtitle-col-title">Controls</div>
+            <div className="subtitle-col-title">Subtitles Settings</div>
             <div className="subtitle-controls-list">
               <div className="subtitle-control-item">
                 <label>Delay</label>
@@ -909,13 +1021,13 @@ export function SubtitleControlModal({
               </div>
 
               <div className="subtitle-control-item">
-                <label>Offset</label>
+                <label>Vertical Position</label>
                 <div className="subtitle-control-inputs">
                   <button
                     className="subtitle-control-nudge"
                     onClick={() => handleVerticalOffsetChange(Math.max(0, verticalOffset - 5))}
                   >↑</button>
-                  <span className="subtitle-control-display">{verticalOffset}%</span>
+                  <span className="subtitle-control-display">{100 - verticalOffset}%</span>
                   <button
                     className="subtitle-control-nudge"
                     onClick={() => handleVerticalOffsetChange(Math.min(100, verticalOffset + 5))}

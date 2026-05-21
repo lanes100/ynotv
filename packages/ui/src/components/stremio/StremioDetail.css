@@ -53,6 +53,11 @@
   height: 100%;
   box-sizing: border-box;
   scrollbar-width: thin;
+  scrollbar-color: var(--surface-hover, rgba(255, 255, 255, 0.15)) transparent;
+}
+
+.stremio-detail-left:hover {
+  scrollbar-color: var(--accent-primary, rgba(0, 212, 255, 0.5)) transparent;
 }
 
 .stremio-detail-left::-webkit-scrollbar {
@@ -385,6 +390,11 @@
   gap: 8px;
   padding-right: 4px;
   scrollbar-width: thin;
+  scrollbar-color: var(--surface-hover, rgba(255, 255, 255, 0.15)) transparent;
+}
+
+.stremio-detail-video-list:hover {
+  scrollbar-color: var(--accent-primary, rgba(0, 212, 255, 0.5)) transparent;
 }
 
 .stremio-detail-video-list::-webkit-scrollbar {
@@ -530,6 +540,11 @@
   gap: 12px;
   padding-right: 4px;
   scrollbar-width: thin;
+  scrollbar-color: var(--surface-hover, rgba(255, 255, 255, 0.15)) transparent;
+}
+
+.stremio-detail-streams-list:hover {
+  scrollbar-color: var(--accent-primary, rgba(0, 212, 255, 0.5)) transparent;
 }
 
 .stremio-detail-streams-list::-webkit-scrollbar {

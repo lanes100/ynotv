@@ -797,8 +797,14 @@ function App() {
   const [showSubtitleModal, setShowSubtitleModal] = useState(false);
   const [showAudioModal, setShowAudioModal] = useState(false);
 
-  const handleShowSubtitleModal = useCallback(() => setShowSubtitleModal(true), []);
-  const handleShowAudioModal = useCallback(() => setShowAudioModal(true), []);
+  const handleShowSubtitleModal = useCallback(() => {
+    controlsHoveredRef.current = false;
+    setShowSubtitleModal(true);
+  }, [controlsHoveredRef]);
+  const handleShowAudioModal = useCallback(() => {
+    controlsHoveredRef.current = false;
+    setShowAudioModal(true);
+  }, [controlsHoveredRef]);
 
 
 
@@ -973,19 +979,42 @@ function App() {
         const addons = useStremioAddonStore.getState().enabledAddons;
         const subs = await fetchSubtitles(addons, meta.type, meta.id);
         if (subs.length > 0 && window.mpv?.addSubtitleFile) {
-          for (const sub of subs) {
+          const { writeTextFile, mkdir, BaseDirectory } = await import('@tauri-apps/plugin-fs');
+          const { appLocalDataDir, join } = await import('@tauri-apps/api/path');
+          const appDir = await appLocalDataDir();
+
+          await mkdir('subtitles', { baseDir: BaseDirectory.AppLocalData, recursive: true }).catch(() => {});
+
+          for (let i = 0; i < subs.length; i++) {
+            const sub = subs[i];
             try {
               const res = await window.fetchProxy.fetch(sub.url);
               if (res.data?.ok) {
                 const text = res.data.text;
-                const subBlob = new Blob([text], { type: 'text/vtt' });
-                const url = URL.createObjectURL(subBlob);
-                window.mpv.addSubtitleFile(url).catch(() => {});
+                const isVtt = sub.url.toLowerCase().includes('.vtt') || text.includes('WEBVTT');
+                const ext = isVtt ? 'vtt' : 'srt';
+                const sanitizePart = (val?: string) => {
+                  if (!val) return 'unknown';
+                  return val.replace(/__/g, '_').replace(/ /g, '_').replace(/[^a-zA-Z0-9_]/g, '');
+                };
+                const cleanAddon = sanitizePart(sub.addonName || 'Addon');
+                const cleanLabel = sanitizePart(sub.label || sub.lang.toUpperCase());
+                const cleanMetaId = sanitizePart(meta.id);
+                const cleanLang = sanitizePart(sub.lang);
+                const relPath = `subtitles/stremio__${cleanAddon}__${cleanLabel}__${cleanMetaId}__${cleanLang}__${i}.${ext}`;
+                const filePath = await join(appDir, relPath);
+
+                await writeTextFile(relPath, text, { baseDir: BaseDirectory.AppLocalData });
+                window.mpv.addSubtitleFile(filePath).catch(() => {});
               }
-            } catch {}
+            } catch (err) {
+              console.error('[Stremio] Failed to load or save subtitle:', sub.url, err);
+            }
           }
         }
-      } catch {}
+      } catch (err) {
+        console.error('[Stremio] Error processing subtitles:', err);
+      }
     };
     window.addEventListener('ynotv:stremio-play', handler);
     return () => window.removeEventListener('ynotv:stremio-play', handler);
@@ -1994,14 +2023,22 @@ function App() {
       {/* Track Selection Modals */}
       <SubtitleControlModal
         isOpen={showSubtitleModal}
-        onClose={() => setShowSubtitleModal(false)}
+        onClose={() => {
+          controlsHoveredRef.current = false;
+          setShowSubtitleModal(false);
+          handleMouseMove();
+        }}
         vodTitle={vodInfo?.title}
         vodYear={vodInfo?.year}
       />
       <TrackSelectionModal
         isOpen={showAudioModal}
         type="audio"
-        onClose={() => setShowAudioModal(false)}
+        onClose={() => {
+          controlsHoveredRef.current = false;
+          setShowAudioModal(false);
+          handleMouseMove();
+        }}
       />
 
       {/* Advanced Search Modal */}

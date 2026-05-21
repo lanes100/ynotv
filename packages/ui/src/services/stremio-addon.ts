@@ -130,7 +130,12 @@ export async function fetchSubtitles(
     try {
       const url = `${normalizeBaseUrl(addon.baseUrl)}/subtitles/${type}/${id}.json`;
       const data = await fetchJson(url) as { subtitles: StremioSubtitle[] };
-      if (data?.subtitles) results.push(...data.subtitles);
+      if (data?.subtitles) {
+        for (const sub of data.subtitles) {
+          sub.addonName = addon.manifest.name;
+        }
+        results.push(...data.subtitles);
+      }
     } catch {
       // Try next addon
     }

@@ -4,7 +4,6 @@ import { invoke } from '@tauri-apps/api/core';
 import type { StoredChannel } from '../db';
 import type { VodPlayInfo } from '../types/media';
 import { useCurrentProgram } from '../hooks/useChannels';
-import { TrackSelectionModal } from './TrackSelectionModal';
 import { MetadataBadge } from './MetadataBadge';
 import { scheduleRecording, getDvrSettings, updatePlayingStream, db, type DvrSchedule } from '../db';
 import { StalkerClient } from '@ynotv/local-adapter';
@@ -119,7 +118,6 @@ export function NowPlayingBar({
   // scrubMode: 'timeshift' | 'epgcatchup' — local toggle when channel supports both
   const [scrubMode, setScrubMode] = useState<'timeshift' | 'epgcatchup'>('timeshift');
   // Modal state
-  const [showAudioModal, setShowAudioModal] = useState(false);
   const [recording, setRecording] = useState(false);
   const [showRecordModal, setShowRecordModal] = useState(false);
   const [recordDuration, setRecordDuration] = useState(5);
@@ -737,7 +735,7 @@ export function NowPlayingBar({
               </button>
               <button
                 className="npb-btn"
-                onClick={() => setShowAudioModal(true)}
+                onClick={onShowAudioModal}
                 disabled={!canControl}
                 title="Select Audio Track (A)"
               >
@@ -831,15 +829,7 @@ export function NowPlayingBar({
             </button>
           </div>
 
-          {/* Audio Track Selection Modal - rendered via portal to center in viewport */}
-          {showAudioModal && createPortal(
-            <TrackSelectionModal
-              isOpen={showAudioModal}
-              type="audio"
-              onClose={() => setShowAudioModal(false)}
-            />,
-            document.body
-          )}
+
 
           {/* Quick Record Modal - rendered via portal to center in viewport */}
           {showRecordModal && createPortal(
