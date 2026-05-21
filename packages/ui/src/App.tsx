@@ -209,6 +209,7 @@ function App() {
     setPlaying,
     setPosition,
     setVolume,
+    setDuration,
   } = mpv;
 
   // ==========================================================================
@@ -851,6 +852,10 @@ function App() {
   useEffect(() => { handlePlayVodRef.current = handlePlayVod; }, [handlePlayVod]);
   const setActiveViewRef = useRef(setActiveView);
   useEffect(() => { setActiveViewRef.current = setActiveView; }, [setActiveView]);
+  const setDurationRef = useRef(setDuration);
+  useEffect(() => { setDurationRef.current = setDuration; }, [setDuration]);
+  const setPositionRef = useRef(setPosition);
+  useEffect(() => { setPositionRef.current = setPosition; }, [setPosition]);
 
   // Ref to hold current stremio episode info for the progress updater
   const stremioEpisodeRef = useRef<{
@@ -875,13 +880,19 @@ function App() {
       const url = stream.url || (stream.infoHash ? `infoHash:${stream.infoHash}${stream.fileIdx !== undefined ? `:${stream.fileIdx}` : ''}` : null);
       if (!url) return;
 
+      // Reset duration and position state/ref to avoid stale values during calculations
+      if (setDurationRef.current) setDurationRef.current(0);
+      if (setPositionRef.current) setPositionRef.current(0);
+      durationRef.current = 0;
+      positionRef.current = 0;
+
       // Record watch in stremio watch store
       const watchStore = useStremioWatchStore.getState();
 
       // Capture saved fraction before recording new start
       const savedFraction = meta.type === 'series' && episodeVideo
         ? watchStore.getEpisodeProgressFraction(episodeVideo.id)
-        : 0;
+        : (watchStore.history.find((h) => h.metaId === meta.id)?.progressFraction ?? 0);
 
       if (meta.type === 'series' && episodeVideo) {
         // Compute next episode: iterate videos sorted by season/episode
@@ -904,7 +915,8 @@ function App() {
         watchStore.recordEpisodeStart(
           meta.id, meta.name, meta.poster,
           episodeVideo.id, episodeVideo.season ?? 0, episodeVideo.episode ?? 0,
-          nextVideoId, nextSeason, nextEpisode
+          nextVideoId, nextSeason, nextEpisode,
+          stream
         );
         stremioEpisodeRef.current = {
           metaId: meta.id,
@@ -919,7 +931,7 @@ function App() {
         };
         stremioMovieRef.current = null;
       } else {
-        watchStore.recordMovieWatch(meta.id, meta.name, meta.poster);
+        watchStore.recordMovieWatch(meta.id, meta.name, meta.poster, stream);
         stremioMovieRef.current = { metaId: meta.id, name: meta.name, poster: meta.poster };
         stremioEpisodeRef.current = null;
       }
@@ -936,7 +948,7 @@ function App() {
       });
 
       // Resume from saved stremio progress if available
-      if (savedFraction > 0.02 && savedFraction < 0.95 && meta.type === 'series' && episodeVideo) {
+      if (savedFraction > 0.02 && savedFraction < 0.95) {
         const retrySeek = (attempt = 0) => {
           const dur = durationRef.current;
           if (dur > 0) {
@@ -1581,7 +1593,7 @@ function App() {
                     <path d="M8 12h8" />
                     <path d="M12 8v8" />
                   </svg>
-                  <span>Stremio</span>
+                  <span>Strem</span>
                 </button>
               )}
             </div>

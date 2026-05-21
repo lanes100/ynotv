@@ -3,6 +3,12 @@ import type { InstalledAddon, StremioManifest, StremioCatalogResponse, StremioMe
 const MANIFEST_CACHE = new Map<string, { manifest: StremioManifest; ts: number }>();
 const CACHE_TTL = 5 * 60 * 1000;
 
+const CATALOG_CACHE = new Map<string, Promise<StremioCatalogResponse>>();
+
+export function clearCatalogCache() {
+  CATALOG_CACHE.clear();
+}
+
 async function fetchJson(url: string): Promise<any> {
   const proxy = window.fetchProxy;
   if (proxy?.fetch) {
@@ -55,7 +61,20 @@ export async function fetchCatalog(
     url += `/${extraArgs}`;
   }
   url += '.json';
-  return await fetchJson(url) as StremioCatalogResponse;
+
+  const cachedPromise = CATALOG_CACHE.get(url);
+  if (cachedPromise) {
+    return cachedPromise;
+  }
+
+  const promise = fetchJson(url) as Promise<StremioCatalogResponse>;
+  CATALOG_CACHE.set(url, promise);
+
+  promise.catch(() => {
+    CATALOG_CACHE.delete(url);
+  });
+
+  return promise;
 }
 
 export async function fetchMeta(

@@ -131,7 +131,7 @@ export function StartupTab({
             <option value="sports">Sports</option>
             <option value="calendar">TV Calendar</option>
             <option value="dvr">DVR</option>
-            <option value="stremio">Stremio</option>
+            <option value="stremio">Strem</option>
           </select>
         </div>
 

@@ -505,3 +505,48 @@
   font-weight: 600;
   text-align: center;
 }
+
+/* Play overlay button */
+.stremio-rw-play-overlay-btn {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.9);
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: rgba(15, 15, 20, 0.6);
+  border: 1.5px solid rgba(255, 255, 255, 0.45);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 3;
+  opacity: 0;
+  pointer-events: none;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.2s ease, background-color 0.2s ease, border-color 0.2s ease;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.stremio-rw-card:hover .stremio-rw-play-overlay-btn {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.stremio-rw-play-overlay-btn:hover {
+  background: rgba(123, 97, 255, 0.85); /* use Stremio brand purple accent */
+  border-color: rgba(255, 255, 255, 0.8);
+  transform: translate(-50%, -50%) scale(1.1);
+  box-shadow: 0 0 15px rgba(123, 97, 255, 0.6);
+}
+
+.stremio-rw-play-icon {
+  width: 22px;
+  height: 22px;
+  margin-left: 2px; /* slight offset to optically center the play triangle */
+  fill: white;
+}

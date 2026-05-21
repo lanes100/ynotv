@@ -86,7 +86,7 @@ export function StremioTopbar({ addons, onOpenAddonManager }: StremioTopbarProps
             <rect x="2" y="7" width="20" height="14" rx="3" />
             <path d="M17 2l-5 5-5-5" />
           </svg>
-          <span className="stremio-brand-name">Stremio</span>
+          <span className="stremio-brand-name">Strem</span>
         </div>
       </div>
 

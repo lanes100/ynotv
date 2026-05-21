@@ -8,7 +8,7 @@ const NAV_ITEMS = [
   { id: 'series', label: 'Series' },
   { id: 'dvr', label: 'DVR' },
   { id: 'sports', label: 'Sports' },
-  { id: 'stremio', label: 'Stremio' },
+  { id: 'stremio', label: 'Strem' },
 ];
 
 export function NavigationTab({ navHiddenTabs, onNavHiddenTabsChange }: NavigationTabProps) {

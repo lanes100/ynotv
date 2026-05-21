@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { InstalledAddon } from '../types/stremio';
-import { fetchManifest } from '../services/stremio-addon';
+import { fetchManifest, clearCatalogCache } from '../services/stremio-addon';
 
 const STORAGE_KEY = 'stremio-addons';
 
@@ -41,6 +41,7 @@ export const useStremioAddonStore = create<StremioAddonStore>()(
         newAddons[currentIndex] = newAddons[nextIndex];
         newAddons[nextIndex] = temp;
 
+        clearCatalogCache();
         set({ addons: newAddons, enabledAddons: deriveEnabled(newAddons) });
       },
 
@@ -54,6 +55,7 @@ export const useStremioAddonStore = create<StremioAddonStore>()(
           try {
             const manifest = await fetchManifest(def.url);
             if (!existingIds.has(manifest.id)) {
+              clearCatalogCache();
               set(s => {
                 const newAddons = [
                   ...s.addons,
@@ -86,6 +88,7 @@ export const useStremioAddonStore = create<StremioAddonStore>()(
           manifest,
           installedAt: Date.now(),
         };
+        clearCatalogCache();
         set(s => {
           const newAddons = [...s.addons, addon];
           return { addons: newAddons, enabledAddons: deriveEnabled(newAddons) };
@@ -93,6 +96,7 @@ export const useStremioAddonStore = create<StremioAddonStore>()(
       },
 
       removeAddon: (id: string) => {
+        clearCatalogCache();
         set(s => {
           const newAddons = s.addons.filter(a => a.id !== id);
           return { addons: newAddons, enabledAddons: deriveEnabled(newAddons) };
@@ -100,6 +104,7 @@ export const useStremioAddonStore = create<StremioAddonStore>()(
       },
 
       toggleAddon: (id: string) => {
+        clearCatalogCache();
         set(s => {
           const newAddons = s.addons.map(a =>
             a.id === id ? { ...a, enabled: a.enabled === false ? true : false } : a
