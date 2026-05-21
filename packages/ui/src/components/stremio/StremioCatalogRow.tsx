@@ -121,8 +121,8 @@ export function StremioCatalogRow({
       </div>
       <div className="stremio-row-scroll" ref={scrollRef} onScroll={update}>
         <div className="stremio-row-track">
-          {items.map((item) => (
-            <div key={item.id} className="stremio-row-card" onClick={() => onItemClick(item)}>
+          {items.map((item, idx) => (
+            <div key={`${item.id}-${idx}`} className="stremio-row-card" onClick={() => onItemClick(item)}>
               {item.poster && (
                 <img
                   className="stremio-row-poster"

@@ -6,7 +6,7 @@
   height: calc(100% - 32px);
   z-index: 100;
   display: flex;
-  background: rgba(0, 0, 0, 0.85);
+  background: var(--bg-overlay, rgba(0, 0, 0, 0.85));
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   overflow: hidden;
@@ -19,4 +19,22 @@
   overflow-x: hidden;
   padding: 0;
   position: relative;
+}
+
+/* Custom themed scrollbar for main content area */
+.stremio-main::-webkit-scrollbar {
+  width: 6px;
+}
+
+.stremio-main::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.stremio-main::-webkit-scrollbar-thumb {
+  background: var(--surface-hover, rgba(255, 255, 255, 0.15));
+  border-radius: 4px;
+}
+
+.stremio-main::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-primary, rgba(0, 212, 255, 0.5));
 }

@@ -8,23 +8,24 @@
 .stremio-search-bar {
   display: flex;
   align-items: center;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--surface-color, rgba(255, 255, 255, 0.06));
+  border: 1px solid var(--surface-border, rgba(255, 255, 255, 0.1));
   border-radius: 12px;
   padding: 8px 16px;
   margin-bottom: 32px;
   max-width: 600px;
-  transition: border-color 0.2s;
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
 
 .stremio-search-bar:focus-within {
-  border-color: rgba(0, 212, 255, 0.5);
+  border-color: var(--accent-primary, rgba(0, 212, 255, 0.5));
+  box-shadow: 0 0 12px var(--accent-glow, rgba(0, 212, 255, 0.1));
 }
 
 .stremio-search-icon {
   width: 18px;
   height: 18px;
-  color: rgba(255, 255, 255, 0.4);
+  color: var(--text-muted, rgba(255, 255, 255, 0.4));
   flex-shrink: 0;
 }
 
@@ -32,29 +33,30 @@
   flex: 1;
   background: transparent;
   border: none;
-  color: rgba(255, 255, 255, 0.9);
+  color: var(--text-primary, rgba(255, 255, 255, 0.9));
   font-size: 1rem;
   padding: 4px 12px;
   outline: none;
 }
 
 .stremio-search-input::placeholder {
-  color: rgba(255, 255, 255, 0.3);
+  color: var(--text-muted, rgba(255, 255, 255, 0.3));
 }
 
 .stremio-search-clear {
   background: none;
   border: none;
-  color: rgba(255, 255, 255, 0.4);
+  color: var(--text-muted, rgba(255, 255, 255, 0.4));
   cursor: pointer;
   font-size: 0.9rem;
   padding: 4px 8px;
   border-radius: 4px;
+  transition: all 0.15s;
 }
 
 .stremio-search-clear:hover {
-  color: rgba(255, 255, 255, 0.8);
-  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary, rgba(255, 255, 255, 0.8));
+  background: var(--surface-hover, rgba(255, 255, 255, 0.1));
 }
 
 /* ─── Search Results ──────────────────────────────────────── */
@@ -70,7 +72,7 @@
 }
 
 .stremio-meta-card {
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--surface-color, rgba(255, 255, 255, 0.04));
   border-radius: 10px;
   overflow: hidden;
   cursor: pointer;
@@ -79,7 +81,7 @@
 
 .stremio-meta-card:hover {
   transform: translateY(-4px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), 0 0 20px var(--accent-glow, rgba(0, 212, 255, 0.05));
 }
 
 .stremio-meta-poster {
@@ -96,7 +98,7 @@
 .stremio-meta-card-title {
   font-size: 0.85rem;
   font-weight: 500;
-  color: rgba(255, 255, 255, 0.9);
+  color: var(--text-primary, rgba(255, 255, 255, 0.9));
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -104,7 +106,7 @@
 
 .stremio-meta-card-year {
   font-size: 0.75rem;
-  color: rgba(255, 255, 255, 0.4);
+  color: var(--text-muted, rgba(255, 255, 255, 0.4));
   margin-top: 2px;
 }
 
@@ -118,7 +120,7 @@
 
 .stremio-loading-text {
   font-size: 0.9rem;
-  color: rgba(255, 255, 255, 0.4);
+  color: var(--text-muted, rgba(255, 255, 255, 0.4));
   text-align: center;
   padding: 40px 0;
 }
@@ -147,7 +149,7 @@
   margin: 0;
   font-size: 1.1rem;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.9);
+  color: var(--text-primary, rgba(255, 255, 255, 0.9));
 }
 
 .stremio-row-nav {
@@ -156,9 +158,9 @@
 }
 
 .stremio-row-see-all-btn {
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  background: rgba(255, 255, 255, 0.06);
-  color: rgba(255, 255, 255, 0.85);
+  border: 1px solid var(--surface-border, rgba(255, 255, 255, 0.15));
+  background: var(--surface-color, rgba(255, 255, 255, 0.06));
+  color: var(--text-secondary, rgba(255, 255, 255, 0.85));
   border-radius: 8px;
   padding: 0 10px;
   height: 32px;
@@ -169,17 +171,18 @@
 }
 
 .stremio-row-see-all-btn:hover {
-  background: rgba(255, 255, 255, 0.12);
-  color: white;
+  background: var(--surface-hover, rgba(255, 255, 255, 0.12));
+  color: var(--text-primary, white);
+  border-color: var(--accent-primary, rgba(255, 255, 255, 0.25));
 }
 
 .stremio-row-nav-btn {
   width: 32px;
   height: 32px;
   border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.06);
-  color: rgba(255, 255, 255, 0.6);
+  border: 1px solid var(--surface-border, rgba(255, 255, 255, 0.1));
+  background: var(--surface-color, rgba(255, 255, 255, 0.06));
+  color: var(--text-secondary, rgba(255, 255, 255, 0.6));
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -188,8 +191,9 @@
 }
 
 .stremio-row-nav-btn:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.12);
-  color: white;
+  background: var(--surface-hover, rgba(255, 255, 255, 0.12));
+  color: var(--text-primary, white);
+  border-color: var(--accent-primary, rgba(255, 255, 255, 0.25));
 }
 
 .stremio-row-nav-btn:disabled {
@@ -202,15 +206,30 @@
   height: 16px;
 }
 
+/* Themed horizontal scrollbar */
 .stremio-row-scroll {
   overflow-x: auto;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
+  scrollbar-width: thin;
   position: relative;
+  padding-bottom: 4px;
 }
 
 .stremio-row-scroll::-webkit-scrollbar {
-  display: none;
+  height: 4px;
+}
+
+.stremio-row-scroll::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 4px;
+}
+
+.stremio-row-scroll::-webkit-scrollbar-thumb {
+  background: var(--surface-hover, rgba(255, 255, 255, 0.15));
+  border-radius: 4px;
+}
+
+.stremio-row-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-primary, rgba(0, 212, 255, 0.5));
 }
 
 .stremio-row-track {
@@ -222,15 +241,16 @@
 .stremio-row-card {
   flex-shrink: 0;
   width: 150px;
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--surface-color, rgba(255, 255, 255, 0.04));
   border-radius: 10px;
   overflow: hidden;
   cursor: pointer;
-  transition: transform 0.2s;
+  transition: transform 0.2s, box-shadow 0.2s;
 }
 
 .stremio-row-card:hover {
   transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3), 0 0 15px var(--accent-glow, rgba(0, 212, 255, 0.05));
 }
 
 .stremio-row-poster {
@@ -247,7 +267,7 @@
 .stremio-row-card-title {
   font-size: 0.8rem;
   font-weight: 500;
-  color: rgba(255, 255, 255, 0.85);
+  color: var(--text-primary, rgba(255, 255, 255, 0.85));
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -255,7 +275,7 @@
 
 .stremio-row-card-year {
   font-size: 0.7rem;
-  color: rgba(255, 255, 255, 0.4);
+  color: var(--text-muted, rgba(255, 255, 255, 0.4));
   margin-top: 2px;
 }
 
@@ -269,12 +289,12 @@
 
 .stremio-row-fade-left {
   left: 0;
-  background: linear-gradient(to right, rgba(0,0,0,0.85), transparent);
+  background: linear-gradient(to right, var(--bg-primary, rgba(0,0,0,0.85)), transparent);
 }
 
 .stremio-row-fade-right {
   right: 0;
-  background: linear-gradient(to left, rgba(0,0,0,0.85), transparent);
+  background: linear-gradient(to left, var(--bg-primary, rgba(0,0,0,0.85)), transparent);
 }
 
 .stremio-search-expanded {
@@ -292,6 +312,24 @@
   overflow-y: auto;
 }
 
+/* Themed scrollbar for catalog detail view */
+.stremio-catalog-detail-view::-webkit-scrollbar {
+  width: 6px;
+}
+
+.stremio-catalog-detail-view::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.stremio-catalog-detail-view::-webkit-scrollbar-thumb {
+  background: var(--surface-hover, rgba(255, 255, 255, 0.15));
+  border-radius: 4px;
+}
+
+.stremio-catalog-detail-view::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-primary, rgba(0, 212, 255, 0.5));
+}
+
 /* ─── Shimmer Loading Skeleton ────────────────────────────── */
 
 @keyframes shimmer {
@@ -306,13 +344,13 @@
 .stremio-row-poster.skeleton-poster {
   aspect-ratio: 2 / 3;
   width: 100%;
-  background: linear-gradient(90deg, rgba(255, 255, 255, 0.04) 25%, rgba(255, 255, 255, 0.08) 50%, rgba(255, 255, 255, 0.04) 75%);
+  background: linear-gradient(90deg, var(--surface-color, rgba(255, 255, 255, 0.04)) 25%, rgba(255, 255, 255, 0.08) 50%, var(--surface-color, rgba(255, 255, 255, 0.04)) 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
 }
 
 .stremio-row-title.skeleton-text {
-  background: linear-gradient(90deg, rgba(255, 255, 255, 0.04) 25%, rgba(255, 255, 255, 0.08) 50%, rgba(255, 255, 255, 0.04) 75%);
+  background: linear-gradient(90deg, var(--surface-color, rgba(255, 255, 255, 0.04)) 25%, rgba(255, 255, 255, 0.08) 50%, var(--surface-color, rgba(255, 255, 255, 0.04)) 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
 }
@@ -335,9 +373,9 @@
 }
 
 .stremio-discover-select {
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: white;
+  background: var(--surface-color, rgba(255, 255, 255, 0.06));
+  border: 1px solid var(--surface-border, rgba(255, 255, 255, 0.1));
+  color: var(--text-primary, white);
   border-radius: 8px;
   padding: 8px 12px;
   font-size: 0.85rem;
@@ -347,19 +385,18 @@
 }
 
 .stremio-discover-select:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.2);
+  background: var(--surface-hover, rgba(255, 255, 255, 0.1));
+  border-color: var(--accent-primary, rgba(255, 255, 255, 0.2));
 }
 
 .stremio-discover-select option {
-  background: #14141e;
-  color: white;
+  background: var(--bg-primary, #14141e);
+  color: var(--text-primary, white);
 }
 
 /* ─── Recently Watched / Continue Watching Row ────────────── */
 
 .stremio-rw-row {
-  /* Subtle gradient border-top to separate from catalog rows */
   border-top: none;
 }
 
@@ -372,7 +409,7 @@
 .stremio-rw-icon {
   width: 16px;
   height: 16px;
-  color: #00d4ff;
+  color: var(--accent-primary, #00d4ff);
   flex-shrink: 0;
 }
 
@@ -380,15 +417,16 @@
   position: relative;
   flex-shrink: 0;
   width: 150px;
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--surface-color, rgba(255, 255, 255, 0.04));
   border-radius: 10px;
   overflow: hidden;
   cursor: pointer;
-  transition: transform 0.2s;
+  transition: transform 0.2s, box-shadow 0.2s;
 }
 
 .stremio-rw-card:hover {
   transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3), 0 0 15px var(--accent-glow, rgba(0, 212, 255, 0.05));
 }
 
 .stremio-rw-card--loading {
@@ -401,7 +439,7 @@
   width: 100%;
   aspect-ratio: 2 / 3;
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--surface-color, rgba(255, 255, 255, 0.04));
 }
 
 .stremio-rw-poster-wrap .stremio-row-poster {
@@ -417,7 +455,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: rgba(255, 255, 255, 0.15);
+  color: var(--text-muted, rgba(255, 255, 255, 0.15));
 }
 
 .stremio-rw-poster-placeholder svg {
@@ -437,7 +475,7 @@
 
 .stremio-rw-progress-fill {
   height: 100%;
-  background: #00d4ff;
+  background: var(--accent-primary, #00d4ff);
   border-radius: 0 2px 2px 0;
   transition: width 0.3s ease;
 }
@@ -448,7 +486,7 @@
   bottom: 6px;
   left: 6px;
   background: rgba(0, 0, 0, 0.75);
-  color: rgba(255, 255, 255, 0.9);
+  color: var(--text-primary, rgba(255, 255, 255, 0.9));
   font-size: 0.65rem;
   font-weight: 700;
   padding: 2px 6px;
@@ -471,7 +509,7 @@
   z-index: 4;
   background: rgba(0, 0, 0, 0.65);
   border: none;
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--text-secondary, rgba(255, 255, 255, 0.7));
   width: 20px;
   height: 20px;
   border-radius: 50%;
@@ -508,11 +546,11 @@
 /* Sub-text below title */
 .stremio-rw-card-sub {
   font-size: 0.68rem;
-  color: rgba(255, 255, 255, 0.4);
+  color: var(--text-muted, rgba(255, 255, 255, 0.4));
   margin-top: 2px;
 }
 
 .stremio-rw-card-sub--next {
-  color: #00c875;
+  color: var(--accent-primary, #00c875);
   font-weight: 600;
 }

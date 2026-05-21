@@ -1,5 +1,5 @@
 .vod-home {
-  background: #0d0d0d;
+  background: var(--bg-primary, #0d0d0d);
   min-height: 100%;
 }
 

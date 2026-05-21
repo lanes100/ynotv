@@ -29,7 +29,7 @@
 .carousel__title {
   font-size: 1.125rem;
   font-weight: 500;
-  color: #fff;
+  color: var(--text-primary, #fff);
   margin: 0;
   letter-spacing: 0.01em;
 }
@@ -43,20 +43,21 @@
   width: 32px;
   height: 32px;
   border-radius: 4px;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--surface-color, rgba(255, 255, 255, 0.08));
+  border: 1px solid var(--surface-border, rgba(255, 255, 255, 0.1));
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: rgba(255, 255, 255, 0.7);
-  transition: background 150ms ease, color 150ms ease, border-color 150ms ease;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.7));
+  transition: background 150ms ease, color 150ms ease, border-color 150ms ease, box-shadow 150ms ease;
 }
 
 .carousel__nav-btn:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.12);
-  color: #fff;
-  border-color: rgba(255, 255, 255, 0.2);
+  background: var(--surface-hover, rgba(255, 255, 255, 0.12));
+  color: var(--text-primary, #fff);
+  border-color: var(--accent-primary, rgba(255, 255, 255, 0.2));
+  box-shadow: 0 0 10px var(--accent-glow, rgba(0, 212, 255, 0.1));
 }
 
 .carousel__nav-btn:disabled {
@@ -69,19 +70,32 @@
   height: 18px;
 }
 
-/* Scroll container */
+/* Scroll container - themed scrollbar */
 .carousel__scroll-container {
   flex: 1;
   min-height: 0;
   overflow-x: auto;
   overflow-y: hidden;
   scroll-snap-type: x mandatory;
-  scrollbar-width: none; /* Firefox */
-  -ms-overflow-style: none; /* IE/Edge */
+  scrollbar-width: thin;
 }
 
 .carousel__scroll-container::-webkit-scrollbar {
-  display: none; /* Chrome/Safari */
+  height: 4px;
+}
+
+.carousel__scroll-container::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 4px;
+}
+
+.carousel__scroll-container::-webkit-scrollbar-thumb {
+  background: var(--surface-hover, rgba(255, 255, 255, 0.15));
+  border-radius: 4px;
+}
+
+.carousel__scroll-container::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-primary, rgba(0, 212, 255, 0.5));
 }
 
 .carousel__track {
@@ -102,12 +116,12 @@
 
 .carousel__fade--left {
   left: 0;
-  background: linear-gradient(to right, #0d0d0d 0%, transparent 100%);
+  background: linear-gradient(to right, var(--bg-primary, #0d0d0d) 0%, transparent 100%);
 }
 
 .carousel__fade--right {
   right: 0;
-  background: linear-gradient(to left, #0d0d0d 0%, transparent 100%);
+  background: linear-gradient(to left, var(--bg-primary, #0d0d0d) 0%, transparent 100%);
 }
 
 /* Loading skeletons */
@@ -116,9 +130,9 @@
   border-radius: 4px;
   background: linear-gradient(
     90deg,
-    #1a1a1a 25%,
-    #222 50%,
-    #1a1a1a 75%
+    var(--surface-color, #1a1a1a) 25%,
+    rgba(255, 255, 255, 0.05) 50%,
+    var(--surface-color, #1a1a1a) 75%
   );
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;

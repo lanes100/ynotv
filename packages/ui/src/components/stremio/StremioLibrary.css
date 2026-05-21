@@ -16,7 +16,7 @@
   margin: 0;
   font-size: 1.8rem;
   font-weight: 700;
-  color: white;
+  color: var(--text-primary, white);
 }
 
 .stremio-library-controls {
@@ -26,9 +26,9 @@
 }
 
 .stremio-library-search {
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: white;
+  background: var(--surface-color, rgba(255, 255, 255, 0.06));
+  border: 1px solid var(--surface-border, rgba(255, 255, 255, 0.1));
+  color: var(--text-primary, white);
   border-radius: 8px;
   padding: 8px 12px;
   font-size: 0.85rem;
@@ -38,14 +38,15 @@
 }
 
 .stremio-library-search:focus {
-  border-color: rgba(0, 212, 255, 0.5);
-  background: rgba(255, 255, 255, 0.1);
+  border-color: var(--accent-primary, rgba(0, 212, 255, 0.5));
+  background: var(--surface-hover, rgba(255, 255, 255, 0.1));
+  box-shadow: 0 0 10px var(--accent-glow, rgba(0, 212, 255, 0.05));
 }
 
 .stremio-library-select {
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: white;
+  background: var(--surface-color, rgba(255, 255, 255, 0.06));
+  border: 1px solid var(--surface-border, rgba(255, 255, 255, 0.1));
+  color: var(--text-primary, white);
   border-radius: 8px;
   padding: 8px 12px;
   font-size: 0.85rem;
@@ -55,13 +56,13 @@
 }
 
 .stremio-library-select:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.2);
+  background: var(--surface-hover, rgba(255, 255, 255, 0.1));
+  border-color: var(--accent-primary, rgba(255, 255, 255, 0.2));
 }
 
 .stremio-library-select option {
-  background: #14141e;
-  color: white;
+  background: var(--bg-primary, #14141e);
+  color: var(--text-primary, white);
 }
 
 .stremio-library-grid {
@@ -72,7 +73,7 @@
 
 .stremio-library-empty {
   text-align: center;
-  color: rgba(255, 255, 255, 0.4);
+  color: var(--text-muted, rgba(255, 255, 255, 0.4));
   padding: 80px 0;
   font-size: 1rem;
 }
@@ -80,7 +81,7 @@
 .stremio-library-refreshing {
   font-size: 0.75rem;
   font-weight: 400;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--text-muted, rgba(255, 255, 255, 0.5));
   margin-left: 8px;
 }
 
@@ -92,7 +93,7 @@
   position: absolute;
   top: 6px;
   right: 6px;
-  background: #e74c3c;
+  background: var(--status-new, #e74c3c);
   color: white;
   font-size: 0.7rem;
   font-weight: 700;

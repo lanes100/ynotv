@@ -1306,6 +1306,160 @@
 }
 
 /* ============================================
+   STREMIO THEME INTEGRATION
+   ============================================ */
+
+/* Stremio page background */
+[data-theme*="glass-"] .stremio-page {
+  background: var(--bg-overlay);
+}
+
+/* Stremio sidebar glass enhancement */
+[data-theme*="glass-"] .stremio-sidebar {
+  background: var(--surface-color);
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation));
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation));
+  border-right: var(--glass-border);
+  box-shadow: var(--glass-shadow);
+}
+
+/* Stremio detail right panel */
+[data-theme*="glass-"] .stremio-detail-right {
+  background: var(--surface-color);
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation));
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation));
+  border-left: var(--glass-border);
+}
+
+/* Stremio detail backdrop overlay */
+[data-theme*="glass-"] .stremio-detail-backdrop-overlay {
+  background: linear-gradient(to right, var(--bg-overlay) 0%, var(--bg-overlay) 30%, var(--bg-overlay) 65%, transparent 100%),
+              linear-gradient(to bottom, transparent 40%, var(--bg-overlay) 100%);
+}
+
+/* Stremio meta cards and row cards */
+[data-theme*="glass-"] .stremio-meta-card,
+[data-theme*="glass-"] .stremio-row-card,
+[data-theme*="glass-"] .stremio-rw-card {
+  background: var(--surface-color);
+  border: var(--glass-border);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+[data-theme*="glass-"] .stremio-meta-card:hover,
+[data-theme*="glass-"] .stremio-row-card:hover,
+[data-theme*="glass-"] .stremio-rw-card:hover {
+  box-shadow: 0 8px 32px var(--accent-glow);
+}
+
+/* Stremio active sidebar items */
+[data-theme*="glass-"] .stremio-sidebar-item.active {
+  background: var(--surface-active);
+  box-shadow: 0 0 15px var(--accent-glow);
+  border-color: var(--accent-primary);
+}
+
+/* Stremio search bar focus */
+[data-theme*="glass-"] .stremio-search-bar:focus-within {
+  box-shadow: 0 0 12px var(--accent-glow);
+}
+
+/* Stremio navigation buttons */
+[data-theme*="glass-"] .stremio-row-nav-btn,
+[data-theme*="glass-"] .stremio-row-see-all-btn {
+  background: var(--surface-color);
+  border: var(--glass-border);
+}
+
+[data-theme*="glass-"] .stremio-row-nav-btn:hover:not(:disabled),
+[data-theme*="glass-"] .stremio-row-see-all-btn:hover {
+  background: var(--surface-hover);
+  box-shadow: 0 0 10px var(--accent-glow);
+}
+
+/* Stremio detail action buttons */
+[data-theme*="glass-"] .stremio-detail-action-btn {
+  background: var(--surface-color);
+  border: var(--glass-border);
+}
+
+[data-theme*="glass-"] .stremio-detail-action-btn:hover {
+  background: var(--surface-hover);
+  box-shadow: 0 0 15px var(--accent-glow);
+}
+
+[data-theme*="glass-"] .stremio-detail-action-btn.in-library {
+  background: var(--accent-glow);
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+}
+
+/* Stremio stream cards */
+[data-theme*="glass-"] .stremio-detail-stream-card {
+  background: var(--surface-color);
+  border: var(--glass-border);
+}
+
+[data-theme*="glass-"] .stremio-detail-stream-card:hover {
+  background: var(--surface-hover);
+  box-shadow: 0 4px 16px var(--accent-glow);
+}
+
+/* Stremio video cards */
+[data-theme*="glass-"] .stremio-detail-video-card {
+  background: var(--surface-color);
+  border: var(--glass-border);
+}
+
+[data-theme*="glass-"] .stremio-detail-video-card:hover {
+  background: var(--surface-hover);
+}
+
+/* Stremio detail tags */
+[data-theme*="glass-"] .stremio-detail-tag {
+  background: var(--surface-color);
+  border: var(--glass-border);
+}
+
+[data-theme*="glass-"] .stremio-detail-tag:hover {
+  background: var(--surface-hover);
+  box-shadow: 0 0 10px var(--accent-glow);
+}
+
+/* Stremio detail cast member hover */
+[data-theme*="glass-"] .stremio-detail-cast-member:hover {
+  background: var(--surface-hover);
+}
+
+[data-theme*="glass-"] .stremio-detail-cast-member:hover .stremio-detail-cast-photo {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 10px var(--accent-glow);
+}
+
+/* Stremio progress fill */
+[data-theme*="glass-"] .stremio-rw-progress-fill,
+[data-theme*="glass-"] .stremio-ep-progress-fill {
+  background: linear-gradient(90deg, var(--accent-secondary), var(--accent-primary));
+  box-shadow: 0 0 6px var(--accent-glow);
+}
+
+/* Stremio spinner */
+[data-theme*="glass-"] .stremio-spinner {
+  border-top-color: var(--accent-primary);
+  box-shadow: 0 0 10px var(--accent-glow);
+}
+
+/* Stremio row fade gradients */
+[data-theme*="glass-"] .stremio-row-fade-left {
+  background: linear-gradient(to right, var(--bg-primary) 0%, transparent 100%);
+}
+
+[data-theme*="glass-"] .stremio-row-fade-right {
+  background: linear-gradient(to left, var(--bg-primary) 0%, transparent 100%);
+}
+
+/* ============================================
    SOLID GRADIENT THEMES
    ============================================ */
 

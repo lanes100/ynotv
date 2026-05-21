@@ -1,7 +1,7 @@
 .stremio-picker-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.6);
+  background: var(--bg-overlay, rgba(0, 0, 0, 0.6));
   z-index: 200;
   display: flex;
   align-items: center;
@@ -12,13 +12,15 @@
   width: 500px;
   max-width: 90vw;
   max-height: 80vh;
-  background: rgba(20, 20, 30, 0.98);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--surface-color, rgba(20, 20, 30, 0.98));
+  border: var(--glass-border, 1px solid rgba(255, 255, 255, 0.1));
   border-radius: 16px;
   display: flex;
   flex-direction: column;
-  backdrop-filter: blur(20px);
+  backdrop-filter: blur(var(--glass-blur, 20px)) saturate(var(--glass-saturation, 150%));
+  -webkit-backdrop-filter: blur(var(--glass-blur, 20px)) saturate(var(--glass-saturation, 150%));
   overflow: hidden;
+  box-shadow: var(--glass-shadow, 0 8px 32px rgba(0, 0, 0, 0.5));
 }
 
 .stremio-picker-header {
@@ -26,29 +28,30 @@
   align-items: center;
   justify-content: space-between;
   padding: 20px 24px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid var(--surface-border, rgba(255, 255, 255, 0.06));
 }
 
 .stremio-picker-title {
   margin: 0;
   font-size: 1.1rem;
   font-weight: 600;
-  color: white;
+  color: var(--text-primary, white);
 }
 
 .stremio-picker-close {
   background: none;
   border: none;
-  color: rgba(255, 255, 255, 0.4);
+  color: var(--text-muted, rgba(255, 255, 255, 0.4));
   font-size: 1.2rem;
   cursor: pointer;
   padding: 4px 8px;
   border-radius: 4px;
+  transition: all 0.15s;
 }
 
 .stremio-picker-close:hover {
-  color: white;
-  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary, white);
+  background: var(--surface-hover, rgba(255, 255, 255, 0.1));
 }
 
 .stremio-picker-body {
@@ -59,11 +62,28 @@
   gap: 16px;
 }
 
+.stremio-picker-body::-webkit-scrollbar {
+  width: 4px;
+}
+
+.stremio-picker-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.stremio-picker-body::-webkit-scrollbar-thumb {
+  background: var(--surface-hover, rgba(255, 255, 255, 0.15));
+  border-radius: 4px;
+}
+
+.stremio-picker-body::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-primary, rgba(0, 212, 255, 0.5));
+}
+
 .stremio-picker-section-title {
   margin: 0 0 8px 0;
   font-size: 0.85rem;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--text-secondary, rgba(255, 255, 255, 0.6));
   text-transform: uppercase;
   letter-spacing: 0.05em;
   display: flex;
@@ -73,7 +93,7 @@
 
 .stremio-picker-section-sub {
   font-weight: 400;
-  color: rgba(255, 255, 255, 0.35);
+  color: var(--text-muted, rgba(255, 255, 255, 0.35));
   text-transform: none;
   font-size: 0.75rem;
 }
@@ -81,10 +101,10 @@
 .stremio-picker-item {
   width: 100%;
   padding: 12px 16px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--surface-border, rgba(255, 255, 255, 0.06));
+  background: var(--surface-color, rgba(255, 255, 255, 0.03));
   border-radius: 10px;
-  color: rgba(255, 255, 255, 0.8);
+  color: var(--text-secondary, rgba(255, 255, 255, 0.8));
   cursor: pointer;
   text-align: left;
   transition: all 0.15s;
@@ -92,19 +112,20 @@
 }
 
 .stremio-picker-item:hover {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(0, 212, 255, 0.3);
+  background: var(--surface-hover, rgba(255, 255, 255, 0.08));
+  border-color: var(--accent-primary, rgba(0, 212, 255, 0.3));
+  box-shadow: 0 0 12px var(--accent-glow, rgba(0, 212, 255, 0.1));
 }
 
 .stremio-picker-item-name {
   font-size: 0.9rem;
   font-weight: 500;
-  color: white;
+  color: var(--text-primary, white);
 }
 
 .stremio-picker-item-desc {
   font-size: 0.8rem;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--text-muted, rgba(255, 255, 255, 0.5));
   margin-top: 4px;
   line-height: 1.4;
   white-space: pre-wrap;
@@ -120,12 +141,12 @@
 
 .stremio-picker-item-source {
   font-size: 0.7rem;
-  color: rgba(255, 255, 255, 0.3);
+  color: var(--text-muted, rgba(255, 255, 255, 0.3));
   margin-top: 4px;
 }
 
 .stremio-picker-empty {
   text-align: center;
-  color: rgba(255, 255, 255, 0.4);
+  color: var(--text-muted, rgba(255, 255, 255, 0.4));
   padding: 32px 0;
 }

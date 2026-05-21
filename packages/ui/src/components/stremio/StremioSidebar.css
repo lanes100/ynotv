@@ -4,37 +4,58 @@
   left: 0;
   width: 240px;
   height: 100%;
-  background: rgba(0, 0, 0, 0.5);
-  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--surface-color, rgba(0, 0, 0, 0.5));
+  backdrop-filter: blur(var(--glass-blur, 20px)) saturate(var(--glass-saturation, 150%));
+  -webkit-backdrop-filter: blur(var(--glass-blur, 20px)) saturate(var(--glass-saturation, 150%));
+  border-right: var(--glass-border, 1px solid rgba(255, 255, 255, 0.08));
+  box-shadow: var(--glass-shadow, 0 8px 32px rgba(0, 0, 0, 0.3));
   display: flex;
   flex-direction: column;
   z-index: 101;
   overflow-y: auto;
 }
 
+/* Custom themed scrollbar for sidebar */
+.stremio-sidebar::-webkit-scrollbar {
+  width: 4px;
+}
+
+.stremio-sidebar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.stremio-sidebar::-webkit-scrollbar-thumb {
+  background: var(--surface-hover, rgba(255, 255, 255, 0.15));
+  border-radius: 4px;
+}
+
+.stremio-sidebar::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-primary, rgba(0, 212, 255, 0.5));
+}
+
 .stremio-sidebar-header {
   padding: 20px 16px 12px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid var(--surface-border, rgba(255, 255, 255, 0.06));
 }
 
 .stremio-sidebar-title {
   margin: 0;
   font-size: 1.2rem;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.95);
+  color: var(--text-primary, rgba(255, 255, 255, 0.95));
   letter-spacing: 0.02em;
 }
 
 .stremio-sidebar-section {
   padding: 12px 8px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid var(--surface-border, rgba(255, 255, 255, 0.06));
 }
 
 .stremio-sidebar-section-title {
   font-size: 0.7rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: rgba(255, 255, 255, 0.35);
+  color: var(--text-muted, rgba(255, 255, 255, 0.35));
   padding: 0 8px 8px;
   font-weight: 600;
 }
@@ -47,22 +68,24 @@
   padding: 8px 12px;
   border: none;
   background: transparent;
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--text-secondary, rgba(255, 255, 255, 0.7));
   font-size: 0.85rem;
   cursor: pointer;
-  border-radius: 6px;
-  transition: all 0.15s;
+  border-radius: 8px;
+  transition: all 0.2s ease;
   text-align: left;
 }
 
 .stremio-sidebar-item:hover {
-  background: rgba(255, 255, 255, 0.08);
-  color: rgba(255, 255, 255, 0.9);
+  background: var(--surface-hover, rgba(255, 255, 255, 0.08));
+  color: var(--text-primary, rgba(255, 255, 255, 0.9));
+  transform: translateX(2px);
 }
 
 .stremio-sidebar-item.active {
-  background: rgba(0, 212, 255, 0.12);
-  color: #00d4ff;
+  background: var(--surface-active, rgba(0, 212, 255, 0.12));
+  color: var(--accent-primary, #00d4ff);
+  box-shadow: 0 0 12px var(--accent-glow, rgba(0, 212, 255, 0.15));
 }
 
 .stremio-sidebar-item-name {
@@ -91,7 +114,7 @@
 
 .stremio-sidebar-item-type {
   font-size: 0.7rem;
-  color: rgba(255, 255, 255, 0.3);
+  color: var(--text-muted, rgba(255, 255, 255, 0.3));
   margin-left: 8px;
   text-transform: uppercase;
 }
@@ -99,7 +122,7 @@
 .stremio-sidebar-empty {
   padding: 8px 12px;
   font-size: 0.8rem;
-  color: rgba(255, 255, 255, 0.4);
+  color: var(--text-muted, rgba(255, 255, 255, 0.4));
 }
 
 .stremio-sidebar-addon-row {
@@ -108,7 +131,7 @@
   gap: 8px;
   padding: 6px 12px;
   font-size: 0.82rem;
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--text-secondary, rgba(255, 255, 255, 0.6));
 }
 
 .stremio-sidebar-addon-name {
@@ -122,8 +145,8 @@
   font-size: 0.65rem;
   padding: 2px 6px;
   border-radius: 4px;
-  background: rgba(0, 212, 255, 0.15);
-  color: #00d4ff;
+  background: var(--accent-glow, rgba(0, 212, 255, 0.15));
+  color: var(--accent-primary, #00d4ff);
   text-transform: uppercase;
 }
 
@@ -132,20 +155,23 @@
   margin-top: auto;
   display: flex;
   flex-direction: column;
+  gap: 8px;
 }
 
 .stremio-sidebar-add-btn {
   padding: 10px 16px;
   border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.06);
-  color: rgba(255, 255, 255, 0.8);
+  border: var(--glass-border, 1px solid rgba(255, 255, 255, 0.12));
+  background: var(--surface-color, rgba(255, 255, 255, 0.06));
+  color: var(--text-secondary, rgba(255, 255, 255, 0.8));
   font-size: 0.85rem;
   cursor: pointer;
-  transition: all 0.15s;
+  transition: all 0.2s ease;
 }
 
 .stremio-sidebar-add-btn:hover {
-  background: rgba(255, 255, 255, 0.12);
-  color: white;
+  background: var(--surface-hover, rgba(255, 255, 255, 0.12));
+  color: var(--text-primary, white);
+  box-shadow: 0 0 15px var(--accent-glow, rgba(0, 212, 255, 0.1));
+  transform: translateY(-1px);
 }
