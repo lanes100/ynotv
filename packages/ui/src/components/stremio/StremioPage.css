@@ -14,7 +14,6 @@
 
 .stremio-main {
   flex: 1;
-  margin-left: 240px;
   overflow-y: auto;
   overflow-x: hidden;
   padding: 0;
