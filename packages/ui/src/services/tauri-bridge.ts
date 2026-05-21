@@ -149,6 +149,27 @@ export function stopWindowSync() {
 let isCasting = false;
 let castMetadata = { title: "YNotV Stream", subtitle: "" };
 
+// Set this to true if you want core player controls (play, pause, seek, volume, loadVideo)
+// to control Chromecast instead of the local player. Kept here in case we want to re-enable.
+export const REDIRECT_CONTROLS_TO_CAST = false;
+
+export function rewriteTsToM3u8(url: string): string {
+    if (!url) return url;
+    try {
+        const parsed = new URL(url);
+        if (parsed.pathname.toLowerCase().endsWith('.ts')) {
+            parsed.pathname = parsed.pathname.slice(0, -3) + '.m3u8';
+            return parsed.toString();
+        }
+    } catch (e) {
+        // Fallback for simple string replacement if URL parsing fails
+        if (url.toLowerCase().endsWith('.ts')) {
+            return url.slice(0, -3) + '.m3u8';
+        }
+    }
+    return url;
+}
+
 function guessMimeType(url: string): string {
     const u = url.toLowerCase();
     if (u.includes('.m3u8') || u.includes('/m3u8') || u.includes('.ts') || u.includes('/hls')) {
@@ -218,17 +239,18 @@ export const Bridge = {
     },
 
     async loadVideo(url: string) {
-        if (isCasting) {
+        if (REDIRECT_CONTROLS_TO_CAST && isCasting) {
             const isLocal = url.startsWith('file://') || (!url.startsWith('http://') && !url.startsWith('https://'));
             if (isLocal) {
                 return { success: false, error: 'Local files cannot be cast. Only remote streams are supported.' };
             }
+            const castUrl = rewriteTsToM3u8(url);
             try {
                 await invoke('cast_load_media', {
-                    url,
+                    url: castUrl,
                     title: castMetadata.title,
                     subtitle: castMetadata.subtitle,
-                    mimeType: guessMimeType(url),
+                    mimeType: guessMimeType(castUrl),
                 });
                 return { success: true };
             } catch (e: any) {
@@ -244,42 +266,42 @@ export const Bridge = {
     },
 
     async play() {
-        if (isCasting) {
+        if (REDIRECT_CONTROLS_TO_CAST && isCasting) {
             return invoke('cast_play');
         }
         return invoke('mpv_play');
     },
 
     async pause() {
-        if (isCasting) {
+        if (REDIRECT_CONTROLS_TO_CAST && isCasting) {
             return invoke('cast_pause');
         }
         return invoke('mpv_pause');
     },
 
     async resume() {
-        if (isCasting) {
+        if (REDIRECT_CONTROLS_TO_CAST && isCasting) {
             return invoke('cast_play');
         }
         return invoke('mpv_resume');
     },
 
     async stop() {
-        if (isCasting) {
+        if (REDIRECT_CONTROLS_TO_CAST && isCasting) {
             return invoke('cast_pause');
         }
         return invoke('mpv_stop');
     },
 
     async setVolume(volume: number) {
-        if (isCasting) {
+        if (REDIRECT_CONTROLS_TO_CAST && isCasting) {
             return invoke('cast_set_volume', { level: parseFloat(String(volume)) / 100.0 });
         }
         return invoke('mpv_set_volume', { volume: parseFloat(String(volume)) });
     },
 
     async seek(seconds: number) {
-        if (isCasting) {
+        if (REDIRECT_CONTROLS_TO_CAST && isCasting) {
             return invoke('cast_seek', { seconds: parseFloat(String(seconds)) });
         }
         return invoke('mpv_seek', { seconds: parseFloat(String(seconds)) });
@@ -294,7 +316,7 @@ export const Bridge = {
     },
 
     async toggleMute() {
-        if (isCasting) {
+        if (REDIRECT_CONTROLS_TO_CAST && isCasting) {
             return invoke('cast_toggle_mute');
         }
         return invoke('mpv_toggle_mute');

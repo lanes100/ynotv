@@ -22,9 +22,10 @@ interface CastStatus {
 
 interface CastButtonProps {
   castEnabled: boolean;
+  onCastCurrentStream?: () => void;
 }
 
-export function CastButton({ castEnabled }: CastButtonProps) {
+export function CastButton({ castEnabled, onCastCurrentStream }: CastButtonProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [devices, setDevices] = useState<DiscoveredDevice[]>([]);
   const [status, setStatus] = useState<CastStatus>({
@@ -157,20 +158,70 @@ export function CastButton({ castEnabled }: CastButtonProps) {
 
           <div className="cast-device-list">
             {status.connected ? (
-              <div className="cast-connected-device-item">
-                <div className="cast-device-info">
-                  <div className="cast-device-name-active">{status.deviceName}</div>
-                  <div className="cast-device-status-label">
-                    {status.playerState === 'PLAYING'
-                      ? 'Playing'
-                      : status.playerState === 'PAUSED'
-                      ? 'Paused'
-                      : 'Connected'}
+              <div className="cast-connected-device-item-expanded">
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', gap: '8px' }}>
+                  <div className="cast-device-info" style={{ flexGrow: 1, minWidth: 0 }}>
+                    <div className="cast-device-name-active">{status.deviceName}</div>
+                    <div className="cast-device-status-label">
+                      {status.playerState === 'PLAYING'
+                        ? 'Playing'
+                        : status.playerState === 'PAUSED'
+                        ? 'Paused'
+                        : 'Connected'}
+                    </div>
                   </div>
+                  <button className="cast-dropdown-disconnect-btn" onClick={handleDisconnect}>
+                    Disconnect
+                  </button>
                 </div>
-                <button className="cast-dropdown-disconnect-btn" onClick={handleDisconnect}>
-                  Disconnect
-                </button>
+
+                <div className="cast-controls-row">
+                  {status.playerState === 'PLAYING' ? (
+                    <button className="cast-control-btn" onClick={() => invoke('cast_pause')} title="Pause">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                        <rect x="5" y="4" width="4" height="16" rx="1" />
+                        <rect x="15" y="4" width="4" height="16" rx="1" />
+                      </svg>
+                    </button>
+                  ) : (
+                    <button className="cast-control-btn" onClick={() => invoke('cast_play')} title="Play">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                        <polygon points="6,4 20,12 6,20" />
+                      </svg>
+                    </button>
+                  )}
+
+                  <button className="cast-control-btn" onClick={() => invoke('cast_toggle_mute')} title={status.muted ? "Unmute" : "Mute"}>
+                    {status.muted ? (
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M11 5L6 9H2v6h4l5 4V5z" />
+                        <line x1="23" y1="9" x2="17" y2="15" />
+                        <line x1="17" y1="9" x2="23" y2="15" />
+                      </svg>
+                    ) : (
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M11 5L6 9H2v6h4l5 4V5z" />
+                        <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+                      </svg>
+                    )}
+                  </button>
+
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={Math.round(status.volume * 100)}
+                    className="cast-volume-slider"
+                    onChange={(e) => invoke('cast_set_volume', { level: parseFloat(e.target.value) / 100 })}
+                    title="Volume"
+                  />
+                </div>
+
+                {onCastCurrentStream && (
+                  <button className="cast-current-stream-btn" onClick={onCastCurrentStream}>
+                    Cast Current Video
+                  </button>
+                )}
               </div>
             ) : (
               <>

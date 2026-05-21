@@ -62,7 +62,7 @@ import { CastButton } from './components/CastButton';
 import { CastOverlay } from './components/CastOverlay';
 import { syncSource, syncVodForSource, isEpgStale, isVodStale, syncAllStaleGlobalEpgLinks } from './db/sync';
 import { bulkOps } from './services/bulk-ops';
-import { Bridge, type AspectRatioMode, applyAspectRatio } from './services/tauri-bridge';
+import { Bridge, type AspectRatioMode, applyAspectRatio, rewriteTsToM3u8 } from './services/tauri-bridge';
 import { getCurrentWindow, LogicalSize } from '@tauri-apps/api/window';
 import { addToRecentChannels } from './utils/recentChannels';
 import { WatchlistNotificationContainer } from './components/WatchlistNotification';
@@ -360,6 +360,33 @@ function App() {
   const [castDeviceName, setCastDeviceName] = useState('');
   const [castMetadataState, setCastMetadataState] = useState({ title: '', subtitle: '' });
 
+  const castCurrentMedia = useCallback(async () => {
+    if (!currentChannel) return;
+    const isRecording = currentChannel.stream_id?.startsWith('recording_');
+    const isLocalFile = currentChannel.direct_url?.startsWith('file://') || (!currentChannel.direct_url?.startsWith('http://') && !currentChannel.direct_url?.startsWith('https://'));
+    
+    if (isRecording || isLocalFile) {
+      alert('Local files and DVR recordings cannot be cast to Chromecast. Only remote streams are supported.');
+      return;
+    }
+
+    let url = currentChannel.direct_url || '';
+    url = rewriteTsToM3u8(url);
+
+    const title = currentChannel.stream_id === 'vod' && vodInfo ? vodInfo.title : currentChannel.name;
+    const subtitle = currentChannel.stream_id === 'vod' && vodInfo ? 'VOD' : 'Live TV';
+
+    try {
+      console.log('[Cast] Casting URL:', url, 'Title:', title);
+      const isHls = url.toLowerCase().includes('.m3u8') || url.toLowerCase().includes('/m3u8') || url.toLowerCase().includes('/hls');
+      const mimeType = isHls ? 'application/x-mpegURL' : 'video/mp4';
+
+      await invoke('cast_load_media', { url, title, subtitle, mimeType });
+    } catch (e: any) {
+      alert('Failed to cast media: ' + (e?.message || e));
+    }
+  }, [currentChannel, vodInfo]);
+
   // Dynamically start/stop discovery based on setting
   useEffect(() => {
     if (castEnabled) {
@@ -401,24 +428,10 @@ function App() {
         }
 
         if (status.connected && !previouslyCasting) {
-          // Connected to cast! Stop local playback first
-          console.log('[Cast] Casting started, stopping local playback');
-          invoke('mpv_stop').catch(() => {});
-
-          // Reload current playback on the Cast device if playing
+          console.log('[Cast] Casting started, loading media on Chromecast');
           if (playing && currentChannel) {
-            const isRecording = currentChannel.stream_id?.startsWith('recording_');
-            const isLocalFile = currentChannel.direct_url?.startsWith('file://') || (!currentChannel.direct_url?.startsWith('http://') && !currentChannel.direct_url?.startsWith('https://'));
-            
-            if (!isRecording && !isLocalFile) {
-              if (currentChannel.stream_id === 'vod' && vodInfo) {
-                handlePlayVod(vodInfo);
-              } else {
-                handlePlayChannel(currentChannel);
-              }
-            } else {
-              alert('Local files and DVR recordings cannot be cast to Chromecast. Only remote streams are supported.');
-            }
+            castCurrentMedia();
+            Bridge.pause().catch(() => {}); // Pause local video, keep it initialized
           }
         }
         
@@ -434,7 +447,7 @@ function App() {
     return () => {
       if (unlisten) unlisten();
     };
-  }, [playing, currentChannel, vodInfo, handlePlayChannel, handlePlayVod]);
+  }, [playing, currentChannel, castCurrentMedia]);
 
   const handleDisconnectCast = useCallback(async () => {
     try {
@@ -1816,7 +1829,7 @@ function App() {
         </button>
 
         {/* Google Cast Button */}
-        <CastButton castEnabled={castEnabled} />
+        <CastButton castEnabled={castEnabled} onCastCurrentStream={castCurrentMedia} />
 
         {/* Settings Button */}
         <button
@@ -1889,14 +1902,16 @@ function App() {
           <FailoverOverlay state={failoverState} />
         )}
 
-        {isCasting && (
+        {/* Commented out so it is not shown, per user request. Kept here to add back later if needed.
+        isCasting && (
           <CastOverlay
             deviceName={castDeviceName}
             mediaTitle={castMetadataState.title}
             mediaSubtitle={castMetadataState.subtitle}
             onDisconnect={handleDisconnectCast}
           />
-        )}
+        )
+        */}
       </div>
 
       {/* Video double-click overlay - captures double-clicks on video area to toggle fullscreen */}
