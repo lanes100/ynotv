@@ -7,7 +7,6 @@ const STORAGE_KEY = 'stremio-addons';
 
 const DEFAULT_ADDONS = [
   { url: 'https://v3-cinemeta.strem.io/manifest.json', isDefault: true },
-  { url: 'https://opensubtitles-v3.strem.io/manifest.json', isDefault: true },
 ];
 
 function deriveEnabled(addons: InstalledAddon[]) {
@@ -117,7 +116,11 @@ export const useStremioAddonStore = create<StremioAddonStore>()(
       name: STORAGE_KEY,
       partialize: (state) => ({ addons: state.addons }),
       merge: (persisted, current) => {
-        const addons = (persisted as any)?.addons ?? current.addons;
+        let addons = (persisted as any)?.addons ?? current.addons;
+        if (Array.isArray(addons)) {
+          // Clean up legacy Open Subtitles v3 default addon for existing users
+          addons = addons.filter(a => a.id !== 'opensubtitles-v3');
+        }
         return { ...current, addons, enabledAddons: deriveEnabled(addons) };
       },
     }

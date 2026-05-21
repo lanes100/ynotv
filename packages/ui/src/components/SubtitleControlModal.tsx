@@ -706,9 +706,9 @@ export function SubtitleControlModal({
   // Sort alphabetically
   availableLangs.sort((a, b) => a.label.localeCompare(b.label));
 
-  // Determine active track language
-  const activeTrack = allSubTracks.find(t => t.selected);
-  const selectedTrackLang = activeTrack ? getTrackLanguage(activeTrack) : 'off';
+  // Determine active track language based on selectedId
+  const activeTrack = allSubTracks.find(t => t.id === selectedId);
+  const selectedTrackLang = selectedId === 0 ? 'off' : (activeTrack ? getTrackLanguage(activeTrack) : 'off');
 
   // Filter subtitle tracks for Column 2 based on selected language
   const filteredSubTracks = allSubTracks.filter(

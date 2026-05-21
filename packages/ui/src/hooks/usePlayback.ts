@@ -10,6 +10,7 @@ import { addToRecentChannels } from '../utils/recentChannels';
 import { db, recordVodWatch, updateVodWatchProgress, getVodWatchProgress, recordEpisodeWatch, getEpisodeProgress } from '../db';
 import type { useMpvListeners } from './useMpvListeners';
 import { logInfo, logWarn, logError } from '../utils/logger';
+import { toSubSourceLang, fromSubSourceLang } from '../services/subsource';
 
 /**
  * Apply saved subtitle settings to MPV.
@@ -186,6 +187,30 @@ async function tryLoadWithFallbacks(
   return { success: false, url: primaryUrl, error: errorMsg };
 }
 
+function normalizeLangCode(code?: string): string {
+  if (!code) return '';
+  return fromSubSourceLang(toSubSourceLang(code));
+}
+
+function getTrackLanguage(track: any): string {
+  if (track.external && track['external-filename']) {
+    const parts = track['external-filename'].split(/[/\\]/);
+    const base = parts[parts.length - 1];
+    if (base.startsWith('stremio__')) {
+      const subParts = base.split('__');
+      if (subParts.length >= 5) {
+        return normalizeLangCode(subParts[4]);
+      }
+    } else if (base.startsWith('subsource__')) {
+      const subParts = base.split('__');
+      if (subParts.length >= 3) {
+        return normalizeLangCode(subParts[2]);
+      }
+    }
+  }
+  return normalizeLangCode(track.lang);
+}
+
 export interface FailoverState {
   isFailingOver: boolean;
   fromChannelName: string;
@@ -247,6 +272,8 @@ export interface PlaybackState {
   handleToggleStats: () => Promise<void>;
   handleToggleFullscreen: () => Promise<void>;
   syncMpvGeometry: () => Promise<void>;
+  autoSelectSubtitle: () => Promise<void>;
+  autoSelectAudio: () => Promise<void>;
 
   // Layout persistence integration
   notifyMainLoaded: (channelName: string, channelUrl: string, sourceName?: string | null) => void;
@@ -366,12 +393,25 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
   const bufferStarvedSinceRef = useRef<number | null>(null);
   const healthCheckInFlightRef = useRef(false);
   const healthLoadGraceUntilRef = useRef(0);
+  const hasAutoSelectedSubRef = useRef(false);
+  const hasAutoSelectedAudioRef = useRef(false);
+  const autoSelectTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const autoSelectAttemptsRef = useRef(0);
   const streamFailureHandlingRef = useRef(false);
   const recoveryArmedRef = useRef(false);
   const userPausedRef = useRef(false);
   // When true, the next stream death event should be ignored because the
   // main player was intentionally stopped (e.g. popout opened with "stop main").
   const intentionallyStoppedRef = useRef(false);
+
+  // Cleanup autoSelectTimer on unmount
+  useEffect(() => {
+    return () => {
+      if (autoSelectTimerRef.current) {
+        clearInterval(autoSelectTimerRef.current);
+      }
+    };
+  }, []);
   // Stable refs for use inside intervals (avoids stale closure issues)
   const currentChannelRef = useRef(currentChannel);
   const vodInfoRef2 = useRef(vodInfo);
@@ -1096,6 +1136,13 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
 
   const handlePlayChannel = useCallback((channel: StoredChannel, autoSwitched: boolean = false) => {
     // Cancel any in-progress retry when the user switches channels
+    if (autoSelectTimerRef.current) {
+      clearInterval(autoSelectTimerRef.current);
+      autoSelectTimerRef.current = null;
+    }
+    hasAutoSelectedSubRef.current = false;
+    hasAutoSelectedAudioRef.current = false;
+
     clearRetryTimers();
     clearWatchdog();
     setRetryState(null);
@@ -1176,6 +1223,107 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
     }
     handleLoadStream(channel);
   }, [handleLoadStream, resetHealthTracking, vodInfo, position, duration]);
+
+  const autoSelectSubtitle = useCallback(async () => {
+    if (!window.storage) return;
+    const result = await window.storage.getSettings();
+    const ss = result.data?.subtitleSettings;
+    const defaultLanguage = normalizeLangCode(ss?.defaultLanguage || 'en');
+    if (!defaultLanguage) return;
+
+    const trackList = await Bridge.getTrackList();
+    const subTracks = trackList.filter((t: any) => t.type === 'sub');
+
+    // Filter tracks matching target language
+    const matchingTracks = subTracks.filter((t: any) => getTrackLanguage(t) === defaultLanguage);
+
+    if (matchingTracks.length > 0) {
+      // Prioritize embedded tracks (external is falsy) over external addon tracks
+      matchingTracks.sort((a: any, b: any) => {
+        const aExt = !!a.external;
+        const bExt = !!b.external;
+        if (aExt !== bExt) {
+          return aExt ? 1 : -1;
+        }
+        return a.id - b.id;
+      });
+
+      const bestTrack = matchingTracks[0];
+      logInfo(`[Playback] Auto-selecting subtitle track: ${bestTrack.id} language: ${defaultLanguage} external: ${bestTrack.external}`);
+      await Bridge.setSubtitleTrack(bestTrack.id);
+      hasAutoSelectedSubRef.current = true;
+    }
+  }, []);
+
+  const autoSelectAudio = useCallback(async () => {
+    if (!window.storage) return;
+    const result = await window.storage.getSettings();
+    const ss = result.data?.subtitleSettings;
+    const defaultAudioLanguage = normalizeLangCode(ss?.defaultAudioLanguage || 'en');
+    if (!defaultAudioLanguage) return;
+
+    const trackList = await Bridge.getTrackList();
+    const audioTracks = trackList.filter((t: any) => t.type === 'audio');
+
+    // Filter tracks matching target language
+    const matchingTracks = audioTracks.filter((t: any) => normalizeLangCode(t.lang) === defaultAudioLanguage);
+
+    if (matchingTracks.length > 0) {
+      // Prioritize default track
+      matchingTracks.sort((a: any, b: any) => {
+        const aDef = !!a.default;
+        const bDef = !!b.default;
+        if (aDef !== bDef) {
+          return aDef ? -1 : 1;
+        }
+        return a.id - b.id;
+      });
+
+      const bestTrack = matchingTracks[0];
+      logInfo(`[Playback] Auto-selecting audio track: ${bestTrack.id} language: ${defaultAudioLanguage}`);
+      await Bridge.setAudioTrack(bestTrack.id);
+      hasAutoSelectedAudioRef.current = true;
+    }
+  }, []);
+
+  const startAutoSelectPolling = useCallback(() => {
+    if (autoSelectTimerRef.current) {
+      clearInterval(autoSelectTimerRef.current);
+    }
+
+    autoSelectAttemptsRef.current = 0;
+    autoSelectTimerRef.current = setInterval(async () => {
+      autoSelectAttemptsRef.current += 1;
+      
+      try {
+        if (!hasAutoSelectedSubRef.current) {
+          await autoSelectSubtitle();
+        }
+        if (!hasAutoSelectedAudioRef.current) {
+          await autoSelectAudio();
+        }
+      } catch (err) {
+        logWarn('[Playback] Error during auto-selection polling:', err);
+      }
+
+      const allDone = hasAutoSelectedSubRef.current && hasAutoSelectedAudioRef.current;
+      if (allDone || autoSelectAttemptsRef.current >= 40) {
+        if (autoSelectTimerRef.current) {
+          clearInterval(autoSelectTimerRef.current);
+          autoSelectTimerRef.current = null;
+        }
+      }
+    }, 500);
+  }, [autoSelectSubtitle, autoSelectAudio]);
+
+  // Trigger or restart auto-selection polling when playback starts and duration is available (only for VODs/Movies/Series/Stremio)
+  useEffect(() => {
+    if (playing && duration > 0 && !!vodInfo) {
+      if (!hasAutoSelectedSubRef.current || !hasAutoSelectedAudioRef.current) {
+        startAutoSelectPolling();
+      }
+    }
+  }, [playing, duration, !!vodInfo, startAutoSelectPolling]);
 
   const handlePlayCatchup = useCallback(async (channel: StoredChannel, programTitle: string, startTimeMs: number, durationMinutes: number) => {
     // Save VOD progress before switching to catchup
@@ -1368,6 +1516,10 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
       setPlaying(true);
       applySubtitleSettings();
       
+      hasAutoSelectedSubRef.current = false;
+      hasAutoSelectedAudioRef.current = false;
+      startAutoSelectPolling();
+      
       // Resume from saved position if available
       if (resumePosition > 0) {
         setPosition(resumePosition);
@@ -1491,6 +1643,13 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
     setCatchupInfo(null);
     setError(null);
 
+    if (autoSelectTimerRef.current) {
+      clearInterval(autoSelectTimerRef.current);
+      autoSelectTimerRef.current = null;
+    }
+    hasAutoSelectedSubRef.current = false;
+    hasAutoSelectedAudioRef.current = false;
+
     // Reset failover state on stop
     failoverActiveRef.current = false;
     failoverSwitchingRef.current = false;
@@ -1597,6 +1756,8 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
     handleCycleAudio,
     handleToggleStats,
     handleToggleFullscreen,
+    autoSelectSubtitle,
+    autoSelectAudio,
     syncMpvGeometry: syncMpvGeometry || (async () => {}),
     notifyMainLoaded: notifyMainLoaded || (() => {}),
   };

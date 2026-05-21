@@ -311,6 +311,7 @@ function App() {
     handleCycleAudio,
     handleToggleStats,
     handleToggleFullscreen,
+    autoSelectSubtitle,
   } = playback;
 
   // Keep handlePlayChannel ref updated for onLoadMainChannel callback
@@ -862,6 +863,8 @@ function App() {
   useEffect(() => { setDurationRef.current = setDuration; }, [setDuration]);
   const setPositionRef = useRef(setPosition);
   useEffect(() => { setPositionRef.current = setPosition; }, [setPosition]);
+  const autoSelectSubtitleRef = useRef(autoSelectSubtitle);
+  useEffect(() => { autoSelectSubtitleRef.current = autoSelectSubtitle; }, [autoSelectSubtitle]);
 
   // Ref to hold current stremio episode info for the progress updater
   const stremioEpisodeRef = useRef<{
@@ -1014,6 +1017,8 @@ function App() {
         }
       } catch (err) {
         console.error('[Stremio] Error processing subtitles:', err);
+      } finally {
+        autoSelectSubtitleRef.current().catch(console.error);
       }
     };
     window.addEventListener('ynotv:stremio-play', handler);

@@ -190,6 +190,7 @@ export function Settings({
   const [subtitleSettings, setSubtitleSettings] = useState<SubtitleSettings>({
     subsourceApiKey: '',
     defaultLanguage: 'en',
+    defaultAudioLanguage: 'en',
     defaultSize: 35,
     subColor: '#FFFFFF',
     subBackgroundColor: '#000000',
@@ -432,7 +433,10 @@ export function Settings({
 
       // Load subtitle settings
       if (settings.subtitleSettings) {
-        setSubtitleSettings(settings.subtitleSettings);
+        setSubtitleSettings(prev => ({
+          ...prev,
+          ...settings.subtitleSettings
+        }));
       }
 
       // Load widget scale and apply CSS variable immediately

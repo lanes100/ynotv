@@ -438,22 +438,26 @@
 /* Episode badge (S2 E4 or ▶ S2 E5) */
 .stremio-rw-ep-badge {
   position: absolute;
-  top: 4px;
-  left: 4px;
-  background: transparent;
-  color: var(--text-primary, rgba(255, 255, 255, 0.9));
+  top: 6px;
+  left: 6px;
+  background: rgba(15, 11, 28, 0.8);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--text-primary, rgba(255, 255, 255, 0.95));
   font-size: 0.65rem;
   font-weight: 700;
-  padding: 2px 6px;
-  border-radius: 4px;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+  padding: 3px 7px;
+  border-radius: 5px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
   letter-spacing: 0.02em;
   z-index: 2;
 }
 
 .stremio-rw-ep-badge--next {
   color: #4ade80;
-  text-shadow: 0 1px 4px rgba(0, 180, 100, 0.5);
+  background: rgba(10, 25, 15, 0.85);
+  border-color: rgba(74, 222, 128, 0.25);
 }
 
 /* Remove (×) button */
