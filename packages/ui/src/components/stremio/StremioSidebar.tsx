@@ -1,5 +1,8 @@
+import { useState, useCallback } from 'react';
 import type { InstalledAddon } from '../../types/stremio';
 import {
+  useStremioSearchQuery,
+  useSetStremioSearchQuery,
   useStremioSelectedAddonId,
   useSetStremioSelectedAddonId,
   useStremioSelectedCatalogId,
@@ -21,6 +24,9 @@ export function StremioSidebar({ addons, onOpenAddonManager }: StremioSidebarPro
   const setSelectedCatalogId = useSetStremioSelectedCatalogId();
   const setView = useSetStremioView();
   const view = useStremioView();
+  const searchQuery = useStremioSearchQuery();
+  const setSearchQuery = useSetStremioSearchQuery();
+  const [inputValue, setInputValue] = useState(searchQuery);
 
   const isHomeActive = view === 'home' && !selectedAddonId && !selectedCatalogId;
   const isDiscoverActive = view === 'home' && !!selectedAddonId && !!selectedCatalogId;
@@ -53,10 +59,48 @@ export function StremioSidebar({ addons, onOpenAddonManager }: StremioSidebarPro
     setView('calendar');
   };
 
+  const handleSearchKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      const val = inputValue.trim();
+      setSearchQuery(val);
+      if (val.length >= 2) {
+        setView('search');
+      } else {
+        setView('home');
+      }
+    }
+  }, [inputValue, setSearchQuery, setView]);
+
+  const handleSearchClear = useCallback(() => {
+    setInputValue('');
+    setSearchQuery('');
+    setView('home');
+  }, [setSearchQuery, setView]);
+
   return (
     <div className="stremio-sidebar">
-      <div className="stremio-sidebar-header">
-        <h2 className="stremio-sidebar-title">Stremio</h2>
+      <div className="stremio-sidebar-search">
+        <div className="stremio-sidebar-search-input-wrap">
+          <svg className="stremio-sidebar-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <circle cx="11" cy="11" r="8" />
+            <path d="m21 21-4.3-4.3" />
+          </svg>
+          <input
+            className="stremio-sidebar-search-input"
+            type="text"
+            placeholder="Search movies, series..."
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            onKeyDown={handleSearchKeyDown}
+          />
+          {inputValue && (
+            <button className="stremio-sidebar-search-clear" onClick={handleSearchClear}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M18 6L6 18M6 6l12 12" />
+              </svg>
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="stremio-sidebar-section">
@@ -111,13 +155,6 @@ export function StremioSidebar({ addons, onOpenAddonManager }: StremioSidebarPro
       <div className="stremio-sidebar-footer">
         <button className="stremio-sidebar-add-btn" onClick={onOpenAddonManager}>
           ⚙ Manage Addons
-        </button>
-        <button
-          className="stremio-sidebar-add-btn"
-          style={{ marginTop: '8px' }}
-          onClick={() => setView(view === 'search' ? 'home' : 'search')}
-        >
-          {view === 'search' ? '✕ Cancel Search' : '🔍 Search'}
         </button>
       </div>
     </div>

@@ -958,7 +958,7 @@ function App() {
       }
 
       try {
-        const addons = useStremioAddonStore.getState().addons;
+        const addons = useStremioAddonStore.getState().enabledAddons;
         const subs = await fetchSubtitles(addons, meta.type, meta.id);
         if (subs.length > 0 && window.mpv?.addSubtitleFile) {
           for (const sub of subs) {

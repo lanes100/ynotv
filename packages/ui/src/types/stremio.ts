@@ -26,6 +26,7 @@ export interface InstalledAddon {
   manifest: StremioManifest;
   installedAt: number;
   isDefault?: boolean;
+  enabled?: boolean;
 }
 
 export interface StremioCatalogResponse {

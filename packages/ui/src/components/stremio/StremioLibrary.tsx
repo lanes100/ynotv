@@ -15,7 +15,7 @@ const REFRESH_INTERVAL_MS = 60 * 60 * 1000;
 export function StremioLibrary({ onItemClick }: StremioLibraryProps) {
   const library = useStremioLibraryStore((s) => s.library);
   const updateLibraryItem = useStremioLibraryStore((s) => s.updateLibraryItem);
-  const addons = useStremioAddonStore((s) => s.addons);
+  const addons = useStremioAddonStore((s) => s.enabledAddons);
   const episodeProgress = useStremioWatchStore((s) => s.episodeProgress);
 
   const [search, setSearch] = useState('');

@@ -1,21 +1,27 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { InstalledAddon, StremioMetaPreview, StremioMeta } from '../types/stremio';
+import type { InstalledAddon } from '../types/stremio';
 import { fetchManifest } from '../services/stremio-addon';
 
 const STORAGE_KEY = 'stremio-addons';
 
 const DEFAULT_ADDONS = [
+  { url: 'https://v3-cinemeta.strem.io/manifest.json', isDefault: true },
   { url: 'https://opensubtitles-v3.strem.io/manifest.json', isDefault: true },
 ];
 
+function deriveEnabled(addons: InstalledAddon[]) {
+  return addons.filter(a => a.enabled !== false);
+}
+
 interface StremioAddonStore {
   addons: InstalledAddon[];
+  enabledAddons: InstalledAddon[];
   initialized: boolean;
   initializeDefaults: () => Promise<void>;
   addAddon: (url: string) => Promise<void>;
   removeAddon: (id: string) => void;
-  getAddonsWithResource: (resource: string) => InstalledAddon[];
+  toggleAddon: (id: string) => void;
   reorderAddons: (currentIndex: number, direction: 'up' | 'down') => void;
 }
 
@@ -23,6 +29,7 @@ export const useStremioAddonStore = create<StremioAddonStore>()(
   persist(
     (set, get) => ({
       addons: [],
+      enabledAddons: [],
       initialized: false,
       reorderAddons: (currentIndex: number, direction: 'up' | 'down') => {
         const state = get();
@@ -34,7 +41,7 @@ export const useStremioAddonStore = create<StremioAddonStore>()(
         newAddons[currentIndex] = newAddons[nextIndex];
         newAddons[nextIndex] = temp;
 
-        set({ addons: newAddons });
+        set({ addons: newAddons, enabledAddons: deriveEnabled(newAddons) });
       },
 
       initializeDefaults: async () => {
@@ -47,8 +54,8 @@ export const useStremioAddonStore = create<StremioAddonStore>()(
           try {
             const manifest = await fetchManifest(def.url);
             if (!existingIds.has(manifest.id)) {
-              set(s => ({
-                addons: [
+              set(s => {
+                const newAddons = [
                   ...s.addons,
                   {
                     id: manifest.id,
@@ -57,8 +64,9 @@ export const useStremioAddonStore = create<StremioAddonStore>()(
                     installedAt: Date.now(),
                     isDefault: true,
                   },
-                ],
-              }));
+                ];
+                return { addons: newAddons, enabledAddons: deriveEnabled(newAddons) };
+              });
             }
           } catch (e) {
             console.warn('[StremioAddonStore] Failed to install default addon:', def.url, e);
@@ -78,24 +86,35 @@ export const useStremioAddonStore = create<StremioAddonStore>()(
           manifest,
           installedAt: Date.now(),
         };
-        set(s => ({ addons: [...s.addons, addon] }));
+        set(s => {
+          const newAddons = [...s.addons, addon];
+          return { addons: newAddons, enabledAddons: deriveEnabled(newAddons) };
+        });
       },
 
       removeAddon: (id: string) => {
-        set(s => ({ addons: s.addons.filter(a => a.id !== id) }));
+        set(s => {
+          const newAddons = s.addons.filter(a => a.id !== id);
+          return { addons: newAddons, enabledAddons: deriveEnabled(newAddons) };
+        });
       },
 
-      getAddonsWithResource: (resource: string) => {
-        return get().addons.filter(a =>
-          a.manifest.resources.some(r => {
-            if (typeof r === 'string') return r === resource;
-            return r.name === resource;
-          })
-        );
+      toggleAddon: (id: string) => {
+        set(s => {
+          const newAddons = s.addons.map(a =>
+            a.id === id ? { ...a, enabled: a.enabled === false ? true : false } : a
+          );
+          return { addons: newAddons, enabledAddons: deriveEnabled(newAddons) };
+        });
       },
     }),
     {
       name: STORAGE_KEY,
+      partialize: (state) => ({ addons: state.addons }),
+      merge: (persisted, current) => {
+        const addons = (persisted as any)?.addons ?? current.addons;
+        return { ...current, addons, enabledAddons: deriveEnabled(addons) };
+      },
     }
   )
 );

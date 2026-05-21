@@ -12,6 +12,7 @@ export function AddonManagerPanel({ onClose }: AddonManagerPanelProps) {
   const addons = useStremioAddonStore((s) => s.addons);
   const addAddon = useStremioAddonStore((s) => s.addAddon);
   const removeAddon = useStremioAddonStore((s) => s.removeAddon);
+  const toggleAddon = useStremioAddonStore((s) => s.toggleAddon);
   const reorderAddons = useStremioAddonStore((s) => s.reorderAddons);
 
   const [manifestUrl, setManifestUrl] = useState('');
@@ -90,7 +91,7 @@ export function AddonManagerPanel({ onClose }: AddonManagerPanelProps) {
               <div className="stremio-addon-list">
                 {addons.map((addon: InstalledAddon, index) => {
                   return (
-                    <div key={addon.id} className="stremio-addon-item">
+                    <div key={addon.id} className={`stremio-addon-item${addon.enabled === false ? ' disabled' : ''}`}>
                       <div className="stremio-addon-reorder-btns">
                         <button
                           className="stremio-addon-reorder-btn"
@@ -122,6 +123,13 @@ export function AddonManagerPanel({ onClose }: AddonManagerPanelProps) {
                       </div>
 
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+                        <button
+                          className={`stremio-addon-toggle-btn ${addon.enabled === false ? 'disabled' : ''}`}
+                          title={addon.enabled === false ? 'Enable Addon' : 'Disable Addon'}
+                          onClick={() => toggleAddon(addon.id)}
+                        >
+                          {addon.enabled === false ? 'Enable' : 'Disable'}
+                        </button>
                         {!addon.isDefault && (
                           <button
                             className="stremio-addon-configure-btn"

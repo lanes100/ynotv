@@ -24,7 +24,7 @@ interface StremioPageProps {
 }
 
 export function StremioPage({ onClose, stremioStreamPickerMode, onStreamPickerModeChange }: StremioPageProps) {
-  const addons = useStremioAddonStore((s) => s.addons);
+  const addons = useStremioAddonStore((s) => s.enabledAddons);
   const stremioView = useStremioView();
   const setStremioView = useSetStremioView();
   const activeMeta = useStremioActiveMeta();

@@ -1360,11 +1360,6 @@
   border-color: var(--accent-primary);
 }
 
-/* Stremio search bar focus */
-[data-theme*="glass-"] .stremio-search-bar:focus-within {
-  box-shadow: 0 0 12px var(--accent-glow);
-}
-
 /* Stremio navigation buttons */
 [data-theme*="glass-"] .stremio-row-nav-btn,
 [data-theme*="glass-"] .stremio-row-see-all-btn {

@@ -134,7 +134,6 @@ export function StremioCatalogRow({
               )}
               <div className="stremio-row-card-info">
                 <div className="stremio-row-card-title">{item.name}</div>
-                {item.releaseInfo && <div className="stremio-row-card-year">{item.releaseInfo}</div>}
               </div>
             </div>
           ))}

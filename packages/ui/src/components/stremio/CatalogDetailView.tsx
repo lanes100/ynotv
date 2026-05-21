@@ -23,7 +23,7 @@ export function CatalogDetailView({ addon, catalog, onItemClick }: CatalogDetail
   const setSelectedAddonId = useSetStremioSelectedAddonId();
   const setSelectedCatalogId = useSetStremioSelectedCatalogId();
 
-  const addons = useStremioAddonStore((s) => s.addons);
+  const addons = useStremioAddonStore((s) => s.enabledAddons);
 
   const [items, setItems] = useState<StremioMetaPreview[]>([]);
   const [loadingInitial, setLoadingInitial] = useState(true);

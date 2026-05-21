@@ -34,7 +34,7 @@ function formatReleaseDate(dStr?: string) {
 }
 
 export function StremioDetail({ meta, onBack, onPlay, streamPickerMode }: StremioDetailProps) {
-  const addons = useStremioAddonStore((s) => s.addons);
+  const addons = useStremioAddonStore((s) => s.enabledAddons);
   const selectedSeason = useStremioSelectedSeason();
   const setSelectedSeason = useSetStremioSelectedSeason();
   

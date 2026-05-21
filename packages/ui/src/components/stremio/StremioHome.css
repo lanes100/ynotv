@@ -3,62 +3,6 @@
   min-height: 100%;
 }
 
-/* ─── Search Bar ──────────────────────────────────────────── */
-
-.stremio-search-bar {
-  display: flex;
-  align-items: center;
-  background: var(--surface-color, rgba(255, 255, 255, 0.06));
-  border: 1px solid var(--surface-border, rgba(255, 255, 255, 0.1));
-  border-radius: 12px;
-  padding: 8px 16px;
-  margin-bottom: 32px;
-  max-width: 600px;
-  transition: border-color 0.2s, box-shadow 0.2s;
-}
-
-.stremio-search-bar:focus-within {
-  border-color: var(--accent-primary, rgba(0, 212, 255, 0.5));
-  box-shadow: 0 0 12px var(--accent-glow, rgba(0, 212, 255, 0.1));
-}
-
-.stremio-search-icon {
-  width: 18px;
-  height: 18px;
-  color: var(--text-muted, rgba(255, 255, 255, 0.4));
-  flex-shrink: 0;
-}
-
-.stremio-search-input {
-  flex: 1;
-  background: transparent;
-  border: none;
-  color: var(--text-primary, rgba(255, 255, 255, 0.9));
-  font-size: 1rem;
-  padding: 4px 12px;
-  outline: none;
-}
-
-.stremio-search-input::placeholder {
-  color: var(--text-muted, rgba(255, 255, 255, 0.3));
-}
-
-.stremio-search-clear {
-  background: none;
-  border: none;
-  color: var(--text-muted, rgba(255, 255, 255, 0.4));
-  cursor: pointer;
-  font-size: 0.9rem;
-  padding: 4px 8px;
-  border-radius: 4px;
-  transition: all 0.15s;
-}
-
-.stremio-search-clear:hover {
-  color: var(--text-primary, rgba(255, 255, 255, 0.8));
-  background: var(--surface-hover, rgba(255, 255, 255, 0.1));
-}
-
 /* ─── Search Results ──────────────────────────────────────── */
 
 .stremio-search-results {

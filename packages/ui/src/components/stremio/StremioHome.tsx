@@ -3,7 +3,6 @@ import type { InstalledAddon, StremioMetaPreview, StremioMeta } from '../../type
 import { fetchCatalog, fetchMeta } from '../../services/stremio-addon';
 import {
   useStremioSearchQuery,
-  useSetStremioSearchQuery,
   useStremioView,
   useSetStremioView,
   useStremioSelectedAddonId,
@@ -40,7 +39,6 @@ function addonHasResource(addon: InstalledAddon, resource: string): boolean {
 
 export function StremioHome({ addons, onItemClick }: StremioHomeProps) {
   const searchQuery = useStremioSearchQuery();
-  const setSearchQuery = useSetStremioSearchQuery();
   const view = useStremioView();
   const setView = useSetStremioView();
   const selectedAddonId = useStremioSelectedAddonId();
@@ -71,7 +69,6 @@ export function StremioHome({ addons, onItemClick }: StremioHomeProps) {
     const rows: StremioSearchRow[] = [];
 
     for (const addon of addons) {
-      // Match Stremio-like metadata search: query metadata providers, not stream-only addons.
       if (!addonHasResource(addon, 'catalog') || !addonHasResource(addon, 'meta')) continue;
       for (const cat of addon.manifest.catalogs || []) {
         if (cat.extra?.some(e => e.name === 'search') || cat.extraSupported?.includes('search')) {
@@ -90,7 +87,7 @@ export function StremioHome({ addons, onItemClick }: StremioHomeProps) {
               if (rowItems.length > 0) {
                 rows.push({
                   id: `${addon.id}:${cat.type}:${cat.id}`,
-                  title: cat.name || `${addon.manifest.name} - ${cat.type}`,
+                  title: `${cat.name || addon.manifest.name} \u2014 ${cat.type.charAt(0).toUpperCase() + cat.type.slice(1)}`,
                   items: rowItems,
                 });
               }
@@ -109,26 +106,11 @@ export function StremioHome({ addons, onItemClick }: StremioHomeProps) {
     setSearching(false);
   }, [addons]);
 
-  const debouncedSearch = useMemo(() => {
-    let timer: ReturnType<typeof setTimeout>;
-    return (q: string) => {
-      clearTimeout(timer);
-      timer = setTimeout(() => doSearch(q), 300);
-    };
-  }, [doSearch]);
-
-  const handleSearchChange = (value: string) => {
-    setSearchQuery(value);
-    if (value.length >= 2) {
-      setView('search');
-      debouncedSearch(value);
-    } else {
-      setSearchRows([]);
-      setExpandedSearchRowId(null);
-      setSearching(false);
-      if (value.length === 0) setView('home');
+  useEffect(() => {
+    if (view === 'search' && searchQuery.length >= 2) {
+      doSearch(searchQuery);
     }
-  };
+  }, [searchQuery, view, doSearch]);
 
   const handleItemClickWrapper = useCallback(async (preview: StremioMetaPreview | StremioSearchResult) => {
     const sourceAddonId = (preview as StremioSearchResult).sourceAddonId;
@@ -155,26 +137,6 @@ export function StremioHome({ addons, onItemClick }: StremioHomeProps) {
   if (view === 'search') {
     return (
       <div className="stremio-home">
-        <div className="stremio-search-bar">
-          <svg className="stremio-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <circle cx="11" cy="11" r="8" />
-            <path d="m21 21-4.3-4.3" />
-          </svg>
-          <input
-            className="stremio-search-input"
-            type="text"
-            placeholder="Search across all addons..."
-            value={searchQuery}
-            onChange={(e) => handleSearchChange(e.target.value)}
-            autoFocus
-          />
-          {searchQuery && (
-            <button className="stremio-search-clear" onClick={() => handleSearchChange('')}>
-              ✕
-            </button>
-          )}
-        </div>
-
         <div className="stremio-search-results">
           {searching ? (
             <div className="stremio-loading-text">Searching...</div>
@@ -242,25 +204,7 @@ export function StremioHome({ addons, onItemClick }: StremioHomeProps) {
 
   return (
     <div className="stremio-home">
-      <div className="stremio-search-bar">
-        <svg className="stremio-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <circle cx="11" cy="11" r="8" />
-          <path d="m21 21-4.3-4.3" />
-        </svg>
-        <input
-          className="stremio-search-input"
-          type="text"
-          placeholder="Search movies, series..."
-          value={searchQuery}
-          onChange={(e) => handleSearchChange(e.target.value)}
-        />
-        {searchQuery && (
-          <button className="stremio-search-clear" onClick={() => handleSearchChange('')}>✕</button>
-        )}
-      </div>
-
       <div className="stremio-catalog-rows">
-        {/* Continue Watching — always shown if there's history */}
         <StremioRecentlyWatched
           addons={addons}
           onItemClick={onItemClick}
@@ -272,7 +216,7 @@ export function StremioHome({ addons, onItemClick }: StremioHomeProps) {
           renderedRows.map(({ addon, catalog }) => (
             <StremioCatalogRow
               key={`${addon.id}:${catalog.type}:${catalog.id}`}
-              title={catalog.name || `${addon.manifest.name} - ${catalog.type}`}
+              title={`${catalog.name || addon.manifest.name} \u2014 ${catalog.type.charAt(0).toUpperCase() + catalog.type.slice(1)}`}
               addon={addon}
               catalog={catalog}
               onItemClick={handleItemClickWrapper}
