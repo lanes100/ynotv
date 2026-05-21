@@ -620,6 +620,10 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
     const isLocal = isLocalUrl(resolved.url);
     setIgnoreHttpErrors(isStalker || isLocal);
 
+    if (Bridge.getIsCasting?.()) {
+      Bridge.setCastMetadata(channel.name, 'Live TV');
+    }
+
     const result = await tryLoadWithFallbacks(
       resolved.url,
       true,
@@ -1437,6 +1441,10 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
     const isLocal = isLocalUrl(resolved.url);
     setIgnoreHttpErrors(isStalker || isLocal);
 
+    if (Bridge.getIsCasting?.()) {
+      Bridge.setCastMetadata(info.title, info.type || 'VOD');
+    }
+
     const result = await tryLoadWithFallbacks(resolved.url, false, resolved.userAgent);
     if (!result.success) {
       setIgnoreHttpErrors(false);
@@ -1546,6 +1554,9 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
 
     try {
       const url = recording.file_path.startsWith('file://') ? recording.file_path : `file://${recording.file_path}`;
+      if (Bridge.getIsCasting?.()) {
+        Bridge.setCastMetadata(recording.program_title, 'DVR Recording');
+      }
       const result = await Bridge.loadVideo(url);
 
       if (result.success) {

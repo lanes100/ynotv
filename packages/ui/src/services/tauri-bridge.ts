@@ -146,8 +146,47 @@ export function stopWindowSync() {
     }
 }
 
+let isCasting = false;
+let castMetadata = { title: "YNotV Stream", subtitle: "" };
+
+function guessMimeType(url: string): string {
+    const u = url.toLowerCase();
+    if (u.includes('.m3u8') || u.includes('/m3u8') || u.includes('.ts') || u.includes('/hls')) {
+        return 'application/x-mpegURL';
+    }
+    if (u.includes('.mp4') || u.includes('/mp4')) {
+        return 'video/mp4';
+    }
+    if (u.includes('.mkv')) {
+        return 'video/x-matroska';
+    }
+    if (u.includes('.webm')) {
+        return 'video/webm';
+    }
+    return 'application/x-mpegURL';
+}
+
 export const Bridge = {
     isTauri: true,
+
+    // Google Cast State Management
+    setIsCasting(active: boolean) {
+        isCasting = active;
+        console.log('[Bridge] setIsCasting:', active);
+    },
+
+    getIsCasting() {
+        return isCasting;
+    },
+
+    setCastMetadata(title: string, subtitle: string) {
+        castMetadata = { title, subtitle };
+        console.log('[Bridge] setCastMetadata:', castMetadata);
+    },
+
+    getCastMetadata() {
+        return castMetadata;
+    },
 
     // MPV Controls
     async initMpv(timeshiftEnabled?: boolean, timeshiftCacheBytes?: number) {
@@ -179,6 +218,23 @@ export const Bridge = {
     },
 
     async loadVideo(url: string) {
+        if (isCasting) {
+            const isLocal = url.startsWith('file://') || (!url.startsWith('http://') && !url.startsWith('https://'));
+            if (isLocal) {
+                return { success: false, error: 'Local files cannot be cast. Only remote streams are supported.' };
+            }
+            try {
+                await invoke('cast_load_media', {
+                    url,
+                    title: castMetadata.title,
+                    subtitle: castMetadata.subtitle,
+                    mimeType: guessMimeType(url),
+                });
+                return { success: true };
+            } catch (e: any) {
+                return { success: false, error: typeof e === 'string' ? e : e.message || 'Failed to cast media' };
+            }
+        }
         try {
             await invoke('mpv_load', { url });
             return { success: true };
@@ -188,26 +244,44 @@ export const Bridge = {
     },
 
     async play() {
+        if (isCasting) {
+            return invoke('cast_play');
+        }
         return invoke('mpv_play');
     },
 
     async pause() {
+        if (isCasting) {
+            return invoke('cast_pause');
+        }
         return invoke('mpv_pause');
     },
 
     async resume() {
+        if (isCasting) {
+            return invoke('cast_play');
+        }
         return invoke('mpv_resume');
     },
 
     async stop() {
+        if (isCasting) {
+            return invoke('cast_pause');
+        }
         return invoke('mpv_stop');
     },
 
     async setVolume(volume: number) {
+        if (isCasting) {
+            return invoke('cast_set_volume', { level: parseFloat(String(volume)) / 100.0 });
+        }
         return invoke('mpv_set_volume', { volume: parseFloat(String(volume)) });
     },
 
     async seek(seconds: number) {
+        if (isCasting) {
+            return invoke('cast_seek', { seconds: parseFloat(String(seconds)) });
+        }
         return invoke('mpv_seek', { seconds: parseFloat(String(seconds)) });
     },
 
@@ -220,6 +294,9 @@ export const Bridge = {
     },
 
     async toggleMute() {
+        if (isCasting) {
+            return invoke('cast_toggle_mute');
+        }
         return invoke('mpv_toggle_mute');
     },
 

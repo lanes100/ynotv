@@ -43,6 +43,12 @@ mod tmdb_cache;
 mod tvmaze;
 use tmdb_cache::{TmdbCache, MatchResult, CacheStats};
 
+mod cast;
+use cast::{
+    cast_start_discovery, cast_stop_discovery, cast_connect, cast_disconnect,
+    cast_load_media, cast_play, cast_pause, cast_seek, cast_set_volume, cast_toggle_mute,
+};
+
 
 // Bulk insert structures
 #[derive(Debug, Deserialize)]
@@ -2319,6 +2325,7 @@ pub fn run() {
         .plugin(tauri_plugin_process::init())
         // Manage platform-specific MPV state
         .manage(MpvState::new())
+        .manage(std::sync::Arc::new(cast::CastManager::new()))
         .setup(|app| {
             // Register secondary MPV state (Windows only)
             #[cfg(target_os = "windows")]
@@ -2546,7 +2553,18 @@ pub fn run() {
             add_show_episodes_to_watchlist,
             clear_show_watchlist_tracking,
             // Utility commands
-            open_external_url
+            open_external_url,
+            // Google Cast commands
+            cast_start_discovery,
+            cast_stop_discovery,
+            cast_connect,
+            cast_disconnect,
+            cast_load_media,
+            cast_play,
+            cast_pause,
+            cast_seek,
+            cast_set_volume,
+            cast_toggle_mute
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

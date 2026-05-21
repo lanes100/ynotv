@@ -66,6 +66,10 @@ flate2 = "1.0"
 reqwest = { version = "0.12", features = ["json", "stream", "rustls-tls", "gzip", "brotli", "deflate"], default-features = false }
 log = "0.4.29"
 
+# Chromecast dependencies
+rust_cast = { version = "0.21", features = ["thread_safe"] }
+mdns-sd = "0.19"
+
 # Win32 APIs for MPV HWND resizing (Windows only)
 [target.'cfg(target_os = "windows")'.dependencies]
 windows = { version = "0.58", features = [

@@ -46,6 +46,8 @@ interface SettingsProps {
   onChannelInfoOverlayHideDescriptionChange?: (hide: boolean) => void;
   overlayAutohideTimer?: number;
   onOverlayAutohideTimerChange?: (seconds: number) => void;
+  castEnabled?: boolean;
+  onCastEnabledChange?: (enabled: boolean) => void;
 }
 
 export function Settings({
@@ -69,6 +71,8 @@ export function Settings({
   onChannelInfoOverlayHideDescriptionChange,
   overlayAutohideTimer: overlayAutohideTimerProp,
   onOverlayAutohideTimerChange,
+  castEnabled: castEnabledProp,
+  onCastEnabledChange,
 }: SettingsProps) {
   const [activeTab, setActiveTab] = useState<SettingsTabId>(initialTab);
   const [sources, setSources] = useState<Source[]>([]);
@@ -162,6 +166,7 @@ export function Settings({
   const [popoutAlwaysOnTop, setPopoutAlwaysOnTop] = useState(false);
   const [popoutMpvParamsEnabled, setPopoutMpvParamsEnabled] = useState(false);
   const [popoutMpvParams, setPopoutMpvParams] = useState('');
+  const [castEnabled, setCastEnabled] = useState(false);
 
   // Widget scale state
   const [widgetScale, setWidgetScaleState] = useState(1);
@@ -178,6 +183,7 @@ export function Settings({
   useEffect(() => { setChannelInfoOverlayBoxWidth(channelInfoOverlayBoxWidthProp ?? 380); }, [channelInfoOverlayBoxWidthProp]);
   useEffect(() => { setChannelInfoOverlayOpacity(channelInfoOverlayOpacityProp ?? 55); }, [channelInfoOverlayOpacityProp]);
   useEffect(() => { setChannelInfoOverlayHideDescription(channelInfoOverlayHideDescriptionProp ?? false); }, [channelInfoOverlayHideDescriptionProp]);
+  useEffect(() => { setCastEnabled(castEnabledProp ?? false); }, [castEnabledProp]);
   
   // Sync overlay autohide timer prop to uiSettings if needed, though uiSettings has it
   useEffect(() => { 
@@ -303,7 +309,12 @@ export function Settings({
         sportsBgOpacity?: number;
         stremioStreamPickerMode?: 'modal' | 'autoplay';
         navHiddenTabs?: string[];
+        castEnabled?: boolean;
       };
+
+      if (settings.castEnabled !== undefined) {
+        setCastEnabled(settings.castEnabled);
+      }
 
       // Load TMDB API key
       const key = settings.tmdbApiKey || '';
@@ -473,6 +484,16 @@ export function Settings({
     setMpvDisableWhitelist(disabled);
     if (window.storage) {
       await window.storage.updateSettings({ mpvDisableWhitelist: disabled });
+    }
+  };
+
+  const handleCastEnabledChange = async (enabled: boolean) => {
+    setCastEnabled(enabled);
+    if (onCastEnabledChange) {
+      onCastEnabledChange(enabled);
+    }
+    if (window.storage) {
+      await window.storage.updateSettings({ castEnabled: enabled });
     }
   };
 
@@ -943,6 +964,8 @@ export function Settings({
             onStreamMaxRetriesChange={handleStreamMaxRetriesChange}
             stremioStreamPickerMode={stremioStreamPickerMode}
             onStremioStreamPickerModeChange={handleStremioStreamPickerModeChange}
+            castEnabled={castEnabled}
+            onCastEnabledChange={handleCastEnabledChange}
           />
         );
       case 'cache':

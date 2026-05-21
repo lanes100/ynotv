@@ -58,6 +58,8 @@ import { db } from './db';
 import { VideoErrorOverlay } from './components/VideoErrorOverlay';
 import { StreamRetryOverlay } from './components/StreamRetryOverlay';
 import { FailoverOverlay } from './components/FailoverOverlay';
+import { CastButton } from './components/CastButton';
+import { CastOverlay } from './components/CastOverlay';
 import { syncSource, syncVodForSource, isEpgStale, isVodStale, syncAllStaleGlobalEpgLinks } from './db/sync';
 import { bulkOps } from './services/bulk-ops';
 import { Bridge, type AspectRatioMode, applyAspectRatio } from './services/tauri-bridge';
@@ -142,6 +144,8 @@ function App() {
     popoutAlwaysOnTop,
     navHiddenTabs: settingsNavHiddenTabs,
     startupView,
+    castEnabled,
+    setCastEnabled,
   } = useAppSettings();
   const navHiddenTabs = useUIStore((s) => s.navHiddenTabs);
   const setNavHiddenStore = useUIStore((s) => s.setNavHiddenTabs);
@@ -347,6 +351,97 @@ function App() {
   const [popoutMode, setPopoutMode] = useState(false);
   const togglePopoutMode = useCallback(() => {
     setPopoutMode(prev => !prev);
+  }, []);
+
+  // ==========================================================================
+  // Google Cast (Chromecast) Integration
+  // ==========================================================================
+  const [isCasting, setIsCasting] = useState(false);
+  const [castDeviceName, setCastDeviceName] = useState('');
+  const [castMetadataState, setCastMetadataState] = useState({ title: '', subtitle: '' });
+
+  // Dynamically start/stop discovery based on setting
+  useEffect(() => {
+    if (castEnabled) {
+      invoke('cast_start_discovery').catch((e) => {
+        console.error('[Cast] Failed to start discovery:', e);
+      });
+    } else {
+      invoke('cast_stop_discovery').catch((e) => {
+        console.error('[Cast] Failed to stop discovery:', e);
+      });
+      if (Bridge.getIsCasting?.()) {
+        Bridge.setIsCasting(false);
+        setIsCasting(false);
+        invoke('cast_disconnect').catch((e) => {
+          console.error('[Cast] Failed to disconnect on disable:', e);
+        });
+      }
+    }
+    return () => {
+      invoke('cast_stop_discovery').catch(() => {});
+    };
+  }, [castEnabled]);
+
+  // Listen for cast status changes
+  useEffect(() => {
+    let unlisten: (() => void) | undefined;
+
+    import('@tauri-apps/api/event').then(({ listen }) => {
+      listen<any>('cast-status', (event) => {
+        const status = event.payload;
+        console.log('[Cast] Status event:', status);
+        
+        const previouslyCasting = Bridge.getIsCasting ? Bridge.getIsCasting() : false;
+        
+        setIsCasting(status.connected);
+        setCastDeviceName(status.deviceName);
+        if (Bridge.setIsCasting) {
+          Bridge.setIsCasting(status.connected);
+        }
+
+        if (status.connected && !previouslyCasting) {
+          // Connected to cast! Stop local playback first
+          console.log('[Cast] Casting started, stopping local playback');
+          invoke('mpv_stop').catch(() => {});
+
+          // Reload current playback on the Cast device if playing
+          if (playing && currentChannel) {
+            const isRecording = currentChannel.stream_id?.startsWith('recording_');
+            const isLocalFile = currentChannel.direct_url?.startsWith('file://') || (!currentChannel.direct_url?.startsWith('http://') && !currentChannel.direct_url?.startsWith('https://'));
+            
+            if (!isRecording && !isLocalFile) {
+              if (currentChannel.stream_id === 'vod' && vodInfo) {
+                handlePlayVod(vodInfo);
+              } else {
+                handlePlayChannel(currentChannel);
+              }
+            } else {
+              alert('Local files and DVR recordings cannot be cast to Chromecast. Only remote streams are supported.');
+            }
+          }
+        }
+        
+        // Update local metadata states
+        if (Bridge.getCastMetadata) {
+          setCastMetadataState(Bridge.getCastMetadata());
+        }
+      }).then((unsub) => {
+        unlisten = unsub;
+      });
+    });
+
+    return () => {
+      if (unlisten) unlisten();
+    };
+  }, [playing, currentChannel, vodInfo, handlePlayChannel, handlePlayVod]);
+
+  const handleDisconnectCast = useCallback(async () => {
+    try {
+      await invoke('cast_disconnect');
+    } catch (e) {
+      console.error('[Cast] Failed to disconnect:', e);
+    }
   }, []);
 
   // ==========================================================================
@@ -1720,6 +1815,9 @@ function App() {
           </svg>
         </button>
 
+        {/* Google Cast Button */}
+        <CastButton castEnabled={castEnabled} />
+
         {/* Settings Button */}
         <button
           className={`title-bar-settings-btn ${(showSettingsPopup || activeView === 'settings') ? 'active' : ''}`}
@@ -1789,6 +1887,15 @@ function App() {
         {/* Failover overlay — shown when switching to backup stream */}
         {failoverState?.isFailingOver && activeView !== 'guide' && (
           <FailoverOverlay state={failoverState} />
+        )}
+
+        {isCasting && (
+          <CastOverlay
+            deviceName={castDeviceName}
+            mediaTitle={castMetadataState.title}
+            mediaSubtitle={castMetadataState.subtitle}
+            onDisconnect={handleDisconnectCast}
+          />
         )}
       </div>
 
@@ -2182,6 +2289,8 @@ function App() {
       {/* Settings Panel - as popup overlay in main layout, or full view in multiview */}
       {(showSettingsPopup || activeView === 'settings') && (
         <Settings
+          castEnabled={castEnabled}
+          onCastEnabledChange={setCastEnabled}
           initialTab={settingsTab}
           editSourceId={editSourceId}
           onClose={() => {

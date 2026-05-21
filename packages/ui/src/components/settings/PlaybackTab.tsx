@@ -16,6 +16,8 @@ interface PlaybackTabProps {
   onStreamMaxRetriesChange: (retries: number) => Promise<void>;
   stremioStreamPickerMode: StremioStreamPickerMode;
   onStremioStreamPickerModeChange: (mode: StremioStreamPickerMode) => Promise<void>;
+  castEnabled?: boolean;
+  onCastEnabledChange?: (enabled: boolean) => Promise<void>;
 }
 
 const DEFAULT_MPV_PARAMS = `--hwdec=auto
@@ -40,8 +42,10 @@ export function PlaybackTab({
   onStreamMaxRetriesChange,
   stremioStreamPickerMode,
   onStremioStreamPickerModeChange,
+  castEnabled,
+  onCastEnabledChange,
 }: PlaybackTabProps) {
-  const [activeSubTab, setActiveSubTab] = useState<'mpv' | 'reconnect'>('mpv');
+  const [activeSubTab, setActiveSubTab] = useState<'mpv' | 'reconnect' | 'cast'>('mpv');
   const [localParams, setLocalParams] = useState(mpvParams);
   const [hasChanges, setHasChanges] = useState(false);
   const [debugInfo, setDebugInfo] = useState<string | null>(null);
@@ -124,6 +128,12 @@ export function PlaybackTab({
           onClick={() => setActiveSubTab('reconnect')}
         >
           Reconnect
+        </button>
+        <button
+          className={`settings-tab ${activeSubTab === 'cast' ? 'active' : ''}`}
+          onClick={() => setActiveSubTab('cast')}
+        >
+          Google Cast
         </button>
       </div>
 
@@ -246,7 +256,7 @@ export function PlaybackTab({
               </div>
             </div>
           </div>
-        ) : (
+        ) : activeSubTab === 'reconnect' ? (
           <div className="settings-section">
             <div className="playback-section" style={{ marginTop: 0 }}>
 
@@ -358,6 +368,40 @@ export function PlaybackTab({
                 </div>
               </div>
 
+            </div>
+          </div>
+        ) : (
+          <div className="settings-section">
+            <div className="playback-section" style={{ marginTop: 0 }}>
+              <div className="timeshift-toggle-row" style={{ borderBottom: 'none' }}>
+                <div className="timeshift-toggle-info">
+                  <span className="timeshift-toggle-label">Enable Google Cast Support</span>
+                  <span className="timeshift-toggle-sub">
+                    Allows scanning your local network for Chromecast devices. Enabling this will prompt the operating system for local network and firewall permissions.
+                  </span>
+                </div>
+                <label className="toggle-switch">
+                  <input
+                    type="checkbox"
+                    checked={castEnabled || false}
+                    onChange={(e) => onCastEnabledChange?.(e.target.checked)}
+                  />
+                  <span className="toggle-slider" />
+                </label>
+              </div>
+
+              {castEnabled && (
+                <div className="retry-warning" style={{ marginTop: '12px' }}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                    <line x1="12" y1="9" x2="12" y2="13" />
+                    <line x1="12" y1="17" x2="12.01" y2="17" />
+                  </svg>
+                  <span>
+                    Google Cast discovery is active. The application will scan the local network for compatible Chromecast devices. Ensure your device is on the same Wi-Fi/local network.
+                  </span>
+                </div>
+              )}
             </div>
           </div>
         )}

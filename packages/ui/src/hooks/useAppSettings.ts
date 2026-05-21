@@ -94,6 +94,8 @@ export interface AppSettings {
     setSportsScale: (scale: number) => void;
     setSportsBgOpacity: (opacity: number) => void;
     setStartupView: (view: 'none' | 'guide' | 'movies' | 'series' | 'dvr' | 'sports' | 'calendar') => void;
+    castEnabled: boolean;
+    setCastEnabled: (enabled: boolean) => void;
 }
 
 /**
@@ -164,6 +166,9 @@ export function useAppSettings(): AppSettings {
 
   // Startup view
   const [startupView, setStartupViewState] = useState<'none' | 'guide' | 'movies' | 'series' | 'dvr' | 'sports' | 'calendar' | 'stremio'>('none');
+
+  // Google Cast setting
+  const [castEnabled, setCastEnabledState] = useState(false);
 
   // Apply theme effect
   useEffect(() => {
@@ -247,6 +252,9 @@ export function useAppSettings(): AppSettings {
 
           // Load startup view
           setStartupViewState(result.data.startupView ?? 'none');
+
+          // Load Google Cast setting
+          setCastEnabledState(result.data.castEnabled ?? false);
 
           // Apply EPG darken current setting on load
           if (result.data.epgDarkenCurrent) {
@@ -521,6 +529,17 @@ export function useAppSettings(): AppSettings {
     }
   }, []);
 
+  const setCastEnabled = useCallback(async (enabled: boolean) => {
+    setCastEnabledState(enabled);
+    if (window.storage) {
+      try {
+        await window.storage.updateSettings({ castEnabled: enabled });
+      } catch (e) {
+        console.error('[useAppSettings] Failed to save castEnabled:', e);
+      }
+    }
+  }, []);
+
   return {
     rememberLastChannels,
     reopenLastOnStartup,
@@ -583,5 +602,7 @@ export function useAppSettings(): AppSettings {
     setSportsBgOpacity,
     startupView,
     setStartupView,
+    castEnabled,
+    setCastEnabled,
   };
 }
