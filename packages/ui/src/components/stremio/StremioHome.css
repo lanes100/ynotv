@@ -206,30 +206,10 @@
   height: 16px;
 }
 
-/* Themed horizontal scrollbar */
 .stremio-row-scroll {
-  overflow-x: auto;
-  scrollbar-width: thin;
+  overflow-x: hidden;
   position: relative;
   padding-bottom: 4px;
-}
-
-.stremio-row-scroll::-webkit-scrollbar {
-  height: 4px;
-}
-
-.stremio-row-scroll::-webkit-scrollbar-track {
-  background: transparent;
-  border-radius: 4px;
-}
-
-.stremio-row-scroll::-webkit-scrollbar-thumb {
-  background: var(--surface-hover, rgba(255, 255, 255, 0.15));
-  border-radius: 4px;
-}
-
-.stremio-row-scroll::-webkit-scrollbar-thumb:hover {
-  background: var(--accent-primary, rgba(0, 212, 255, 0.5));
 }
 
 .stremio-row-track {
