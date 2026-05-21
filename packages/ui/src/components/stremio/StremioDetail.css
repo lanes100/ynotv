@@ -656,10 +656,8 @@
 
 .stremio-detail-cast-row {
   display: flex;
-  gap: 12px;
-  overflow-x: auto;
-  padding-bottom: 4px;
-  scrollbar-width: thin;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .stremio-detail-cast-member {
