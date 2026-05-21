@@ -382,6 +382,7 @@ function App() {
       const mimeType = isHls ? 'application/x-mpegURL' : 'video/mp4';
 
       await invoke('cast_load_media', { url, title, subtitle, mimeType });
+      Bridge.stop().catch(() => {}); // Stop local video to release network connection
     } catch (e: any) {
       alert('Failed to cast media: ' + (e?.message || e));
     }
@@ -431,7 +432,7 @@ function App() {
           console.log('[Cast] Casting started, loading media on Chromecast');
           if (playing && currentChannel) {
             castCurrentMedia();
-            Bridge.pause().catch(() => {}); // Pause local video, keep it initialized
+            Bridge.stop().catch(() => {}); // Stop local video to release network connection
           }
         }
         
