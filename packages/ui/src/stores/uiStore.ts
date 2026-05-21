@@ -10,7 +10,7 @@ import type { SportsTabId } from '@ynotv/core';
 import type { MediaItem } from '../types/media';
 import type { StremioMetaPreview, StremioMeta } from '../types/stremio';
 
-export type StremioView = 'home' | 'library' | 'detail' | 'search';
+export type StremioView = 'home' | 'library' | 'detail' | 'search' | 'calendar';
 
 interface UIState {
   // Movies page

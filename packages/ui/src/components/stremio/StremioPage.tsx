@@ -12,6 +12,7 @@ import {
 import { StremioSidebar } from './StremioSidebar';
 import { StremioHome } from './StremioHome';
 import { StremioLibrary } from './StremioLibrary';
+import { StremioCalendar } from './StremioCalendar';
 import { StremioDetail } from './StremioDetail';
 import { AddonManagerPanel } from './AddonManagerPanel';
 import './StremioPage.css';
@@ -67,8 +68,7 @@ export function StremioPage({ onClose, stremioStreamPickerMode, onStreamPickerMo
   const handleBack = useCallback(() => {
     if (activeMeta) {
       setActiveMeta(null);
-      // Navigate back to the previous view (home or library)
-      setStremioView(homeScrollTop > 0 ? 'home' : 'home'); // default back to home, or let store view persist
+      setStremioView(homeScrollTop > 0 ? 'home' : 'home');
       setSelectedSeason(undefined);
     }
   }, [activeMeta, setActiveMeta, setStremioView, setSelectedSeason]);
@@ -112,6 +112,12 @@ export function StremioPage({ onClose, stremioStreamPickerMode, onStreamPickerMo
 
         <div style={{ display: stremioView === 'library' ? 'block' : 'none' }}>
           <StremioLibrary
+            onItemClick={handleItemClick}
+          />
+        </div>
+
+        <div style={{ display: stremioView === 'calendar' ? 'block' : 'none' }}>
+          <StremioCalendar
             onItemClick={handleItemClick}
           />
         </div>

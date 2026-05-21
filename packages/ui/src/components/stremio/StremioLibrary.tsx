@@ -1,6 +1,7 @@
-import { useState, useMemo } from 'react';
-import { useStremioLibraryStore } from '../../stores/stremioLibraryStore';
-import type { StremioMetaPreview, StremioMeta } from '../../types/stremio';
+import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useStremioLibraryStore, type LibraryItem } from '../../stores/stremioLibraryStore';
+import { useStremioWatchStore } from '../../stores/stremioWatchStore';
+import type { StremioMeta } from '../../types/stremio';
 import { useStremioAddonStore } from '../../stores/stremioAddonStore';
 import { fetchMeta } from '../../services/stremio-addon';
 import './StremioLibrary.css';
@@ -9,18 +10,63 @@ interface StremioLibraryProps {
   onItemClick: (meta: StremioMeta) => void;
 }
 
+const REFRESH_INTERVAL_MS = 60 * 60 * 1000;
+
 export function StremioLibrary({ onItemClick }: StremioLibraryProps) {
   const library = useStremioLibraryStore((s) => s.library);
+  const updateLibraryItem = useStremioLibraryStore((s) => s.updateLibraryItem);
   const addons = useStremioAddonStore((s) => s.addons);
+  const episodeProgress = useStremioWatchStore((s) => s.episodeProgress);
 
   const [search, setSearch] = useState('');
   const [selectedType, setSelectedType] = useState('All');
   const [sortBy, setSortBy] = useState<'added' | 'name' | 'rating' | 'year'>('added');
+  const [refreshing, setRefreshing] = useState(false);
+
+  // Refresh stale library items in the background
+  useEffect(() => {
+    const stale = library.filter(
+      (item) => item.type === 'series' && (!item.lastChecked || Date.now() - item.lastChecked > REFRESH_INTERVAL_MS)
+    );
+    if (stale.length === 0) return;
+
+    let cancelled = false;
+    const refresh = async () => {
+      setRefreshing(true);
+      for (const item of stale) {
+        if (cancelled) break;
+        const addon = addons.find((a) => a.manifest.catalogs?.some((c) => c.type === item.type));
+        if (!addon) continue;
+        try {
+          const meta = await fetchMeta([addon], item.type, item.id);
+          if (meta && meta.videos && !cancelled) {
+            updateLibraryItem(item.id, {
+              videos: meta.videos,
+              videoCount: meta.videos.length,
+              lastChecked: Date.now(),
+            });
+          }
+        } catch {
+          // Skip refresh failures
+        }
+      }
+      if (!cancelled) setRefreshing(false);
+    };
+    refresh();
+    return () => { cancelled = true; };
+  }, [library, addons, updateLibraryItem]);
+
+  const getNewCount = useCallback((item: LibraryItem): number => {
+    if (item.type !== 'series' || !item.videos) return 0;
+    return item.videos.filter((v) => {
+      if (v.season === undefined || v.episode === undefined) return false;
+      return !episodeProgress[v.id]?.finished;
+    }).length;
+  }, [episodeProgress]);
 
   const filteredItems = useMemo(() => {
     let items = [...library];
 
-    // Filter by type
     if (selectedType !== 'All') {
       const typeLower = selectedType.toLowerCase();
       if (typeLower === 'movies') {
@@ -32,13 +78,11 @@ export function StremioLibrary({ onItemClick }: StremioLibraryProps) {
       }
     }
 
-    // Filter by search
     if (search.trim()) {
       const q = search.toLowerCase();
       items = items.filter((x) => x.name.toLowerCase().includes(q));
     }
 
-    // Sort items
     items.sort((a, b) => {
       if (sortBy === 'name') {
         return a.name.localeCompare(b.name);
@@ -51,14 +95,13 @@ export function StremioLibrary({ onItemClick }: StremioLibraryProps) {
       if (sortBy === 'year') {
         return (b.year || 0) - (a.year || 0);
       }
-      // default: added (which is already order of store list: newest first)
       return 0;
     });
 
     return items;
   }, [library, search, selectedType, sortBy]);
 
-  const handleCardClick = async (item: StremioMetaPreview) => {
+  const handleCardClick = async (item: LibraryItem) => {
     const addon = addons.find((a) => a.manifest.catalogs?.some((c) => c.type === item.type));
     if (addon) {
       const meta = await fetchMeta([addon], item.type, item.id);
@@ -69,7 +112,10 @@ export function StremioLibrary({ onItemClick }: StremioLibraryProps) {
   return (
     <div className="stremio-library">
       <div className="stremio-library-header">
-        <h2 className="stremio-library-title">Library</h2>
+        <h2 className="stremio-library-title">
+          Library
+          {refreshing && <span className="stremio-library-refreshing"> Refreshing...</span>}
+        </h2>
         <div className="stremio-library-controls">
           <input
             className="stremio-library-search"
@@ -109,27 +155,37 @@ export function StremioLibrary({ onItemClick }: StremioLibraryProps) {
         </div>
       ) : (
         <div className="stremio-library-grid">
-          {filteredItems.map((item) => (
-            <div
-              key={item.id}
-              className="stremio-meta-card"
-              onClick={() => handleCardClick(item)}
-            >
-              {item.poster && (
-                <img
-                  className="stremio-meta-poster"
-                  src={item.poster}
-                  alt={item.name}
-                  loading="lazy"
-                />
-              )}
-              <div className="stremio-meta-card-info">
-                <div className="stremio-meta-card-title">{item.name}</div>
-                {item.releaseInfo && <div className="stremio-meta-card-year">{item.releaseInfo}</div>}
-                {item.imdbRating && <div className="stremio-meta-card-rating">★ {item.imdbRating}</div>}
+          {filteredItems.map((item) => {
+            const newCount = item.type === 'series' ? getNewCount(item) : 0;
+            return (
+              <div
+                key={item.id}
+                className="stremio-meta-card"
+                onClick={() => handleCardClick(item)}
+              >
+                {item.poster && (
+                  <div className="stremio-library-poster-wrap">
+                    <img
+                      className="stremio-meta-poster"
+                      src={item.poster}
+                      alt={item.name}
+                      loading="lazy"
+                    />
+                    {newCount > 0 && (
+                      <div className="stremio-library-new-badge">
+                        {newCount}
+                      </div>
+                    )}
+                  </div>
+                )}
+                <div className="stremio-meta-card-info">
+                  <div className="stremio-meta-card-title">{item.name}</div>
+                  {item.releaseInfo && <div className="stremio-meta-card-year">{item.releaseInfo}</div>}
+                  {item.imdbRating && <div className="stremio-meta-card-rating">★ {item.imdbRating}</div>}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

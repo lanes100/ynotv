@@ -1,0 +1,124 @@
+.stremio-calendar {
+  padding: 32px 24px;
+  min-height: 100%;
+}
+
+.stremio-calendar-header {
+  margin-bottom: 24px;
+}
+
+.stremio-calendar-title {
+  margin: 0;
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: white;
+}
+
+.stremio-calendar-empty {
+  text-align: center;
+  color: rgba(255, 255, 255, 0.4);
+  padding: 80px 0;
+  font-size: 1rem;
+}
+
+.stremio-calendar-content {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.stremio-cal-section {
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 12px;
+  padding: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.stremio-cal-section-title {
+  margin: 0 0 12px 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.8);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.stremio-cal-section-count {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  padding: 0 8px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.6);
+  line-height: 20px;
+}
+
+.stremio-cal-ep-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.stremio-cal-ep-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.stremio-cal-ep-card:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.stremio-cal-ep-watched {
+  opacity: 0.5;
+}
+
+.stremio-cal-ep-poster {
+  width: 50px;
+  height: 70px;
+  border-radius: 4px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.stremio-cal-ep-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.stremio-cal-ep-series {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: white;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.stremio-cal-ep-title {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.5);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.stremio-cal-ep-watched-label {
+  font-size: 0.65rem;
+  color: #2ecc71;
+  font-weight: 600;
+  margin-top: 2px;
+}
+
+.stremio-cal-ep-date {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.4);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
