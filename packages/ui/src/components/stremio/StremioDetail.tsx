@@ -1,10 +1,18 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import type { StremioMeta, StremioStream, StremioVideo } from '../../types/stremio';
 import { useStremioAddonStore } from '../../stores/stremioAddonStore';
-import { useStremioSelectedSeason, useSetStremioSelectedSeason } from '../../stores/uiStore';
+import {
+  useStremioSelectedSeason,
+  useSetStremioSelectedSeason,
+  useSetStremioSearchQuery,
+  useSetStremioView,
+  useSetStremioActiveMeta,
+} from '../../stores/uiStore';
 import { useStremioLibraryStore } from '../../stores/stremioLibraryStore';
 import { useStremioWatchStore } from '../../stores/stremioWatchStore';
 import { fetchStreams } from '../../services/stremio-addon';
+import { useLazyStremioCast } from '../../hooks/useLazyStremioCast';
+import { useTmdbAccessToken } from '../../hooks/useTmdbLists';
 import './StremioDetail.css';
 
 interface StremioDetailProps {
@@ -35,6 +43,19 @@ export function StremioDetail({ meta, onBack, onPlay, streamPickerMode }: Stremi
   const isInLibrary = useStremioLibraryStore((s) => s.isInLibrary);
 
   const episodeProgress = useStremioWatchStore((s) => s.episodeProgress);
+
+  const setStremioSearchQuery = useSetStremioSearchQuery();
+  const setStremioView = useSetStremioView();
+  const setStremioActiveMeta = useSetStremioActiveMeta();
+  const tmdbToken = useTmdbAccessToken();
+
+  const { cast, loading: castLoading } = useLazyStremioCast(meta, tmdbToken);
+
+  const handleCastClick = useCallback((castName: string) => {
+    setStremioActiveMeta(null);
+    setStremioSearchQuery(castName);
+    setStremioView('home');
+  }, [setStremioActiveMeta, setStremioSearchQuery, setStremioView]);
 
   const [streams, setStreams] = useState<StremioStream[]>([]);
   const [selectedVideo, setSelectedVideo] = useState<StremioVideo | null>(null);
@@ -198,12 +219,46 @@ export function StremioDetail({ meta, onBack, onPlay, streamPickerMode }: Stremi
             </div>
           )}
 
-          {meta.cast && meta.cast.length > 0 && (
+          {(cast.length > 0 || castLoading) && (
+            <div className="stremio-detail-section">
+              <div className="stremio-detail-section-label">CAST</div>
+              <div className="stremio-detail-cast-row">
+                {castLoading && cast.length === 0 ? (
+                  <div className="stremio-detail-cast-loading">Loading cast...</div>
+                ) : (
+                  cast.map((member) => (
+                    <div
+                      key={member.name}
+                      className="stremio-detail-cast-member"
+                      onClick={() => handleCastClick(member.name)}
+                      title={`Search for ${member.name}`}
+                    >
+                      <div className="stremio-detail-cast-photo">
+                        {member.photo ? (
+                          <img src={member.photo} alt={member.name} loading="lazy" />
+                        ) : (
+                          <div className="stremio-detail-cast-photo-placeholder">
+                            <span>{member.name.charAt(0)}</span>
+                          </div>
+                        )}
+                      </div>
+                      <span className="stremio-detail-cast-name">{member.name}</span>
+                      {member.character && (
+                        <span className="stremio-detail-cast-character">{member.character}</span>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
+
+          {meta.cast && meta.cast.length > 0 && cast.length === 0 && !castLoading && (
             <div className="stremio-detail-section">
               <div className="stremio-detail-section-label">CAST</div>
               <div className="stremio-detail-tags">
                 {meta.cast.slice(0, 10).map((c) => (
-                  <span key={c} className="stremio-detail-tag">{c}</span>
+                  <span key={c} className="stremio-detail-tag" onClick={() => handleCastClick(c)}>{c}</span>
                 ))}
               </div>
             </div>
