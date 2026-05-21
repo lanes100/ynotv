@@ -13,6 +13,8 @@ import {
 import { StremioCatalogRow } from './StremioCatalogRow';
 import { CatalogDetailView } from './CatalogDetailView';
 import { StremioRecentlyWatched } from './StremioRecentlyWatched';
+import { StremioHeroBanner } from './StremioHeroBanner';
+import { useStremioHover } from '../../contexts/StremioHoverContext';
 import './StremioHome.css';
 
 interface StremioHomeProps {
@@ -48,6 +50,8 @@ export function StremioHome({ addons, onItemClick }: StremioHomeProps) {
   const [searchRows, setSearchRows] = useState<StremioSearchRow[]>([]);
   const [expandedSearchRowId, setExpandedSearchRowId] = useState<string | null>(null);
   const [searching, setSearching] = useState(false);
+
+  const { onCardMouseEnter, onCardMouseLeave, onCardClick } = useStremioHover();
 
   const renderedRows = useMemo(() => {
     return addons.flatMap((addon) =>
@@ -155,7 +159,16 @@ export function StremioHome({ addons, onItemClick }: StremioHomeProps) {
                     <div className="stremio-search-expanded">
                       <div className="stremio-search-expanded-grid">
                         {row.items.map((item) => (
-                          <div key={`${row.id}:${item.type}:${item.id}`} className="stremio-meta-card" onClick={() => handleItemClickWrapper(item)}>
+                          <div
+                            key={`${row.id}:${item.type}:${item.id}`}
+                            className="stremio-meta-card"
+                            onMouseEnter={(e) => onCardMouseEnter(item, e.currentTarget, e)}
+                            onMouseLeave={onCardMouseLeave}
+                            onClick={() => {
+                              onCardClick();
+                              handleItemClickWrapper(item);
+                            }}
+                          >
                             {item.poster && (
                               <img
                                 className="stremio-meta-poster"
@@ -167,7 +180,6 @@ export function StremioHome({ addons, onItemClick }: StremioHomeProps) {
                             )}
                             <div className="stremio-meta-card-info">
                               <div className="stremio-meta-card-title">{item.name}</div>
-                              {item.releaseInfo && <div className="stremio-meta-card-year">{item.releaseInfo}</div>}
                               {item.imdbRating && <div className="stremio-meta-card-rating">★ {item.imdbRating}</div>}
                             </div>
                           </div>
@@ -204,6 +216,10 @@ export function StremioHome({ addons, onItemClick }: StremioHomeProps) {
 
   return (
     <div className="stremio-home">
+      <StremioHeroBanner
+        addons={addons}
+        onItemClick={handleItemClickWrapper}
+      />
       <div className="stremio-catalog-rows">
         <StremioRecentlyWatched
           addons={addons}

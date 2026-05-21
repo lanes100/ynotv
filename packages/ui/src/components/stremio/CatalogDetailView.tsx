@@ -8,6 +8,7 @@ import {
   useSetStremioSelectedAddonId,
   useSetStremioSelectedCatalogId,
 } from '../../stores/uiStore';
+import { useStremioHover } from '../../contexts/StremioHoverContext';
 import './StremioHome.css';
 
 interface CatalogDetailViewProps {
@@ -213,6 +214,8 @@ export function CatalogDetailView({ addon, catalog, onItemClick }: CatalogDetail
     };
   }, [catalogKey, setScrollPosition]);
 
+  const { onCardMouseEnter, onCardMouseLeave, onCardClick } = useStremioHover();
+
   return (
     <div className="stremio-catalog-detail-view" ref={containerRef}>
       <div style={{ padding: '24px' }}>
@@ -288,7 +291,16 @@ export function CatalogDetailView({ addon, catalog, onItemClick }: CatalogDetail
         ) : (
           <div className="stremio-meta-grid">
             {items.map((item) => (
-              <div key={`${item.type}:${item.id}`} className="stremio-meta-card" onClick={() => onItemClick(item)}>
+              <div
+                key={`${item.type}:${item.id}`}
+                className="stremio-meta-card"
+                onMouseEnter={(e) => onCardMouseEnter(item, e.currentTarget, e)}
+                onMouseLeave={onCardMouseLeave}
+                onClick={() => {
+                  onCardClick();
+                  onItemClick(item);
+                }}
+              >
                 {item.poster && (
                   <img
                     className="stremio-meta-poster"
@@ -300,16 +312,12 @@ export function CatalogDetailView({ addon, catalog, onItemClick }: CatalogDetail
                 )}
                 <div className="stremio-meta-card-info">
                   <div className="stremio-meta-card-title">{item.name}</div>
-                  {item.releaseInfo && <div className="stremio-meta-card-year">{item.releaseInfo}</div>}
                   {item.imdbRating && <div className="stremio-meta-card-rating">★ {item.imdbRating}</div>}
                 </div>
               </div>
             ))}
           </div>
         )}
-
-        {loadingMore && <div className="stremio-loading-text">Loading more...</div>}
-        <div ref={sentinelRef} style={{ height: '1px' }} />
       </div>
     </div>
   );

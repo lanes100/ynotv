@@ -15,6 +15,8 @@ import { StremioLibrary } from './StremioLibrary';
 import { StremioCalendar } from './StremioCalendar';
 import { StremioDetail } from './StremioDetail';
 import { AddonManagerPanel } from './AddonManagerPanel';
+import { StremioHoverProvider } from '../../contexts/StremioHoverContext';
+import { StremioHoverCard } from './StremioHoverCard';
 import './StremioPage.css';
 
 interface StremioPageProps {
@@ -92,45 +94,49 @@ export function StremioPage({ onClose, stremioStreamPickerMode, onStreamPickerMo
   }, [stremioView, homeScrollTop]);
 
   return (
-    <div className="stremio-page">
-      {showAddonManager && (
-        <AddonManagerPanel onClose={() => setShowAddonManager(false)} />
-      )}
-
-      <StremioSidebar
-        addons={addons}
-        onOpenAddonManager={() => setShowAddonManager(true)}
-      />
-
-      <div className="stremio-main" ref={mainRef}>
-        <div style={{ display: stremioView === 'home' || stremioView === 'search' ? 'block' : 'none' }}>
-          <StremioHome
-            addons={addons}
-            onItemClick={handleItemClick}
-          />
-        </div>
-
-        <div style={{ display: stremioView === 'library' ? 'block' : 'none' }}>
-          <StremioLibrary
-            onItemClick={handleItemClick}
-          />
-        </div>
-
-        <div style={{ display: stremioView === 'calendar' ? 'block' : 'none' }}>
-          <StremioCalendar
-            onItemClick={handleItemClick}
-          />
-        </div>
-
-        {stremioView === 'detail' && activeMeta && (
-          <StremioDetail
-            meta={activeMeta}
-            onBack={handleBack}
-            onPlay={handlePlayStream}
-            streamPickerMode={stremioStreamPickerMode}
-          />
+    <StremioHoverProvider>
+      <div className="stremio-page">
+        {showAddonManager && (
+          <AddonManagerPanel onClose={() => setShowAddonManager(false)} />
         )}
+
+        <StremioSidebar
+          addons={addons}
+          onOpenAddonManager={() => setShowAddonManager(true)}
+        />
+
+        <div className="stremio-main" ref={mainRef}>
+          <div style={{ display: stremioView === 'home' || stremioView === 'search' ? 'block' : 'none' }}>
+            <StremioHome
+              addons={addons}
+              onItemClick={handleItemClick}
+            />
+          </div>
+
+          <div style={{ display: stremioView === 'library' ? 'block' : 'none' }}>
+            <StremioLibrary
+              onItemClick={handleItemClick}
+            />
+          </div>
+
+          <div style={{ display: stremioView === 'calendar' ? 'block' : 'none' }}>
+            <StremioCalendar
+              onItemClick={handleItemClick}
+            />
+          </div>
+
+          {stremioView === 'detail' && activeMeta && (
+            <StremioDetail
+              meta={activeMeta}
+              onBack={handleBack}
+              onPlay={handlePlayStream}
+              streamPickerMode={stremioStreamPickerMode}
+            />
+          )}
+        </div>
+
+        <StremioHoverCard />
       </div>
-    </div>
+    </StremioHoverProvider>
   );
 }

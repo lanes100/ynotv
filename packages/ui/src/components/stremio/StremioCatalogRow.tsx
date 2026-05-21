@@ -1,6 +1,7 @@
 import { useRef, useState, useCallback, useEffect } from 'react';
 import type { InstalledAddon, StremioManifestCatalog, StremioMetaPreview } from '../../types/stremio';
 import { fetchCatalog } from '../../services/stremio-addon';
+import { useStremioHover } from '../../contexts/StremioHoverContext';
 import './StremioHome.css';
 
 interface StremioCatalogRowProps {
@@ -76,6 +77,8 @@ export function StremioCatalogRow({
     el.scrollTo({ left: el.scrollLeft + (dir === 'left' ? -amount : amount), behavior: 'smooth' });
   };
 
+  const { onCardMouseEnter, onCardMouseLeave, onCardClick } = useStremioHover();
+
   if (loading) {
     return (
       <section className="stremio-row">
@@ -122,7 +125,16 @@ export function StremioCatalogRow({
       <div className="stremio-row-scroll" ref={scrollRef} onScroll={update}>
         <div className="stremio-row-track">
           {items.map((item, idx) => (
-            <div key={`${item.id}-${idx}`} className="stremio-row-card" onClick={() => onItemClick(item)}>
+            <div
+              key={`${item.id}-${idx}`}
+              className="stremio-row-card"
+              onMouseEnter={(e) => onCardMouseEnter(item, e.currentTarget, e)}
+              onMouseLeave={onCardMouseLeave}
+              onClick={() => {
+                onCardClick();
+                onItemClick(item);
+              }}
+            >
               {item.poster && (
                 <img
                   className="stremio-row-poster"

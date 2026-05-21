@@ -2,6 +2,8 @@ import { useRef, useState, useCallback, useEffect } from 'react';
 import type { InstalledAddon, StremioMeta } from '../../types/stremio';
 import { fetchMeta } from '../../services/stremio-addon';
 import { useStremioWatchStore, type StremioWatchEntry } from '../../stores/stremioWatchStore';
+import { useStremioHover } from '../../contexts/StremioHoverContext';
+import type { StremioMetaPreview } from '../../types/stremio';
 import './StremioHome.css';
 
 interface StremioRecentlyWatchedProps {
@@ -51,6 +53,8 @@ export function StremioRecentlyWatched({ addons, onItemClick }: StremioRecentlyW
     }
   }, [addons, onItemClick, loadingId]);
 
+  const { onCardMouseEnter, onCardMouseLeave, onCardClick } = useStremioHover();
+
   if (history.length === 0) return null;
 
   return (
@@ -94,7 +98,20 @@ export function StremioRecentlyWatched({ addons, onItemClick }: StremioRecentlyW
               <div
                 key={entry.metaId}
                 className={`stremio-row-card stremio-rw-card${isLoading ? ' stremio-rw-card--loading' : ''}`}
-                onClick={() => handleItemClick(entry)}
+                onMouseEnter={(e) => {
+                  const previewItem: StremioMetaPreview = {
+                    id: entry.metaId,
+                    type: entry.type,
+                    name: entry.name,
+                    poster: entry.poster || undefined,
+                  };
+                  onCardMouseEnter(previewItem, e.currentTarget, e);
+                }}
+                onMouseLeave={onCardMouseLeave}
+                onClick={() => {
+                  onCardClick();
+                  handleItemClick(entry);
+                }}
               >
                 {/* Remove button */}
                 <button

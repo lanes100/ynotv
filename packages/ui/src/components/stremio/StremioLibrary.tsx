@@ -4,6 +4,8 @@ import { useStremioWatchStore } from '../../stores/stremioWatchStore';
 import type { StremioMeta } from '../../types/stremio';
 import { useStremioAddonStore } from '../../stores/stremioAddonStore';
 import { fetchMeta } from '../../services/stremio-addon';
+import { useStremioHover } from '../../contexts/StremioHoverContext';
+import type { StremioMetaPreview } from '../../types/stremio';
 import './StremioLibrary.css';
 
 interface StremioLibraryProps {
@@ -109,6 +111,8 @@ export function StremioLibrary({ onItemClick }: StremioLibraryProps) {
     }
   };
 
+  const { onCardMouseEnter, onCardMouseLeave, onCardClick } = useStremioHover();
+
   return (
     <div className="stremio-library">
       <div className="stremio-library-header">
@@ -161,7 +165,12 @@ export function StremioLibrary({ onItemClick }: StremioLibraryProps) {
               <div
                 key={item.id}
                 className="stremio-meta-card"
-                onClick={() => handleCardClick(item)}
+                onMouseEnter={(e) => onCardMouseEnter(item as StremioMetaPreview, e.currentTarget, e)}
+                onMouseLeave={onCardMouseLeave}
+                onClick={() => {
+                  onCardClick();
+                  handleCardClick(item);
+                }}
               >
                 {item.poster && (
                   <div className="stremio-library-poster-wrap">
@@ -180,7 +189,6 @@ export function StremioLibrary({ onItemClick }: StremioLibraryProps) {
                 )}
                 <div className="stremio-meta-card-info">
                   <div className="stremio-meta-card-title">{item.name}</div>
-                  {item.releaseInfo && <div className="stremio-meta-card-year">{item.releaseInfo}</div>}
                   {item.imdbRating && <div className="stremio-meta-card-rating">★ {item.imdbRating}</div>}
                 </div>
               </div>

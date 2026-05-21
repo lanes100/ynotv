@@ -1,0 +1,469 @@
+.stremio-hero-banner {
+  position: relative;
+  height: 480px;
+  background-color: #0c0c10;
+  border-radius: 16px;
+  overflow: hidden;
+  margin-bottom: 32px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5), 0 0 40px rgba(0, 0, 0, 0.2);
+  z-index: 10;
+  border: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+/* ─── Backdrop Image & Cross-fade ────────────────────────── */
+
+.stremio-hero-backdrop {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 20%;
+  z-index: 1;
+  transform: scale(1.02);
+  animation: hero-image-enter 0.9s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+}
+
+@keyframes hero-image-enter {
+  0% {
+    opacity: 0;
+    transform: scale(1.05);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1.02);
+  }
+}
+
+/* ─── Vignette & Gradient Overlays ───────────────────────── */
+
+/* Strong left shadow gradient for text readability */
+.stremio-hero-overlay-left {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to right,
+    rgba(10, 10, 15, 0.96) 0%,
+    rgba(10, 10, 15, 0.9) 25%,
+    rgba(10, 10, 15, 0.7) 45%,
+    rgba(10, 10, 15, 0.3) 65%,
+    transparent 100%
+  );
+  z-index: 2;
+  pointer-events: none;
+}
+
+/* Bottom shadow to blend banner smoothly into the content below */
+.stremio-hero-overlay-bottom {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 180px;
+  background: linear-gradient(
+    to top,
+    rgba(10, 10, 15, 1) 0%,
+    rgba(10, 10, 15, 0.8) 25%,
+    rgba(10, 10, 15, 0.3) 60%,
+    transparent 100%
+  );
+  z-index: 2;
+  pointer-events: none;
+}
+
+/* Vignette around borders for theatrical depth */
+.stremio-hero-overlay-vignette {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    circle at right,
+    transparent 40%,
+    rgba(10, 10, 15, 0.15) 80%,
+    rgba(10, 10, 15, 0.4) 100%
+  );
+  z-index: 2;
+  pointer-events: none;
+}
+
+/* ─── Spotlight Content Layout ───────────────────────────── */
+
+.stremio-hero-content {
+  position: relative;
+  z-index: 3;
+  height: 100%;
+  max-width: 48%;
+  padding: 48px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  box-sizing: border-box;
+  animation: hero-content-enter 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes hero-content-enter {
+  0% {
+    opacity: 0;
+    transform: translateY(15px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.stremio-hero-logo {
+  max-height: 100px;
+  max-width: 100%;
+  object-fit: contain;
+  object-position: left bottom;
+  margin-bottom: 20px;
+  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.6));
+}
+
+.stremio-hero-title {
+  font-size: 2.8rem;
+  font-weight: 800;
+  line-height: 1.15;
+  margin: 0 0 18px 0;
+  color: #ffffff;
+  letter-spacing: -0.02em;
+  text-shadow: 0 4px 16px rgba(0, 0, 0, 0.8);
+  font-family: inherit;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ─── Metadata Details & Badges ──────────────────────────── */
+
+.stremio-hero-meta {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+
+.stremio-hero-meta-badge.rating {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(255, 193, 7, 0.12);
+  border: 1px solid rgba(255, 193, 7, 0.35);
+  color: #ffc107;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  box-shadow: 0 2px 8px rgba(255, 193, 7, 0.05);
+}
+
+.star-icon {
+  width: 13px;
+  height: 13px;
+  fill: #ffc107;
+}
+
+.stremio-hero-meta-text {
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+}
+
+.stremio-hero-meta-text.type-badge {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  padding: 2px 8px;
+  border-radius: 5px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+/* Genres Tags */
+.stremio-hero-genres {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.stremio-hero-genre-tag {
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.8);
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+}
+
+/* Description / Synopsis Plot */
+.stremio-hero-description {
+  font-size: 0.92rem;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.65);
+  margin: 0 0 24px 0;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.6);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ─── Actions & Watch Now button ─────────────────────────── */
+
+.stremio-hero-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.stremio-hero-btn-watch {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #ffffff;
+  color: #0a0a0f;
+  border: none;
+  padding: 12px 28px;
+  border-radius: 8px;
+  font-size: 0.92rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(255, 255, 255, 0.12), 0 0 30px rgba(255, 255, 255, 0.05);
+  transition: all 0.25s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.stremio-hero-btn-watch:hover {
+  background: var(--accent-primary, #00d4ff);
+  color: #ffffff;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 212, 255, 0.35), 0 0 30px rgba(0, 212, 255, 0.15);
+}
+
+.stremio-hero-btn-watch:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(0, 212, 255, 0.2);
+}
+
+.btn-icon {
+  width: 18px;
+  height: 18px;
+}
+
+/* ─── Slide Navigation Chevrons ────────────────────────── */
+
+.stremio-hero-nav-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: rgba(10, 10, 15, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 5;
+  opacity: 0;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition: all 0.25s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.stremio-hero-banner:hover .stremio-hero-nav-arrow {
+  opacity: 1;
+}
+
+.stremio-hero-nav-arrow.left {
+  left: 24px;
+}
+
+.stremio-hero-nav-arrow.right {
+  right: 24px;
+}
+
+.stremio-hero-nav-arrow:hover {
+  background: rgba(10, 10, 15, 0.75);
+  border-color: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+  transform: translateY(-50%) scale(1.08);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+}
+
+.stremio-hero-nav-arrow:active {
+  transform: translateY(-50%) scale(0.98);
+}
+
+.stremio-hero-nav-arrow svg {
+  width: 22px;
+  height: 22px;
+}
+
+/* ─── Dot Indicators ─────────────────────────────────────── */
+
+.stremio-hero-indicators {
+  position: absolute;
+  bottom: 36px;
+  right: 48px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  z-index: 5;
+}
+
+.stremio-hero-indicator-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.35);
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  transition: all 0.25s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.stremio-hero-indicator-dot:hover {
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.stremio-hero-indicator-dot.active {
+  width: 22px;
+  border-radius: 4px;
+  background: var(--accent-primary, #00d4ff);
+  box-shadow: 0 0 10px rgba(0, 212, 255, 0.4);
+}
+
+/* ─── Loading Skeleton Styles ────────────────────────────── */
+
+.stremio-hero-banner.skeleton {
+  background: #0f0f15;
+  animation: none;
+}
+
+.skeleton-logo {
+  height: 48px;
+  width: 240px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 6px;
+  margin-bottom: 24px;
+  position: relative;
+  overflow: hidden;
+}
+
+.skeleton-meta {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.skeleton-pill {
+  height: 22px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 6px;
+  position: relative;
+  overflow: hidden;
+}
+
+.skeleton-desc {
+  height: 16px;
+  width: 90%;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 4px;
+  margin-bottom: 10px;
+  position: relative;
+  overflow: hidden;
+}
+
+.skeleton-btn {
+  height: 44px;
+  width: 140px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  margin-top: 14px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Shimmer animation overlay for skeleton loader */
+.stremio-hero-banner.skeleton .skeleton-logo::after,
+.stremio-hero-banner.skeleton .skeleton-pill::after,
+.stremio-hero-banner.skeleton .skeleton-desc::after,
+.stremio-hero-banner.skeleton .skeleton-btn::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.05) 50%, transparent 100%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.8s infinite;
+}
+
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* ─── Responsive Media Queries ───────────────────────────── */
+
+@media (max-width: 1024px) {
+  .stremio-hero-banner {
+    height: 420px;
+    margin-bottom: 24px;
+  }
+  .stremio-hero-content {
+    max-width: 60%;
+    padding: 36px;
+  }
+  .stremio-hero-title {
+    font-size: 2.3rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .stremio-hero-banner {
+    height: 360px;
+  }
+  .stremio-hero-content {
+    max-width: 80%;
+    padding: 24px;
+  }
+  .stremio-hero-title {
+    font-size: 1.8rem;
+  }
+  .stremio-hero-logo {
+    max-height: 70px;
+  }
+  .stremio-hero-nav-arrow {
+    width: 38px;
+    height: 38px;
+  }
+  .stremio-hero-nav-arrow.left {
+    left: 12px;
+  }
+  .stremio-hero-nav-arrow.right {
+    right: 12px;
+  }
+  .stremio-hero-indicators {
+    right: 24px;
+    bottom: 24px;
+  }
+}
