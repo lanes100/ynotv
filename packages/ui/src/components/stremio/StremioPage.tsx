@@ -9,7 +9,7 @@ import {
   useStremioSelectedSeason,
   useSetStremioSelectedSeason,
 } from '../../stores/uiStore';
-import { StremioSidebar } from './StremioSidebar';
+import { StremioTopbar } from './StremioTopbar';
 import { StremioHome } from './StremioHome';
 import { StremioLibrary } from './StremioLibrary';
 import { StremioCalendar } from './StremioCalendar';
@@ -100,7 +100,7 @@ export function StremioPage({ onClose, stremioStreamPickerMode, onStreamPickerMo
           <AddonManagerPanel onClose={() => setShowAddonManager(false)} />
         )}
 
-        <StremioSidebar
+        <StremioTopbar
           addons={addons}
           onOpenAddonManager={() => setShowAddonManager(true)}
         />
