@@ -54,7 +54,7 @@ export function StremioHome({ addons, onItemClick }: StremioHomeProps) {
 
   // Trakt and Simkl Catalog States
   const [traktWatchlist, setTraktWatchlist] = useState<StremioMetaPreview[]>([]);
-  const [traktRecommendations, setTraktRecommendations] = useState<StremioMetaPreview[]>([]);
+  // const [traktRecommendations, setTraktRecommendations] = useState<StremioMetaPreview[]>([]);
   const [simklWatchlist, setSimklWatchlist] = useState<StremioMetaPreview[]>([]);
 
   // Fetch cloud catalogs on mount or when view changes back to home/search
@@ -72,12 +72,12 @@ export function StremioHome({ addons, onItemClick }: StremioHomeProps) {
           scrobbler.fetchTraktCatalog('watchlist').then((items) => {
             if (active) setTraktWatchlist(items);
           });
-          scrobbler.fetchTraktCatalog('recommendations').then((items) => {
-            if (active) setTraktRecommendations(items);
-          });
+          // scrobbler.fetchTraktCatalog('recommendations').then((items) => {
+          //   if (active) setTraktRecommendations(items);
+          // });
         } else {
           setTraktWatchlist([]);
-          setTraktRecommendations([]);
+          // setTraktRecommendations([]);
         }
 
         if (s.simklEnabled && s.simklAccessToken) {
@@ -280,15 +280,6 @@ export function StremioHome({ addons, onItemClick }: StremioHomeProps) {
             key="trakt-watchlist"
             title="Trakt Watchlist"
             items={traktWatchlist}
-            onItemClick={handleItemClickWrapper}
-          />
-        )}
-
-        {traktRecommendations.length > 0 && (
-          <StremioCatalogRow
-            key="trakt-recs"
-            title="Trakt Recommendations"
-            items={traktRecommendations}
             onItemClick={handleItemClickWrapper}
           />
         )}

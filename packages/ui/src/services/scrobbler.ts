@@ -346,7 +346,7 @@ class ScrobblerService {
     logInfo('Updating scrobble progress:', this.lastActiveMedia.title, `(${Math.round(progressPercent)}%)`);
 
     await Promise.all([
-      this.sendTraktScrobble('pause', this.lastActiveMedia), // Trakt persists resume progress on pause/stop, not start
+      this.sendTraktScrobble('start', this.lastActiveMedia), // Trakt persists resume progress on start, keeps session active
       this.sendSimklScrobble('start', this.lastActiveMedia), // Simkl also does this
     ]);
   }

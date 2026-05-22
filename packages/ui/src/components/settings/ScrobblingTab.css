@@ -3,8 +3,28 @@
   flex-direction: column;
   gap: 24px;
   max-width: 900px;
-  padding-bottom: 40px;
+  padding: 16px 20px 40px 20px;
   font-family: inherit;
+  overflow-y: auto;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+.scrobble-tab-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.scrobble-tab-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrobble-tab-content::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 3px;
+}
+
+.scrobble-tab-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
 }
 
 /* Glassmorphism Panel Base */

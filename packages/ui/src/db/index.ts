@@ -2204,7 +2204,7 @@ export async function updateVodWatchProgress(
       `UPDATE vod_history SET progress_seconds = ?, total_duration = ?, watched_at = ? WHERE media_id = ? AND media_type = ?`,
       [progressSeconds, effectiveDuration, Date.now(), mediaId, mediaType]
     );
-    // Don't notify here to avoid excessive re-renders during playback
+    dbEvents.notify('vod_history', 'update');
   } catch (error) {
     console.error('[VOD History] Failed to update progress:', error);
     throw error;

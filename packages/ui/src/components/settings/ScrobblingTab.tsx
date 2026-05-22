@@ -29,8 +29,8 @@ export function ScrobblingTab() {
   const [simklExpiresIn, setSimklExpiresIn] = useState(0);
 
   // Manual Sync states
-  const [isSyncing, setIsSyncing] = useState(false);
-  const [syncStatus, setSyncStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  // const [isSyncing, setIsSyncing] = useState(false);
+  // const [syncStatus, setSyncStatus] = useState<'idle' | 'success' | 'error'>('idle');
 
   // Timers and Polling references
   const traktPollTimer = useRef<any>(null);
@@ -153,7 +153,8 @@ export function ScrobblingTab() {
     }
   };
 
-  // Simkl Authorization process
+  // [Commented out - Simkl Authorization process]
+  /*
   const startSimklLink = async () => {
     clearSimklTimers();
     setSimklAuthState('idle');
@@ -164,7 +165,6 @@ export function ScrobblingTab() {
       setSimklExpiresIn(codeData.expires_in);
       setSimklAuthState('polling');
 
-      // 1. Countdown timer
       let timeLeft = codeData.expires_in;
       simklCountdownTimer.current = setInterval(() => {
         timeLeft -= 1;
@@ -175,11 +175,9 @@ export function ScrobblingTab() {
         }
       }, 1000);
 
-      // 2. Poll interval
       const intervalSec = codeData.interval || 5;
       simklPollTimer.current = setInterval(async () => {
         try {
-          // Simkl polls using user_code (not device_code)
           const pollRes = await scrobbler.pollSimklToken(codeData.user_code);
           if (pollRes.success) {
             clearSimklTimers();
@@ -214,8 +212,10 @@ export function ScrobblingTab() {
       loadSettings();
     }
   };
+  */
 
-  // Manual trigger Watch Progress Sync
+  // [Commented out - Manual trigger Watch Progress Sync]
+  /*
   const triggerManualSync = async () => {
     if (isSyncing) return;
     setIsSyncing(true);
@@ -232,6 +232,7 @@ export function ScrobblingTab() {
       setIsSyncing(false);
     }
   };
+  */
 
   // Helper to copy user PIN
   const handleCopyCode = (text: string) => {
@@ -240,7 +241,7 @@ export function ScrobblingTab() {
 
   return (
     <div className="scrobble-tab-content">
-      {/* Upper Status Action Card */}
+      {/* [Commented out - Cloud Playback Sync Banner]
       <div className="sync-banner-card glass-panel">
         <div className="sync-banner-info">
           <h3>Cloud Playback Sync</h3>
@@ -268,6 +269,7 @@ export function ScrobblingTab() {
           )}
         </button>
       </div>
+      */}
 
       {/* Dual Panel Grid */}
       <div className="scrobble-grid">
@@ -369,7 +371,7 @@ export function ScrobblingTab() {
           )}
         </div>
 
-        {/* Simkl Panel */}
+        {/* [Commented out - Simkl Panel]
         <div className={`scrobble-card glass-panel ${simklLinked ? 'connected' : ''}`}>
           <div className="card-top">
             <div className="platform-logo simkl">
@@ -466,34 +468,10 @@ export function ScrobblingTab() {
             </div>
           )}
         </div>
+        */}
       </div>
 
-      {/* Build Credentials Status */}
-      <div className="advanced-credentials-section">
-        <div className="advanced-form glass-panel">
-            <div className="form-column">
-              <h4>Build Credentials</h4>
-              <p>
-                Trakt and Simkl developer credentials are injected at build time from environment variables.
-                They are not stored in app settings or committed to the repository.
-              </p>
-            </div>
 
-            <div className="form-column">
-              <h4>Credential Status</h4>
-              <p>Trakt: {credentialStatus.traktConfigured ? 'Configured for this build' : 'Missing from this build'}</p>
-              <p>Simkl: {credentialStatus.simklConfigured ? 'Configured for this build' : 'Missing from this build'}</p>
-            </div>
-          </div>
-      </div>
-
-      {/* Sync rules and specs indicator */}
-      <div className="scrobbler-disclaimer">
-        <span className="disclaimer-badge">Sync Specs</span>
-        <p>
-          Updates are optimized and throttled strictly to **every 30 seconds** during playback to protect API quotas. Playback stop will automatically submit a watched/completion event when progress reaches **90% or more**.
-        </p>
-      </div>
     </div>
   );
 }
