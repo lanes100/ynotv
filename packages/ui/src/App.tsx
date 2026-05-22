@@ -1134,6 +1134,25 @@ function App() {
   }, []);
 
   // ==========================================================================
+  // Direct URL Playback Handler (used by Trailer button etc.)
+  // ==========================================================================
+  useEffect(() => {
+    const handler = async (e: Event) => {
+      const { url, title } = (e as CustomEvent).detail;
+      if (!url) return;
+      setActiveViewRef.current?.('none');
+      await handlePlayVodRef.current({
+        url,
+        title: title || '',
+        type: 'movie',
+        source_id: 'trailer',
+      });
+    };
+    window.addEventListener('ynotv:play-url', handler);
+    return () => window.removeEventListener('ynotv:play-url', handler);
+  }, []);
+
+  // ==========================================================================
   // Stremio Progress Updater — saves watch progress every 10 seconds
   // ==========================================================================
   const positionRef = useRef(position);

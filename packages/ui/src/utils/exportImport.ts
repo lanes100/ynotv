@@ -141,9 +141,11 @@ export interface ExportData {
         completed: number;
     }>;
     userPrefs: Array<{ key: string; value: string }>;
+    stremioAddons?: any;
+    stremioWatchHistory?: any;
 }
 
-const EXPORT_VERSION = 4;
+const EXPORT_VERSION = 5;
 
 /**
  * Export all application data to a JSON file
@@ -358,6 +360,27 @@ export async function exportAllData(): Promise<{ success: boolean; filePath?: st
         // 11. Get User Prefs
         const userPrefs = await db.prefs.toArray();
 
+        // 12. Get Stremio data from localStorage
+        let stremioAddons = undefined;
+        try {
+            const addonsRaw = localStorage.getItem('stremio-addons');
+            if (addonsRaw) {
+                stremioAddons = JSON.parse(addonsRaw);
+            }
+        } catch (e) {
+            console.warn('[Export] Failed to parse stremio-addons from localStorage:', e);
+        }
+
+        let stremioWatchHistory = undefined;
+        try {
+            const historyRaw = localStorage.getItem('stremio-watch-history');
+            if (historyRaw) {
+                stremioWatchHistory = JSON.parse(historyRaw);
+            }
+        } catch (e) {
+            console.warn('[Export] Failed to parse stremio-watch-history from localStorage:', e);
+        }
+
         const exportData: ExportData = {
             version: EXPORT_VERSION,
             timestamp: new Date().toISOString(),
@@ -376,7 +399,9 @@ export async function exportAllData(): Promise<{ success: boolean; filePath?: st
             failoverGroups,
             vodHistory,
             episodeHistory,
-            userPrefs
+            userPrefs,
+            stremioAddons,
+            stremioWatchHistory
         };
 
         const fileName = `ynotv-backup-${new Date().toISOString().split('T')[0]}.json`;
@@ -415,6 +440,20 @@ export async function importAllData(): Promise<{ success: boolean; error?: strin
 
         // 2. Restore Settings
         await window.storage.updateSettings(data.settings);
+
+        // Restore Stremio addons
+        if (data.stremioAddons) {
+            localStorage.setItem('stremio-addons', JSON.stringify(data.stremioAddons));
+        } else {
+            localStorage.removeItem('stremio-addons');
+        }
+
+        // Restore Stremio watch history
+        if (data.stremioWatchHistory) {
+            localStorage.setItem('stremio-watch-history', JSON.stringify(data.stremioWatchHistory));
+        } else {
+            localStorage.removeItem('stremio-watch-history');
+        }
 
         // 3. Restore Sources
         // Delete existing sources to ensure clean state matching backup

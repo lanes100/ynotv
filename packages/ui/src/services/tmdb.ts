@@ -8,7 +8,7 @@
  * with GitHub-cached fallback for users without their own token.
  */
 
-import { TMDB } from 'tmdb-ts';
+import { TMDB, type Video } from 'tmdb-ts';
 
 // TMDB image base URLs
 export const TMDB_IMAGE_BASE = 'https://image.tmdb.org/t/p';
@@ -697,4 +697,33 @@ export async function getCachedTvGenreCounts(): Promise<Map<number, number>> {
   });
 
   return counts;
+}
+
+/**
+ * Fetch videos for a movie from TMDB
+ */
+export async function getMovieVideos(accessToken: string, movieId: number): Promise<Video[]> {
+  const tmdb = getTmdb(accessToken);
+  const response = await tmdb.movies.videos(movieId);
+  return response.results;
+}
+
+/**
+ * Fetch videos for a TV show from TMDB
+ */
+export async function getTvShowVideos(accessToken: string, tvId: number): Promise<Video[]> {
+  const tmdb = getTmdb(accessToken);
+  const response = await tmdb.tvShows.videos(tvId);
+  return response.results;
+}
+
+/**
+ * Find the best trailer video URL from a list of TMDB videos.
+ * Prefers "Trailer" type from YouTube, falls back to "Teaser", then any YouTube video.
+ */
+export function findTrailerUrl(videos: Video[]): string | null {
+  const trailer = videos.find(v => v.site === 'YouTube' && v.type === 'Trailer')
+    ?? videos.find(v => v.site === 'YouTube' && v.type === 'Teaser')
+    ?? videos.find(v => v.site === 'YouTube');
+  return trailer ? `https://www.youtube.com/watch?v=${trailer.key}` : null;
 }

@@ -69,7 +69,7 @@ export function ImportExportTab() {
                 </div>
                 <p className="section-description">
                     Export your configuration to a JSON file to transfer between devices or create backups.
-                    Includes Sources, Settings, Favorites, Category/Channel customizations, Watchlist, DVR schedules, Failover groups, VOD history, and EPG overrides.
+                    Includes Sources, Settings (including TMDB, RPDB, and SubSource API keys), Favorites, Category/Channel customizations, Watchlist, DVR schedules, Failover groups, VOD history, EPG overrides, Stremio addons, and Stremio watch history.
                 </p>
 
                 {status && (
@@ -86,7 +86,7 @@ export function ImportExportTab() {
                 </div>
                 <p className="section-description" style={{ marginBottom: '12px' }}>
                     Save your current setup to a file. <br />
-                    <span style={{ color: '#ff9900' }}>Warning: The exported file contains your source passwords in plain text. Keep it safe.</span>
+                    <span style={{ color: '#ff9900' }}>Warning: The exported file contains your source passwords, Stremio settings, and API keys in plain text. Keep it safe.</span>
                 </p>
                 <button
                     className="sync-btn"

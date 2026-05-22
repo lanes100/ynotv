@@ -1,6 +1,6 @@
 import { useRef, useState, useCallback, useEffect } from 'react';
-import type { InstalledAddon, StremioMeta, StremioStream, StremioMetaPreview, StremioVideo } from '../../types/stremio';
-import { fetchMeta, fetchStreams } from '../../services/stremio-addon';
+import type { InstalledAddon, StremioMeta, StremioMetaPreview } from '../../types/stremio';
+import { fetchMeta } from '../../services/stremio-addon';
 import { useStremioWatchStore, type StremioWatchEntry } from '../../stores/stremioWatchStore';
 import { useSetStremioSelectedSeason, useSetStremioPreselectVideoId } from '../../stores/uiStore';
 import { useStremioHover } from '../../contexts/StremioHoverContext';
@@ -9,73 +9,6 @@ import './StremioHome.css';
 interface StremioRecentlyWatchedProps {
   addons: InstalledAddon[];
   onItemClick: (meta: StremioMeta) => void;
-}
-
-function matchStream(candidates: StremioStream[], target: StremioStream): StremioStream | null {
-  if (candidates.length === 0) return null;
-
-  // 1. If target has infoHash, look for a candidate with the same infoHash first.
-  if (target.infoHash) {
-    const infoHashMatch = candidates.find(
-      (c) => c.infoHash && c.infoHash.toLowerCase() === target.infoHash!.toLowerCase()
-    );
-    if (infoHashMatch) return infoHashMatch;
-  }
-
-  // Helper to tokenize and clean strings
-  const getTokens = (str?: string) => {
-    if (!str) return [];
-    return str
-      .toLowerCase()
-      .replace(/[^a-z0-9]/g, ' ')
-      .split(/\s+/)
-      .filter((w) => {
-        if (!w) return false;
-        // Exclude season/episode indicator patterns
-        if (/^s\d+$/i.test(w) || /^e\d+$/i.test(w) || /^ep\d+$/i.test(w)) return false;
-        if (/^\d+$/i.test(w)) return false; // Exclude raw numbers to avoid matching episode index numbers
-        return true;
-      });
-  };
-
-  const targetNameTokens = getTokens(target.name);
-  const targetTitleTokens = getTokens(target.title);
-
-  let bestCandidate: StremioStream | null = null;
-  let bestScore = -1;
-
-  for (const candidate of candidates) {
-    let score = 0;
-
-    // Matching addon is extremely important
-    if (candidate.addonName && target.addonName && candidate.addonName === target.addonName) {
-      score += 15;
-    }
-
-    // Compare name field tokens
-    const candNameTokens = getTokens(candidate.name);
-    const commonName = candNameTokens.filter((tok) => targetNameTokens.includes(tok));
-    score += commonName.length * 3;
-
-    // Compare title field tokens
-    const candTitleTokens = getTokens(candidate.title);
-    const commonTitle = candTitleTokens.filter((tok) => targetTitleTokens.includes(tok));
-    score += commonTitle.length * 2;
-
-    // Add bonus if name matches exactly (case-insensitive)
-    if (candidate.name && target.name && candidate.name.toLowerCase() === target.name.toLowerCase()) {
-      score += 10;
-    }
-
-    if (score > bestScore) {
-      bestScore = score;
-      bestCandidate = candidate;
-    }
-  }
-
-  // Set a minimum threshold to ensure we don't pick a completely unrelated stream.
-  // If we matched the addon name, that's already score 15, which is a good baseline.
-  return bestScore >= 5 ? bestCandidate : candidates[0] || null;
 }
 
 export function StremioRecentlyWatched({ addons, onItemClick }: StremioRecentlyWatchedProps) {
@@ -129,84 +62,6 @@ export function StremioRecentlyWatched({ addons, onItemClick }: StremioRecentlyW
       setLoadingId(null);
     }
   }, [addons, onItemClick, loadingId, setSelectedSeason, setPreselectVideoId]);
-
-  const handleDirectPlay = useCallback(async (entry: StremioWatchEntry, e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (loadingId) return;
-    setLoadingId(entry.metaId);
-
-    try {
-      // 1. Fetch metadata to get the full video list for series
-      const meta = await fetchMeta(addons, entry.type, entry.metaId);
-      if (!meta) {
-        // Fallback to detail page
-        const fallbackMeta = await fetchMeta(addons, entry.type, entry.metaId);
-        if (fallbackMeta) onItemClick(fallbackMeta);
-        return;
-      }
-
-      let selectedStream: StremioStream | null = null;
-      let targetVideo: StremioVideo | undefined = undefined;
-
-      if (entry.type === 'movie') {
-        if (entry.lastSelectedStream && (entry.lastSelectedStream.url || entry.lastSelectedStream.infoHash)) {
-          selectedStream = entry.lastSelectedStream;
-        } else {
-          const streams = await fetchStreams(addons, 'movie', entry.metaId);
-          if (streams && streams.length > 0) {
-            selectedStream = streams.find((s) => s.url && !s.behaviorHints?.notWebReady) || streams[0];
-          }
-        }
-      } else {
-        // Series
-        const isSeries = entry.type === 'series';
-        const hasNext = isSeries && entry.nextVideoId != null;
-        const targetVideoId = hasNext ? entry.nextVideoId : entry.lastWatchedVideoId;
-
-        if (targetVideoId) {
-          // Find target episode video in meta
-          if (meta.videos && Array.isArray(meta.videos)) {
-            targetVideo = meta.videos.find((v) => v.id === targetVideoId);
-          }
-
-          // Fetch streams for the target video
-          const streams = await fetchStreams(addons, 'series', targetVideoId);
-          if (streams && streams.length > 0) {
-            if (entry.lastSelectedStream && (entry.lastSelectedStream.url || entry.lastSelectedStream.infoHash)) {
-              selectedStream = matchStream(streams, entry.lastSelectedStream);
-            } else {
-              selectedStream = streams.find((s) => s.url && !s.behaviorHints?.notWebReady) || streams[0];
-            }
-          }
-        }
-      }
-
-      if (selectedStream) {
-        // Dispatch play event
-        window.dispatchEvent(
-          new CustomEvent('ynotv:stremio-play', {
-            detail: {
-              stream: selectedStream,
-              meta,
-              episodeVideo: targetVideo,
-            },
-          })
-        );
-      } else {
-        // Fallback to opening details view
-        onItemClick(meta);
-      }
-    } catch (err) {
-      console.error('[StremioRecentlyWatched] Direct play failed:', err);
-      // Fallback to detail page if possible
-      try {
-        const meta = await fetchMeta(addons, entry.type, entry.metaId);
-        if (meta) onItemClick(meta);
-      } catch {}
-    } finally {
-      setLoadingId(null);
-    }
-  }, [addons, onItemClick, loadingId]);
 
   const { onCardMouseEnter, onCardMouseLeave, onCardClick } = useStremioHover();
 
@@ -305,7 +160,10 @@ export function StremioRecentlyWatched({ addons, onItemClick }: StremioRecentlyW
                     <button
                       className="stremio-rw-play-overlay-btn"
                       title={`Play ${entry.name}`}
-                      onClick={(e) => handleDirectPlay(entry, e)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleItemClick(entry);
+                      }}
                     >
                       <svg viewBox="0 0 24 24" fill="currentColor" className="stremio-rw-play-icon">
                         <path d="M8 5v14l11-7z" />

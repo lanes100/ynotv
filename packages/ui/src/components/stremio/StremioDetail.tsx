@@ -14,6 +14,7 @@ import { useStremioLibraryStore } from '../../stores/stremioLibraryStore';
 import { useStremioWatchStore } from '../../stores/stremioWatchStore';
 import { fetchStreams } from '../../services/stremio-addon';
 import { useLazyStremioCast } from '../../hooks/useLazyStremioCast';
+import { useLazyStremioTrailer } from '../../hooks/useLazyStremioTrailer';
 import { useTmdbAccessToken } from '../../hooks/useTmdbLists';
 import './StremioDetail.css';
 
@@ -54,6 +55,7 @@ export function StremioDetail({ meta, onBack, onPlay, streamPickerMode }: Stremi
   const tmdbToken = useTmdbAccessToken();
 
   const { cast, loading: castLoading } = useLazyStremioCast(meta, tmdbToken);
+  const { trailerUrl: tmdbTrailerUrl } = useLazyStremioTrailer(meta, tmdbToken);
 
   const handleCastClick = useCallback((castName: string) => {
     setStremioActiveMeta(null);
@@ -68,6 +70,7 @@ export function StremioDetail({ meta, onBack, onPlay, streamPickerMode }: Stremi
 
   const isSeries = meta.type === 'series';
   const isAdded = isInLibrary(meta.id);
+  const effectiveTrailerUrl = meta.trailer || tmdbTrailerUrl;
 
   const seasons = useMemo(() => {
     if (!isSeries || !meta.videos) return [];
@@ -295,10 +298,14 @@ export function StremioDetail({ meta, onBack, onPlay, streamPickerMode }: Stremi
 
           {/* Action Buttons */}
           <div className="stremio-detail-actions">
-            {meta.trailer && (
+            {effectiveTrailerUrl && (
               <button
                 className="stremio-detail-action-btn"
-                onClick={() => window.open(meta.trailer, '_blank')}
+                onClick={() => {
+                  window.dispatchEvent(new CustomEvent('ynotv:play-url', {
+                    detail: { url: effectiveTrailerUrl, title: `${meta.name} - Trailer` },
+                  }));
+                }}
               >
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16">
                   <polygon points="23 7 16 12 23 17 23 7" />
