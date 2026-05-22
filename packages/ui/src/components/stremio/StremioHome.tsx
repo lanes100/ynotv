@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import type { InstalledAddon, StremioMetaPreview, StremioMeta } from '../../types/stremio';
 import { fetchCatalog, fetchMeta } from '../../services/stremio-addon';
+import { scrobbler } from '../../services/scrobbler';
 import {
   useStremioSearchQuery,
   useStremioView,
@@ -50,6 +51,52 @@ export function StremioHome({ addons, onItemClick }: StremioHomeProps) {
   const [searchRows, setSearchRows] = useState<StremioSearchRow[]>([]);
   const [expandedSearchRowId, setExpandedSearchRowId] = useState<string | null>(null);
   const [searching, setSearching] = useState(false);
+
+  // Trakt and Simkl Catalog States
+  const [traktWatchlist, setTraktWatchlist] = useState<StremioMetaPreview[]>([]);
+  const [traktRecommendations, setTraktRecommendations] = useState<StremioMetaPreview[]>([]);
+  const [simklWatchlist, setSimklWatchlist] = useState<StremioMetaPreview[]>([]);
+
+  // Fetch cloud catalogs on mount or when view changes back to home/search
+  useEffect(() => {
+    let active = true;
+    const loadScrobblerCatalogs = async () => {
+      if (!window.storage) return;
+      try {
+        const res = await window.storage.getSettings();
+        const s = res.data || {};
+        
+        if (!active) return;
+        
+        if (s.traktEnabled && s.traktAccessToken) {
+          scrobbler.fetchTraktCatalog('watchlist').then((items) => {
+            if (active) setTraktWatchlist(items);
+          });
+          scrobbler.fetchTraktCatalog('recommendations').then((items) => {
+            if (active) setTraktRecommendations(items);
+          });
+        } else {
+          setTraktWatchlist([]);
+          setTraktRecommendations([]);
+        }
+
+        if (s.simklEnabled && s.simklAccessToken) {
+          scrobbler.fetchSimklCatalog('watchlist').then((items) => {
+            if (active) setSimklWatchlist(items);
+          });
+        } else {
+          setSimklWatchlist([]);
+        }
+      } catch (e) {
+        console.error('Failed to load scrobbler catalogs in StremioHome:', e);
+      }
+    };
+
+    loadScrobblerCatalogs();
+    return () => {
+      active = false;
+    };
+  }, [view]);
 
   const { onCardMouseEnter, onCardMouseLeave, onCardClick } = useStremioHover();
 
@@ -121,9 +168,11 @@ export function StremioHome({ addons, onItemClick }: StremioHomeProps) {
     const addon = sourceAddonId
       ? addons.find(a => a.id === sourceAddonId)
       : addons.find(a => a.manifest.catalogs?.some(c => c.type === preview.type));
-    if (addon) {
-      const meta = await fetchMeta([addon], preview.type, preview.id);
-      if (meta) onItemClick(meta);
+    
+    // Fallback: If no specific addon matches, query across all addons to fetch full metadata
+    const meta = await fetchMeta(addon ? [addon] : addons, preview.type, preview.id);
+    if (meta) {
+      onItemClick(meta);
     }
   }, [addons, onItemClick]);
 
@@ -225,6 +274,33 @@ export function StremioHome({ addons, onItemClick }: StremioHomeProps) {
           addons={addons}
           onItemClick={onItemClick}
         />
+
+        {traktWatchlist.length > 0 && (
+          <StremioCatalogRow
+            key="trakt-watchlist"
+            title="Trakt Watchlist"
+            items={traktWatchlist}
+            onItemClick={handleItemClickWrapper}
+          />
+        )}
+
+        {traktRecommendations.length > 0 && (
+          <StremioCatalogRow
+            key="trakt-recs"
+            title="Trakt Recommendations"
+            items={traktRecommendations}
+            onItemClick={handleItemClickWrapper}
+          />
+        )}
+
+        {simklWatchlist.length > 0 && (
+          <StremioCatalogRow
+            key="simkl-watchlist"
+            title="Simkl Watchlist"
+            items={simklWatchlist}
+            onItemClick={handleItemClickWrapper}
+          />
+        )}
 
         {renderedRows.length === 0 ? (
           <div className="stremio-loading-text">No catalogs available. Install an addon to get started.</div>

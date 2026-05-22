@@ -97,6 +97,17 @@ export interface AppSettings {
     globalEpgLinks?: GlobalEpgLink[];
     // Navigation tab visibility — tabs hidden from titlebar
     navHiddenTabs?: string[];
+    // Trakt & Simkl integration settings
+    traktEnabled?: boolean;
+    traktAccessToken?: string | null;
+    traktRefreshToken?: string | null;
+    traktTokenExpiresAt?: number | null;
+    traktScrobbleEnabled?: boolean;
+    traktSyncEnabled?: boolean;
+    simklEnabled?: boolean;
+    simklAccessToken?: string | null;
+    simklScrobbleEnabled?: boolean;
+    simklSyncEnabled?: boolean;
     [key: string]: any;
 }
 

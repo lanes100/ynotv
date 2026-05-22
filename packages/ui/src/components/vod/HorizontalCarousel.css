@@ -77,25 +77,11 @@
   overflow-x: auto;
   overflow-y: hidden;
   scroll-snap-type: x mandatory;
-  scrollbar-width: thin;
+  scrollbar-width: none;
 }
 
 .carousel__scroll-container::-webkit-scrollbar {
-  height: 4px;
-}
-
-.carousel__scroll-container::-webkit-scrollbar-track {
-  background: transparent;
-  border-radius: 4px;
-}
-
-.carousel__scroll-container::-webkit-scrollbar-thumb {
-  background: var(--surface-hover, rgba(255, 255, 255, 0.15));
-  border-radius: 4px;
-}
-
-.carousel__scroll-container::-webkit-scrollbar-thumb:hover {
-  background: var(--accent-primary, rgba(0, 212, 255, 0.5));
+  display: none;
 }
 
 .carousel__track {

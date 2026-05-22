@@ -2315,6 +2315,9 @@ pub fn run() {
             } else {
                 log::LevelFilter::Info
             })
+            .level_for("rustls", log::LevelFilter::Info)
+            .level_for("h2", log::LevelFilter::Info)
+            .level_for("hyper", log::LevelFilter::Info)
             .timezone_strategy(tauri_plugin_log::TimezoneStrategy::UseLocal)
             .rotation_strategy(tauri_plugin_log::RotationStrategy::KeepAll)
             .target(tauri_plugin_log::Target::new(tauri_plugin_log::TargetKind::LogDir {

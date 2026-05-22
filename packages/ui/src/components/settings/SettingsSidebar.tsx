@@ -14,6 +14,7 @@ export type SettingsTabId =
   | 'theme'
   | 'startup'
   | 'playback'
+  | 'scrobbling'
   | 'cache'
   | 'livetv'
   | 'live-view'
@@ -42,6 +43,7 @@ const SETTINGS_TABS: SettingsTab[] = [
   { id: 'navigation', label: 'Navigation' },
   { id: 'startup', label: 'Startup' },
   { id: 'playback', label: 'Playback' },
+  { id: 'scrobbling', label: 'Scrobbling & Sync' },
   { id: 'cache', label: 'Cache' },
   { id: 'security', label: 'Security' },
   { id: 'debug', label: 'Debug' },

@@ -84,6 +84,7 @@ import { useStremioAddonStore } from './stores/stremioAddonStore';
 import { useStremioWatchStore } from './stores/stremioWatchStore';
 import { useUIStore } from './stores/uiStore';
 import { fetchSubtitles } from './services/stremio-addon';
+import { scrobbler } from './services/scrobbler';
 
 // NEW: Extracted hooks
 import { useAppSettings } from './hooks/useAppSettings';
@@ -1185,6 +1186,131 @@ function App() {
     saveStremioProgress();
     const interval = setInterval(saveStremioProgress, 10_000);
     return () => clearInterval(interval);
+  }, [vodInfo, playing, duration]);
+
+  // ==========================================================================
+  // Trakt & Simkl Unified Playback Scrobbler
+  // ==========================================================================
+  const lastKnownProgressPercentRef = useRef(0);
+  const scrobblingMediaRef = useRef<any>(null);
+  const scrobbleTimerRef = useRef<any>(null);
+
+  // Refresh Trakt tokens on mount. Playback progress sync is manual from Settings.
+  useEffect(() => {
+    scrobbler.refreshTraktToken().catch(console.error);
+  }, []);
+
+  // Update last known progress percent continuously
+  useEffect(() => {
+    if (duration > 0) {
+      lastKnownProgressPercentRef.current = (position / duration) * 100;
+    }
+  }, [position, duration]);
+
+  useEffect(() => {
+    if (!vodInfo) {
+      // Playback stopped/closed
+      if (scrobblingMediaRef.current) {
+        const finalPercent = lastKnownProgressPercentRef.current;
+        console.log('[Scrobbler] Playback ended, stopping scrobble at percent:', finalPercent);
+        scrobbler.stopScrobble(finalPercent).catch(console.error);
+        scrobblingMediaRef.current = null;
+      }
+      if (scrobbleTimerRef.current) {
+        clearInterval(scrobbleTimerRef.current);
+        scrobbleTimerRef.current = null;
+      }
+      return;
+    }
+
+    if (playing && duration > 0) {
+      // Playback active (either starting or resuming)
+      const currentPercent = (position / duration) * 100;
+      
+      // Determine media details
+      let title = vodInfo.title || 'Unknown Video';
+      let year = vodInfo.year;
+      let imdbId: string | undefined = undefined;
+      let type: 'movie' | 'series' = vodInfo.type === 'series' ? 'series' : 'movie';
+      let season: number | undefined = undefined;
+      let episode: number | undefined = undefined;
+
+      // Extract IMDb and episode metadata
+      if (vodInfo.source_id === 'stremio') {
+        const epInfo = stremioEpisodeRef.current;
+        const movieInfo = stremioMovieRef.current;
+        if (epInfo) {
+          imdbId = epInfo.metaId;
+          title = epInfo.name;
+          season = epInfo.season;
+          episode = epInfo.episode;
+          type = 'series';
+        } else if (movieInfo) {
+          imdbId = movieInfo.metaId;
+          title = movieInfo.name;
+          type = 'movie';
+        }
+      } else {
+        // Native VOD
+        imdbId = vodInfo.mediaId && vodInfo.mediaId.startsWith('tt') ? vodInfo.mediaId : undefined;
+        if (vodInfo.type === 'series') {
+          type = 'series';
+          season = vodInfo.seasonNum;
+          episode = vodInfo.episodeNum;
+          
+          // If mediaId is structured like "imdb_ep_id", extract the first part if it's an imdb id
+          if (vodInfo.mediaId && vodInfo.mediaId.includes('_ep_')) {
+            const parts = vodInfo.mediaId.split('_ep_');
+            if (parts[0] && parts[0].startsWith('tt')) {
+              imdbId = parts[0];
+            }
+          }
+        }
+      }
+
+      const mediaInfo = {
+        title,
+        year,
+        imdbId,
+        type,
+        season,
+        episode,
+        progressPercent: currentPercent
+      };
+
+      scrobblingMediaRef.current = mediaInfo;
+      console.log('[Scrobbler] Starting/Resuming scrobble session:', mediaInfo);
+      scrobbler.startScrobble(mediaInfo).catch(console.error);
+
+      // Clear any existing timer
+      if (scrobbleTimerRef.current) {
+        clearInterval(scrobbleTimerRef.current);
+      }
+
+      // Set up periodic 30-second progress updater
+      scrobbleTimerRef.current = setInterval(() => {
+        const progress = lastKnownProgressPercentRef.current;
+        console.log('[Scrobbler] 30s scrobble update interval firing at progress:', progress);
+        scrobbler.updateScrobble(progress).catch(console.error);
+      }, 30000);
+
+    } else if (!playing && scrobblingMediaRef.current) {
+      // Playback paused
+      console.log('[Scrobbler] Playback paused, pausing scrobble...');
+      scrobbler.pauseScrobble().catch(console.error);
+      if (scrobbleTimerRef.current) {
+        clearInterval(scrobbleTimerRef.current);
+        scrobbleTimerRef.current = null;
+      }
+    }
+
+    return () => {
+      // Clean up timer on change of playback states
+      if (scrobbleTimerRef.current) {
+        clearInterval(scrobbleTimerRef.current);
+        scrobbleTimerRef.current = null;
+      }
+    };
   }, [vodInfo, playing, duration]);
 
   // ==========================================================================

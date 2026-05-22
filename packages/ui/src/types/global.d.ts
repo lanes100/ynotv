@@ -2,6 +2,17 @@ import { Source } from '@ynotv/core';
 import { AppSettings } from './app';
 
 declare global {
+    interface ImportMetaEnv {
+        readonly VITE_TRAKT_CLIENT_ID?: string;
+        readonly VITE_TRAKT_CLIENT_SECRET?: string;
+        readonly VITE_SIMKL_CLIENT_ID?: string;
+        readonly VITE_SIMKL_CLIENT_SECRET?: string;
+    }
+
+    interface ImportMeta {
+        readonly env: ImportMetaEnv;
+    }
+
     interface Window {
         __debugLoggingEnabled?: boolean;
         storage: {

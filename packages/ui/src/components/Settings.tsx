@@ -21,6 +21,7 @@ import { LiveViewTab } from './settings/LiveViewTab';
 import { PopoutTab } from './settings/PopoutTab';
 import { SubtitlesTab, type SubtitleSettings } from './settings/SubtitlesTab';
 import { WidgetsTab } from './settings/WidgetsTab';
+import { ScrobblingTab } from './settings/ScrobblingTab';
 import type { ShortcutsMap, ThemeId } from '../types/app';
 import type { StremioStreamPickerMode } from '../types/stremio';
 import './Settings.css';
@@ -1049,6 +1050,8 @@ export function Settings({
             onSportsBgOpacityChange={handleSportsBgOpacityChange}
           />
         );
+      case 'scrobbling':
+        return <ScrobblingTab />;
       default:
         return null;
     }
