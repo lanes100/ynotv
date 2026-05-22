@@ -78,6 +78,8 @@ interface UIState {
   setStremioSearchQuery: (query: string) => void;
   stremioSelectedSeason: number | undefined;
   setStremioSelectedSeason: (season: number | undefined) => void;
+  stremioPreselectVideoId: string | null;
+  setStremioPreselectVideoId: (id: string | null) => void;
   stremioCatalogScrollPositions: Record<string, number>;
   setStremioCatalogScrollPosition: (key: string, value: number) => void;
 }
@@ -154,6 +156,8 @@ export const useUIStore = create<UIState>((set) => ({
   setStremioSearchQuery: (query) => set({ stremioSearchQuery: query }),
   stremioSelectedSeason: undefined,
   setStremioSelectedSeason: (season) => set({ stremioSelectedSeason: season }),
+  stremioPreselectVideoId: null,
+  setStremioPreselectVideoId: (id) => set({ stremioPreselectVideoId: id }),
   stremioCatalogScrollPositions: {},
   setStremioCatalogScrollPosition: (key, value) =>
     set((state) => ({
@@ -225,5 +229,7 @@ export const useStremioSearchQuery = () => useUIStore((s) => s.stremioSearchQuer
 export const useSetStremioSearchQuery = () => useUIStore((s) => s.setStremioSearchQuery);
 export const useStremioSelectedSeason = () => useUIStore((s) => s.stremioSelectedSeason);
 export const useSetStremioSelectedSeason = () => useUIStore((s) => s.setStremioSelectedSeason);
+export const useStremioPreselectVideoId = () => useUIStore((s) => s.stremioPreselectVideoId);
+export const useSetStremioPreselectVideoId = () => useUIStore((s) => s.setStremioPreselectVideoId);
 export const useStremioCatalogScrollPositions = () => useUIStore((s) => s.stremioCatalogScrollPositions);
 export const useSetStremioCatalogScrollPosition = () => useUIStore((s) => s.setStremioCatalogScrollPosition);

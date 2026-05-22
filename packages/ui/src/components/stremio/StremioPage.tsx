@@ -8,6 +8,7 @@ import {
   useSetStremioActiveMeta,
   useStremioSelectedSeason,
   useSetStremioSelectedSeason,
+  useUIStore,
 } from '../../stores/uiStore';
 import { StremioTopbar } from './StremioTopbar';
 import { StremioHome } from './StremioHome';
@@ -64,7 +65,12 @@ export function StremioPage({ onClose, stremioStreamPickerMode, onStreamPickerMo
     }
     setActiveMeta(meta);
     setStremioView('detail');
-    setSelectedSeason(undefined);
+    // If preselectVideoId is set (from Continue Watching), keep the season
+    // already set by the caller. Otherwise, reset to undefined so StremioDetail
+    // auto-selects Season 1.
+    if (!useUIStore.getState().stremioPreselectVideoId) {
+      setSelectedSeason(undefined);
+    }
   }, [setActiveMeta, setStremioView, setSelectedSeason]);
 
   const handleBack = useCallback(() => {

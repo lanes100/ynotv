@@ -144,6 +144,8 @@ export function Settings({
   // Stream retry settings
   const [streamWatchdogSeconds, setStreamWatchdogSeconds] = useState(10);
   const [streamMaxRetries, setStreamMaxRetries] = useState(20);
+  const [useEventBasedReconnect, setUseEventBasedReconnect] = useState(true);
+  const [stallDetectionEnabled, setStallDetectionEnabled] = useState(true);
   // Stremio settings
   const [stremioStreamPickerMode, setStremioStreamPickerMode] = useState<StremioStreamPickerMode>('modal');
 
@@ -286,6 +288,8 @@ export function Settings({
         liveBufferOffset?: number;
         streamWatchdogSeconds?: number;
         streamMaxRetries?: number;
+        useEventBasedReconnect?: boolean;
+        stallDetectionEnabled?: boolean;
         epgDarkenCurrent?: boolean;
         epgView?: 'traditional' | 'alternate';
         collapseSourceCategoriesOnStartup?: boolean;
@@ -408,6 +412,8 @@ export function Settings({
       setLiveBufferOffset(settings.liveBufferOffset ?? 0);
       setStreamWatchdogSeconds(settings.streamWatchdogSeconds ?? 10);
       setStreamMaxRetries(settings.streamMaxRetries ?? 20);
+      setUseEventBasedReconnect(settings.useEventBasedReconnect ?? true);
+      setStallDetectionEnabled(settings.stallDetectionEnabled ?? true);
       setStremioStreamPickerMode(settings.stremioStreamPickerMode ?? 'modal');
 
       // Load LiveTV settings
@@ -515,6 +521,26 @@ export function Settings({
     }
     window.dispatchEvent(new CustomEvent('ynotv:retry-settings-changed', {
       detail: { streamMaxRetries: retries }
+    }));
+  };
+
+  const handleUseEventBasedReconnectChange = async (enabled: boolean) => {
+    setUseEventBasedReconnect(enabled);
+    if (window.storage) {
+      await window.storage.updateSettings({ useEventBasedReconnect: enabled });
+    }
+    window.dispatchEvent(new CustomEvent('ynotv:retry-settings-changed', {
+      detail: { useEventBasedReconnect: enabled }
+    }));
+  };
+
+  const handleStallDetectionEnabledChange = async (enabled: boolean) => {
+    setStallDetectionEnabled(enabled);
+    if (window.storage) {
+      await window.storage.updateSettings({ stallDetectionEnabled: enabled });
+    }
+    window.dispatchEvent(new CustomEvent('ynotv:retry-settings-changed', {
+      detail: { stallDetectionEnabled: enabled }
     }));
   };
 
@@ -967,6 +993,10 @@ export function Settings({
             onStremioStreamPickerModeChange={handleStremioStreamPickerModeChange}
             castEnabled={castEnabled}
             onCastEnabledChange={handleCastEnabledChange}
+            useEventBasedReconnect={useEventBasedReconnect}
+            onUseEventBasedReconnectChange={handleUseEventBasedReconnectChange}
+            stallDetectionEnabled={stallDetectionEnabled}
+            onStallDetectionEnabledChange={handleStallDetectionEnabledChange}
           />
         );
       case 'cache':

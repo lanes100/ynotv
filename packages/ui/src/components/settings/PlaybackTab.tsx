@@ -18,6 +18,10 @@ interface PlaybackTabProps {
   onStremioStreamPickerModeChange: (mode: StremioStreamPickerMode) => Promise<void>;
   castEnabled?: boolean;
   onCastEnabledChange?: (enabled: boolean) => Promise<void>;
+  useEventBasedReconnect: boolean;
+  onUseEventBasedReconnectChange: (enabled: boolean) => Promise<void>;
+  stallDetectionEnabled: boolean;
+  onStallDetectionEnabledChange: (enabled: boolean) => Promise<void>;
 }
 
 const DEFAULT_MPV_PARAMS = `--hwdec=auto
@@ -44,6 +48,10 @@ export function PlaybackTab({
   onStremioStreamPickerModeChange,
   castEnabled,
   onCastEnabledChange,
+  useEventBasedReconnect,
+  onUseEventBasedReconnectChange,
+  stallDetectionEnabled,
+  onStallDetectionEnabledChange,
 }: PlaybackTabProps) {
   const [activeSubTab, setActiveSubTab] = useState<'mpv' | 'reconnect' | 'cast'>('mpv');
   const [localParams, setLocalParams] = useState(mpvParams);
@@ -54,10 +62,14 @@ export function PlaybackTab({
   // Local state for retry settings (committed on blur / enter)
   const [localWatchdog, setLocalWatchdog] = useState(String(streamWatchdogSeconds));
   const [localMaxRetries, setLocalMaxRetries] = useState(String(streamMaxRetries));
+  const [localUseEventBased, setLocalUseEventBased] = useState(useEventBasedReconnect);
+  const [localStallDetection, setLocalStallDetection] = useState(stallDetectionEnabled);
 
   // Sync if parent value changes (e.g. loaded from storage after mount)
   useEffect(() => { setLocalWatchdog(String(streamWatchdogSeconds)); }, [streamWatchdogSeconds]);
   useEffect(() => { setLocalMaxRetries(String(streamMaxRetries)); }, [streamMaxRetries]);
+  useEffect(() => { setLocalUseEventBased(useEventBasedReconnect); }, [useEventBasedReconnect]);
+  useEffect(() => { setLocalStallDetection(stallDetectionEnabled); }, [stallDetectionEnabled]);
 
   useEffect(() => {
     setLocalParams(mpvParams);
@@ -259,6 +271,52 @@ export function PlaybackTab({
         ) : activeSubTab === 'reconnect' ? (
           <div className="settings-section">
             <div className="playback-section" style={{ marginTop: 0 }}>
+
+              {/* Event-based reconnect toggle */}
+              <div className="timeshift-toggle-row" style={{ marginBottom: '12px' }}>
+                <div className="timeshift-toggle-info">
+                  <span className="timeshift-toggle-label">Event-Based Reconnect</span>
+                  <span className="timeshift-toggle-sub">
+                    React immediately to stream errors (EOF, HTTP errors, MPV crashes). Disable if you experience
+                    overly aggressive reconnects on slow or unstable sources — the watchdog will still detect
+                    dead streams based on playback progress.
+                  </span>
+                </div>
+                <label className="toggle-switch">
+                  <input
+                    type="checkbox"
+                    checked={localUseEventBased}
+                    onChange={(e) => {
+                      setLocalUseEventBased(e.target.checked);
+                      onUseEventBasedReconnectChange(e.target.checked);
+                    }}
+                  />
+                  <span className="toggle-slider" />
+                </label>
+              </div>
+
+              {/* Stall detection toggle */}
+              <div className="timeshift-toggle-row" style={{ marginBottom: '12px' }}>
+                <div className="timeshift-toggle-info">
+                  <span className="timeshift-toggle-label">Stall Detection (Watchdog)</span>
+                  <span className="timeshift-toggle-sub">
+                    Periodically poll MPV to detect stalled or frozen streams based on playback progress.
+                    Disable if you prefer only event-based detection, or if the watchdog causes false
+                    reconnects on slow streams.
+                  </span>
+                </div>
+                <label className="toggle-switch">
+                  <input
+                    type="checkbox"
+                    checked={localStallDetection}
+                    onChange={(e) => {
+                      setLocalStallDetection(e.target.checked);
+                      onStallDetectionEnabledChange(e.target.checked);
+                    }}
+                  />
+                  <span className="toggle-slider" />
+                </label>
+              </div>
 
               {/* Watchdog timeout */}
               <div className="retry-setting-row">

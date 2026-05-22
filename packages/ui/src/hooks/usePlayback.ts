@@ -335,6 +335,8 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
   // they're always current inside interval callbacks without stale closures.
   const maxRetriesRef = useRef(20);
   const stallThresholdMsRef = useRef(10_000);
+  const useEventBasedReconnectRef = useRef(true);
+  const stallDetectionEnabledRef = useRef(true);
 
   // Load retry settings from storage once on mount
   useEffect(() => {
@@ -348,6 +350,12 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
         if (typeof s.streamWatchdogSeconds === 'number' && s.streamWatchdogSeconds >= 3) {
           stallThresholdMsRef.current = s.streamWatchdogSeconds * 1_000;
         }
+        if (typeof s.useEventBasedReconnect === 'boolean') {
+          useEventBasedReconnectRef.current = s.useEventBasedReconnect;
+        }
+        if (typeof s.stallDetectionEnabled === 'boolean') {
+          stallDetectionEnabledRef.current = s.stallDetectionEnabled;
+        }
       }
     }).catch(() => {});
   }, []);
@@ -355,7 +363,7 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
   // Listen for real-time changes dispatched by Settings.tsx — no restart required
   useEffect(() => {
     const handler = (e: Event) => {
-      const detail = (e as CustomEvent<{ streamWatchdogSeconds?: number; streamMaxRetries?: number }>).detail;
+      const detail = (e as CustomEvent<{ streamWatchdogSeconds?: number; streamMaxRetries?: number; useEventBasedReconnect?: boolean; stallDetectionEnabled?: boolean }>).detail;
       if (typeof detail.streamWatchdogSeconds === 'number' && detail.streamWatchdogSeconds >= 3) {
         stallThresholdMsRef.current = detail.streamWatchdogSeconds * 1_000;
         logInfo(`[Retry] Watchdog threshold updated to ${detail.streamWatchdogSeconds}s`);
@@ -363,6 +371,14 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
       if (typeof detail.streamMaxRetries === 'number' && detail.streamMaxRetries > 0) {
         maxRetriesRef.current = detail.streamMaxRetries;
         logInfo(`[Retry] Max retries updated to ${detail.streamMaxRetries}`);
+      }
+      if (typeof detail.useEventBasedReconnect === 'boolean') {
+        useEventBasedReconnectRef.current = detail.useEventBasedReconnect;
+        logInfo(`[Retry] Event-based reconnect ${detail.useEventBasedReconnect ? 'enabled' : 'disabled'}`);
+      }
+      if (typeof detail.stallDetectionEnabled === 'boolean') {
+        stallDetectionEnabledRef.current = detail.stallDetectionEnabled;
+        logInfo(`[Retry] Stall detection ${detail.stallDetectionEnabled ? 'enabled' : 'disabled'}`);
       }
     };
     window.addEventListener('ynotv:retry-settings-changed', handler);
@@ -962,16 +978,28 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
 
     import('@tauri-apps/api/event').then(({ listen }) => {
       listen('mpv-stream-ended', () => {
+        if (!useEventBasedReconnectRef.current) {
+          logInfo('[Retry] Ignoring mpv-stream-ended event (event-based reconnect disabled)');
+          return;
+        }
         logInfo('[Retry] Received mpv-stream-ended event');
         handleStreamDied();
       }).then((fn) => { unlistenEnded = fn; });
 
       listen('mpv-end-file-error', () => {
+        if (!useEventBasedReconnectRef.current) {
+          logInfo('[Retry] Ignoring mpv-end-file-error event (event-based reconnect disabled)');
+          return;
+        }
         logInfo('[Retry] Received mpv-end-file-error event');
         handleStreamDied();
       }).then((fn) => { unlistenEndFileError = fn; });
 
       listen('mpv-http-error', () => {
+        if (!useEventBasedReconnectRef.current) {
+          logInfo('[Retry] Ignoring mpv-http-error event (event-based reconnect disabled)');
+          return;
+        }
         if (isIgnoringHttpErrors()) {
           logInfo('[Retry] Ignoring mpv-http-error event for current stream');
           return;
@@ -981,6 +1009,10 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
       }).then((fn) => { unlistenHttpError = fn; });
 
       listen('mpv-error', () => {
+        if (!useEventBasedReconnectRef.current) {
+          logInfo('[Retry] Ignoring mpv-error event (event-based reconnect disabled)');
+          return;
+        }
         logInfo('[Retry] Received mpv-error event');
         handleStreamDied();
       }).then((fn) => { unlistenMpvError = fn; });
@@ -1015,6 +1047,11 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
         userPausedRef.current ||
         now < healthLoadGraceUntilRef.current
       ) {
+        return;
+      }
+
+      if (!stallDetectionEnabledRef.current) {
+        healthCheckInFlightRef.current = false;
         return;
       }
 

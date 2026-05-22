@@ -4,6 +4,8 @@ import { useStremioAddonStore } from '../../stores/stremioAddonStore';
 import {
   useStremioSelectedSeason,
   useSetStremioSelectedSeason,
+  useStremioPreselectVideoId,
+  useSetStremioPreselectVideoId,
   useSetStremioSearchQuery,
   useSetStremioView,
   useSetStremioActiveMeta,
@@ -43,6 +45,8 @@ export function StremioDetail({ meta, onBack, onPlay, streamPickerMode }: Stremi
   const isInLibrary = useStremioLibraryStore((s) => s.isInLibrary);
 
   const episodeProgress = useStremioWatchStore((s) => s.episodeProgress);
+  const preselectVideoId = useStremioPreselectVideoId();
+  const setPreselectVideoId = useSetStremioPreselectVideoId();
 
   const setStremioSearchQuery = useSetStremioSearchQuery();
   const setStremioView = useSetStremioView();
@@ -99,6 +103,24 @@ export function StremioDetail({ meta, onBack, onPlay, streamPickerMode }: Stremi
       setSelectedSeason(preferred);
     }
   }, [isSeries, seasons, selectedSeason, setSelectedSeason]);
+
+  // Auto-load streams for preselected video (from Continue Watching poster click)
+  useEffect(() => {
+    if (!isSeries || !preselectVideoId || !meta.videos) return;
+    const video = meta.videos.find((v) => v.id === preselectVideoId);
+    if (!video) return;
+    setPreselectVideoId(null);
+    setSelectedVideo(video);
+    setLoadingStreams(true);
+    fetchStreams(addons, 'series', video.id).then((result) => {
+      setStreams(result);
+      setLoadingStreams(false);
+      if (streamPickerMode === 'autoplay' && result.length > 0) {
+        const direct = result.find((s) => s.url && !s.behaviorHints?.notWebReady) || result[0];
+        if (direct) onPlay(direct, meta, video);
+      }
+    });
+  }, [isSeries, preselectVideoId, meta.id, meta.videos, addons, streamPickerMode, onPlay, meta, setPreselectVideoId]);
 
   // Load streams on mount for Movies
   useEffect(() => {

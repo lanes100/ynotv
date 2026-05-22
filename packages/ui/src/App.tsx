@@ -1127,8 +1127,6 @@ function App() {
         }
       } catch (err) {
         console.error('[Stremio] Error processing subtitles:', err);
-      } finally {
-        autoSelectSubtitleRef.current().catch(console.error);
       }
     };
     window.addEventListener('ynotv:stremio-play', handler);

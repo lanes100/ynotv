@@ -2,6 +2,7 @@ import { useRef, useState, useCallback, useEffect } from 'react';
 import type { InstalledAddon, StremioMeta, StremioStream, StremioMetaPreview, StremioVideo } from '../../types/stremio';
 import { fetchMeta, fetchStreams } from '../../services/stremio-addon';
 import { useStremioWatchStore, type StremioWatchEntry } from '../../stores/stremioWatchStore';
+import { useSetStremioSelectedSeason, useSetStremioPreselectVideoId } from '../../stores/uiStore';
 import { useStremioHover } from '../../contexts/StremioHoverContext';
 import './StremioHome.css';
 
@@ -85,6 +86,8 @@ export function StremioRecentlyWatched({ addons, onItemClick }: StremioRecentlyW
 
   const history = useStremioWatchStore((s) => s.history);
   const removeFromHistory = useStremioWatchStore((s) => s.removeFromHistory);
+  const setSelectedSeason = useSetStremioSelectedSeason();
+  const setPreselectVideoId = useSetStremioPreselectVideoId();
 
   const update = useCallback(() => {
     const el = scrollRef.current;
@@ -111,13 +114,21 @@ export function StremioRecentlyWatched({ addons, onItemClick }: StremioRecentlyW
     setLoadingId(entry.metaId);
     try {
       const meta = await fetchMeta(addons, entry.type, entry.metaId);
-      if (meta) onItemClick(meta);
+      if (meta) {
+        if (entry.type === 'series' && entry.lastSeason != null) {
+          setSelectedSeason(entry.lastSeason);
+          if (entry.lastWatchedVideoId) {
+            setPreselectVideoId(entry.lastWatchedVideoId);
+          }
+        }
+        onItemClick(meta);
+      }
     } catch {
       // Silently fail
     } finally {
       setLoadingId(null);
     }
-  }, [addons, onItemClick, loadingId]);
+  }, [addons, onItemClick, loadingId, setSelectedSeason, setPreselectVideoId]);
 
   const handleDirectPlay = useCallback(async (entry: StremioWatchEntry, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -129,7 +140,6 @@ export function StremioRecentlyWatched({ addons, onItemClick }: StremioRecentlyW
       const meta = await fetchMeta(addons, entry.type, entry.metaId);
       if (!meta) {
         // Fallback to detail page
-        setLoadingId(null);
         const fallbackMeta = await fetchMeta(addons, entry.type, entry.metaId);
         if (fallbackMeta) onItemClick(fallbackMeta);
         return;
@@ -139,13 +149,12 @@ export function StremioRecentlyWatched({ addons, onItemClick }: StremioRecentlyW
       let targetVideo: StremioVideo | undefined = undefined;
 
       if (entry.type === 'movie') {
-        if (entry.lastSelectedStream) {
+        if (entry.lastSelectedStream && (entry.lastSelectedStream.url || entry.lastSelectedStream.infoHash)) {
           selectedStream = entry.lastSelectedStream;
         } else {
-          // Fetch streams and pick first
           const streams = await fetchStreams(addons, 'movie', entry.metaId);
           if (streams && streams.length > 0) {
-            selectedStream = streams[0];
+            selectedStream = streams.find((s) => s.url && !s.behaviorHints?.notWebReady) || streams[0];
           }
         }
       } else {
@@ -163,10 +172,10 @@ export function StremioRecentlyWatched({ addons, onItemClick }: StremioRecentlyW
           // Fetch streams for the target video
           const streams = await fetchStreams(addons, 'series', targetVideoId);
           if (streams && streams.length > 0) {
-            if (entry.lastSelectedStream) {
+            if (entry.lastSelectedStream && (entry.lastSelectedStream.url || entry.lastSelectedStream.infoHash)) {
               selectedStream = matchStream(streams, entry.lastSelectedStream);
             } else {
-              selectedStream = streams[0];
+              selectedStream = streams.find((s) => s.url && !s.behaviorHints?.notWebReady) || streams[0];
             }
           }
         }
