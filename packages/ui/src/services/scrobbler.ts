@@ -340,15 +340,11 @@ class ScrobblerService {
   async updateScrobble(progressPercent: number): Promise<void> {
     if (!this.isScrobblingActive || !this.lastActiveMedia) return;
     
-    // Update local copy
     this.lastActiveMedia.progressPercent = progressPercent;
     
     logInfo('Updating scrobble progress:', this.lastActiveMedia.title, `(${Math.round(progressPercent)}%)`);
 
-    await Promise.all([
-      this.sendTraktScrobble('start', this.lastActiveMedia), // Trakt persists resume progress on start, keeps session active
-      this.sendSimklScrobble('start', this.lastActiveMedia), // Simkl also does this
-    ]);
+    await this.sendSimklScrobble('start', this.lastActiveMedia);
   }
 
   async pauseScrobble(): Promise<void> {
@@ -369,14 +365,13 @@ class ScrobblerService {
     
     logInfo('Stopping scrobble:', this.lastActiveMedia.title, `(${Math.round(progressPercent)}%)`);
 
-    const traktAction: 'stop' | 'pause' = progressPercent >= 90 || progressPercent < 80 ? 'stop' : 'pause';
     const simklAction: 'stop' | 'pause' = progressPercent >= 90 ? 'stop' : 'pause';
     if (progressPercent >= 90) {
       logInfo('Media completed (>=90%)! Marking as fully watched.');
     }
 
     await Promise.all([
-      this.sendTraktScrobble(traktAction, this.lastActiveMedia),
+      this.sendTraktScrobble('stop', this.lastActiveMedia), // Trakt handles >=80% as scrobble, <80% as pause
       this.sendSimklScrobble(simklAction, this.lastActiveMedia),
     ]);
 
