@@ -289,34 +289,41 @@ export function CatalogDetailView({ addon, catalog, onItemClick }: CatalogDetail
         ) : items.length === 0 ? (
           <div className="stremio-loading-text" style={{ padding: '80px 0' }}>No items in this catalog.</div>
         ) : (
-          <div className="stremio-meta-grid">
-            {items.map((item) => (
-              <div
-                key={`${item.type}:${item.id}`}
-                className="stremio-meta-card"
-                onMouseEnter={(e) => onCardMouseEnter(item, e.currentTarget, e)}
-                onMouseLeave={onCardMouseLeave}
-                onClick={() => {
-                  onCardClick();
-                  onItemClick(item);
-                }}
-              >
-                {item.poster && (
-                  <img
-                    className="stremio-meta-poster"
-                    src={item.poster}
-                    alt={item.name}
-                    loading="lazy"
-                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                  />
-                )}
-                <div className="stremio-meta-card-info">
-                  <div className="stremio-meta-card-title">{item.name}</div>
-                  {item.imdbRating && <div className="stremio-meta-card-rating">★ {item.imdbRating}</div>}
+          <>
+            <div className="stremio-meta-grid">
+              {items.map((item) => (
+                <div
+                  key={`${item.type}:${item.id}`}
+                  className="stremio-meta-card"
+                  onMouseEnter={(e) => onCardMouseEnter(item, e.currentTarget, e)}
+                  onMouseLeave={onCardMouseLeave}
+                  onClick={() => {
+                    onCardClick();
+                    onItemClick(item);
+                  }}
+                >
+                  {item.poster && (
+                    <img
+                      className="stremio-meta-poster"
+                      src={item.poster}
+                      alt={item.name}
+                      loading="lazy"
+                      onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                    />
+                  )}
+                  <div className="stremio-meta-card-info">
+                    <div className="stremio-meta-card-title">{item.name}</div>
+                    {item.imdbRating && <div className="stremio-meta-card-rating">★ {item.imdbRating}</div>}
+                  </div>
                 </div>
+              ))}
+            </div>
+            {hasMore && (
+              <div ref={sentinelRef} className="stremio-loading-text" style={{ padding: '20px 0', textAlign: 'center' }}>
+                {loadingMore ? 'Loading more...' : ''}
               </div>
-            ))}
-          </div>
+            )}
+          </>
         )}
       </div>
     </div>
