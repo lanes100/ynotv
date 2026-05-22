@@ -273,28 +273,13 @@ class ScrobblerService {
 
   // NOTE: Simkl uses the user_code (not device_code) as the identifier for polling
   async pollSimklToken(userCode: string): Promise<{ success: boolean; error?: string }> {
-    const { clientId, clientSecret } = getSimklCredentials();
+    const { clientId } = getSimklCredentials();
 
     logInfo('Polling Simkl access token...');
-    // Poll by exchanging the PIN code via POST /oauth/token with grant_type=pin
-    const response = await makeRequest(`${SIMKL_API_URL}/oauth/token`, {
-      method: 'POST',
-      body: {
-        grant_type: 'urn:ietf:params:oauth:grant-type:device_code',
-        code: userCode,
-        client_id: clientId,
-        client_secret: clientSecret,
-      },
+    // Simkl PIN polling is a GET to /oauth/pin/{user_code}?client_id=...
+    const response = await makeRequest(`${SIMKL_API_URL}/oauth/pin/${userCode}?client_id=${clientId}`, {
+      method: 'GET',
     });
-
-    if (response.status === 400 || response.status === 403 || response.status === 428) {
-      // 400 = pending, 403 = denied, 428 = still pending (authorization_pending)
-      const body = await response.json().catch(() => ({})) as any;
-      if (body?.error === 'access_denied') {
-        return { success: false, error: 'Access denied by user' };
-      }
-      return { success: false };
-    }
 
     if (response.ok) {
       const data = await response.json();
@@ -308,9 +293,16 @@ class ScrobblerService {
         logInfo('Simkl linked successfully.');
         return { success: true };
       }
+
+      // If result is OK but no access_token yet, still pending
+      if (data.result === 'OK' && !data.access_token) {
+        return { success: false };
+      }
     }
 
-    return { success: false, error: 'Simkl authorization failed' };
+    // Non-OK response means still pending (the API returns 200 with just {result: 'OK'}
+    // until the user approves, at which point it includes access_token)
+    return { success: false };
   }
 
   async logoutSimkl(): Promise<void> {
@@ -508,7 +500,7 @@ class ScrobblerService {
       const { clientId } = getSimklCredentials();
       const headers = {
         'Authorization': `Bearer ${settings.simklAccessToken}`,
-        'simkl-client-id': clientId,
+        'simkl-api-key': clientId,
       };
 
       // Simkl uses a standard POST to /scrobble
@@ -644,7 +636,7 @@ class ScrobblerService {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${token}`,
-            'simkl-client-id': clientId,
+            'simkl-api-key': clientId,
           },
         });
 
@@ -749,7 +741,7 @@ class ScrobblerService {
       const { clientId } = getSimklCredentials();
       const headers = {
         'Authorization': `Bearer ${settings.simklAccessToken}`,
-        'simkl-client-id': clientId,
+        'simkl-api-key': clientId,
       };
 
       let url = '';
