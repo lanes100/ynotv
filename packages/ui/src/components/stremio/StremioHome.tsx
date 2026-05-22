@@ -68,7 +68,7 @@ export function StremioHome({ addons, onItemClick }: StremioHomeProps) {
         
         if (!active) return;
         
-        if (s.traktEnabled && s.traktAccessToken) {
+        if (s.traktEnabled && s.traktAccessToken && s.traktWatchlistEnabled !== false) {
           scrobbler.fetchTraktCatalog('watchlist').then((items) => {
             if (active) setTraktWatchlist(items);
           });

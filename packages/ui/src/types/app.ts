@@ -104,6 +104,7 @@ export interface AppSettings {
     traktTokenExpiresAt?: number | null;
     traktScrobbleEnabled?: boolean;
     traktSyncEnabled?: boolean;
+    traktWatchlistEnabled?: boolean;
     simklEnabled?: boolean;
     simklAccessToken?: string | null;
     simklScrobbleEnabled?: boolean;

@@ -182,6 +182,7 @@ class ScrobblerService {
         traktTokenExpiresAt: Date.now() + (data.expires_in * 1000),
         traktScrobbleEnabled: true,
         traktSyncEnabled: false,
+        traktWatchlistEnabled: true,
       });
       logInfo('Trakt linked successfully.');
       return { success: true };
@@ -244,6 +245,7 @@ class ScrobblerService {
       traktTokenExpiresAt: null,
       traktScrobbleEnabled: false,
       traktSyncEnabled: false,
+      traktWatchlistEnabled: false,
     });
     logInfo('Trakt unlinked successfully.');
   }
