@@ -995,12 +995,12 @@ export function SubtitleControlModal({
                 <div className="subtitle-control-inputs">
                   <button
                     className="subtitle-control-nudge"
-                    onClick={() => handleDelayChange(Math.round((delay - 0.5) * 10) / 10)}
+                    onClick={() => handleDelayChange(Math.round((delay - 0.1) * 10) / 10)}
                   >-</button>
                   <span className="subtitle-control-display">{delay.toFixed(1)}s</span>
                   <button
                     className="subtitle-control-nudge"
-                    onClick={() => handleDelayChange(Math.round((delay + 0.5) * 10) / 10)}
+                    onClick={() => handleDelayChange(Math.round((delay + 0.1) * 10) / 10)}
                   >+</button>
                 </div>
               </div>

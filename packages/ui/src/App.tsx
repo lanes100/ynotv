@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 const AUTO_SYNC_CHECK_INTERVAL_MS = 10 * 60 * 1000;
 let hasStartupAutoSyncTriggered = false;
 import { invoke } from '@tauri-apps/api/core';
-import type { StremioStreamPickerMode } from './types/stremio';
+import type { StremioStreamPickerMode, StremioMeta } from './types/stremio';
 import './services/tauri-bridge'; // Initialize Tauri bridge and polyfills
 import { checkForUpdates, checkForUpdatesSilent } from './services/updater';
 import { Settings } from './components/Settings';
@@ -991,6 +991,7 @@ function App() {
     nextEpisode?: number;
   } | null>(null);
   const stremioMovieRef = useRef<{ metaId: string; name: string; poster?: string } | null>(null);
+  const stremioMetaRef = useRef<StremioMeta | null>(null);
 
   useEffect(() => {
     const handler = async (e: Event) => {
@@ -1057,15 +1058,26 @@ function App() {
         stremioEpisodeRef.current = null;
       }
 
+      stremioMetaRef.current = meta;
       setActiveViewRef.current('none');
+      const isSeries = meta.type === 'series' && episodeVideo;
       await handlePlayVodRef.current({
         url,
         title: meta.name,
         year: meta.year ? String(meta.year) : undefined,
-        plot: meta.description,
-        type: meta.type === 'series' ? 'series' : 'movie',
+        plot: isSeries
+          ? (episodeVideo.description || episodeVideo.overview || meta.description)
+          : meta.description,
+        type: isSeries ? 'series' : 'movie',
+        episodeInfo: isSeries
+          ? `S${episodeVideo.season} E${episodeVideo.episode}${episodeVideo.title ? ` · ${episodeVideo.title}` : ''}`
+          : undefined,
         source_id: 'stremio',
-        mediaId: meta.type === 'series' && episodeVideo ? `${meta.id}_ep_${episodeVideo.id}` : meta.id,
+        mediaId: isSeries ? `${meta.id}_ep_${episodeVideo.id}` : meta.id,
+        seriesId: isSeries ? meta.id : undefined,
+        seasonNum: episodeVideo?.season,
+        episodeNum: episodeVideo?.episode,
+        episodeId: episodeVideo?.id,
       });
 
       // Resume from saved stremio progress if available
@@ -1349,58 +1361,80 @@ function App() {
   const handleChannelUp = useCallback(async () => {
     // Check if we're watching a series with episode info
     if (vodInfo?.type === 'series' && vodInfo.seriesId && vodInfo.seasonNum && vodInfo.episodeNum) {
-      // Navigate to previous episode
-      const prevEpisode = await getAdjacentEpisode(
-        vodInfo.seriesId,
-        vodInfo.seasonNum,
-        vodInfo.episodeNum,
-        'prev'
-      );
-      
-      if (prevEpisode) {
-        // Get progress for resume
-        const progress = await getEpisodeProgress(prevEpisode.id);
-        const resumePosition = progress?.progress_seconds && progress.progress_seconds > 10 ? progress.progress_seconds : 0;
-        
-        // Record watch history
-        void recordVodWatch(
+      // Stremio series: navigate through videos stored in meta
+      if (vodInfo.source_id === 'stremio') {
+        const meta = stremioMetaRef.current;
+        if (meta?.videos) {
+          const sorted = [...meta.videos].sort((a: any, b: any) => {
+            if ((a.season ?? 0) !== (b.season ?? 0)) return (a.season ?? 0) - (b.season ?? 0);
+            return (a.episode ?? 0) - (b.episode ?? 0);
+          });
+          const currentIdx = sorted.findIndex((v: any) => v.id === vodInfo.episodeId);
+          if (currentIdx > 0) {
+            const prevVideo = sorted[currentIdx - 1];
+            const store = useUIStore.getState();
+            store.setStremioActiveMeta(meta);
+            store.setStremioSelectedSeason(prevVideo.season);
+            store.setStremioPreselectVideoId(prevVideo.id);
+            setActiveViewRef.current('stremio');
+            return;
+          }
+        }
+        // Fall through to channel nav if no prev episode found
+      } else {
+        // VOD series: navigate via DB episodes
+        const prevEpisode = await getAdjacentEpisode(
           vodInfo.seriesId,
-          'series',
-          vodInfo.source_id || '',
-          vodInfo.title,
-          undefined,
-          prevEpisode.season_num,
-          prevEpisode.episode_num,
-          prevEpisode.title || `Episode ${prevEpisode.episode_num}`
+          vodInfo.seasonNum,
+          vodInfo.episodeNum,
+          'prev'
         );
         
-        void recordEpisodeWatch(
-          prevEpisode.id,
-          vodInfo.seriesId,
-          vodInfo.source_id || '',
-          prevEpisode.season_num,
-          prevEpisode.episode_num,
-          prevEpisode.title || `Episode ${prevEpisode.episode_num}`,
-          resumePosition,
-          prevEpisode.duration ?? Number(prevEpisode.info?.duration) ?? 0
-        );
-        
-        // Play the previous episode
-        await handlePlayVod({
-          url: prevEpisode.direct_url,
-          title: vodInfo.title,
-          year: vodInfo.year,
-          plot: vodInfo.plot,
-          type: 'series',
-          episodeInfo: `S${prevEpisode.season_num} E${prevEpisode.episode_num}${prevEpisode.title ? ` · ${prevEpisode.title}` : ''}`,
-          source_id: vodInfo.source_id,
-          mediaId: `${vodInfo.seriesId}_ep_${prevEpisode.id}`,
-          seriesId: vodInfo.seriesId,
-          seasonNum: prevEpisode.season_num,
-          episodeNum: prevEpisode.episode_num,
-          episodeId: prevEpisode.id,
-        });
-        return;
+        if (prevEpisode) {
+          // Get progress for resume
+          const progress = await getEpisodeProgress(prevEpisode.id);
+          const resumePosition = progress?.progress_seconds && progress.progress_seconds > 10 ? progress.progress_seconds : 0;
+          
+          // Record watch history
+          void recordVodWatch(
+            vodInfo.seriesId,
+            'series',
+            vodInfo.source_id || '',
+            vodInfo.title,
+            undefined,
+            prevEpisode.season_num,
+            prevEpisode.episode_num,
+            prevEpisode.title || `Episode ${prevEpisode.episode_num}`
+          );
+          
+          void recordEpisodeWatch(
+            prevEpisode.id,
+            vodInfo.seriesId,
+            vodInfo.source_id || '',
+            prevEpisode.season_num,
+            prevEpisode.episode_num,
+            prevEpisode.title || `Episode ${prevEpisode.episode_num}`,
+            resumePosition,
+            prevEpisode.duration ?? Number(prevEpisode.info?.duration) ?? 0
+          );
+          
+          // Play the previous episode
+          await handlePlayVod({
+            url: prevEpisode.direct_url,
+            title: vodInfo.title,
+            year: vodInfo.year,
+            plot: prevEpisode.plot || vodInfo.plot,
+            type: 'series',
+            episodeInfo: `S${prevEpisode.season_num} E${prevEpisode.episode_num}${prevEpisode.title ? ` · ${prevEpisode.title}` : ''}`,
+            source_id: vodInfo.source_id,
+            mediaId: `${vodInfo.seriesId}_ep_${prevEpisode.id}`,
+            seriesId: vodInfo.seriesId,
+            seasonNum: prevEpisode.season_num,
+            episodeNum: prevEpisode.episode_num,
+            episodeId: prevEpisode.id,
+          });
+          return;
+        }
       }
     }
     
@@ -1419,58 +1453,80 @@ function App() {
   const handleChannelDown = useCallback(async () => {
     // Check if we're watching a series with episode info
     if (vodInfo?.type === 'series' && vodInfo.seriesId && vodInfo.seasonNum && vodInfo.episodeNum) {
-      // Navigate to next episode
-      const nextEpisode = await getAdjacentEpisode(
-        vodInfo.seriesId,
-        vodInfo.seasonNum,
-        vodInfo.episodeNum,
-        'next'
-      );
-      
-      if (nextEpisode) {
-        // Get progress for resume
-        const progress = await getEpisodeProgress(nextEpisode.id);
-        const resumePosition = progress?.progress_seconds && progress.progress_seconds > 10 ? progress.progress_seconds : 0;
-        
-        // Record watch history
-        void recordVodWatch(
+      // Stremio series: navigate through videos stored in meta
+      if (vodInfo.source_id === 'stremio') {
+        const meta = stremioMetaRef.current;
+        if (meta?.videos) {
+          const sorted = [...meta.videos].sort((a: any, b: any) => {
+            if ((a.season ?? 0) !== (b.season ?? 0)) return (a.season ?? 0) - (b.season ?? 0);
+            return (a.episode ?? 0) - (b.episode ?? 0);
+          });
+          const currentIdx = sorted.findIndex((v: any) => v.id === vodInfo.episodeId);
+          if (currentIdx >= 0 && currentIdx < sorted.length - 1) {
+            const nextVideo = sorted[currentIdx + 1];
+            const store = useUIStore.getState();
+            store.setStremioActiveMeta(meta);
+            store.setStremioSelectedSeason(nextVideo.season);
+            store.setStremioPreselectVideoId(nextVideo.id);
+            setActiveViewRef.current('stremio');
+            return;
+          }
+        }
+        // Fall through to channel nav if no next episode found
+      } else {
+        // VOD series: navigate via DB episodes
+        const nextEpisode = await getAdjacentEpisode(
           vodInfo.seriesId,
-          'series',
-          vodInfo.source_id || '',
-          vodInfo.title,
-          undefined,
-          nextEpisode.season_num,
-          nextEpisode.episode_num,
-          nextEpisode.title || `Episode ${nextEpisode.episode_num}`
+          vodInfo.seasonNum,
+          vodInfo.episodeNum,
+          'next'
         );
         
-        void recordEpisodeWatch(
-          nextEpisode.id,
-          vodInfo.seriesId,
-          vodInfo.source_id || '',
-          nextEpisode.season_num,
-          nextEpisode.episode_num,
-          nextEpisode.title || `Episode ${nextEpisode.episode_num}`,
-          resumePosition,
-          nextEpisode.duration ?? Number(nextEpisode.info?.duration) ?? 0
-        );
-        
-        // Play the next episode
-        await handlePlayVod({
-          url: nextEpisode.direct_url,
-          title: vodInfo.title,
-          year: vodInfo.year,
-          plot: vodInfo.plot,
-          type: 'series',
-          episodeInfo: `S${nextEpisode.season_num} E${nextEpisode.episode_num}${nextEpisode.title ? ` · ${nextEpisode.title}` : ''}`,
-          source_id: vodInfo.source_id,
-          mediaId: `${vodInfo.seriesId}_ep_${nextEpisode.id}`,
-          seriesId: vodInfo.seriesId,
-          seasonNum: nextEpisode.season_num,
-          episodeNum: nextEpisode.episode_num,
-          episodeId: nextEpisode.id,
-        });
-        return;
+        if (nextEpisode) {
+          // Get progress for resume
+          const progress = await getEpisodeProgress(nextEpisode.id);
+          const resumePosition = progress?.progress_seconds && progress.progress_seconds > 10 ? progress.progress_seconds : 0;
+          
+          // Record watch history
+          void recordVodWatch(
+            vodInfo.seriesId,
+            'series',
+            vodInfo.source_id || '',
+            vodInfo.title,
+            undefined,
+            nextEpisode.season_num,
+            nextEpisode.episode_num,
+            nextEpisode.title || `Episode ${nextEpisode.episode_num}`
+          );
+          
+          void recordEpisodeWatch(
+            nextEpisode.id,
+            vodInfo.seriesId,
+            vodInfo.source_id || '',
+            nextEpisode.season_num,
+            nextEpisode.episode_num,
+            nextEpisode.title || `Episode ${nextEpisode.episode_num}`,
+            resumePosition,
+            nextEpisode.duration ?? Number(nextEpisode.info?.duration) ?? 0
+          );
+          
+          // Play the next episode
+          await handlePlayVod({
+            url: nextEpisode.direct_url,
+            title: vodInfo.title,
+            year: vodInfo.year,
+            plot: nextEpisode.plot || vodInfo.plot,
+            type: 'series',
+            episodeInfo: `S${nextEpisode.season_num} E${nextEpisode.episode_num}${nextEpisode.title ? ` · ${nextEpisode.title}` : ''}`,
+            source_id: vodInfo.source_id,
+            mediaId: `${vodInfo.seriesId}_ep_${nextEpisode.id}`,
+            seriesId: vodInfo.seriesId,
+            seasonNum: nextEpisode.season_num,
+            episodeNum: nextEpisode.episode_num,
+            episodeId: nextEpisode.id,
+          });
+          return;
+        }
       }
     }
     

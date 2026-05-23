@@ -109,11 +109,15 @@ export function SeriesDetail({ series, onClose, onPlayEpisode, apiKey, initialSe
         episodeDuration
       );
 
+      // Use episode-specific synopsis if available from lazy-loaded extras
+      const extra = episodeExtras.get(`${episode.season_num}_${episode.episode_num}`);
+      const episodePlot = extra?.summary || episode.plot || lazyPlot || series.plot;
+
       onPlayEpisode?.({
         url: episode.direct_url,
         title: series.title || series.name,
         year: series.year || series.release_date?.slice(0, 4),
-        plot: lazyPlot || series.plot,
+        plot: episodePlot,
         type: 'series',
         episodeInfo: `S${episode.season_num} E${episode.episode_num}${episode.title ? ` · ${episode.title}` : ''}`,
         source_id: series.source_id,
@@ -125,7 +129,7 @@ export function SeriesDetail({ series, onClose, onPlayEpisode, apiKey, initialSe
         episodeId: episode.id,
       });
     },
-    [series, onPlayEpisode, lazyPlot, episodeProgress]
+    [series, onPlayEpisode, lazyPlot, episodeProgress, episodeExtras]
   );
 
   const [copiedId, setCopiedId] = useState<string | null>(null);
