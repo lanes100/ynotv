@@ -4,6 +4,7 @@ import { relaunch } from '@tauri-apps/plugin-process';
 import '../Modal.css';
 import './PlaybackTab.css';
 import type { StremioStreamPickerMode } from '../../types/stremio';
+import { PopoutTab } from './PopoutTab';
 
 interface PlaybackTabProps {
   mpvParams: string;
@@ -22,6 +23,15 @@ interface PlaybackTabProps {
   onUseEventBasedReconnectChange: (enabled: boolean) => Promise<void>;
   stallDetectionEnabled: boolean;
   onStallDetectionEnabledChange: (enabled: boolean) => Promise<void>;
+  // Popout Player props
+  popoutStopMain: boolean;
+  onPopoutStopMainChange: (stop: boolean) => void;
+  popoutAlwaysOnTop: boolean;
+  onPopoutAlwaysOnTopChange: (onTop: boolean) => void;
+  popoutMpvParamsEnabled: boolean;
+  onPopoutMpvParamsEnabledChange: (enabled: boolean) => void;
+  popoutMpvParams: string;
+  onPopoutMpvParamsChange: (params: string) => void;
 }
 
 const DEFAULT_MPV_PARAMS = `--hwdec=auto
@@ -52,8 +62,16 @@ export function PlaybackTab({
   onUseEventBasedReconnectChange,
   stallDetectionEnabled,
   onStallDetectionEnabledChange,
+  popoutStopMain,
+  onPopoutStopMainChange,
+  popoutAlwaysOnTop,
+  onPopoutAlwaysOnTopChange,
+  popoutMpvParamsEnabled,
+  onPopoutMpvParamsEnabledChange,
+  popoutMpvParams,
+  onPopoutMpvParamsChange,
 }: PlaybackTabProps) {
-  const [activeSubTab, setActiveSubTab] = useState<'mpv' | 'reconnect' | 'cast'>('mpv');
+  const [activeSubTab, setActiveSubTab] = useState<'mpv' | 'reconnect' | 'cast' | 'popout'>('mpv');
   const [localParams, setLocalParams] = useState(mpvParams);
   const [hasChanges, setHasChanges] = useState(false);
   const [debugInfo, setDebugInfo] = useState<string | null>(null);
@@ -147,10 +165,16 @@ export function PlaybackTab({
         >
           Google Cast
         </button>
+        <button
+          className={`settings-tab ${activeSubTab === 'popout' ? 'active' : ''}`}
+          onClick={() => setActiveSubTab('popout')}
+        >
+          Popout Player
+        </button>
       </div>
 
       <div className="settings-tab-content">
-        {activeSubTab === 'mpv' ? (
+        {activeSubTab === 'mpv' && (
           <div className="settings-section">
             <div className="section-header">
               <h3>Playback Settings</h3>
@@ -268,7 +292,9 @@ export function PlaybackTab({
               </div>
             </div>
           </div>
-        ) : activeSubTab === 'reconnect' ? (
+        )}
+
+        {activeSubTab === 'reconnect' && (
           <div className="settings-section">
             <div className="playback-section" style={{ marginTop: 0 }}>
 
@@ -428,7 +454,9 @@ export function PlaybackTab({
 
             </div>
           </div>
-        ) : (
+        )}
+
+        {activeSubTab === 'cast' && (
           <div className="settings-section">
             <div className="playback-section" style={{ marginTop: 0 }}>
               <div className="timeshift-toggle-row" style={{ borderBottom: 'none' }}>
@@ -462,6 +490,19 @@ export function PlaybackTab({
               )}
             </div>
           </div>
+        )}
+
+        {activeSubTab === 'popout' && (
+          <PopoutTab
+            popoutStopMain={popoutStopMain}
+            onPopoutStopMainChange={onPopoutStopMainChange}
+            popoutAlwaysOnTop={popoutAlwaysOnTop}
+            onPopoutAlwaysOnTopChange={onPopoutAlwaysOnTopChange}
+            popoutMpvParamsEnabled={popoutMpvParamsEnabled}
+            onPopoutMpvParamsEnabledChange={onPopoutMpvParamsEnabledChange}
+            popoutMpvParams={popoutMpvParams}
+            onPopoutMpvParamsChange={onPopoutMpvParamsChange}
+          />
         )}
       </div>
 

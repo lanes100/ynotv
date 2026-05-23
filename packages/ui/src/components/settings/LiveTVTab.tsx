@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { ChannelsTab } from './ChannelsTab';
+import { LiveViewTab } from './LiveViewTab';
+import { WidgetsTab } from './WidgetsTab';
 import './PlaybackTab.css'; // Reuse existing tab styles
 
 interface LiveTVTabProps {
@@ -28,6 +30,28 @@ interface LiveTVTabProps {
   onMaxSearchResultsChange: (limit: number) => void;
   searchResultsOrder: 'default' | 'alphabetical';
   onSearchResultsOrderChange: (order: 'default' | 'alphabetical') => void;
+  // Channel Overlay props
+  channelInfoOverlayEnabled: boolean;
+  onChannelInfoOverlayChange: (enabled: boolean) => void;
+  channelInfoOverlayFontSize: number;
+  onChannelInfoOverlayFontSizeChange: (size: number) => void;
+  channelInfoOverlayLogoSize: number;
+  onChannelInfoOverlayLogoSizeChange: (size: number) => void;
+  channelInfoOverlayBoxWidth: number;
+  onChannelInfoOverlayBoxWidthChange: (width: number) => void;
+  channelInfoOverlayOpacity: number;
+  onChannelInfoOverlayOpacityChange: (opacity: number) => void;
+  channelInfoOverlayHideDescription: boolean;
+  onChannelInfoOverlayHideDescriptionChange: (hide: boolean) => void;
+  // Widgets props
+  widgetScale: number;
+  onWidgetScaleChange: (scale: number) => void;
+  widgetBgOpacity: number;
+  onWidgetBgOpacityChange: (opacity: number) => void;
+  sportsScale: number;
+  onSportsScaleChange: (scale: number) => void;
+  sportsBgOpacity: number;
+  onSportsBgOpacityChange: (opacity: number) => void;
 }
 
 export function LiveTVTab({
@@ -53,8 +77,28 @@ export function LiveTVTab({
   onMaxSearchResultsChange,
   searchResultsOrder,
   onSearchResultsOrderChange,
+  channelInfoOverlayEnabled,
+  onChannelInfoOverlayChange,
+  channelInfoOverlayFontSize,
+  onChannelInfoOverlayFontSizeChange,
+  channelInfoOverlayLogoSize,
+  onChannelInfoOverlayLogoSizeChange,
+  channelInfoOverlayBoxWidth,
+  onChannelInfoOverlayBoxWidthChange,
+  channelInfoOverlayOpacity,
+  onChannelInfoOverlayOpacityChange,
+  channelInfoOverlayHideDescription,
+  onChannelInfoOverlayHideDescriptionChange,
+  widgetScale,
+  onWidgetScaleChange,
+  widgetBgOpacity,
+  onWidgetBgOpacityChange,
+  sportsScale,
+  onSportsScaleChange,
+  sportsBgOpacity,
+  onSportsBgOpacityChange,
 }: LiveTVTabProps) {
-  const [activeSubTab, setActiveSubTab] = useState<'epg' | 'font-size' | 'sort-order' | 'search'>('epg');
+  const [activeSubTab, setActiveSubTab] = useState<'epg' | 'font-size' | 'sort-order' | 'search' | 'live-view' | 'widgets'>('epg');
 
   return (
     <div className="playback-tab-content" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
@@ -82,6 +126,18 @@ export function LiveTVTab({
           onClick={() => setActiveSubTab('search')}
         >
           Search
+        </button>
+        <button
+          className={`settings-tab ${activeSubTab === 'live-view' ? 'active' : ''}`}
+          onClick={() => setActiveSubTab('live-view')}
+        >
+          Channel Overlay
+        </button>
+        <button
+          className={`settings-tab ${activeSubTab === 'widgets' ? 'active' : ''}`}
+          onClick={() => setActiveSubTab('widgets')}
+        >
+          Widgets
         </button>
       </div>
 
@@ -318,6 +374,36 @@ export function LiveTVTab({
             searchResultsOrder={searchResultsOrder}
             onSearchResultsOrderChange={onSearchResultsOrderChange}
             showMode={activeSubTab === 'sort-order' ? 'sort-order' : 'search'}
+          />
+        )}
+
+        {activeSubTab === 'live-view' && (
+          <LiveViewTab
+            channelInfoOverlayEnabled={channelInfoOverlayEnabled}
+            onChannelInfoOverlayChange={onChannelInfoOverlayChange}
+            channelInfoOverlayFontSize={channelInfoOverlayFontSize}
+            onChannelInfoOverlayFontSizeChange={onChannelInfoOverlayFontSizeChange}
+            channelInfoOverlayLogoSize={channelInfoOverlayLogoSize}
+            onChannelInfoOverlayLogoSizeChange={onChannelInfoOverlayLogoSizeChange}
+            channelInfoOverlayBoxWidth={channelInfoOverlayBoxWidth}
+            onChannelInfoOverlayBoxWidthChange={onChannelInfoOverlayBoxWidthChange}
+            channelInfoOverlayOpacity={channelInfoOverlayOpacity}
+            onChannelInfoOverlayOpacityChange={onChannelInfoOverlayOpacityChange}
+            channelInfoOverlayHideDescription={channelInfoOverlayHideDescription}
+            onChannelInfoOverlayHideDescriptionChange={onChannelInfoOverlayHideDescriptionChange}
+          />
+        )}
+
+        {activeSubTab === 'widgets' && (
+          <WidgetsTab
+            widgetScale={widgetScale}
+            onWidgetScaleChange={onWidgetScaleChange}
+            widgetBgOpacity={widgetBgOpacity}
+            onWidgetBgOpacityChange={onWidgetBgOpacityChange}
+            sportsScale={sportsScale}
+            onSportsScaleChange={onSportsScaleChange}
+            sportsBgOpacity={sportsBgOpacity}
+            onSportsBgOpacityChange={onSportsBgOpacityChange}
           />
         )}
       </div>

@@ -15,6 +15,8 @@ import {
 } from '../../stores/uiStore';
 import { parseM3U, XtreamClient, StalkerClient } from '@ynotv/local-adapter';
 import { CategoryManager } from './CategoryManager';
+import { DataRefreshTab } from './DataRefreshTab';
+import { TmdbTab } from './TmdbTab';
 import './SourcesTab.css';
 import { useSourceVersion } from '../../contexts/SourceVersionContext';
 import type { GlobalEpgLink } from '../../types/app';
@@ -25,6 +27,23 @@ interface SourcesTabProps {
   onSourcesChange: () => void;
   editSourceId?: string | null;
   epgSyncConcurrency?: number;
+  // Data Refresh sub-tab props
+  vodRefreshHours?: number;
+  epgRefreshHours?: number;
+  onVodRefreshChange?: (hours: number) => void;
+  onEpgRefreshChange?: (hours: number) => void;
+  onEpgSyncConcurrencyChange?: (value: number) => void;
+  // TMDB/RPDB sub-tab props
+  tmdbApiKey?: string;
+  tmdbKeyValid?: boolean | null;
+  onApiKeyChange?: (key: string) => void;
+  onApiKeyValidChange?: (valid: boolean | null) => void;
+  rpdbApiKey?: string;
+  rpdbKeyValid?: boolean | null;
+  onRpdbApiKeyChange?: (key: string) => void;
+  onRpdbKeyValidChange?: (valid: boolean | null) => void;
+  rpdbBackdropsEnabled?: boolean;
+  onRpdbBackdropsEnabledChange?: (enabled: boolean) => void;
 }
 
 type SourceType = 'm3u' | 'xtream' | 'stalker';
@@ -115,7 +134,28 @@ function formatTimeAgo(date: Date | null | undefined): string {
   return `${weeks} week${weeks !== 1 ? 's' : ''} ago`;
 }
 
-export function SourcesTab({ sources, isEncryptionAvailable, onSourcesChange, editSourceId, epgSyncConcurrency = 0 }: SourcesTabProps) {
+export function SourcesTab({
+  sources,
+  isEncryptionAvailable,
+  onSourcesChange,
+  editSourceId,
+  epgSyncConcurrency = 0,
+  vodRefreshHours = 24,
+  epgRefreshHours = 6,
+  onVodRefreshChange,
+  onEpgRefreshChange,
+  onEpgSyncConcurrencyChange,
+  tmdbApiKey = '',
+  tmdbKeyValid = null,
+  onApiKeyChange,
+  onApiKeyValidChange,
+  rpdbApiKey = '',
+  rpdbKeyValid = null,
+  onRpdbApiKeyChange,
+  onRpdbKeyValidChange,
+  rpdbBackdropsEnabled = false,
+  onRpdbBackdropsEnabledChange,
+}: SourcesTabProps) {
   const { incrementVersion } = useSourceVersion(); // Get version incrementer
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -168,8 +208,8 @@ export function SourcesTab({ sources, isEncryptionAvailable, onSourcesChange, ed
   // Backup delete confirmation modal state
   const [deleteBackupConfirm, setDeleteBackupConfirm] = useState<{ type: 'stalker' | 'xtream'; index: number } | null>(null);
 
-  // Sub-tab state: 'source' | 'epg'
-  const [activeSubTab, setActiveSubTab] = useState<'source' | 'epg'>('source');
+  // Sub-tab state: 'source' | 'epg' | 'refresh' | 'tmdb'
+  const [activeSubTab, setActiveSubTab] = useState<'source' | 'epg' | 'refresh' | 'tmdb'>('source');
 
   // Global EPG links state
   const [globalEpgLinks, setGlobalEpgLinks] = useState<GlobalEpgLink[]>([]);
@@ -1120,6 +1160,40 @@ export function SourcesTab({ sources, isEncryptionAvailable, onSourcesChange, ed
           }}
         >
           EPG
+        </button>
+        <button
+          className={`sub-tab-btn ${activeSubTab === 'refresh' ? 'active' : ''}`}
+          onClick={() => setActiveSubTab('refresh')}
+          style={{
+            padding: '10px 20px',
+            background: activeSubTab === 'refresh' ? 'rgba(255,255,255,0.08)' : 'transparent',
+            border: 'none',
+            borderBottom: activeSubTab === 'refresh' ? '2px solid var(--accent-primary, #00d4ff)' : '2px solid transparent',
+            color: activeSubTab === 'refresh' ? 'white' : 'rgba(255,255,255,0.6)',
+            cursor: 'pointer',
+            fontSize: '0.9rem',
+            fontWeight: 500,
+            transition: 'all 0.2s ease',
+          }}
+        >
+          Data Refresh
+        </button>
+        <button
+          className={`sub-tab-btn ${activeSubTab === 'tmdb' ? 'active' : ''}`}
+          onClick={() => setActiveSubTab('tmdb')}
+          style={{
+            padding: '10px 20px',
+            background: activeSubTab === 'tmdb' ? 'rgba(255,255,255,0.08)' : 'transparent',
+            border: 'none',
+            borderBottom: activeSubTab === 'tmdb' ? '2px solid var(--accent-primary, #00d4ff)' : '2px solid transparent',
+            color: activeSubTab === 'tmdb' ? 'white' : 'rgba(255,255,255,0.6)',
+            cursor: 'pointer',
+            fontSize: '0.9rem',
+            fontWeight: 500,
+            transition: 'all 0.2s ease',
+          }}
+        >
+          TMDB/RPDB
         </button>
       </div>
 
@@ -2103,6 +2177,32 @@ export function SourcesTab({ sources, isEncryptionAvailable, onSourcesChange, ed
             </ul>
           )}
         </div>
+      )}
+
+      {activeSubTab === 'refresh' && (
+        <DataRefreshTab
+          vodRefreshHours={vodRefreshHours}
+          epgRefreshHours={epgRefreshHours}
+          epgSyncConcurrency={epgSyncConcurrency}
+          onVodRefreshChange={onVodRefreshChange || (() => {})}
+          onEpgRefreshChange={onEpgRefreshChange || (() => {})}
+          onEpgSyncConcurrencyChange={onEpgSyncConcurrencyChange || (() => {})}
+        />
+      )}
+
+      {activeSubTab === 'tmdb' && (
+        <TmdbTab
+          tmdbApiKey={tmdbApiKey}
+          tmdbKeyValid={tmdbKeyValid}
+          onApiKeyChange={onApiKeyChange || (() => {})}
+          onApiKeyValidChange={onApiKeyValidChange || (() => {})}
+          rpdbApiKey={rpdbApiKey}
+          rpdbKeyValid={rpdbKeyValid}
+          onRpdbApiKeyChange={onRpdbApiKeyChange || (() => {})}
+          onRpdbKeyValidChange={onRpdbKeyValidChange || (() => {})}
+          rpdbBackdropsEnabled={rpdbBackdropsEnabled}
+          onRpdbBackdropsEnabledChange={onRpdbBackdropsEnabledChange || (() => {})}
+        />
       )}
 
       {/* Add/Edit Global EPG Form */}

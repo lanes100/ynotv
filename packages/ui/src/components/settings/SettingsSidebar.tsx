@@ -2,8 +2,6 @@ import './SettingsSidebar.css';
 
 export type SettingsTabId =
   | 'sources'
-  | 'tmdb'
-  | 'refresh'
   | 'subtitles'
   | 'security'
   | 'debug'
@@ -17,9 +15,6 @@ export type SettingsTabId =
   | 'scrobbling'
   | 'cache'
   | 'livetv'
-  | 'live-view'
-  | 'widgets'
-  | 'popout'
   | 'about';
 
 interface SettingsTab {
@@ -31,18 +26,13 @@ interface SettingsTab {
 
 const SETTINGS_TABS: SettingsTab[] = [
   { id: 'sources', label: 'Sources' },
-  { id: 'refresh', label: 'Data Refresh' },
-  { id: 'tmdb', label: 'TMDB/RPDB' },
-  { id: 'subtitles', label: 'Subtitles' },
   { id: 'livetv', label: 'LiveTV' },
-  { id: 'live-view', label: 'Channel Overlay' },
-  { id: 'widgets', label: 'Widgets' },
-  { id: 'popout', label: 'Popout Player' },
+  { id: 'playback', label: 'Playback' },
+  { id: 'subtitles', label: 'Subtitles & Audio' },
   { id: 'theme', label: 'Theme' },
   { id: 'ui', label: 'UI' },
   { id: 'navigation', label: 'Navigation' },
   { id: 'startup', label: 'Startup' },
-  { id: 'playback', label: 'Playback' },
   { id: 'scrobbling', label: 'Trakt' },
   { id: 'cache', label: 'Cache' },
   { id: 'security', label: 'Security' },

@@ -3,8 +3,6 @@ import type { Source } from '@ynotv/core';
 import { useEpgView, useSetEpgView, useUIStore } from '../stores/uiStore';
 import { SettingsSidebar, type SettingsTabId } from './settings/SettingsSidebar';
 import { SourcesTab } from './settings/SourcesTab';
-import { TmdbTab } from './settings/TmdbTab';
-import { DataRefreshTab } from './settings/DataRefreshTab';
 import { SecurityTab } from './settings/SecurityTab';
 import { DebugTab } from './settings/DebugTab';
 import { ShortcutsTab } from './settings/ShortcutsTab';
@@ -17,10 +15,7 @@ import { PlaybackTab } from './settings/PlaybackTab';
 import { CacheTab } from './settings/CacheTab';
 import { AboutTab } from './settings/AboutTab';
 import { LiveTVTab } from './settings/LiveTVTab';
-import { LiveViewTab } from './settings/LiveViewTab';
-import { PopoutTab } from './settings/PopoutTab';
 import { SubtitlesTab, type SubtitleSettings } from './settings/SubtitlesTab';
-import { WidgetsTab } from './settings/WidgetsTab';
 import { ScrobblingTab } from './settings/ScrobblingTab';
 import type { ShortcutsMap, ThemeId } from '../types/app';
 import type { StremioStreamPickerMode } from '../types/stremio';
@@ -882,11 +877,11 @@ export function Settings({
             onSourcesChange={loadSources}
             editSourceId={editSourceId}
             epgSyncConcurrency={epgSyncConcurrency}
-          />
-        );
-      case 'tmdb':
-        return (
-          <TmdbTab
+            vodRefreshHours={vodRefreshHours}
+            epgRefreshHours={epgRefreshHours}
+            onVodRefreshChange={setVodRefreshHours}
+            onEpgRefreshChange={setEpgRefreshHours}
+            onEpgSyncConcurrencyChange={setEpgSyncConcurrency}
             tmdbApiKey={tmdbApiKey}
             tmdbKeyValid={tmdbKeyValid}
             onApiKeyChange={setTmdbApiKey}
@@ -897,17 +892,6 @@ export function Settings({
             onRpdbKeyValidChange={setPosterDbKeyValid}
             rpdbBackdropsEnabled={rpdbBackdropsEnabled}
             onRpdbBackdropsEnabledChange={setRpdbBackdropsEnabled}
-          />
-        );
-      case 'refresh':
-        return (
-          <DataRefreshTab
-            vodRefreshHours={vodRefreshHours}
-            epgRefreshHours={epgRefreshHours}
-            epgSyncConcurrency={epgSyncConcurrency}
-            onVodRefreshChange={setVodRefreshHours}
-            onEpgRefreshChange={setEpgRefreshHours}
-            onEpgSyncConcurrencyChange={setEpgSyncConcurrency}
           />
         );
       case 'subtitles':
@@ -997,6 +981,14 @@ export function Settings({
             onUseEventBasedReconnectChange={handleUseEventBasedReconnectChange}
             stallDetectionEnabled={stallDetectionEnabled}
             onStallDetectionEnabledChange={handleStallDetectionEnabledChange}
+            popoutStopMain={popoutStopMain}
+            onPopoutStopMainChange={handlePopoutStopMainChange}
+            popoutAlwaysOnTop={popoutAlwaysOnTop}
+            onPopoutAlwaysOnTopChange={handlePopoutAlwaysOnTopChange}
+            popoutMpvParamsEnabled={popoutMpvParamsEnabled}
+            onPopoutMpvParamsEnabledChange={handlePopoutMpvParamsEnabledChange}
+            popoutMpvParams={popoutMpvParams}
+            onPopoutMpvParamsChange={handlePopoutMpvParamsChange}
           />
         );
       case 'cache':
@@ -1033,11 +1025,6 @@ export function Settings({
             onMaxSearchResultsChange={handleMaxSearchResultsChange}
             searchResultsOrder={searchResultsOrder}
             onSearchResultsOrderChange={handleSearchResultsOrderChange}
-          />
-        );
-      case 'live-view':
-        return (
-          <LiveViewTab
             channelInfoOverlayEnabled={channelInfoOverlayEnabled}
             onChannelInfoOverlayChange={handleChannelInfoOverlayChange}
             channelInfoOverlayFontSize={channelInfoOverlayFontSize}
@@ -1050,26 +1037,6 @@ export function Settings({
             onChannelInfoOverlayOpacityChange={handleChannelInfoOverlayOpacityChange}
             channelInfoOverlayHideDescription={channelInfoOverlayHideDescription}
             onChannelInfoOverlayHideDescriptionChange={handleChannelInfoOverlayHideDescriptionChange}
-          />
-        );
-      case 'popout':
-        return (
-          <PopoutTab
-            popoutStopMain={popoutStopMain}
-            onPopoutStopMainChange={handlePopoutStopMainChange}
-            popoutAlwaysOnTop={popoutAlwaysOnTop}
-            onPopoutAlwaysOnTopChange={handlePopoutAlwaysOnTopChange}
-            popoutMpvParamsEnabled={popoutMpvParamsEnabled}
-            onPopoutMpvParamsEnabledChange={handlePopoutMpvParamsEnabledChange}
-            popoutMpvParams={popoutMpvParams}
-            onPopoutMpvParamsChange={handlePopoutMpvParamsChange}
-          />
-        );
-      case 'about':
-        return <AboutTab />;
-      case 'widgets':
-        return (
-          <WidgetsTab
             widgetScale={widgetScale}
             onWidgetScaleChange={handleWidgetScaleChange}
             widgetBgOpacity={widgetBgOpacity}
@@ -1080,6 +1047,8 @@ export function Settings({
             onSportsBgOpacityChange={handleSportsBgOpacityChange}
           />
         );
+      case 'about':
+        return <AboutTab />;
       case 'scrobbling':
         return <ScrobblingTab />;
       default:
