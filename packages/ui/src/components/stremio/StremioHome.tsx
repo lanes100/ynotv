@@ -51,6 +51,7 @@ export function StremioHome({ addons, onItemClick }: StremioHomeProps) {
   const [searchRows, setSearchRows] = useState<StremioSearchRow[]>([]);
   const [expandedSearchRowId, setExpandedSearchRowId] = useState<string | null>(null);
   const [searching, setSearching] = useState(false);
+  const [catalogFilter, setCatalogFilter] = useState('');
 
   // Trakt and Simkl Catalog States
   const [traktWatchlist, setTraktWatchlist] = useState<StremioMetaPreview[]>([]);
@@ -108,6 +109,15 @@ export function StremioHome({ addons, onItemClick }: StremioHomeProps) {
       }))
     );
   }, [addons]);
+
+  const filteredRows = useMemo(() => {
+    if (!catalogFilter.trim()) return renderedRows;
+    const lower = catalogFilter.toLowerCase().trim();
+    return renderedRows.filter(({ addon, catalog }) => {
+      const name = catalog.name || addon.manifest.name || '';
+      return name.toLowerCase().includes(lower);
+    });
+  }, [renderedRows, catalogFilter]);
 
   const doSearch = useCallback(async (query: string) => {
     if (!query || query.length < 2) {
@@ -265,6 +275,27 @@ export function StremioHome({ addons, onItemClick }: StremioHomeProps) {
 
   return (
     <div className="stremio-home">
+      <div className="stremio-catalog-filter">
+        <svg className="stremio-catalog-filter-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <circle cx="11" cy="11" r="8" />
+          <path d="m21 21-4.3-4.3" />
+        </svg>
+        <input
+          className="stremio-catalog-filter-input"
+          type="text"
+          placeholder="Filter catalogs..."
+          value={catalogFilter}
+          onChange={(e) => setCatalogFilter(e.target.value)}
+        />
+        {catalogFilter && (
+          <button className="stremio-catalog-filter-clear" onClick={() => setCatalogFilter('')}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M18 6L6 18M6 6l12 12" />
+            </svg>
+          </button>
+        )}
+      </div>
+
       <StremioHeroBanner
         addons={addons}
         onItemClick={handleItemClickWrapper}
@@ -293,10 +324,12 @@ export function StremioHome({ addons, onItemClick }: StremioHomeProps) {
           />
         )}
 
-        {renderedRows.length === 0 ? (
-          <div className="stremio-loading-text">No catalogs available. Install an addon to get started.</div>
+        {filteredRows.length === 0 ? (
+          <div className="stremio-loading-text">
+            {catalogFilter.trim() ? 'No catalogs match your filter.' : 'No catalogs available. Install an addon to get started.'}
+          </div>
         ) : (
-          renderedRows.map(({ addon, catalog }) => (
+          filteredRows.map(({ addon, catalog }) => (
             <StremioCatalogRow
               key={`${addon.id}:${catalog.type}:${catalog.id}`}
               title={`${catalog.name || addon.manifest.name} \u2014 ${catalog.type.charAt(0).toUpperCase() + catalog.type.slice(1)}`}
