@@ -605,9 +605,6 @@ export function CategoryStrip({ selectedCategoryId, onSelectCategory, visible, o
 
       <div className="category-strip-scrollable">
         {/* Grouped Category list */}
-        {filteredGroupedCategories.length > 0 && (
-          <div className="sidebar-section-header">Sources</div>
-        )}
         {filteredGroupedCategories.map((group) => {
           const isExpanded = expandedSources[group.sourceId] || searchQuery.trim().length > 0;
           return (
@@ -619,16 +616,6 @@ export function CategoryStrip({ selectedCategoryId, onSelectCategory, visible, o
             >
               <div className="source-header-left">
                 <ChevronIcon expanded={isExpanded} />
-                <span className="source-icon-badge">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <line x1="8" y1="6" x2="21" y2="6"></line>
-                    <line x1="8" y1="12" x2="21" y2="12"></line>
-                    <line x1="8" y1="18" x2="21" y2="18"></line>
-                    <line x1="3" y1="6" x2="3.01" y2="6"></line>
-                    <line x1="3" y1="12" x2="3.01" y2="12"></line>
-                    <line x1="3" y1="18" x2="3.01" y2="18"></line>
-                  </svg>
-                </span>
                 <div className="source-name-container">
                   <ScrollingText className="source-name">{sources[group.sourceId] || 'Loading...'}</ScrollingText>
                 </div>
@@ -647,17 +634,7 @@ export function CategoryStrip({ selectedCategoryId, onSelectCategory, visible, o
                     onClick={() => onSelectCategory(category.category_id)}
                     onContextMenu={(e) => handleCategoryContextMenu(e, category.category_id, category.alias || category.category_name, group.sourceId, sources[group.sourceId] || 'Source')}
                   >
-                    <div className="category-item-left">
-                      <span className="category-hash-icon">
-                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                          <line x1="4" y1="9" x2="20" y2="9"></line>
-                          <line x1="4" y1="15" x2="20" y2="15"></line>
-                          <line x1="10" y1="3" x2="8" y2="21"></line>
-                          <line x1="16" y1="3" x2="14" y2="21"></line>
-                        </svg>
-                      </span>
-                      <ScrollingText className="category-name">{category.alias || category.category_name}</ScrollingText>
-                    </div>
+                    <ScrollingText className="category-name">{category.alias || category.category_name}</ScrollingText>
                     <span className="category-count">{category.channelCount}</span>
                   </button>
                 ))}
