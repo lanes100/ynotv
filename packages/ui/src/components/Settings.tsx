@@ -164,6 +164,9 @@ export function Settings({
   const [popoutAlwaysOnTop, setPopoutAlwaysOnTop] = useState(false);
   const [popoutMpvParamsEnabled, setPopoutMpvParamsEnabled] = useState(false);
   const [popoutMpvParams, setPopoutMpvParams] = useState('');
+  // Skip Intro settings state
+  const [skipIntroTimerSeconds, setSkipIntroTimerSeconds] = useState(10);
+  const [skipIntroAutoSkip, setSkipIntroAutoSkip] = useState(false);
   const [castEnabled, setCastEnabled] = useState(false);
 
   // Widget scale state
@@ -302,6 +305,8 @@ export function Settings({
         popoutAlwaysOnTop?: boolean;
         popoutMpvParamsEnabled?: boolean;
         popoutMpvParams?: string;
+        skipIntroTimerSeconds?: number;
+        skipIntroAutoSkip?: boolean;
         subtitleSettings?: SubtitleSettings;
         widgetScale?: number;
         widgetBgOpacity?: number;
@@ -443,6 +448,10 @@ export function Settings({
       setPopoutAlwaysOnTop(settings.popoutAlwaysOnTop ?? false);
       setPopoutMpvParamsEnabled(settings.popoutMpvParamsEnabled ?? false);
       setPopoutMpvParams(settings.popoutMpvParams ?? '');
+
+      // Load Skip Intro settings
+      setSkipIntroTimerSeconds(settings.skipIntroTimerSeconds ?? 10);
+      setSkipIntroAutoSkip(settings.skipIntroAutoSkip ?? false);
 
       // Load subtitle settings
       if (settings.subtitleSettings) {
@@ -696,6 +705,26 @@ export function Settings({
     if (window.storage) {
       await window.storage.updateSettings({ popoutMpvParams: params });
     }
+  };
+
+  const handleSkipIntroTimerSecondsChange = async (seconds: number) => {
+    setSkipIntroTimerSeconds(seconds);
+    if (window.storage) {
+      await window.storage.updateSettings({ skipIntroTimerSeconds: seconds });
+    }
+    window.dispatchEvent(new CustomEvent('ynotv:skip-intro-settings-changed', {
+      detail: { skipIntroTimerSeconds: seconds }
+    }));
+  };
+
+  const handleSkipIntroAutoSkipChange = async (auto: boolean) => {
+    setSkipIntroAutoSkip(auto);
+    if (window.storage) {
+      await window.storage.updateSettings({ skipIntroAutoSkip: auto });
+    }
+    window.dispatchEvent(new CustomEvent('ynotv:skip-intro-settings-changed', {
+      detail: { skipIntroAutoSkip: auto }
+    }));
   };
 
   const handleSubtitleSettingsChange = async (partial: Partial<SubtitleSettings>) => {
@@ -989,6 +1018,10 @@ export function Settings({
             onPopoutMpvParamsEnabledChange={handlePopoutMpvParamsEnabledChange}
             popoutMpvParams={popoutMpvParams}
             onPopoutMpvParamsChange={handlePopoutMpvParamsChange}
+            skipIntroTimerSeconds={skipIntroTimerSeconds}
+            onSkipIntroTimerSecondsChange={handleSkipIntroTimerSecondsChange}
+            skipIntroAutoSkip={skipIntroAutoSkip}
+            onSkipIntroAutoSkipChange={handleSkipIntroAutoSkipChange}
           />
         );
       case 'cache':

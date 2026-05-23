@@ -85,6 +85,8 @@ import { useStremioWatchStore } from './stores/stremioWatchStore';
 import { useUIStore } from './stores/uiStore';
 import { fetchSubtitles } from './services/stremio-addon';
 import { scrobbler } from './services/scrobbler';
+import { SkipIntroButton } from './components/SkipIntroButton';
+import { useSkipIntro } from './hooks/useSkipIntro';
 
 // NEW: Extracted hooks
 import { useAppSettings } from './hooks/useAppSettings';
@@ -1331,6 +1333,17 @@ function App() {
   }, [vodInfo, playing, duration]);
 
   // ==========================================================================
+  // Skip Intro (IntroDB integration)
+  // ==========================================================================
+  const skipIntro = useSkipIntro({
+    vodInfo,
+    playing,
+    position,
+    duration,
+    stremioEpisodeRef,
+  });
+
+  // ==========================================================================
   // Handle Channel Navigation (Up/Down) - with Series Episode Support
   // ==========================================================================
   const handleChannelUp = useCallback(async () => {
@@ -2202,6 +2215,13 @@ function App() {
           onClose={() => setGroupPickerOpen(false)}
         />
       )}
+
+      {/* Skip Intro Button */}
+      <SkipIntroButton
+        visible={skipIntro.showButton}
+        countdown={skipIntro.countdown}
+        onSkip={skipIntro.handleSkip}
+      />
 
       {/* Now Playing Bar */}
       <NowPlayingBar

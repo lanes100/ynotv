@@ -5,6 +5,7 @@ import '../Modal.css';
 import './PlaybackTab.css';
 import type { StremioStreamPickerMode } from '../../types/stremio';
 import { PopoutTab } from './PopoutTab';
+import { SkipIntroTab } from './SkipIntroTab';
 
 interface PlaybackTabProps {
   mpvParams: string;
@@ -32,6 +33,11 @@ interface PlaybackTabProps {
   onPopoutMpvParamsEnabledChange: (enabled: boolean) => void;
   popoutMpvParams: string;
   onPopoutMpvParamsChange: (params: string) => void;
+  // Skip Intro props
+  skipIntroTimerSeconds: number;
+  onSkipIntroTimerSecondsChange: (seconds: number) => void;
+  skipIntroAutoSkip: boolean;
+  onSkipIntroAutoSkipChange: (auto: boolean) => void;
 }
 
 const DEFAULT_MPV_PARAMS = `--hwdec=auto
@@ -70,8 +76,12 @@ export function PlaybackTab({
   onPopoutMpvParamsEnabledChange,
   popoutMpvParams,
   onPopoutMpvParamsChange,
+  skipIntroTimerSeconds,
+  onSkipIntroTimerSecondsChange,
+  skipIntroAutoSkip,
+  onSkipIntroAutoSkipChange,
 }: PlaybackTabProps) {
-  const [activeSubTab, setActiveSubTab] = useState<'mpv' | 'reconnect' | 'cast' | 'popout'>('mpv');
+  const [activeSubTab, setActiveSubTab] = useState<'mpv' | 'reconnect' | 'cast' | 'popout' | 'skipintro'>('mpv');
   const [localParams, setLocalParams] = useState(mpvParams);
   const [hasChanges, setHasChanges] = useState(false);
   const [debugInfo, setDebugInfo] = useState<string | null>(null);
@@ -170,6 +180,12 @@ export function PlaybackTab({
           onClick={() => setActiveSubTab('popout')}
         >
           Popout Player
+        </button>
+        <button
+          className={`settings-tab ${activeSubTab === 'skipintro' ? 'active' : ''}`}
+          onClick={() => setActiveSubTab('skipintro')}
+        >
+          Skip Intro
         </button>
       </div>
 
@@ -502,6 +518,15 @@ export function PlaybackTab({
             onPopoutMpvParamsEnabledChange={onPopoutMpvParamsEnabledChange}
             popoutMpvParams={popoutMpvParams}
             onPopoutMpvParamsChange={onPopoutMpvParamsChange}
+          />
+        )}
+
+        {activeSubTab === 'skipintro' && (
+          <SkipIntroTab
+            skipIntroTimerSeconds={skipIntroTimerSeconds}
+            onSkipIntroTimerSecondsChange={onSkipIntroTimerSecondsChange}
+            skipIntroAutoSkip={skipIntroAutoSkip}
+            onSkipIntroAutoSkipChange={onSkipIntroAutoSkipChange}
           />
         )}
       </div>
