@@ -2377,6 +2377,8 @@ function App() {
         }}
         vodTitle={vodInfo?.title}
         vodYear={vodInfo?.year}
+        seasonNum={vodInfo?.seasonNum}
+        episodeNum={vodInfo?.episodeNum}
       />
       <TrackSelectionModal
         isOpen={showAudioModal}
