@@ -323,10 +323,95 @@
   color: white;
 }
 
+.category-item-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+
+.category-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.5);
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+/* Base styles for list bars */
+.category-list-bar {
+  margin: 3px 12px;
+  width: calc(100% - 24px);
+  box-sizing: border-box;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 6px;
+  padding: 6px 10px;
+}
+
+.category-list-bar:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.category-list-bar.selected {
+  background: rgba(0, 212, 255, 0.1);
+  border-color: rgba(0, 212, 255, 0.2);
+}
+
+.sidebar-section-header {
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: rgba(255, 255, 255, 0.3);
+  padding: 12px 12px 6px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  user-select: none;
+}
+
+.sidebar-section-header::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
 .category-item.nested {
-  padding-left: 28px;
-  /* Indent nested categories */
-  font-size: 0.8rem;
+  padding-left: 8px;
+  padding-right: 10px;
+  padding-top: 6px;
+  padding-bottom: 6px;
+  font-size: 0.78rem;
+  border-radius: 6px;
+  width: calc(100% - 12px);
+  margin: 1px 6px;
+}
+
+.source-icon-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 8px;
+  color: rgba(255, 255, 255, 0.45);
+  flex-shrink: 0;
+}
+
+.category-hash-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.35);
+  margin-right: 6px;
+  flex-shrink: 0;
 }
 
 .category-item.selected {
@@ -436,7 +521,14 @@
 }
 
 .category-source-content {
-  background: rgba(0, 0, 0, 0.1);
+  background: rgba(0, 0, 0, 0.12);
+  position: relative;
+  padding-left: 12px;
+  margin-left: 16px;
+  border-left: 1.5px solid rgba(255, 255, 255, 0.08);
+  margin-bottom: 4px;
+  padding-top: 2px;
+  padding-bottom: 2px;
 }
 
 .category-name {

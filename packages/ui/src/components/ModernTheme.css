@@ -223,26 +223,236 @@
   transition: all 0.25s ease;
 }
 
+/* Modern Category List Bar Overrides */
+.modern-ui .category-list-bar {
+  margin: 3px 12px;
+  width: calc(100% - 24px);
+  padding: 6px 10px;
+  background: 
+    linear-gradient(135deg, 
+      rgba(255, 255, 255, 0.03) 0%,
+      rgba(255, 255, 255, 0.01) 100%
+    );
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.modern-ui .category-list-bar::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 0;
+  background: var(--accent-primary, #00d4ff);
+  border-radius: 0 2px 2px 0;
+  transition: height 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 0 6px var(--accent-primary, #00d4ff);
+}
+
+.modern-ui .category-list-bar:hover {
+  background: 
+    linear-gradient(135deg, 
+      rgba(255, 255, 255, 0.06) 0%,
+      rgba(255, 255, 255, 0.02) 100%
+    ) !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  transform: translateX(3px) !important;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2) !important;
+}
+
+.modern-ui .category-list-bar:hover::before {
+  height: 14px;
+}
+
+.modern-ui .category-list-bar.selected {
+  background: 
+    linear-gradient(135deg,
+      color-mix(in srgb, var(--accent-primary, #00d4ff) 12%, transparent) 0%,
+      color-mix(in srgb, var(--accent-primary, #00d4ff) 5%, transparent) 100%
+    ) !important;
+  border-color: color-mix(in srgb, var(--accent-primary, #00d4ff) 20%, transparent) !important;
+  box-shadow: 
+    0 3px 10px rgba(0, 0, 0, 0.2),
+    0 0 0 1px color-mix(in srgb, var(--accent-primary, #00d4ff) 15%, transparent) inset !important;
+}
+
+.modern-ui .category-list-bar.selected::before {
+  height: 50%;
+}
+
+.modern-ui .category-list-bar .category-name {
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.modern-ui .category-list-bar .category-count {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  min-width: 20px;
+  border-radius: 12px;
+}
+
+/* Modern Category Icons */
+.modern-ui .category-icon {
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.modern-ui .category-icon svg {
+  width: 11px;
+  height: 11px;
+}
+
+/* All Channels Icon Accent */
+.modern-ui .all-channels-icon {
+  background: rgba(0, 212, 255, 0.06);
+  color: #00d4ff;
+  border-color: rgba(0, 212, 255, 0.12);
+}
+.modern-ui .category-list-bar:hover .all-channels-icon,
+.modern-ui .category-list-bar.selected .all-channels-icon {
+  background: rgba(0, 212, 255, 0.14);
+  box-shadow: 0 0 8px rgba(0, 212, 255, 0.35);
+  color: #33e0ff;
+  border-color: rgba(0, 212, 255, 0.25);
+}
+
+/* Favorites Icon Accent */
+.modern-ui .favorites-icon {
+  background: rgba(255, 196, 0, 0.06);
+  color: #ffc400;
+  border-color: rgba(255, 196, 0, 0.12);
+}
+.modern-ui .category-list-bar:hover .favorites-icon,
+.modern-ui .category-list-bar.selected .favorites-icon {
+  background: rgba(255, 196, 0, 0.14);
+  box-shadow: 0 0 8px rgba(255, 196, 0, 0.35);
+  color: #ffd033;
+  border-color: rgba(255, 196, 0, 0.25);
+}
+
+/* Watchlist Icon Accent */
+.modern-ui .watchlist-icon {
+  background: rgba(99, 102, 241, 0.06);
+  color: #6366f1;
+  border-color: rgba(99, 102, 241, 0.12);
+}
+.modern-ui .category-list-bar:hover .watchlist-icon,
+.modern-ui .category-list-bar.selected .watchlist-icon {
+  background: rgba(99, 102, 241, 0.14);
+  box-shadow: 0 0 8px rgba(99, 102, 241, 0.35);
+  color: #818cf8;
+  border-color: rgba(99, 102, 241, 0.25);
+}
+
+/* Recently Viewed Icon Accent */
+.modern-ui .recent-icon {
+  background: rgba(244, 63, 94, 0.06);
+  color: #f43f5e;
+  border-color: rgba(244, 63, 94, 0.12);
+}
+.modern-ui .category-list-bar:hover .recent-icon,
+.modern-ui .category-list-bar.selected .recent-icon {
+  background: rgba(244, 63, 94, 0.14);
+  box-shadow: 0 0 8px rgba(244, 63, 94, 0.35);
+  color: #fb7185;
+  border-color: rgba(244, 63, 94, 0.25);
+}
+
+/* Custom Groups Folder Icon Accent */
+.modern-ui .custom-group-icon {
+  background: rgba(16, 185, 129, 0.06);
+  color: #10b981;
+  border-color: rgba(16, 185, 129, 0.12);
+}
+.modern-ui .category-list-bar:hover .custom-group-icon,
+.modern-ui .category-list-bar.selected .custom-group-icon {
+  background: rgba(16, 185, 129, 0.14);
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.35);
+  color: #34d399;
+  border-color: rgba(16, 185, 129, 0.25);
+}
+
+/* Modern Section Headers */
+.modern-ui .sidebar-section-header {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.3);
+  padding: 12px 16px 6px;
+  letter-spacing: 0.1em;
+}
+
+.modern-ui .sidebar-section-header::after {
+  background: linear-gradient(90deg, 
+    rgba(255, 255, 255, 0.08) 0%,
+    rgba(255, 255, 255, 0.01) 100%
+  );
+}
+
 /* Modern Source Groups - Clean styling */
 .modern-ui .category-strip .category-source-group {
-  margin: 4px 0;
+  margin: 6px 12px;
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  /* Note: removed overflow: hidden as it breaks sticky positioning */
+  border: 1px solid rgba(255, 255, 255, 0.04);
 }
 
 /* Let base CSS handle sticky, only add visual enhancements */
 .modern-ui .category-strip button.category-source-header {
-  padding: 10px 12px !important;
-  background: rgba(255, 255, 255, 0.03) !important;
-  border-top: 1px solid rgba(255, 255, 255, 0.05) !important;
-  color: rgba(255, 255, 255, 0.8) !important;
+  padding: 8px 12px !important;
+  background: rgba(255, 255, 255, 0.02) !important;
+  border-top: none !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.02) !important;
+  color: rgba(255, 255, 255, 0.7) !important;
+  border-radius: 8px;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
 }
 
 .modern-ui .category-strip button.category-source-header:hover {
-  background: rgba(255, 255, 255, 0.08) !important;
+  background: rgba(255, 255, 255, 0.06) !important;
   color: white !important;
+}
+
+.modern-ui .category-strip button.category-source-header .source-count {
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  padding: 2px 6px !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: rgba(255, 255, 255, 0.5) !important;
+  border-radius: 12px !important;
+}
+
+.modern-ui .category-strip button.category-source-header:hover .source-count {
+  background: rgba(255, 255, 255, 0.12) !important;
+  color: rgba(255, 255, 255, 0.8) !important;
+}
+
+.modern-ui .source-icon-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 6px;
+  color: rgba(255, 255, 255, 0.4);
+  transition: all 0.25s ease;
+}
+
+.modern-ui .category-source-header:hover .source-icon-badge {
+  color: var(--accent-primary, #00d4ff);
 }
 
 /* Explicit sticky positioning for expanded headers in modern theme */
@@ -250,14 +460,84 @@
   position: sticky !important;
   top: 0 !important;
   z-index: 100 !important;
-  background: rgba(20, 20, 25, 0.98) !important;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+  background: rgba(25, 25, 30, 0.96) !important;
+  border-bottom: 1.5px solid color-mix(in srgb, var(--accent-primary, #00d4ff) 25%, rgba(255, 255, 255, 0.08)) !important;
+  border-radius: 8px 8px 0 0 !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2) !important;
 }
 
 .modern-ui .category-strip .category-source-group.is-expanded button.category-source-header:hover {
   background: rgba(35, 35, 45, 0.98) !important;
 }
+
+.modern-ui .category-strip .category-source-group.is-expanded .source-icon-badge {
+  color: var(--accent-primary, #00d4ff);
+  filter: drop-shadow(0 0 3px var(--accent-primary, rgba(0, 212, 255, 0.4)));
+}
+
+/* Nested Tree-Line Guide */
+.modern-ui .category-source-content {
+  background: rgba(0, 0, 0, 0.15) !important;
+  border-left: 1.5px solid rgba(255, 255, 255, 0.08) !important;
+  margin-left: 20px !important;
+  padding-left: 6px !important;
+  transition: border-color 0.3s ease !important;
+  padding-top: 2px !important;
+  padding-bottom: 2px !important;
+}
+
+.modern-ui .category-source-group:hover .category-source-content {
+  border-left-color: color-mix(in srgb, var(--accent-primary, #00d4ff) 30%, transparent) !important;
+}
+
+/* Nested categories styled like modern Slack/Discord channels list */
+.modern-ui .category-item.nested {
+  background: transparent !important;
+  border: none !important;
+  padding: 6px 8px 6px 6px !important;
+  margin: 1px 0 !important;
+  width: calc(100% - 4px) !important;
+  font-size: 11.5px !important;
+  border-radius: 6px !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+.modern-ui .category-item.nested::before {
+  display: none !important; /* Hide left line for nested items */
+}
+
+.modern-ui .category-item.nested:hover {
+  background: rgba(255, 255, 255, 0.04) !important;
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+
+.modern-ui .category-item.nested.selected {
+  background: color-mix(in srgb, var(--accent-primary, #00d4ff) 10%, transparent) !important;
+  color: var(--accent-primary, #00d4ff) !important;
+  font-weight: 600 !important;
+}
+
+/* Hashtag Icon Styles */
+.modern-ui .category-hash-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.25);
+  margin-right: 6px;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+
+.modern-ui .category-item.nested:hover .category-hash-icon {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.modern-ui .category-item.nested.selected .category-hash-icon {
+  color: var(--accent-primary, #00d4ff);
+  filter: drop-shadow(0 0 3px var(--accent-primary, rgba(0, 212, 255, 0.4)));
+}
+
 
 .modern-ui .category-strip .source-header-left {
   gap: 8px;
