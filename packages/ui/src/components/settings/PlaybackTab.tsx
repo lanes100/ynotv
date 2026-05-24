@@ -36,6 +36,8 @@ interface PlaybackTabProps {
   // External Player props
   externalPlayerPath: string;
   onExternalPlayerPathChange: (path: string) => void;
+  externalPlayerReuse: boolean;
+  onExternalPlayerReuseChange: (reuse: boolean) => void;
   // Skip Intro props
   skipIntroTimerSeconds: number;
   onSkipIntroTimerSecondsChange: (seconds: number) => void;
@@ -81,6 +83,8 @@ export function PlaybackTab({
   onPopoutMpvParamsChange,
   externalPlayerPath,
   onExternalPlayerPathChange,
+  externalPlayerReuse,
+  onExternalPlayerReuseChange,
   skipIntroTimerSeconds,
   onSkipIntroTimerSecondsChange,
   skipIntroAutoSkip,
@@ -525,6 +529,8 @@ export function PlaybackTab({
             onPopoutMpvParamsChange={onPopoutMpvParamsChange}
             externalPlayerPath={externalPlayerPath}
             onExternalPlayerPathChange={onExternalPlayerPathChange}
+            externalPlayerReuse={externalPlayerReuse}
+            onExternalPlayerReuseChange={onExternalPlayerReuseChange}
           />
         )}
 

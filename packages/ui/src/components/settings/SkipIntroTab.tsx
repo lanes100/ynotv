@@ -14,17 +14,18 @@ export function SkipIntroTab({
   onSkipIntroAutoSkipChange,
 }: SkipIntroTabProps) {
   return (
-    <div className="playback-tab-content" style={{ overflow: 'auto', height: '100%' }}>
-      <div className="settings-section">
-        <h3 className="settings-section-title">Skip Intro</h3>
-        <p className="settings-section-description">
+    <div className="settings-tab-content">
+      <div className="settings-section" style={{ paddingTop: '8px' }}>
+        <div className="section-header">
+          <h3>Skip Intro</h3>
+        </div>
+        <p className="section-description">
           Configure the IntroDB-powered skip intro feature for series episodes.
           When a valid intro entry exists from the IntroDB API, the app can show a
           skip button or skip automatically.
         </p>
 
-        <div className="timeshift-settings" style={{ marginTop: '16px' }}>
-          {/* Auto-skip toggle */}
+        <div className="timeshift-settings">
           <div className="timeshift-toggle-row">
             <div className="timeshift-toggle-info">
               <span className="timeshift-toggle-label">Automatic Intro Skip</span>
@@ -43,8 +44,7 @@ export function SkipIntroTab({
             </label>
           </div>
 
-          {/* Timer duration */}
-          <div className="retry-setting-row" style={{ marginTop: '16px' }}>
+          <div className="timeshift-toggle-row">
             <div className="timeshift-toggle-info">
               <span className="timeshift-toggle-label">Skip Button Duration</span>
               <span className="timeshift-toggle-sub">
@@ -52,22 +52,19 @@ export function SkipIntroTab({
                 (only applies when Automatic Intro Skip is disabled).
               </span>
             </div>
-            <div className="retry-input-wrapper">
-              <input
-                id="skip-intro-timer"
-                type="number"
-                min={3}
-                max={30}
-                step={1}
-                className="retry-number-input"
-                value={skipIntroTimerSeconds}
-                onChange={(e) => {
-                  const n = Math.max(3, Math.min(30, parseInt(e.target.value, 10) || 10));
-                  onSkipIntroTimerSecondsChange(n);
-                }}
-              />
-              <span className="retry-input-unit">sec</span>
-            </div>
+            <input
+              type="number"
+              min={3}
+              max={30}
+              step={1}
+              value={skipIntroTimerSeconds}
+              onChange={(e) => {
+                const n = Math.max(3, Math.min(30, parseInt(e.target.value, 10) || 10));
+                onSkipIntroTimerSecondsChange(n);
+              }}
+              className="query-input"
+              style={{ width: '80px', textAlign: 'center' }}
+            />
           </div>
         </div>
       </div>

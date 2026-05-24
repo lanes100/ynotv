@@ -47,6 +47,7 @@ export interface AppSettings {
   // External player
   externalPlayerPath: string;
   externalPlayerArgs: string;
+  externalPlayerReuse: boolean;
 
   // Theme
   theme: ThemeId;
@@ -104,6 +105,8 @@ export interface AppSettings {
     setExternalPlayerPath: (path: string) => void;
     externalPlayerArgs: string;
     setExternalPlayerArgs: (args: string) => void;
+    externalPlayerReuse: boolean;
+    setExternalPlayerReuse: (reuse: boolean) => void;
 }
 
 /**
@@ -154,6 +157,7 @@ export function useAppSettings(): AppSettings {
   // External player settings
   const [externalPlayerPath, setExternalPlayerPathState] = useState('');
   const [externalPlayerArgs, setExternalPlayerArgsState] = useState('');
+  const [externalPlayerReuse, setExternalPlayerReuseState] = useState(false);
 
   // Theme state
   const [theme, setThemeState] = useState<ThemeId>('glass-neon');
@@ -243,6 +247,7 @@ export function useAppSettings(): AppSettings {
           setPopoutMpvParamsState(result.data.popoutMpvParams ?? '');
           setExternalPlayerPathState(result.data.externalPlayerPath ?? '');
           setExternalPlayerArgsState(result.data.externalPlayerArgs ?? '');
+          setExternalPlayerReuseState(result.data.externalPlayerReuse ?? false);
 
           // Load widget scale and apply CSS variable
           const savedScale = result.data.widgetScale ?? 1;
@@ -565,6 +570,17 @@ export function useAppSettings(): AppSettings {
     }
   }, []);
 
+  const setExternalPlayerReuse = useCallback(async (reuse: boolean) => {
+    setExternalPlayerReuseState(reuse);
+    if (window.storage) {
+      try {
+        await window.storage.updateSettings({ externalPlayerReuse: reuse });
+      } catch (e) {
+        console.error('[useAppSettings] Failed to save externalPlayerReuse:', e);
+      }
+    }
+  }, []);
+
   const setCastEnabled = useCallback(async (enabled: boolean) => {
     setCastEnabledState(enabled);
     if (window.storage) {
@@ -644,5 +660,7 @@ export function useAppSettings(): AppSettings {
     setExternalPlayerPath,
     externalPlayerArgs,
     setExternalPlayerArgs,
+    externalPlayerReuse,
+    setExternalPlayerReuse,
   };
 }

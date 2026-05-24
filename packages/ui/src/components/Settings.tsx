@@ -166,6 +166,7 @@ export function Settings({
   const [popoutMpvParams, setPopoutMpvParams] = useState('');
   // External player settings state
   const [externalPlayerPath, setExternalPlayerPath] = useState('');
+  const [externalPlayerReuse, setExternalPlayerReuse] = useState(false);
   // Skip Intro settings state
   const [skipIntroTimerSeconds, setSkipIntroTimerSeconds] = useState(10);
   const [skipIntroAutoSkip, setSkipIntroAutoSkip] = useState(false);
@@ -308,6 +309,7 @@ export function Settings({
         popoutMpvParamsEnabled?: boolean;
         popoutMpvParams?: string;
         externalPlayerPath?: string;
+        externalPlayerReuse?: boolean;
         skipIntroTimerSeconds?: number;
         skipIntroAutoSkip?: boolean;
         subtitleSettings?: SubtitleSettings;
@@ -454,6 +456,7 @@ export function Settings({
 
       // Load External Player settings
       setExternalPlayerPath(settings.externalPlayerPath ?? '');
+      setExternalPlayerReuse(settings.externalPlayerReuse ?? false);
 
       // Load Skip Intro settings
       setSkipIntroTimerSeconds(settings.skipIntroTimerSeconds ?? 10);
@@ -717,6 +720,13 @@ export function Settings({
     setExternalPlayerPath(path);
     if (window.storage) {
       await window.storage.updateSettings({ externalPlayerPath: path });
+    }
+  };
+
+  const handleExternalPlayerReuseChange = async (reuse: boolean) => {
+    setExternalPlayerReuse(reuse);
+    if (window.storage) {
+      await window.storage.updateSettings({ externalPlayerReuse: reuse });
     }
   };
 
@@ -1033,6 +1043,8 @@ export function Settings({
             onPopoutMpvParamsChange={handlePopoutMpvParamsChange}
             externalPlayerPath={externalPlayerPath}
             onExternalPlayerPathChange={handleExternalPlayerPathChange}
+            externalPlayerReuse={externalPlayerReuse}
+            onExternalPlayerReuseChange={handleExternalPlayerReuseChange}
             skipIntroTimerSeconds={skipIntroTimerSeconds}
             onSkipIntroTimerSecondsChange={handleSkipIntroTimerSecondsChange}
             skipIntroAutoSkip={skipIntroAutoSkip}

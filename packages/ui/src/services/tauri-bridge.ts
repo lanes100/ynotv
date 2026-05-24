@@ -456,6 +456,14 @@ export const Bridge = {
         return invoke('spawn_external_player_with_args', { playerPath, args });
     },
 
+    async openExternalPlayerReuse(playerPath: string, url: string) {
+        return invoke('spawn_external_player_reuse', { playerPath, url });
+    },
+
+    async killExternalPlayer() {
+        return invoke('kill_external_player');
+    },
+
     // Window Controls
     async minimize() {
         console.log('[Bridge] minimize called');

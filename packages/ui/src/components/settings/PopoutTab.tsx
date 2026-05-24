@@ -14,6 +14,8 @@ interface PopoutTabProps {
   onPopoutMpvParamsChange: (params: string) => void;
   externalPlayerPath: string;
   onExternalPlayerPathChange: (path: string) => void;
+  externalPlayerReuse: boolean;
+  onExternalPlayerReuseChange: (reuse: boolean) => void;
 }
 
 export function PopoutTab({
@@ -27,6 +29,8 @@ export function PopoutTab({
   onPopoutMpvParamsChange,
   externalPlayerPath,
   onExternalPlayerPathChange,
+  externalPlayerReuse,
+  onExternalPlayerReuseChange,
 }: PopoutTabProps) {
   const [localParams, setLocalParams] = useState(popoutMpvParams);
   const [hasChanges, setHasChanges] = useState(false);
@@ -108,6 +112,24 @@ export function PopoutTab({
                 Browse
               </button>
             </div>
+          </div>
+
+          <div className="timeshift-toggle-row" style={{ marginTop: '16px' }}>
+            <div className="timeshift-toggle-info">
+              <span className="timeshift-toggle-label">Reuse same player instance</span>
+              <span className="timeshift-toggle-sub">
+                When enabled, switching channels will close the previous player before opening a new one,
+                instead of spawning multiple player windows.
+              </span>
+            </div>
+            <label className="toggle-switch">
+              <input
+                type="checkbox"
+                checked={externalPlayerReuse}
+                onChange={(e) => onExternalPlayerReuseChange(e.target.checked)}
+              />
+              <span className="toggle-slider"></span>
+            </label>
           </div>
         </div>
       </div>

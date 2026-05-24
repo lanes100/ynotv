@@ -2096,6 +2096,84 @@ async fn spawn_external_player(player_path: String, url: String) -> Result<(), S
 }
 
 #[tauri::command]
+async fn kill_external_player(state: tauri::State<'_, ExternalPlayerState>) -> Result<(), String> {
+    let mut pid_guard = state.pid.lock().map_err(|e| e.to_string())?;
+    if let Some(pid) = pid_guard.take() {
+        debug!("[ExternalPlayer] Killing previous instance PID: {}", pid);
+        #[cfg(target_os = "windows")]
+        {
+            let kill_cmd = format!("taskkill /F /PID {}", pid);
+            if let Err(e) = std::process::Command::new("cmd")
+                .args(&["/C", &kill_cmd])
+                .output()
+            {
+                warn!("[ExternalPlayer] Failed to kill PID {}: {}", pid, e);
+            } else {
+                debug!("[ExternalPlayer] Killed PID: {}", pid);
+            }
+        }
+        #[cfg(not(target_os = "windows"))]
+        {
+            if let Err(e) = std::process::Command::new("kill")
+                .arg(&pid.to_string())
+                .output()
+            {
+                warn!("[ExternalPlayer] Failed to kill PID {}: {}", pid, e);
+            } else {
+                debug!("[ExternalPlayer] Killed PID: {}", pid);
+            }
+        }
+    }
+    Ok(())
+}
+
+#[tauri::command]
+async fn spawn_external_player_reuse(
+    state: tauri::State<'_, ExternalPlayerState>,
+    player_path: String,
+    url: String,
+) -> Result<(), String> {
+    debug!(
+        "[ExternalPlayer] Spawning (reuse): {} with URL: {}",
+        player_path, url
+    );
+
+    // Kill previous instance if any
+    let mut pid_guard = state.pid.lock().map_err(|e| e.to_string())?;
+    if let Some(old_pid) = *pid_guard {
+        debug!("[ExternalPlayer] Killing previous instance PID: {}", old_pid);
+        #[cfg(target_os = "windows")]
+        {
+            let kill_cmd = format!("taskkill /F /PID {}", old_pid);
+            let _ = std::process::Command::new("cmd")
+                .args(&["/C", &kill_cmd])
+                .output();
+        }
+        #[cfg(not(target_os = "windows"))]
+        {
+            let _ = std::process::Command::new("kill")
+                .arg(&old_pid.to_string())
+                .output();
+        }
+    }
+
+    // Spawn new instance
+    let child = std::process::Command::new(&player_path)
+        .arg(&url)
+        .spawn()
+        .map_err(|e| {
+            format!(
+                "Failed to launch external player '{}': {}",
+                player_path, e
+            )
+        })?;
+    let new_pid = child.id();
+    debug!("[ExternalPlayer] Spawned PID: {}", new_pid);
+    *pid_guard = Some(new_pid);
+    Ok(())
+}
+
+#[tauri::command]
 async fn spawn_external_player_with_args(
     player_path: String,
     args: Vec<String>,
@@ -2341,6 +2419,24 @@ fn restore_window_position(app: &tauri::AppHandle) {
 // =============================================================================
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
+// ─── External Player State (for reuse / single-instance mode) ────────────────
+
+use std::sync::Mutex;
+
+pub struct ExternalPlayerState {
+    pub pid: Mutex<Option<u32>>,
+}
+
+impl ExternalPlayerState {
+    pub fn new() -> Self {
+        ExternalPlayerState {
+            pid: Mutex::new(None),
+        }
+    }
+}
+
+// ─── App Entry Point ─────────────────────────────────────────────────────────
+
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
@@ -2450,6 +2546,9 @@ pub fn run() {
 
             // Register PopoutMpvState for standalone popout player
             app.manage(PopoutMpvState::new());
+
+            // Register ExternalPlayerState for single-instance reuse
+            app.manage(ExternalPlayerState::new());
 
             // Register TmdbCacheState as managed state so the cache is shared
             // across all TMDB commands instead of being re-created each call.
@@ -2599,6 +2698,8 @@ pub fn run() {
             // Utility commands
             open_external_url,
             spawn_external_player,
+            spawn_external_player_reuse,
+            kill_external_player,
             spawn_external_player_with_args,
             // Google Cast commands
             cast_start_discovery,

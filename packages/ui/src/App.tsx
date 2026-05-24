@@ -947,15 +947,18 @@ function App() {
       const resolved = await resolvePlayUrl(channel.source_id, channel.direct_url);
       const result = await window.storage?.getSettings();
       let playerPath = result?.data?.externalPlayerPath || '';
+      const playerReuse = result?.data?.externalPlayerReuse ?? false;
       const playerArgs = result?.data?.externalPlayerArgs || '';
       if (!playerPath) {
         console.warn('[App] External player path not configured');
         return;
       }
-      // Strip quotes from path if present
       playerPath = playerPath.replace(/^"(.*)"$/, '$1').replace(/^'(.*)'$/, '$1');
       const url = resolved.url;
-      if (playerArgs.includes('{url}')) {
+
+      if (playerReuse) {
+        await invoke('spawn_external_player_reuse', { playerPath, url });
+      } else if (playerArgs.includes('{url}')) {
         const argsStr = playerArgs.replace(/\{url\}/g, url);
         const args = argsStr.match(/(?:[^\s"]+|"[^"]*")+/g)?.map(a => a.replace(/^"(.*)"$/, '$1')) || [];
         await invoke('spawn_external_player_with_args', { playerPath, args });
