@@ -349,13 +349,14 @@
 
 /* Base styles for list bars */
 .category-list-bar {
-  margin: 3px 12px;
-  width: calc(100% - 24px);
+  width: 100%;
   box-sizing: border-box;
   background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.04);
-  border-radius: 6px;
-  padding: 6px 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+  border-bottom: none;
+  border-left: none;
+  border-right: none;
+  padding: 8px 12px;
 }
 
 .category-list-bar:hover {

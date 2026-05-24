@@ -236,9 +236,8 @@
 
 /* Modern Category List Bar Overrides */
 .modern-ui .category-list-bar {
-  margin: 4px 12px;
-  width: calc(100% - 24px);
-  padding: 6px 12px;
+  width: 100%;
+  padding: 8px 12px;
   background: 
     linear-gradient(135deg, 
       rgba(255, 255, 255, 0.03) 0%,
