@@ -220,6 +220,11 @@ function App() {
     setDuration,
   } = mpv;
 
+  const positionRef = useRef(position);
+  const durationRef = useRef(duration);
+  useEffect(() => { positionRef.current = position; }, [position]);
+  useEffect(() => { durationRef.current = duration; }, [duration]);
+
   // ==========================================================================
   // Multiview / Layout Persistence (needs mpvReady from useMpvListeners)
   // ==========================================================================
@@ -310,7 +315,7 @@ function App() {
     handleCatchupSeek,
     handlePlayVod,
     handlePlayRecording,
-    handleStop,
+    handleStop: handleStopRaw,
     handleSeek,
     handleTogglePlay,
     handleVolumeChange,
@@ -509,6 +514,42 @@ function App() {
     handleSelectCategory,
     handleMouseMove,
   } = nav;
+
+  // Wrap handleStop to restore Stremio page if stopped from a Stremio media context
+  const handleStop = useCallback(async () => {
+    const isStremio = vodInfo?.source_id === 'stremio' || vodInfo?.source_id === 'trailer';
+    
+    // Save final progress to Stremio watch store before stopping
+    if (vodInfo?.source_id === 'stremio') {
+      const pos = positionRef.current;
+      const dur = durationRef.current;
+      if (dur > 0 && pos > 0) {
+        const fraction = Math.min(1, pos / dur);
+        const watchStore = useStremioWatchStore.getState();
+        const epInfo = stremioEpisodeRef.current;
+        const movieInfo = stremioMovieRef.current;
+        if (epInfo) {
+          watchStore.updateEpisodeProgress(
+            epInfo.metaId,
+            epInfo.videoId,
+            fraction,
+            epInfo.season,
+            epInfo.episode,
+            epInfo.nextVideoId,
+            epInfo.nextSeason,
+            epInfo.nextEpisode
+          );
+        } else if (movieInfo) {
+          watchStore.updateMovieProgress(movieInfo.metaId, fraction);
+        }
+      }
+    }
+
+    await handleStopRaw();
+    if (isStremio) {
+      setActiveView('stremio');
+    }
+  }, [vodInfo, handleStopRaw, setActiveView]);
 
   // ==========================================================================
   // Aspect Ratio — tracked separately for the hero screen
@@ -1101,6 +1142,21 @@ function App() {
       stremioMetaRef.current = meta;
       setActiveViewRef.current('none');
       const isSeries = meta.type === 'series' && episodeVideo;
+
+      // Record watch in local DB vod_history to make it show up in Continue Watching on home page
+      void recordVodWatch(
+        meta.id,
+        isSeries ? 'series' : 'movie',
+        'stremio',
+        meta.name,
+        meta.poster,
+        isSeries ? (episodeVideo.season ?? undefined) : undefined,
+        isSeries ? (episodeVideo.episode ?? undefined) : undefined,
+        isSeries ? (episodeVideo.title || `Episode ${episodeVideo.episode}`) : undefined
+      ).catch((err) => {
+        console.error('[Stremio] Failed to record VOD watch in history:', err);
+      });
+
       await handlePlayVodRef.current({
         url,
         title: meta.name,
@@ -1209,11 +1265,6 @@ function App() {
   // ==========================================================================
   // Stremio Progress Updater — saves watch progress every 10 seconds
   // ==========================================================================
-  const positionRef = useRef(position);
-  const durationRef = useRef(duration);
-  useEffect(() => { positionRef.current = position; }, [position]);
-  useEffect(() => { durationRef.current = duration; }, [duration]);
-
   useEffect(() => {
     if (vodInfo?.source_id !== 'stremio' || !playing || duration <= 0) return;
 

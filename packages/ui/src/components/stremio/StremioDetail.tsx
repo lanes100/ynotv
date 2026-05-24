@@ -428,7 +428,7 @@ export function StremioDetail({ meta, onBack, onPlay, streamPickerMode }: Stremi
                               title="Mark as watched"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                toggleEpisodeWatched(ep.id, meta.id, currentSeason, ep.episode ?? 1);
+                                toggleEpisodeWatched(ep.id, meta.id, selectedSeason ?? 1, ep.episode ?? 1);
                               }}
                             >
                               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -443,7 +443,7 @@ export function StremioDetail({ meta, onBack, onPlay, streamPickerMode }: Stremi
                               title="Mark as unwatched"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                toggleEpisodeWatched(ep.id, meta.id, currentSeason, ep.episode ?? 1);
+                                toggleEpisodeWatched(ep.id, meta.id, selectedSeason ?? 1, ep.episode ?? 1);
                               }}
                             >
                               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">

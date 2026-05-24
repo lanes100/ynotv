@@ -222,18 +222,16 @@ export const useStremioWatchStore = create<StremioWatchStore>()(
             episodeProgress: { ...s.episodeProgress, [videoId]: epProgress },
           }));
           import('../db').then(({ recordEpisodeWatch }) => {
-            recordEpisodeWatch({
-              episode_id: videoId,
-              series_id: metaId,
-              source_id: '',
-              season_num: season,
-              episode_num: episode,
-              title: '',
-              watched_at: now,
-              progress_seconds: 0,
-              total_duration: 0,
-              completed: 1,
-            }).catch(() => {});
+            recordEpisodeWatch(
+              videoId,
+              metaId,
+              'stremio',
+              season,
+              episode,
+              '',
+              0,
+              0
+            ).catch(() => {});
           });
         }
       },
