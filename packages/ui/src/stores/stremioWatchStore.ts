@@ -68,6 +68,7 @@ interface StremioWatchStore {
 
   getEpisodeWatched: (videoId: string) => boolean;
   getEpisodeProgressFraction: (videoId: string) => number;
+  toggleEpisodeWatched: (videoId: string, metaId: string, season: number, episode: number) => void;
   removeFromHistory: (metaId: string) => void;
   clearHistory: () => void;
 }
@@ -190,6 +191,51 @@ export const useStremioWatchStore = create<StremioWatchStore>()(
 
       getEpisodeProgressFraction: (videoId) => {
         return get().episodeProgress[videoId]?.progressFraction ?? 0;
+      },
+
+      toggleEpisodeWatched: (videoId, metaId, season, episode) => {
+        const state = get();
+        const current = state.episodeProgress[videoId];
+        const isFinished = current?.finished ?? false;
+
+        if (isFinished) {
+          set((s) => {
+            const next = { ...s.episodeProgress };
+            delete next[videoId];
+            return { episodeProgress: next };
+          });
+          import('../db').then(({ deleteEpisodeHistory }) => {
+            deleteEpisodeHistory(videoId).catch(() => {});
+          });
+        } else {
+          const now = Date.now();
+          const epProgress: StremioEpisodeProgress = {
+            videoId,
+            metaId,
+            season,
+            episode,
+            progressFraction: 1,
+            finished: true,
+            watchedAt: now,
+          };
+          set((s) => ({
+            episodeProgress: { ...s.episodeProgress, [videoId]: epProgress },
+          }));
+          import('../db').then(({ recordEpisodeWatch }) => {
+            recordEpisodeWatch({
+              episode_id: videoId,
+              series_id: metaId,
+              source_id: '',
+              season_num: season,
+              episode_num: episode,
+              title: '',
+              watched_at: now,
+              progress_seconds: 0,
+              total_duration: 0,
+              completed: 1,
+            }).catch(() => {});
+          });
+        }
       },
 
       removeFromHistory: (metaId) => {

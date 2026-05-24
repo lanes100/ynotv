@@ -46,6 +46,7 @@ export function StremioDetail({ meta, onBack, onPlay, streamPickerMode }: Stremi
   const isInLibrary = useStremioLibraryStore((s) => s.isInLibrary);
 
   const episodeProgress = useStremioWatchStore((s) => s.episodeProgress);
+  const toggleEpisodeWatched = useStremioWatchStore((s) => s.toggleEpisodeWatched);
   const preselectVideoId = useStremioPreselectVideoId();
   const setPreselectVideoId = useSetStremioPreselectVideoId();
 
@@ -420,9 +421,31 @@ export function StremioDetail({ meta, onBack, onPlay, streamPickerMode }: Stremi
                               />
                             </div>
                           )}
-                          {/* Watched checkmark badge */}
+                          {/* Unwatched — click to mark as watched */}
+                          {!epFinished && (
+                            <div
+                              className="stremio-ep-unwatched-badge"
+                              title="Mark as watched"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleEpisodeWatched(ep.id, meta.id, currentSeason, ep.episode ?? 1);
+                              }}
+                            >
+                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <polyline points="20 6 9 17 4 12" />
+                              </svg>
+                            </div>
+                          )}
+                          {/* Watched checkmark badge — click to toggle */}
                           {epFinished && (
-                            <div className="stremio-ep-watched-badge" title="Watched">
+                            <div
+                              className="stremio-ep-watched-badge"
+                              title="Mark as unwatched"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleEpisodeWatched(ep.id, meta.id, currentSeason, ep.episode ?? 1);
+                              }}
+                            >
                               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
                                 <polyline points="20 6 9 17 4 12" />
                               </svg>

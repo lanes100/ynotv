@@ -201,7 +201,7 @@
 
 /* Search Input Styles */
 .category-search-container {
-  padding: 4px 0;
+  padding: 2px 0 0 0;
   border-bottom: none;
 }
 
@@ -209,7 +209,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  margin: 3px 12px;
+  margin: 0 12px 2px;
   width: calc(100% - 24px);
   padding: 6px 10px;
   box-sizing: border-box;

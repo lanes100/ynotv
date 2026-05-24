@@ -44,11 +44,6 @@ export interface AppSettings {
   popoutMpvParamsEnabled: boolean;
   popoutMpvParams: string;
 
-  // External player
-  externalPlayerPath: string;
-  externalPlayerArgs: string;
-  externalPlayerReuse: boolean;
-
   // Theme
   theme: ThemeId;
 

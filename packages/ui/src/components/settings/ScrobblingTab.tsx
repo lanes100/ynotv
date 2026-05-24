@@ -278,7 +278,7 @@ export function ScrobblingTab() {
 
             <div className="timeshift-toggle-row" style={{ marginBottom: '16px' }}>
               <div className="timeshift-toggle-info">
-                <span className="timeshift-toggle-label">Show Trakt Watchlist in Stremio</span>
+                <span className="timeshift-toggle-label">Show Trakt Watchlist in Strem</span>
                 <span className="timeshift-toggle-sub">Display your Trakt watchlist as a catalog row on the Stremio home page</span>
               </div>
               <label className="toggle-switch">

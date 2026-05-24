@@ -958,12 +958,12 @@ function App() {
 
       if (playerReuse) {
         await invoke('spawn_external_player_reuse', { playerPath, url });
-      } else if (playerArgs.includes('{url}')) {
+      } else       if (playerArgs.includes('{url}')) {
         const argsStr = playerArgs.replace(/\{url\}/g, url);
-        const args = argsStr.match(/(?:[^\s"]+|"[^"]*")+/g)?.map(a => a.replace(/^"(.*)"$/, '$1')) || [];
+        const args = (argsStr.match(/(?:[^\s"]+|"[^"]*")+/g) || []).map((a: string) => a.replace(/^"(.*)"$/, '$1'));
         await invoke('spawn_external_player_with_args', { playerPath, args });
       } else if (playerArgs.trim()) {
-        const baseArgs = playerArgs.match(/(?:[^\s"]+|"[^"]*")+/g)?.map(a => a.replace(/^"(.*)"$/, '$1')) || [];
+        const baseArgs = (playerArgs.match(/(?:[^\s"]+|"[^"]*")+/g) || []).map((a: string) => a.replace(/^"(.*)"$/, '$1'));
         const args = [...baseArgs, url];
         await invoke('spawn_external_player_with_args', { playerPath, args });
       } else {
@@ -986,7 +986,7 @@ function App() {
   }, [popoutMode, handlePlayChannel, popoutSwapChannel, handlePlayInExternal]);
 
   const handlePlayVodWrapper = useCallback((info: import('./types/media').VodPlayInfo, onCloseView?: () => void) => {
-    if (popoutMode) {
+    if (popoutMode === 'popout') {
       popoutSwapVod(info);
     } else {
       handlePlayVod(info, onCloseView);

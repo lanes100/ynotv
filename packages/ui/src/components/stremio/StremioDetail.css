@@ -694,6 +694,12 @@
   align-items: center;
   justify-content: center;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.stremio-ep-watched-badge:hover {
+  transform: scale(1.2);
 }
 
 .stremio-ep-watched-badge svg {
@@ -701,6 +707,39 @@
   height: 10px;
   stroke: white;
   stroke-width: 3;
+}
+
+/* Unwatched badge — faint circle, shown on hover of card */
+.stremio-ep-unwatched-badge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 18px;
+  height: 18px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  cursor: pointer;
+}
+
+.stremio-detail-video-card:hover .stremio-ep-unwatched-badge {
+  opacity: 1;
+}
+
+.stremio-ep-unwatched-badge:hover {
+  transform: scale(1.2);
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.stremio-ep-unwatched-badge svg {
+  width: 10px;
+  height: 10px;
+  stroke: rgba(255, 255, 255, 0.5);
+  stroke-width: 2;
 }
 
 /* Watched episode card — subtle green tint on the border */

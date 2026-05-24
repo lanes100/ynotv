@@ -47,27 +47,22 @@ export function useSkipIntro(options: UseSkipIntroOptions) {
 
   const currentEpisodeKey = vodInfo?.mediaId || vodInfo?.url || null;
 
-  // Listen for settings changes (hot-reload)
   useEffect(() => {
     const handler = (e: Event) => {
       const detail = (e as CustomEvent<Partial<SkipIntroSettings>>).detail;
       if (typeof detail.skipIntroTimerSeconds === 'number' && detail.skipIntroTimerSeconds >= 3) {
         settingsRef.current.skipIntroTimerSeconds = detail.skipIntroTimerSeconds;
-        console.log('[SkipIntro] Timer updated to:', detail.skipIntroTimerSeconds);
       }
       if (typeof detail.skipIntroAutoSkip === 'boolean') {
         settingsRef.current.skipIntroAutoSkip = detail.skipIntroAutoSkip;
-        console.log('[SkipIntro] Auto-skip updated to:', detail.skipIntroAutoSkip);
       }
     };
     window.addEventListener('ynotv:skip-intro-settings-changed', handler);
     return () => window.removeEventListener('ynotv:skip-intro-settings-changed', handler);
   }, []);
 
-  // Reset everything when episode changes
   useEffect(() => {
     if (currentEpisodeKey === episodeKeyRef.current) return;
-    console.log('[SkipIntro] Episode changed:', currentEpisodeKey);
     episodeKeyRef.current = currentEpisodeKey;
     introRef.current = null;
     dismissedRef.current = false;
@@ -81,7 +76,6 @@ export function useSkipIntro(options: UseSkipIntroOptions) {
     }
   }, [currentEpisodeKey]);
 
-  // Clear countdown timer on unmount
   useEffect(() => {
     return () => {
       if (countdownTimerRef.current) {
@@ -90,7 +84,6 @@ export function useSkipIntro(options: UseSkipIntroOptions) {
     };
   }, []);
 
-  // Fetch intro segments when a new episode starts playing
   useEffect(() => {
     if (!vodInfo || !playing || fetchingRef.current) return;
     if (vodInfo.type !== 'series') {
@@ -111,11 +104,9 @@ export function useSkipIntro(options: UseSkipIntroOptions) {
         imdbId = stremioEpisodeRef.current.metaId;
         season = stremioEpisodeRef.current.season;
         episode = stremioEpisodeRef.current.episode;
-        console.log('[SkipIntro] Stremio: imdbId=', imdbId, 'season=', season, 'episode=', episode);
       } else {
         season = vodInfo.seasonNum;
         episode = vodInfo.episodeNum;
-        console.log('[SkipIntro] VOD: seasonNum=', season, 'episodeNum=', episode);
 
         if (vodInfo.mediaId && vodInfo.mediaId.startsWith('tt')) {
           imdbId = vodInfo.mediaId;
@@ -127,28 +118,22 @@ export function useSkipIntro(options: UseSkipIntroOptions) {
         }
 
         if (!imdbId && vodInfo.seriesId) {
-          console.log('[SkipIntro] Looking up imdb_id from DB for series:', vodInfo.seriesId);
           try {
             const series = await db.vodSeries.get(vodInfo.seriesId);
             if (series?.imdb_id) {
               imdbId = series.imdb_id;
-              console.log('[SkipIntro] Found imdb_id in DB:', imdbId);
-            } else {
-              console.log('[SkipIntro] No imdb_id found in DB for series');
             }
           } catch (e) {
-            console.log('[SkipIntro] DB lookup error:', e);
+            // DB lookup failed
           }
         }
       }
 
       if (!imdbId) {
-        console.log('[SkipIntro] No imdbId available, skipping');
         fetchingRef.current = false;
         return;
       }
       if (!season || !episode) {
-        console.log('[SkipIntro] No season/episode available, skipping');
         fetchingRef.current = false;
         return;
       }
@@ -156,9 +141,6 @@ export function useSkipIntro(options: UseSkipIntroOptions) {
       const segment = await fetchIntroSegments(imdbId, season, episode);
       if (segment) {
         introRef.current = { start: segment.start_sec, end: segment.end_sec };
-        console.log('[SkipIntro] Stored intro:', introRef.current);
-      } else {
-        console.log('[SkipIntro] No intro segment returned from API');
       }
       fetchingRef.current = false;
     };
@@ -166,14 +148,12 @@ export function useSkipIntro(options: UseSkipIntroOptions) {
     fetchIntro();
   }, [vodInfo, playing, stremioEpisodeRef]);
 
-  // Track position to show/hide the skip button or auto-skip
   useEffect(() => {
     if (!introRef.current) {
       return;
     }
 
     const { start, end } = introRef.current;
-    console.log('[SkipIntro] Position check: pos=', position, 'intro=[', start, '-', end, ']', 'playing=', playing, 'dismissed=', dismissedRef.current, 'showButton=', showButton);
 
     if (!playing) {
       return;
@@ -181,7 +161,6 @@ export function useSkipIntro(options: UseSkipIntroOptions) {
 
     if (position >= end) {
       if (showButton) {
-        console.log('[SkipIntro] Past intro end, hiding button');
         setShowButton(false);
         if (countdownTimerRef.current) {
           clearInterval(countdownTimerRef.current);
@@ -191,19 +170,15 @@ export function useSkipIntro(options: UseSkipIntroOptions) {
       return;
     }
 
-    // Auto-skip if enabled and not already triggered
     if (position >= start && settingsRef.current.skipIntroAutoSkip && !autoSkipTriggeredRef.current) {
-      console.log('[SkipIntro] Auto-skipping to:', end);
       autoSkipTriggeredRef.current = true;
       dismissedRef.current = true;
       Bridge.seek(end).catch(() => {});
       return;
     }
 
-    // Show button if within intro range and not dismissed
     if (position >= start && !dismissedRef.current && !showButton && !settingsRef.current.skipIntroAutoSkip) {
       const timer = settingsRef.current.skipIntroTimerSeconds;
-      console.log('[SkipIntro] Inside intro range, showing button for', timer, 'seconds');
       setShowButton(true);
       setCountdown(timer);
 
@@ -214,7 +189,6 @@ export function useSkipIntro(options: UseSkipIntroOptions) {
       countdownTimerRef.current = setInterval(() => {
         setCountdown((prev) => {
           if (prev <= 1) {
-            console.log('[SkipIntro] Countdown expired, dismissing');
             if (countdownTimerRef.current) {
               clearInterval(countdownTimerRef.current);
               countdownTimerRef.current = null;
@@ -231,7 +205,6 @@ export function useSkipIntro(options: UseSkipIntroOptions) {
 
   const handleSkip = useCallback(() => {
     if (!introRef.current) return;
-    console.log('[SkipIntro] Skipping to:', introRef.current.end);
     dismissedRef.current = true;
     setShowButton(false);
     if (countdownTimerRef.current) {

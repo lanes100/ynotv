@@ -513,7 +513,7 @@ export function CategoryStrip({ selectedCategoryId, onSelectCategory, visible, o
             </button>
             {onClose && (
               <button
-                className="hide-sidebar-btn"
+                className="guide-nav-btn"
                 onClick={onClose}
                 title="Hide Sidebar"
               >
