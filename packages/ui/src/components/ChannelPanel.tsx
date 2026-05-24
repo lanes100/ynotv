@@ -51,6 +51,7 @@ interface ChannelRowData {
   currentLayout?: string;
   onSendToSlot?: (slotId: 2 | 3 | 4, channelName: string, channelUrl: string, sourceName?: string | null) => void;
   onPlayInPopout?: (channel: StoredChannel) => void;
+  onPlayInExternal?: (channel: StoredChannel) => void;
   currentChannel?: StoredChannel | null;
 }
 
@@ -83,6 +84,7 @@ const ChannelRowVirtuoso = memo(function ChannelRowVirtuoso({
       currentLayout={data.currentLayout}
       onSendToSlot={data.onSendToSlot}
       onPlayInPopout={data.onPlayInPopout}
+      onPlayInExternal={data.onPlayInExternal}
       isCurrentlyPlaying={isCurrentlyPlaying}
     />
   );
@@ -159,10 +161,11 @@ interface ChannelPanelProps {
   retryState?: RetryState | null;
   /** Failover state for Live TV — shown in preview pane */
   failoverState?: FailoverState | null;
-  // Popout props
-  popoutMode?: boolean;
+  // Popout props: 'off' | 'popout' | 'external'
+  popoutMode?: 'off' | 'popout' | 'external';
   onTogglePopoutMode?: () => void;
   onPlayInPopout?: (channel: StoredChannel) => void;
+  onPlayInExternal?: (channel: StoredChannel) => void;
   popoutIsOpen?: boolean;
 }
 
@@ -219,9 +222,10 @@ export function ChannelPanel({
   onSetAspectRatio,
   retryState = null,
   failoverState = null,
-  popoutMode = false,
+  popoutMode = 'off',
   onTogglePopoutMode,
   onPlayInPopout,
+  onPlayInExternal,
   popoutIsOpen = false,
 }: ChannelPanelProps) {
   const epgView = useEpgView();
@@ -1716,23 +1720,39 @@ export function ChannelPanel({
             )}
           </div>
           <div className="guide-header-right">
-            {/* Popout mode toggle */}
+            {/* Popout/External mode toggle: cycles off → popout → external */}
             {onTogglePopoutMode && (
               <button
-                className={`guide-nav-btn ${popoutMode ? 'active' : ''}`}
+                className={`guide-nav-btn ${popoutMode !== 'off' ? 'active' : ''}`}
                 onClick={onTogglePopoutMode}
-                title={popoutMode ? 'Popout mode ON — clicks go to popout' : 'Popout mode OFF'}
+                title={
+                  popoutMode === 'off'
+                    ? 'Normal mode'
+                    : popoutMode === 'popout'
+                      ? 'Popout mode — clicks go to popout player'
+                      : 'External mode — clicks open in external player'
+                }
                 style={{
-                  color: popoutMode ? 'var(--accent)' : 'inherit',
+                  color: popoutMode === 'off' ? 'inherit' : 'var(--accent)',
                   marginRight: '8px',
                 }}
               >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
-                  <line x1="8" y1="21" x2="16" y2="21"/>
-                  <line x1="12" y1="17" x2="12" y2="21"/>
-                </svg>
-                {popoutMode && <span style={{ marginLeft: '4px', fontSize: '11px' }}>Popout</span>}
+                {popoutMode === 'external' ? (
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/>
+                  </svg>
+                ) : (
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+                    <line x1="8" y1="21" x2="16" y2="21"/>
+                    <line x1="12" y1="17" x2="12" y2="21"/>
+                  </svg>
+                )}
+                {popoutMode !== 'off' && (
+                  <span style={{ marginLeft: '4px', fontSize: '11px' }}>
+                    {popoutMode === 'popout' ? 'Popout' : 'External'}
+                  </span>
+                )}
               </button>
             )}
             {!isSearchMode && (
@@ -1888,13 +1908,14 @@ export function ChannelPanel({
                       activeRecordings={activeRecordings}
                       currentLayout={currentLayout}
                       onSendToSlot={onSendToSlot}
-                      onPlayInPopout={onPlayInPopout}
-                      includeSourceInSearch={includeSourceInSearch}
-                      currentChannel={currentChannel}
-                    />
-                  ))}
-                </div>
-              )}
+                       onPlayInPopout={onPlayInPopout}
+                       onPlayInExternal={onPlayInExternal}
+                       includeSourceInSearch={includeSourceInSearch}
+                       currentChannel={currentChannel}
+                     />
+                   ))}
+                 </div>
+               )}
 
               {/* Program Results - Grouped by Channel */}
               {searchScope !== 'channels' && (() => {
@@ -1957,7 +1978,7 @@ export function ChannelPanel({
                                 <span className="live-dot"></span> Live Now ({liveChannels.length})
                               </div>
                               {liveChannels.map(({ channel, programs }) => (
-                                <SearchResultRow
+                                  <SearchResultRow
                                   key={`live-${channel.stream_id}`}
                                   channel={channel}
                                   programs={programs}
@@ -1969,6 +1990,7 @@ export function ChannelPanel({
                                   onFavoriteToggle={refreshSearchResults}
                                   activeRecordings={activeRecordings}
                                   onPlayInPopout={onPlayInPopout}
+                                  onPlayInExternal={onPlayInExternal}
                                   includeSourceInSearch={includeSourceInSearch}
                                   currentChannel={currentChannel}
                                 />
@@ -1995,6 +2017,7 @@ export function ChannelPanel({
                                   onFavoriteToggle={refreshSearchResults}
                                   activeRecordings={activeRecordings}
                                   onPlayInPopout={onPlayInPopout}
+                                  onPlayInExternal={onPlayInExternal}
                                   includeSourceInSearch={includeSourceInSearch}
                                   currentChannel={currentChannel}
                                 />
@@ -2057,6 +2080,7 @@ export function ChannelPanel({
                 currentLayout,
                 onSendToSlot,
                 onPlayInPopout,
+                onPlayInExternal,
                 currentChannel,
               }}
               components={{

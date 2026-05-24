@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
-import './PlaybackTab.css'; // Reuse existing tab styles
+import * as dialog from '@tauri-apps/plugin-dialog';
+import './PlaybackTab.css';
 
 interface PopoutTabProps {
   popoutStopMain: boolean;
@@ -11,6 +12,8 @@ interface PopoutTabProps {
   onPopoutMpvParamsEnabledChange: (enabled: boolean) => void;
   popoutMpvParams: string;
   onPopoutMpvParamsChange: (params: string) => void;
+  externalPlayerPath: string;
+  onExternalPlayerPathChange: (path: string) => void;
 }
 
 export function PopoutTab({
@@ -22,6 +25,8 @@ export function PopoutTab({
   onPopoutMpvParamsEnabledChange,
   popoutMpvParams,
   onPopoutMpvParamsChange,
+  externalPlayerPath,
+  onExternalPlayerPathChange,
 }: PopoutTabProps) {
   const [localParams, setLocalParams] = useState(popoutMpvParams);
   const [hasChanges, setHasChanges] = useState(false);
@@ -58,21 +63,73 @@ export function PopoutTab({
   };
 
   return (
-    <div className="playback-tab-content" style={{ overflow: 'auto', height: '100%' }}>
-      <div className="settings-section">
-        <h3 className="settings-section-title">Popout Player</h3>
-        <p className="settings-section-description">
+    <div className="settings-tab-content">
+      {/* External Player Section */}
+      <div className="settings-section" style={{ paddingTop: '8px' }}>
+        <div className="section-header">
+          <h3>External Player</h3>
+        </div>
+        <p className="section-description">
+          Configure an external media player (e.g. mpv, VLC) to stream channels directly.
+          When the EPG popout mode is set to "External", clicking any channel will send its
+          stream to the configured player.
+        </p>
+
+        <div style={{ marginTop: '12px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <label style={{ color: 'rgba(255,255,255,0.9)', fontSize: '0.95rem' }}>
+              Player Executable Path
+            </label>
+            <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.8rem', marginBottom: '4px' }}>
+              Full path to your player executable (e.g. C:\Program Files\mpv\mpv.exe or C:\Program Files\VideoLAN\VLC\vlc.exe).
+            </span>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <input
+                type="text"
+                value={externalPlayerPath}
+                onChange={(e) => onExternalPlayerPathChange(e.target.value)}
+                placeholder="C:\Program Files\mpv\mpv.exe"
+                className="query-input"
+                style={{ flex: 1 }}
+              />
+              <button
+                className="sync-btn"
+                onClick={async () => {
+                  const selected = await dialog.open({
+                    multiple: false,
+                    filters: [{ name: 'Executable', extensions: ['exe', 'cmd', 'bat'] }]
+                  });
+                  if (selected) {
+                    onExternalPlayerPathChange(selected as string);
+                  }
+                }}
+                style={{ whiteSpace: 'nowrap', flexShrink: 0 }}
+              >
+                Browse
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', margin: '0 0 8px 0' }} />
+
+      {/* Popout Player Section */}
+      <div className="settings-section" style={{ paddingTop: '8px' }}>
+        <div className="section-header">
+          <h3>Popout Player</h3>
+        </div>
+        <p className="section-description">
           Control how the standalone popout MPV player behaves when activated.
         </p>
 
-        <div className="timeshift-settings" style={{ marginTop: '16px' }}>
-          {/* Stop main player */}
+        <div className="timeshift-settings">
           <div className="timeshift-toggle-row">
             <div className="timeshift-toggle-info">
               <span className="timeshift-toggle-label">Stop main player when popout opens</span>
               <span className="timeshift-toggle-sub">
                 When enabled, the embedded player in the main window will stop when a popout is opened.
-                Disable this to keep both playing simultaneously (like multiview in separate windows).
+                Disable this to keep both playing simultaneously.
               </span>
             </div>
             <label className="toggle-switch">
@@ -85,8 +142,7 @@ export function PopoutTab({
             </label>
           </div>
 
-          {/* Always on top */}
-          <div className="timeshift-toggle-row" style={{ marginTop: '12px' }}>
+          <div className="timeshift-toggle-row">
             <div className="timeshift-toggle-info">
               <span className="timeshift-toggle-label">Always on top</span>
               <span className="timeshift-toggle-sub">
@@ -103,8 +159,7 @@ export function PopoutTab({
             </label>
           </div>
 
-          {/* Enable custom MPV parameters */}
-          <div className="timeshift-toggle-row" style={{ marginTop: '16px', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '16px' }}>
+          <div className="timeshift-toggle-row" style={{ borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '12px' }}>
             <div className="timeshift-toggle-info">
               <span className="timeshift-toggle-label">Enable additional MPV parameters</span>
               <span className="timeshift-toggle-sub">
@@ -122,7 +177,6 @@ export function PopoutTab({
             </label>
           </div>
 
-          {/* Custom params textarea */}
           {popoutMpvParamsEnabled && (
             <div style={{ marginTop: '12px' }}>
               <div className="playback-section">
@@ -130,8 +184,6 @@ export function PopoutTab({
                   <span>Additional MPV Parameters</span>
                   <small>
                     One parameter per line. These flags are passed to the popout MPV on startup.
-                    <br />
-                    Example: --hwdec=auto --cache=yes --network-timeout=10
                   </small>
                 </div>
 
@@ -143,36 +195,6 @@ export function PopoutTab({
                   rows={8}
                   spellCheck={false}
                 />
-
-                <div className="playback-help">
-                  <h4>Common Parameters</h4>
-                  <div className="help-grid">
-                    <div className="help-item">
-                      <code>--hwdec=auto</code>
-                      <span>Enable hardware decoding</span>
-                    </div>
-                    <div className="help-item">
-                      <code>--cache=yes</code>
-                      <span>Enable stream caching</span>
-                    </div>
-                    <div className="help-item">
-                      <code>--network-timeout=10</code>
-                      <span>Network timeout in seconds</span>
-                    </div>
-                    <div className="help-item">
-                      <code>--video-sync=display-resample</code>
-                      <span>Smooth video playback</span>
-                    </div>
-                    <div className="help-item">
-                      <code>--demuxer-max-bytes=50MiB</code>
-                      <span>Maximum cache size</span>
-                    </div>
-                    <div className="help-item">
-                      <code>--stream-lavf-o=reconnect=1</code>
-                      <span>Auto-reconnect on disconnect</span>
-                    </div>
-                  </div>
-                </div>
 
                 <div className="playback-actions">
                   <button

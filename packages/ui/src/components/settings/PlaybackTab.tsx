@@ -33,6 +33,9 @@ interface PlaybackTabProps {
   onPopoutMpvParamsEnabledChange: (enabled: boolean) => void;
   popoutMpvParams: string;
   onPopoutMpvParamsChange: (params: string) => void;
+  // External Player props
+  externalPlayerPath: string;
+  onExternalPlayerPathChange: (path: string) => void;
   // Skip Intro props
   skipIntroTimerSeconds: number;
   onSkipIntroTimerSecondsChange: (seconds: number) => void;
@@ -76,6 +79,8 @@ export function PlaybackTab({
   onPopoutMpvParamsEnabledChange,
   popoutMpvParams,
   onPopoutMpvParamsChange,
+  externalPlayerPath,
+  onExternalPlayerPathChange,
   skipIntroTimerSeconds,
   onSkipIntroTimerSecondsChange,
   skipIntroAutoSkip,
@@ -179,7 +184,7 @@ export function PlaybackTab({
           className={`settings-tab ${activeSubTab === 'popout' ? 'active' : ''}`}
           onClick={() => setActiveSubTab('popout')}
         >
-          Popout Player
+          External/Popout Player
         </button>
         <button
           className={`settings-tab ${activeSubTab === 'skipintro' ? 'active' : ''}`}
@@ -518,6 +523,8 @@ export function PlaybackTab({
             onPopoutMpvParamsEnabledChange={onPopoutMpvParamsEnabledChange}
             popoutMpvParams={popoutMpvParams}
             onPopoutMpvParamsChange={onPopoutMpvParamsChange}
+            externalPlayerPath={externalPlayerPath}
+            onExternalPlayerPathChange={onExternalPlayerPathChange}
           />
         )}
 

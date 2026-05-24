@@ -63,6 +63,7 @@ import { CastOverlay } from './components/CastOverlay';
 import { syncSource, syncVodForSource, isEpgStale, isVodStale, syncAllStaleGlobalEpgLinks } from './db/sync';
 import { bulkOps } from './services/bulk-ops';
 import { Bridge, type AspectRatioMode, applyAspectRatio, rewriteTsToM3u8 } from './services/tauri-bridge';
+import { resolvePlayUrl } from './services/stream-resolver';
 import { getCurrentWindow, LogicalSize } from '@tauri-apps/api/window';
 import { addToRecentChannels } from './utils/recentChannels';
 import { WatchlistNotificationContainer } from './components/WatchlistNotification';
@@ -350,10 +351,14 @@ function App() {
     seekPopout,
   } = popout;
 
-  // Popout mode state (all clicks go to popout)
-  const [popoutMode, setPopoutMode] = useState(false);
-  const togglePopoutMode = useCallback(() => {
-    setPopoutMode(prev => !prev);
+  // Popout mode state: 'off' | 'popout' | 'external'
+  const [popoutMode, setPopoutMode] = useState<'off' | 'popout' | 'external'>('off');
+  const cyclePopoutMode = useCallback(() => {
+    setPopoutMode(prev => {
+      if (prev === 'off') return 'popout';
+      if (prev === 'popout') return 'external';
+      return 'off';
+    });
   }, []);
 
   // ==========================================================================
@@ -937,13 +942,45 @@ function App() {
   // ==========================================================================
   // Popout-aware channel/VOD play wrappers
   // ==========================================================================
-  const handlePlayChannelWrapper = useCallback((channel: StoredChannel, autoSwitched?: boolean) => {
-    if (popoutMode) {
+  const handlePlayInExternal = useCallback(async (channel: StoredChannel) => {
+    try {
+      const resolved = await resolvePlayUrl(channel.source_id, channel.direct_url);
+      const result = await window.storage?.getSettings();
+      let playerPath = result?.data?.externalPlayerPath || '';
+      const playerArgs = result?.data?.externalPlayerArgs || '';
+      if (!playerPath) {
+        console.warn('[App] External player path not configured');
+        return;
+      }
+      // Strip quotes from path if present
+      playerPath = playerPath.replace(/^"(.*)"$/, '$1').replace(/^'(.*)'$/, '$1');
+      const url = resolved.url;
+      if (playerArgs.includes('{url}')) {
+        const argsStr = playerArgs.replace(/\{url\}/g, url);
+        const args = argsStr.match(/(?:[^\s"]+|"[^"]*")+/g)?.map(a => a.replace(/^"(.*)"$/, '$1')) || [];
+        await invoke('spawn_external_player_with_args', { playerPath, args });
+      } else if (playerArgs.trim()) {
+        const baseArgs = playerArgs.match(/(?:[^\s"]+|"[^"]*")+/g)?.map(a => a.replace(/^"(.*)"$/, '$1')) || [];
+        const args = [...baseArgs, url];
+        await invoke('spawn_external_player_with_args', { playerPath, args });
+      } else {
+        await invoke('spawn_external_player', { playerPath, url });
+      }
+      addToRecentChannels(channel);
+    } catch (e) {
+      console.error('[App] Failed to launch external player:', e);
+    }
+  }, []);
+
+  const handlePlayChannelWrapper = useCallback(async (channel: StoredChannel, autoSwitched?: boolean) => {
+    if (popoutMode === 'external') {
+      await handlePlayInExternal(channel);
+    } else if (popoutMode === 'popout') {
       popoutSwapChannel(channel);
     } else {
       handlePlayChannel(channel, autoSwitched);
     }
-  }, [popoutMode, handlePlayChannel, popoutSwapChannel]);
+  }, [popoutMode, handlePlayChannel, popoutSwapChannel, handlePlayInExternal]);
 
   const handlePlayVodWrapper = useCallback((info: import('./types/media').VodPlayInfo, onCloseView?: () => void) => {
     if (popoutMode) {
@@ -2466,8 +2503,9 @@ function App() {
         categoryStripOpen={categoriesOpen}
         onPlayChannel={handlePlayChannelWrapper}
         popoutMode={popoutMode}
-        onTogglePopoutMode={togglePopoutMode}
+        onTogglePopoutMode={cyclePopoutMode}
         onPlayInPopout={popoutSwapChannel}
+        onPlayInExternal={handlePlayInExternal}
         popoutIsOpen={popoutIsOpen}
         onPlayCatchup={handlePlayCatchup}
         onClose={() => {

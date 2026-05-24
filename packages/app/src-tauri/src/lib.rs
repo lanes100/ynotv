@@ -2076,6 +2076,47 @@ async fn open_external_url(url: String) -> Result<(), String> {
     tauri_plugin_opener::open_url(&url, None::<&str>).map_err(|e| e.to_string())
 }
 
+#[tauri::command]
+async fn spawn_external_player(player_path: String, url: String) -> Result<(), String> {
+    debug!(
+        "[ExternalPlayer] Spawning: {} with URL: {}",
+        player_path, url
+    );
+    let child = std::process::Command::new(&player_path)
+        .arg(&url)
+        .spawn()
+        .map_err(|e| {
+            format!(
+                "Failed to launch external player '{}': {}",
+                player_path, e
+            )
+        })?;
+    debug!("[ExternalPlayer] Spawned PID: {}", child.id());
+    Ok(())
+}
+
+#[tauri::command]
+async fn spawn_external_player_with_args(
+    player_path: String,
+    args: Vec<String>,
+) -> Result<(), String> {
+    debug!(
+        "[ExternalPlayer] Spawning: {} with args: {:?}",
+        player_path, args
+    );
+    let child = std::process::Command::new(&player_path)
+        .args(&args)
+        .spawn()
+        .map_err(|e| {
+            format!(
+                "Failed to launch external player '{}': {}",
+                player_path, e
+            )
+        })?;
+    debug!("[ExternalPlayer] Spawned PID: {}", child.id());
+    Ok(())
+}
+
 // =============================================================================
 // Window State Persistence
 // =============================================================================
@@ -2557,6 +2598,8 @@ pub fn run() {
             clear_show_watchlist_tracking,
             // Utility commands
             open_external_url,
+            spawn_external_player,
+            spawn_external_player_with_args,
             // Google Cast commands
             cast_start_discovery,
             cast_stop_discovery,

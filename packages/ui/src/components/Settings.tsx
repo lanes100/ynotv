@@ -164,6 +164,8 @@ export function Settings({
   const [popoutAlwaysOnTop, setPopoutAlwaysOnTop] = useState(false);
   const [popoutMpvParamsEnabled, setPopoutMpvParamsEnabled] = useState(false);
   const [popoutMpvParams, setPopoutMpvParams] = useState('');
+  // External player settings state
+  const [externalPlayerPath, setExternalPlayerPath] = useState('');
   // Skip Intro settings state
   const [skipIntroTimerSeconds, setSkipIntroTimerSeconds] = useState(10);
   const [skipIntroAutoSkip, setSkipIntroAutoSkip] = useState(false);
@@ -305,6 +307,7 @@ export function Settings({
         popoutAlwaysOnTop?: boolean;
         popoutMpvParamsEnabled?: boolean;
         popoutMpvParams?: string;
+        externalPlayerPath?: string;
         skipIntroTimerSeconds?: number;
         skipIntroAutoSkip?: boolean;
         subtitleSettings?: SubtitleSettings;
@@ -448,6 +451,9 @@ export function Settings({
       setPopoutAlwaysOnTop(settings.popoutAlwaysOnTop ?? false);
       setPopoutMpvParamsEnabled(settings.popoutMpvParamsEnabled ?? false);
       setPopoutMpvParams(settings.popoutMpvParams ?? '');
+
+      // Load External Player settings
+      setExternalPlayerPath(settings.externalPlayerPath ?? '');
 
       // Load Skip Intro settings
       setSkipIntroTimerSeconds(settings.skipIntroTimerSeconds ?? 10);
@@ -704,6 +710,13 @@ export function Settings({
     setPopoutMpvParams(params);
     if (window.storage) {
       await window.storage.updateSettings({ popoutMpvParams: params });
+    }
+  };
+
+  const handleExternalPlayerPathChange = async (path: string) => {
+    setExternalPlayerPath(path);
+    if (window.storage) {
+      await window.storage.updateSettings({ externalPlayerPath: path });
     }
   };
 
@@ -1018,6 +1031,8 @@ export function Settings({
             onPopoutMpvParamsEnabledChange={handlePopoutMpvParamsEnabledChange}
             popoutMpvParams={popoutMpvParams}
             onPopoutMpvParamsChange={handlePopoutMpvParamsChange}
+            externalPlayerPath={externalPlayerPath}
+            onExternalPlayerPathChange={handleExternalPlayerPathChange}
             skipIntroTimerSeconds={skipIntroTimerSeconds}
             onSkipIntroTimerSecondsChange={handleSkipIntroTimerSecondsChange}
             skipIntroAutoSkip={skipIntroAutoSkip}

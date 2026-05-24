@@ -44,6 +44,10 @@ export interface AppSettings {
   popoutMpvParamsEnabled: boolean;
   popoutMpvParams: string;
 
+  // External player
+  externalPlayerPath: string;
+  externalPlayerArgs: string;
+
   // Theme
   theme: ThemeId;
 
@@ -96,6 +100,10 @@ export interface AppSettings {
     setStartupView: (view: 'none' | 'guide' | 'movies' | 'series' | 'dvr' | 'sports' | 'calendar') => void;
     castEnabled: boolean;
     setCastEnabled: (enabled: boolean) => void;
+    externalPlayerPath: string;
+    setExternalPlayerPath: (path: string) => void;
+    externalPlayerArgs: string;
+    setExternalPlayerArgs: (args: string) => void;
 }
 
 /**
@@ -142,6 +150,10 @@ export function useAppSettings(): AppSettings {
   const [popoutAlwaysOnTop, setPopoutAlwaysOnTopState] = useState(false);
   const [popoutMpvParamsEnabled, setPopoutMpvParamsEnabledState] = useState(false);
   const [popoutMpvParams, setPopoutMpvParamsState] = useState('');
+
+  // External player settings
+  const [externalPlayerPath, setExternalPlayerPathState] = useState('');
+  const [externalPlayerArgs, setExternalPlayerArgsState] = useState('');
 
   // Theme state
   const [theme, setThemeState] = useState<ThemeId>('glass-neon');
@@ -229,6 +241,8 @@ export function useAppSettings(): AppSettings {
           setPopoutAlwaysOnTopState(result.data.popoutAlwaysOnTop ?? false);
           setPopoutMpvParamsEnabledState(result.data.popoutMpvParamsEnabled ?? false);
           setPopoutMpvParamsState(result.data.popoutMpvParams ?? '');
+          setExternalPlayerPathState(result.data.externalPlayerPath ?? '');
+          setExternalPlayerArgsState(result.data.externalPlayerArgs ?? '');
 
           // Load widget scale and apply CSS variable
           const savedScale = result.data.widgetScale ?? 1;
@@ -529,6 +543,28 @@ export function useAppSettings(): AppSettings {
     }
   }, []);
 
+  const setExternalPlayerPath = useCallback(async (path: string) => {
+    setExternalPlayerPathState(path);
+    if (window.storage) {
+      try {
+        await window.storage.updateSettings({ externalPlayerPath: path });
+      } catch (e) {
+        console.error('[useAppSettings] Failed to save externalPlayerPath:', e);
+      }
+    }
+  }, []);
+
+  const setExternalPlayerArgs = useCallback(async (args: string) => {
+    setExternalPlayerArgsState(args);
+    if (window.storage) {
+      try {
+        await window.storage.updateSettings({ externalPlayerArgs: args });
+      } catch (e) {
+        console.error('[useAppSettings] Failed to save externalPlayerArgs:', e);
+      }
+    }
+  }, []);
+
   const setCastEnabled = useCallback(async (enabled: boolean) => {
     setCastEnabledState(enabled);
     if (window.storage) {
@@ -604,5 +640,9 @@ export function useAppSettings(): AppSettings {
     setStartupView,
     castEnabled,
     setCastEnabled,
+    externalPlayerPath,
+    setExternalPlayerPath,
+    externalPlayerArgs,
+    setExternalPlayerArgs,
   };
 }

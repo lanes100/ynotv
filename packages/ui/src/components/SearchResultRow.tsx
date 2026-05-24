@@ -20,6 +20,7 @@ interface SearchResultRowProps {
   currentLayout?: string;
   onSendToSlot?: (slotId: 2 | 3 | 4, channelName: string, channelUrl: string, sourceName?: string | null) => void;
   onPlayInPopout?: (channel: StoredChannel) => void;
+  onPlayInExternal?: (channel: StoredChannel) => void;
   includeSourceInSearch?: boolean;
   currentChannel?: StoredChannel | null;
 }
@@ -52,6 +53,7 @@ export const SearchResultRow = memo(function SearchResultRow({
   currentLayout,
   onSendToSlot,
   onPlayInPopout,
+  onPlayInExternal,
   includeSourceInSearch,
   currentChannel,
 }: SearchResultRowProps) {
@@ -249,6 +251,7 @@ export const SearchResultRow = memo(function SearchResultRow({
           currentLayout={currentLayout}
           onSendToSlot={onSendToSlot}
           onPlayInPopout={onPlayInPopout}
+          onPlayInExternal={onPlayInExternal}
         />
       )}
 

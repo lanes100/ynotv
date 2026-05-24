@@ -22,6 +22,8 @@ interface ChannelContextMenuProps {
     onSendToSlot?: (slotId: 2 | 3 | 4, channelName: string, channelUrl: string, sourceName?: string | null) => void;
     // Popout props
     onPlayInPopout?: (channel: StoredChannel) => void;
+    // External player prop
+    onPlayInExternal?: (channel: StoredChannel) => void;
 }
 
 // Helper to format date for datetime-local input
@@ -40,6 +42,7 @@ export function ChannelContextMenu({
     currentLayout,
     onSendToSlot,
     onPlayInPopout,
+    onPlayInExternal,
 }: ChannelContextMenuProps) {
     const menuRef = useRef<HTMLDivElement>(null);
     const [currentView, setCurrentView] = useState<MenuView>('main');
@@ -642,6 +645,20 @@ export function ChannelContextMenu({
                         }}
                     >
                         🖥️ Play in Popout
+                    </div>
+                    <div className="context-menu-separator" />
+                </>
+            )}
+            {onPlayInExternal && (
+                <>
+                    <div
+                        className="context-menu-item"
+                        onClick={() => {
+                            onPlayInExternal(channel);
+                            onClose();
+                        }}
+                    >
+                        ▶️ Send to External Player
                     </div>
                     <div className="context-menu-separator" />
                 </>

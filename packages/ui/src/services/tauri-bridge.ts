@@ -448,6 +448,14 @@ export const Bridge = {
         return invoke('popout_get_params_debug');
     },
 
+    async openExternalPlayer(playerPath: string, url: string) {
+        return invoke('spawn_external_player', { playerPath, url });
+    },
+
+    async openExternalPlayerWithArgs(playerPath: string, args: string[]) {
+        return invoke('spawn_external_player_with_args', { playerPath, args });
+    },
+
     // Window Controls
     async minimize() {
         console.log('[Bridge] minimize called');

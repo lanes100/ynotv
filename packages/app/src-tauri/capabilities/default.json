@@ -58,7 +58,9 @@
   "commands": {
     "allow": [
       "bulk_insert",
-      "open_external_url"
+      "open_external_url",
+      "spawn_external_player",
+      "spawn_external_player_with_args"
     ]
   }
 }
