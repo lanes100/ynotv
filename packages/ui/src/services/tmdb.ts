@@ -8,7 +8,7 @@
  * with GitHub-cached fallback for users without their own token.
  */
 
-import { TMDB, type Video } from 'tmdb-ts';
+import { TMDB, type Video, type Recommendation, type TvRecommendation } from 'tmdb-ts';
 
 // TMDB image base URLs
 export const TMDB_IMAGE_BASE = 'https://image.tmdb.org/t/p';
@@ -319,7 +319,7 @@ export async function getTvShowDetails(
   tvId: number
 ): Promise<TmdbTvDetails> {
   const tmdb = getTmdb(accessToken);
-  const details = await tmdb.tvShows.details(tvId);
+  const details = await tmdb.tvShows.details(tvId, ['external_ids']);
   return details as unknown as TmdbTvDetails;
 }
 
@@ -698,6 +698,38 @@ export async function getCachedTvGenreCounts(): Promise<Map<number, number>> {
 
   return counts;
 }
+
+// ===========================================================================
+// Recommendations endpoints
+// ===========================================================================
+
+export async function getMovieRecommendations(
+  accessToken: string,
+  movieId: number,
+  page = 1
+): Promise<Recommendation[]> {
+  return withApiCache(`movies_recommendations_${movieId}_${page}`, async () => {
+    const tmdb = getTmdb(accessToken);
+    const response = await tmdb.movies.recommendations(movieId, { page });
+    return response.results;
+  });
+}
+
+export async function getTvShowRecommendations(
+  accessToken: string,
+  tvId: number,
+  page = 1
+): Promise<TvRecommendation[]> {
+  return withApiCache(`tv_recommendations_${tvId}_${page}`, async () => {
+    const tmdb = getTmdb(accessToken);
+    const response = await tmdb.tvShows.recommendations(tvId, { page });
+    return response.results;
+  });
+}
+
+// ===========================================================================
+// Videos endpoints
+// ===========================================================================
 
 /**
  * Fetch videos for a movie from TMDB

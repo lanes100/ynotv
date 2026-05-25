@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import type { StremioMeta, StremioStream, StremioVideo } from '../../types/stremio';
 import { useStremioAddonStore } from '../../stores/stremioAddonStore';
 import {
@@ -12,10 +12,12 @@ import {
 } from '../../stores/uiStore';
 import { useStremioLibraryStore } from '../../stores/stremioLibraryStore';
 import { useStremioWatchStore } from '../../stores/stremioWatchStore';
-import { fetchStreams } from '../../services/stremio-addon';
+import { fetchStreams, fetchMeta } from '../../services/stremio-addon';
 import { useLazyStremioCast } from '../../hooks/useLazyStremioCast';
 import { useLazyStremioTrailer } from '../../hooks/useLazyStremioTrailer';
+import { useLazyStremioRecommendations, type RecommendationItem } from '../../hooks/useLazyStremioRecommendations';
 import { useTmdbAccessToken } from '../../hooks/useTmdbLists';
+import { getMovieDetails, getTvShowDetails, getTmdbImageUrl } from '../../services/tmdb';
 import './StremioDetail.css';
 
 interface StremioDetailProps {
@@ -57,12 +59,133 @@ export function StremioDetail({ meta, onBack, onPlay, streamPickerMode }: Stremi
 
   const { cast, loading: castLoading } = useLazyStremioCast(meta, tmdbToken);
   const { trailerUrl: tmdbTrailerUrl } = useLazyStremioTrailer(meta, tmdbToken);
+  const { items: recommendations, loading: recsLoading } = useLazyStremioRecommendations(meta, tmdbToken);
 
   const handleCastClick = useCallback((castName: string) => {
     setStremioActiveMeta(null);
     setStremioSearchQuery(castName);
     setStremioView('home');
   }, [setStremioActiveMeta, setStremioSearchQuery, setStremioView]);
+
+  const handleRecClick = useCallback((rec: RecommendationItem) => {
+    const newMeta: StremioMeta = {
+      id: `tmdb:${rec.id}`,
+      type: meta.type,
+      name: rec.title,
+      poster: rec.posterUrl ?? undefined,
+      year: rec.year ? parseInt(rec.year) : undefined,
+      imdbRating: rec.rating > 0 ? String(rec.rating.toFixed(1)) : undefined,
+    };
+    setStremioActiveMeta(null);
+    setTimeout(() => {
+      setStremioActiveMeta(newMeta);
+      setStremioView('detail');
+    }, 0);
+  }, [meta.type, setStremioActiveMeta, setStremioView]);
+
+  const fetchedIdsRef = useRef<Set<string>>(new Set());
+
+  // Auto-heal/fetch full metadata if we only have TMDB ID or incomplete metadata
+  useEffect(() => {
+    if (!meta.id || fetchedIdsRef.current.has(meta.id)) return;
+    
+    const isTmdbId = meta.id.startsWith('tmdb:');
+    const isSeriesItem = meta.type === 'series';
+    const isIncomplete = isTmdbId || (isSeriesItem && !meta.videos) || !meta.description;
+    
+    if (!isIncomplete) return;
+
+    let active = true;
+
+    const fetchFullMetadata = async () => {
+      // Retrieve TMDB token, fallback to direct settings check if not populated yet in React state
+      let activeToken = tmdbToken;
+      if (!activeToken && window.storage) {
+        try {
+          const settings = await window.storage.getSettings();
+          activeToken = (settings.data as any)?.tmdbApiKey || null;
+        } catch (e) {
+          console.error('[StremioDetail] Failed to read tmdbApiKey directly from storage:', e);
+        }
+      }
+
+      // If we need TMDB details but don't have a token (and couldn't read one), abort and let it retry
+      if (isTmdbId && !activeToken) {
+        return;
+      }
+
+      let imdbId: string | null = null;
+      const tmdbIdStr = isTmdbId ? meta.id.replace('tmdb:', '') : null;
+      let tmdbDetails: any = null;
+
+      // 1. If it's a TMDB ID, we need to get the IMDb ID from TMDB
+      if (isTmdbId && tmdbIdStr && activeToken) {
+        try {
+          const idNum = parseInt(tmdbIdStr, 10);
+          if (!isNaN(idNum)) {
+            if (isSeriesItem) {
+              tmdbDetails = await getTvShowDetails(activeToken, idNum);
+              imdbId = tmdbDetails.external_ids?.imdb_id || null;
+            } else {
+              tmdbDetails = await getMovieDetails(activeToken, idNum);
+              imdbId = tmdbDetails.imdb_id || null;
+            }
+          }
+        } catch (err) {
+          console.error('[StremioDetail] Failed to fetch TMDB details for ID:', meta.id, err);
+        }
+      } else if (!isTmdbId) {
+        // It's already an IMDb ID (tt...)
+        imdbId = meta.id;
+      }
+
+      if (!active) return;
+
+      // 2. Fetch Stremio metadata using the IMDb ID
+      let fullMeta: StremioMeta | null = null;
+      if (imdbId) {
+        try {
+          fullMeta = await fetchMeta(addons, meta.type, imdbId);
+        } catch (err) {
+          console.error('[StremioDetail] Failed to fetch Stremio metadata for IMDb ID:', imdbId, err);
+        }
+      }
+
+      if (!active) return;
+
+      // Mark as processed only if this run is still active (not aborted)
+      fetchedIdsRef.current.add(meta.id);
+
+      // 3. Update the active meta in the store to trigger a re-render with full metadata
+      if (fullMeta) {
+        // Keep the TMDb rating if Stremio rating is not present
+        if (!fullMeta.imdbRating && meta.imdbRating) {
+          fullMeta.imdbRating = meta.imdbRating;
+        }
+        setStremioActiveMeta(fullMeta);
+      } else if (tmdbDetails) {
+        console.warn('[StremioDetail] Stremio metadata fetch failed, using TMDB fallback details');
+        // Fallback: If Stremio metadata fetch failed but we have TMDB details, enrich what we have
+        const enrichedMeta: StremioMeta = {
+          ...meta,
+          id: imdbId || meta.id,
+          description: tmdbDetails.overview || meta.description,
+          genres: tmdbDetails.genres?.map((g: any) => g.name) || meta.genres,
+          runtime: tmdbDetails.runtime ? `${tmdbDetails.runtime} min` : meta.runtime,
+          background: getTmdbImageUrl(tmdbDetails.backdrop_path, 'original') || meta.background,
+        };
+        setStremioActiveMeta(enrichedMeta);
+      } else {
+        console.error('[StremioDetail] Both Stremio metadata fetch and TMDB fetch failed.');
+      }
+    };
+
+    fetchFullMetadata();
+
+    return () => {
+      active = false;
+    };
+  }, [meta.id, meta.type, tmdbToken, addons, setStremioActiveMeta]);
 
   const [streams, setStreams] = useState<StremioStream[]>([]);
   const [selectedVideo, setSelectedVideo] = useState<StremioVideo | null>(null);
@@ -340,6 +463,41 @@ export function StremioDetail({ meta, onBack, onPlay, streamPickerMode }: Stremi
               )}
             </button>
           </div>
+
+          {/* Recommendations */}
+          {(recommendations.length > 0 || recsLoading) && (
+            <div className="stremio-detail-section stremio-detail-recs-section">
+              <div className="stremio-detail-section-label">RECOMMENDATIONS</div>
+              <div className="stremio-detail-recs-row">
+                {recsLoading && recommendations.length === 0 ? (
+                  <div className="stremio-detail-cast-loading">Loading recommendations...</div>
+                ) : (
+                  recommendations.map((rec) => (
+                    <div
+                      key={rec.id}
+                      className="stremio-detail-rec-card"
+                      onClick={() => handleRecClick(rec)}
+                      title={rec.title}
+                    >
+                      <div className="stremio-detail-rec-poster">
+                        {rec.posterUrl ? (
+                          <img src={rec.posterUrl} alt={rec.title} loading="lazy" />
+                        ) : (
+                          <div className="stremio-detail-rec-poster-placeholder">
+                            <span>{rec.title.charAt(0)}</span>
+                          </div>
+                        )}
+                      </div>
+                      <span className="stremio-detail-rec-title">{rec.title}</span>
+                      <span className="stremio-detail-rec-meta">
+                        {rec.year}{rec.rating > 0 && ` · ★ ${rec.rating.toFixed(1)}`}
+                      </span>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Right Side: Episodes list OR streams list */}
