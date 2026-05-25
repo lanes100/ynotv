@@ -1432,7 +1432,21 @@ export function SourcesTab({
                 <input
                   type="text"
                   value={formData.url}
-                  onChange={(e) => setFormData({ ...formData, url: e.target.value })}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (formData.type === 'xtream') {
+                      try {
+                        const urlObj = new URL(value);
+                        const u = urlObj.searchParams.get('username');
+                        const p = urlObj.searchParams.get('password');
+                        if (u && p && (value.includes('/get.php') || value.includes('/player_api.php'))) {
+                          setFormData({ ...formData, url: `${urlObj.protocol}//${urlObj.host}/`, username: u, password: p });
+                          return;
+                        }
+                      } catch {}
+                    }
+                    setFormData({ ...formData, url: value });
+                  }}
                   placeholder="http://provider.com:8080"
                 />
               </div>
