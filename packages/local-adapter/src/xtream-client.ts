@@ -59,6 +59,7 @@ export class XtreamClient {
     this.config = {
       ...config,
       baseUrl: config.baseUrl.replace(/\/+$/, ''),
+      userAgent: config.userAgent || 'ynoTVPlayer',
     };
     this.sourceId = sourceId;
   }

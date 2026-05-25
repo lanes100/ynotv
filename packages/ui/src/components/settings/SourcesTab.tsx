@@ -698,15 +698,16 @@ export function SourcesTab({
         success = result.success;
       } else {
         // M3U: try a lightweight fetch
+        const finalUa = formData.userAgent.trim() || 'ynoTVPlayer';
         if (window.fetchProxy) {
           const result = await window.fetchProxy.fetch(url, {
-            headers: formData.userAgent ? { 'User-Agent': formData.userAgent } : {}
+            headers: { 'User-Agent': finalUa }
           });
           success = !!(result.success && result.data && result.data.ok);
         } else {
           const response = await fetch(url, {
             method: 'HEAD',
-            headers: formData.userAgent ? { 'User-Agent': formData.userAgent } : {}
+            headers: { 'User-Agent': finalUa }
           });
           success = response.ok;
         }

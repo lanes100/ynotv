@@ -47,11 +47,11 @@ pub async fn sync_xtream_source(
     info!("[Xtream Sync] Starting native sync for {}", source_id);
 
     let client_builder = Client::builder();
-    let client = if let Some(ua) = user_agent {
-        client_builder.user_agent(ua).build().map_err(|e| e.to_string())?
-    } else {
-        client_builder.build().map_err(|e| e.to_string())?
+    let ua = match user_agent {
+        Some(ref u) if !u.trim().is_empty() => u.clone(),
+        _ => "ynoTVPlayer".to_string(),
     };
+    let client = client_builder.user_agent(ua).build().map_err(|e| e.to_string())?;
 
     let base_url = base_url.trim_end_matches('/');
 
@@ -347,11 +347,11 @@ pub async fn sync_m3u_source(
     info!("[M3U Sync] Starting native sync for {}", source_id);
 
     let client_builder = Client::builder();
-    let client = if let Some(ua) = user_agent {
-        client_builder.user_agent(ua).build().map_err(|e| e.to_string())?
-    } else {
-        client_builder.build().map_err(|e| e.to_string())?
+    let ua = match user_agent {
+        Some(ref u) if !u.trim().is_empty() => u.clone(),
+        _ => "ynoTVPlayer".to_string(),
     };
+    let client = client_builder.user_agent(ua).build().map_err(|e| e.to_string())?;
 
     let response = client.get(&url).send().await.map_err(|e| {
         let msg = format!("Failed to connect to M3U URL: {}", e);
@@ -529,11 +529,11 @@ pub async fn sync_xtream_vod_movies(
         .deflate(true)
         .gzip(true);
         
-    let client = if let Some(ua) = user_agent {
-        client_builder.user_agent(ua).build().map_err(|e| e.to_string())?
-    } else {
-        client_builder.build().map_err(|e| e.to_string())?
+    let ua = match user_agent {
+        Some(ref u) if !u.trim().is_empty() => u.clone(),
+        _ => "ynoTVPlayer".to_string(),
     };
+    let client = client_builder.user_agent(ua).build().map_err(|e| e.to_string())?;
 
     let base_url = base_url.trim_end_matches('/');
 
@@ -714,11 +714,11 @@ pub async fn sync_xtream_vod_series(
         .deflate(true)
         .gzip(true);
         
-    let client = if let Some(ua) = user_agent {
-        client_builder.user_agent(ua).build().map_err(|e| e.to_string())?
-    } else {
-        client_builder.build().map_err(|e| e.to_string())?
+    let ua = match user_agent {
+        Some(ref u) if !u.trim().is_empty() => u.clone(),
+        _ => "ynoTVPlayer".to_string(),
     };
+    let client = client_builder.user_agent(ua).build().map_err(|e| e.to_string())?;
 
     let base_url = base_url.trim_end_matches('/');
 

@@ -89,7 +89,10 @@ export async function resolvePlayUrl(
         return { url: rawUrl };
     }
 
-    const userAgent: string | undefined = sourceData.user_agent || undefined;
+    let userAgent: string | undefined = sourceData.user_agent || undefined;
+    if (!userAgent && (sourceData.type === 'xtream' || sourceData.type === 'm3u')) {
+        userAgent = 'ynoTVPlayer';
+    }
     const sourceName: string | null = sourceData.name ?? null;
     let resolvedUrl = rawUrl;
 
