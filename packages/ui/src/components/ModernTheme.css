@@ -134,7 +134,7 @@
 
 .modern-ui .category-item:hover {
   background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(255, 255, 255, 0.08);
+  border-color: color-mix(in srgb, var(--accent-primary, #00d4ff) 25%, transparent);
   transform: translateX(3px);
 }
 
@@ -271,7 +271,7 @@
       rgba(255, 255, 255, 0.06) 0%,
       rgba(255, 255, 255, 0.02) 100%
     ) !important;
-  border-color: rgba(255, 255, 255, 0.1) !important;
+  border-color: color-mix(in srgb, var(--accent-primary, #00d4ff) 25%, transparent) !important;
   transform: translateX(3px) !important;
   box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2) !important;
 }
@@ -434,6 +434,7 @@
 .modern-ui .category-strip button.category-source-header:hover {
   background: rgba(255, 255, 255, 0.08) !important;
   color: white !important;
+  border-top-color: color-mix(in srgb, var(--accent-primary, #00d4ff) 25%, transparent) !important;
 }
 
 /* Explicit sticky positioning for expanded headers in modern theme */
