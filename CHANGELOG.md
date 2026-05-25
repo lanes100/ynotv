@@ -1,5 +1,36 @@
 # Changelog
 
+## v2.0.0
+
+### Added
+
+- **Stremio add-ons support** - A dedicated `Strem.` page has been added for Stremio add-on support. Navigate to the Strem page and click `Manage Add-ons` to add your Stremio add-ons. Strem Tab can be hidden in new `Settings -> Navigations` if you don't plan to use it.
+- **HLS multiview** - Multiview now has an option to choose between MPV or HLS container for playback. Use HLS if your system can't handle multi MPV or if you need overlays
+- **Cast to TV** - Casting to any Chromecast-compatible device is now supported. Enable under `Settings → Playback → Google Cast`. A Windows firewall prompt will appear on first use to allow local network scanning for available devices.
+- **External player support** - Any channel can be sent to an external player of your choice. Configure the player under `Settings → Playback → External/Popout Player`. Access via `Right-click → Send to External Player`, or click the screen icon in the EPG and set it to `External` to route all playback externally.
+- **IntroDB integration** - A skip intro button will appear for Series episodes with an entry in IntroDB. Auto-skip can be enabled, and the button display duration is configurable under `Settings → Playback → Skip Intro`.
+- **Trakt integration** - Trakt scrobbling is now supported for VOD and Stremio streams. Trakt watchlists can also be imported directly into Strem catalogs.
+- **Hide navigation tabs** - Individual tabs can be hidden from the title bar navigation by unchecking them under `Settings → Navigation`. Hide any unnecessary tabs you don't use. 
+- **Clear Recent List** - The recent channels list can now be cleared by right-clicking `Recent` in the sidebar and selecting `Clear`.
+- **Startup View** - Configure which page is displayed on launch under `Settings → Startup → Startup View`.
+- **Live TV sync only** - A new option in Source settings allows syncing Live TV channels exclusively, skipping VOD content entirely. Enable via the checkbox in `Settings → Source Settings`.
+- **Rugby support** - Rugby has been added to the Sports page. Enable under `Sports → Settings`.
+- **Aspect ratio selector** - A new button on the Now Playing Bar allows the aspect ratio to be changed during playback.
+- **Movies & Series detail page overhaul** - The Movies detail page now includes cast headshots. The Series page has been reworked to display episode summaries and screen captures.
+- **Improved TMDB metadata matching** - VOD movie metadata matching against TMDB has been refined for greater accuracy.
+- **EPG programme overlap prevention** - EPG entries from providers that supply overlapping programme blocks will now be split automatically. When a second programme begins, the preceding block is closed at that point.
+- **Borderless popout player** - The title bar has been removed from the popout window for a cleaner display.
+- **Default audio and subtitle language** - Preferred audio and subtitle languages can be set under `Settings → Subtitles & Audio`. Applies to VOD and Stremio streams.
+- **Disable event-based reconnect** - Event based detection for autoreconnect is disabled by default now as it was too aggressive, causing unstable streams to constantly reconnect.  Can re-enable if it didn't cause issues under `Settings → Playback → Reconnect`.
+- **Default user agent** - The default user agent is now set to `ynoTVPlayer` rather than being left blank.
+
+### Fixed
+
+- **SubSource applying incorrect season for Series** - Subtitle lookups via SubSource will now resolve to the correct season.
+- **Update popup not scaling correctly** - The update popup now renders properly for users with display scaling applied.
+- **Stalker adult channels not appearing** - Resolved an issue preventing adult channels from Stalker sources from being displayed.
+- **Quick Record not starting immediately** - Upon clicking the button, recording should start immediately now.
+
 ## v1.7.1
 
 ### Added

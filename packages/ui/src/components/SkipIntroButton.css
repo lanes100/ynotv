@@ -1,6 +1,6 @@
 .skip-intro-btn {
   position: fixed;
-  bottom: 100px;
+  bottom: 160px;
   right: 24px;
   z-index: 10000;
   display: flex;
