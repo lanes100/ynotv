@@ -19,7 +19,7 @@ function log(stage: string, ...args: any[]) {
 }
 
 /* ─── language helpers ─── */
-const LANG_MAP: Record<string, string> = {
+export const LANG_MAP: Record<string, string> = {
   // 2-letter ISO-639-1
   en: 'english', es: 'spanish', fr: 'french', de: 'german', it: 'italian',
   pt: 'portuguese', ru: 'russian', ar: 'arabic', hi: 'hindi', zh: 'chinese',
@@ -274,64 +274,84 @@ export async function searchSubSourceSubtitles(
 }
 
 /* ─── download + extract ─── */
-export async function downloadSubSourceSubtitle(
+export interface ZipEntry {
+  fileName: string;
+  compressionMethod: number;
+  compressedSize: number;
+  uncompressedSize: number;
+  dataStart: number;
+}
+
+export async function downloadSubSourceZip(
   apiKey: string,
   subtitleId: number
-): Promise<SubSourceDownloadResult> {
+): Promise<{ success: boolean; data?: Uint8Array; error?: string }> {
   if (!apiKey) {
     return { success: false, error: 'No API key configured' };
   }
 
-  log('DOWNLOAD', { subtitleId });
+  log('DOWNLOAD_ZIP', { subtitleId });
 
   try {
     const url = `${API_BASE}/subtitles/${subtitleId}/download`;
     let zipData: Uint8Array;
 
     if (window.fetchProxy) {
-      log('DOWNLOAD', 'using fetchProxy.fetchBinary');
+      log('DOWNLOAD_ZIP', 'using fetchProxy.fetchBinary');
       const proxyResult = await window.fetchProxy.fetchBinary(url, {
         headers: { 'X-API-Key': apiKey, 'Accept': 'application/zip' },
       });
       if (proxyResult.error || !proxyResult.data || !proxyResult.success) {
-        log('DOWNLOAD', 'fetchBinary failed:', proxyResult.error);
+        log('DOWNLOAD_ZIP', 'fetchBinary failed:', proxyResult.error);
         return { success: false, error: proxyResult.error || 'Binary download failed' };
       }
       zipData = proxyResult.data;
     } else {
-      log('DOWNLOAD', 'using native fetch with arrayBuffer');
+      log('DOWNLOAD_ZIP', 'using native fetch with arrayBuffer');
       const response = await fetch(url, {
         headers: { 'X-API-Key': apiKey, 'Accept': 'application/zip' },
       });
       if (!response.ok) {
-        log('DOWNLOAD', `HTTP ${response.status}`);
+        log('DOWNLOAD_ZIP', `HTTP ${response.status}`);
         return { success: false, error: `HTTP ${response.status}: ${response.statusText}` };
       }
       zipData = new Uint8Array(await response.arrayBuffer());
     }
 
-    log('DOWNLOAD', `got ${zipData.length} bytes`);
-
-    const srtText = await extractSrtFromZip(zipData);
-    if (!srtText) {
-      log('DOWNLOAD', 'no .srt found in ZIP');
-      return { success: false, error: 'Could not extract .srt from ZIP archive' };
-    }
-
-    log('DOWNLOAD', `extracted ${srtText.length} chars`);
-    return { success: true, content: srtText };
+    log('DOWNLOAD_ZIP', `got ${zipData.length} bytes`);
+    return { success: true, data: zipData };
   } catch (e: any) {
-    log('DOWNLOAD', 'ERROR', e?.message);
+    log('DOWNLOAD_ZIP', 'ERROR', e?.message);
     return { success: false, error: e?.message || 'Download failed' };
   }
 }
 
+export async function downloadSubSourceSubtitle(
+  apiKey: string,
+  subtitleId: number
+): Promise<SubSourceDownloadResult> {
+  const zipResult = await downloadSubSourceZip(apiKey, subtitleId);
+  if (!zipResult.success || !zipResult.data) {
+    return { success: false, error: zipResult.error || 'Download failed' };
+  }
+
+  const srtText = await extractSrtFromZip(zipResult.data);
+  if (!srtText) {
+    log('DOWNLOAD', 'no .srt found in ZIP');
+    return { success: false, error: 'Could not extract .srt from ZIP archive' };
+  }
+
+  log('DOWNLOAD', `extracted ${srtText.length} chars`);
+  return { success: true, content: srtText };
+}
+
 /* ─── ZIP extraction ─── */
-async function extractSrtFromZip(zipData: Uint8Array): Promise<string | null> {
+export function getZipEntries(zipData: Uint8Array): ZipEntry[] {
   const decoder = new TextDecoder();
+  const entries: ZipEntry[] = [];
   let offset = 0;
 
-  log('ZIP', `scanning ${zipData.length} bytes`);
+  log('ZIP', `scanning ${zipData.length} bytes for entries`);
 
   while (offset < zipData.length - 30) {
     // local file header signature: PK\x03\x04
@@ -363,57 +383,79 @@ async function extractSrtFromZip(zipData: Uint8Array): Promise<string | null> {
     const fileName = decoder.decode(zipData.slice(fileNameStart, fileNameStart + fileNameLength));
     const dataStart = fileNameStart + fileNameLength + extraLength;
 
-    log('ZIP', `entry: "${fileName}" method=${compressionMethod} size=${compressedSize}`);
-
-    if (fileName.toLowerCase().endsWith('.srt')) {
-      if (compressionMethod === 0) {
-        // Stored (no compression)
-        const text = decoder.decode(zipData.slice(dataStart, dataStart + uncompressedSize));
-        log('ZIP', 'extracted stored .srt');
-        return text;
-      }
-
-      if (compressionMethod === 8) {
-        // Deflated – try raw deflate via DecompressionStream
-        try {
-          const compressed = zipData.slice(dataStart, dataStart + compressedSize);
-          log('ZIP', 'decompressing deflated entry…');
-          const ds = new DecompressionStream('deflate-raw');
-          const writer = ds.writable.getWriter();
-          writer.write(compressed);
-          writer.close();
-
-          const reader = ds.readable.getReader();
-          const chunks: Uint8Array[] = [];
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            chunks.push(value);
-          }
-
-          const total = chunks.reduce((s, c) => s + c.length, 0);
-          const result = new Uint8Array(total);
-          let pos = 0;
-          for (const chunk of chunks) {
-            result.set(chunk, pos);
-            pos += chunk.length;
-          }
-
-          const text = decoder.decode(result);
-          log('ZIP', 'extracted deflated .srt');
-          return text;
-        } catch (e: any) {
-          log('ZIP', 'deflate-raw failed:', e?.message);
-          // fall through to next entry
-        }
-      }
+    const lowerName = fileName.toLowerCase();
+    if (lowerName.endsWith('.srt') || lowerName.endsWith('.vtt')) {
+      entries.push({
+        fileName,
+        compressionMethod,
+        compressedSize,
+        uncompressedSize,
+        dataStart,
+      });
     }
 
     // jump to next local file header
     offset = dataStart + compressedSize;
   }
 
-  log('ZIP', 'no .srt entry found');
+  return entries;
+}
+
+export async function decompressZipEntry(zipData: Uint8Array, entry: ZipEntry): Promise<string | null> {
+  const decoder = new TextDecoder();
+  const { fileName, compressionMethod, compressedSize, uncompressedSize, dataStart } = entry;
+
+  log('ZIP', `extracting: "${fileName}" method=${compressionMethod} size=${compressedSize}`);
+
+  if (compressionMethod === 0) {
+    // Stored (no compression)
+    const text = decoder.decode(zipData.slice(dataStart, dataStart + uncompressedSize));
+    log('ZIP', 'extracted stored file');
+    return text;
+  }
+
+  if (compressionMethod === 8) {
+    // Deflated – try raw deflate via DecompressionStream
+    try {
+      const compressed = zipData.slice(dataStart, dataStart + compressedSize);
+      log('ZIP', 'decompressing deflated entry…');
+      const ds = new DecompressionStream('deflate-raw');
+      const writer = ds.writable.getWriter();
+      writer.write(compressed);
+      writer.close();
+
+      const reader = ds.readable.getReader();
+      const chunks: Uint8Array[] = [];
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        chunks.push(value);
+      }
+
+      const total = chunks.reduce((s, c) => s + c.length, 0);
+      const result = new Uint8Array(total);
+      let pos = 0;
+      for (const chunk of chunks) {
+        result.set(chunk, pos);
+        pos += chunk.length;
+      }
+
+      const text = decoder.decode(result);
+      log('ZIP', 'extracted deflated file');
+      return text;
+    } catch (e: any) {
+      log('ZIP', 'deflate-raw failed:', e?.message);
+    }
+  }
+
+  return null;
+}
+
+async function extractSrtFromZip(zipData: Uint8Array): Promise<string | null> {
+  const entries = getZipEntries(zipData);
+  if (entries.length > 0) {
+    return decompressZipEntry(zipData, entries[0]);
+  }
   return null;
 }
 

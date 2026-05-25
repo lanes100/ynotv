@@ -22,7 +22,7 @@
   background: var(--surface-color, #1e1e2e);
   border-radius: 10px;
   width: 92%;
-  max-width: 720px;
+  max-width: 960px;
   max-height: 72vh;
   display: flex;
   flex-direction: column;
@@ -155,11 +155,17 @@
 }
 
 .subtitle-col-lang {
-  flex: 0 0 28%;
-  max-width: 220px;
+  flex: 0 0 20%;
+  max-width: 160px;
 }
 
 .subtitle-col-tracks {
+  flex: 0 0 28%;
+  min-width: 180px;
+  max-width: 260px;
+}
+
+.subtitle-col-search {
   flex: 1 1 auto;
   min-width: 0;
 }
@@ -187,6 +193,7 @@
 /* Column content scrollable */
 .subtitle-col-lang,
 .subtitle-col-tracks,
+.subtitle-col-search,
 .subtitle-col-controls {
   overflow-y: auto;
   overflow-x: hidden;

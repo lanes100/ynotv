@@ -89,7 +89,7 @@ export interface StremioStream {
   title?: string;
   description?: string;
   subtitles?: { id: string; url: string; lang: string }[];
-  behaviorHints?: { notWebReady?: boolean; bingeGroup?: string; proxyHeaders?: Record<string, string> };
+  behaviorHints?: { notWebReady?: boolean; bingeGroup?: string; proxyHeaders?: Record<string, string>; videoHash?: string; videoSize?: number; filename?: string };
   addonName?: string;
 }
 

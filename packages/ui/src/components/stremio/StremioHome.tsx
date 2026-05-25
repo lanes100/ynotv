@@ -33,7 +33,7 @@ type StremioSearchRow = {
   items: StremioSearchResult[];
 };
 
-const HIDDEN_CATALOG_IDS = new Set(['lastVideosIds', 'calendarVideosIds']);
+const HIDDEN_CATALOG_IDS = new Set(['last-videos', 'calendar-videos']);
 
 function addonHasResource(addon: InstalledAddon, resource: string): boolean {
   return addon.manifest.resources.some((r) => {

@@ -1201,7 +1201,12 @@ function App() {
 
       try {
         const addons = useStremioAddonStore.getState().enabledAddons;
-        const subs = await fetchSubtitles(addons, meta.type, meta.id);
+        const subtitleId = isSeries && episodeVideo?.id ? episodeVideo.id : meta.id;
+        const subtitleExtra: Record<string, string> = {};
+        if (stream.behaviorHints?.videoHash) subtitleExtra.videoHash = stream.behaviorHints.videoHash;
+        if (stream.behaviorHints?.videoSize) subtitleExtra.videoSize = String(stream.behaviorHints.videoSize);
+        if (stream.behaviorHints?.filename) subtitleExtra.filename = stream.behaviorHints.filename;
+        const subs = await fetchSubtitles(addons, meta.type, subtitleId, Object.keys(subtitleExtra).length > 0 ? subtitleExtra : undefined);
         if (subs.length > 0 && window.mpv?.addSubtitleFile) {
           const { writeTextFile, mkdir, BaseDirectory } = await import('@tauri-apps/plugin-fs');
           const { appLocalDataDir, join } = await import('@tauri-apps/api/path');
@@ -1221,15 +1226,15 @@ function App() {
                   if (!val) return 'unknown';
                   return val.replace(/__/g, '_').replace(/ /g, '_').replace(/[^a-zA-Z0-9_]/g, '');
                 };
-                const cleanAddon = sanitizePart(sub.addonName || 'Addon');
-                const cleanLabel = sanitizePart(sub.label || sub.lang.toUpperCase());
-                const cleanMetaId = sanitizePart(meta.id);
-                const cleanLang = sanitizePart(sub.lang);
+                const cleanAddon = sanitizePart(sub.addonName || 'Addon').slice(0, 30);
+                const cleanLabel = sanitizePart(sub.label || sub.lang.toUpperCase()).slice(0, 40);
+                const cleanMetaId = sanitizePart(meta.id).slice(0, 30);
+                const cleanLang = sanitizePart(sub.lang).slice(0, 10);
                 const relPath = `subtitles/stremio__${cleanAddon}__${cleanLabel}__${cleanMetaId}__${cleanLang}__${i}.${ext}`;
                 const filePath = await join(appDir, relPath);
 
                 await writeTextFile(relPath, text, { baseDir: BaseDirectory.AppLocalData });
-                window.mpv.addSubtitleFile(filePath).catch(() => {});
+                window.mpv.addSubtitleFile(filePath, 'auto').catch(() => {});
               }
             } catch (err) {
               console.error('[Stremio] Failed to load or save subtitle:', sub.url, err);

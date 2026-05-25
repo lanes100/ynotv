@@ -665,9 +665,10 @@ pub async fn set_subtitle_track<R: Runtime>(app: &AppHandle<R>, id: i64) -> Resu
     send_command_internal(&state, "set_property", vec![json!("sid"), json!(id)]).await.map(|_| ())
 }
 
-pub async fn add_subtitle_file<R: Runtime>(app: &AppHandle<R>, file_path: String) -> Result<(), String> {
+pub async fn add_subtitle_file<R: Runtime>(app: &AppHandle<R>, file_path: String, flag: Option<String>) -> Result<(), String> {
     let state = app.state::<MpvState>();
-    send_command_internal(&state, "sub-add", vec![json!(file_path), json!("select")]).await.map(|_| ())
+    let f = flag.unwrap_or_else(|| "select".to_string());
+    send_command_internal(&state, "sub-add", vec![json!(file_path), json!(f)]).await.map(|_| ())
 }
 
 pub async fn remove_subtitle_file<R: Runtime>(app: &AppHandle<R>, file_path: String) -> Result<(), String> {

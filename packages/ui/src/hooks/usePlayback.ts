@@ -10,7 +10,7 @@ import { addToRecentChannels } from '../utils/recentChannels';
 import { db, recordVodWatch, updateVodWatchProgress, getVodWatchProgress, recordEpisodeWatch, getEpisodeProgress } from '../db';
 import type { useMpvListeners } from './useMpvListeners';
 import { logInfo, logWarn, logError } from '../utils/logger';
-import { toSubSourceLang, fromSubSourceLang } from '../services/subsource';
+import { toSubSourceLang, fromSubSourceLang, LANG_MAP } from '../services/subsource';
 
 /**
  * Apply saved subtitle settings to MPV.
@@ -208,7 +208,19 @@ function getTrackLanguage(track: any): string {
       }
     }
   }
-  return normalizeLangCode(track.lang);
+  const lang = normalizeLangCode(track.lang);
+  if (lang) return lang;
+  // Fallback: detect language from track title (many embedded tracks lack a proper lang field)
+  if (track.title) {
+    const title = track.title.toLowerCase();
+    for (const [code, name] of Object.entries(LANG_MAP)) {
+      if (code.length === 3 && title.includes(code)) return normalizeLangCode(code);
+    }
+    for (const [code, name] of Object.entries(LANG_MAP)) {
+      if (code.length === 2 && title.includes(name)) return normalizeLangCode(code);
+    }
+  }
+  return '';
 }
 
 export interface FailoverState {
@@ -335,7 +347,7 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
   // they're always current inside interval callbacks without stale closures.
   const maxRetriesRef = useRef(20);
   const stallThresholdMsRef = useRef(10_000);
-  const useEventBasedReconnectRef = useRef(true);
+  const useEventBasedReconnectRef = useRef(false);
   const stallDetectionEnabledRef = useRef(true);
 
   // Load retry settings from storage once on mount
@@ -1278,9 +1290,23 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
     // Filter tracks matching target language
     const matchingTracks = subTracks.filter((t: any) => getTrackLanguage(t) === defaultLanguage);
 
-    if (matchingTracks.length > 0) {
+    // Separate forced tracks (skip them if non-forced alternatives exist)
+    const forcedTracks: any[] = [];
+    const nonForcedTracks: any[] = [];
+    for (const t of matchingTracks) {
+      const title = (t.title || '').toLowerCase();
+      if (title.includes('forced') || title.includes('forçado')) {
+        forcedTracks.push(t);
+      } else {
+        nonForcedTracks.push(t);
+      }
+    }
+
+    const candidates = nonForcedTracks.length > 0 ? nonForcedTracks : forcedTracks;
+
+    if (candidates.length > 0) {
       // Prioritize embedded tracks (external is falsy) over external addon tracks
-      matchingTracks.sort((a: any, b: any) => {
+      candidates.sort((a: any, b: any) => {
         const aExt = !!a.external;
         const bExt = !!b.external;
         if (aExt !== bExt) {
@@ -1289,8 +1315,8 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
         return a.id - b.id;
       });
 
-      const bestTrack = matchingTracks[0];
-      logInfo(`[Playback] Auto-selecting subtitle track: ${bestTrack.id} language: ${defaultLanguage} external: ${bestTrack.external}`);
+      const bestTrack = candidates[0];
+      logInfo(`[Playback] Auto-selecting subtitle track: ${bestTrack.id} language: ${defaultLanguage} external: ${bestTrack.external} title: ${bestTrack.title}`);
       await Bridge.setSubtitleTrack(bestTrack.id);
       hasAutoSelectedSubRef.current = true;
     }

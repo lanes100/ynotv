@@ -343,8 +343,8 @@ export const Bridge = {
         return invoke('mpv_set_subtitle', { id });
     },
 
-    async addSubtitleFile(filePath: string) {
-        return invoke('mpv_add_subtitle', { filePath });
+    async addSubtitleFile(filePath: string, flag?: string) {
+        return invoke('mpv_add_subtitle', { filePath, flag });
     },
 
     async removeSubtitleFile(filePath: string) {

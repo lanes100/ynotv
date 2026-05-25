@@ -11,7 +11,7 @@ import {
 import { useStremioHover } from '../../contexts/StremioHoverContext';
 import './StremioHome.css';
 
-const HIDDEN_CATALOG_IDS = new Set(['lastVideosIds', 'calendarVideosIds']);
+const HIDDEN_CATALOG_IDS = new Set(['last-videos', 'calendar-videos']);
 
 interface CatalogDetailViewProps {
   addon: InstalledAddon;

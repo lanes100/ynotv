@@ -40,27 +40,30 @@ A feature-rich, open source IPTV player for Windows built on [Tauri v2](https://
 ---
 ## Features
 
-- **M3U, Xtream Codes & Stalker Support** — multiple EPG sources supported
-- **Grid-style EPG** — with an integrated preview window
-- **Catchup & Cache Time Shift** — instant replays on supported channels
-- **Automatic Stream Fallback** — detects and switches away from stalled or dead streams
-- **Sports Tab** — real-time scores and detailed game stats with instant search to find channel
-- **Widget System** — Display live sports score in overlay
-- **VOD Support** — rich metadata via TMDB and RPDB with saved progress
-- **Subtitle Integration** — Subsource support for VODs
-- **Popout Player** — play streams in a seperate MPV window
-- **Backup DNS/URLs** — automatically swaps when the current source fails
-- **Favorites & Custom Groups** — pull from any source
-- **Channel Management** — rename, hide, and sort categories and channels freely
-- **EPG Editor** — change tvg-id, logos, or auto-match to a different entry
-- **Embedded MPV Playback** — with support for custom parameters
-- **Multiview** — resizable PiP, also supporting up to four simultaneous streams in a 2x2 grid
-- **Channel & EPG Search** — instant results with advanced filtering options
-- **Watchlist & Reminders** — auto-swaps to a channel when a program goes live
-- **Built-in DVR** — record any stream or schedule for later
-- **TV Calendar** — powered by TVMaze for auto-setting reminders on upcoming shows
-- **Reprogrammable Hotkeys** — fast navigation
-- **40+ Built-in Themes** — something for every preference
+- **M3U, Xtream Codes & Stalker Support** - multiple EPG sources supported
+- **Stremio Addons support** - Integrated stremio addons support
+- **Grid-style EPG** - with an integrated preview window
+- **Catchup & Cache Time Shift** - instant replays on supported channels
+- **Automatic Stream Fallback** - detects and switches away from stalled or dead streams
+- **Sports Tab** - real-time scores and detailed game stats with instant search to find channel
+- **Cast to TV** - Cast to any supported TV devices on your local network
+- **Trakt integration** - Scrobble directly to your Trakt account
+- **Widget System** - Display live sports score in overlay
+- **VOD Support** - rich metadata via TMDB and RPDB with saved progress
+- **Subtitle Integration** - Subsource support for VODs
+- **Popout Player & External player** - play streams in a seperate MPV window or your choice in an external player
+- **Backup DNS/URLs** - automatically swaps when the current source fails
+- **Favorites & Custom Groups** - pull from any source
+- **Channel Management** - rename, hide, and sort categories and channels freely
+- **EPG Editor** - change tvg-id, logos, or auto-match to a different entry
+- **Embedded MPV Playback** - with support for custom parameters
+- **Multiview** - resizable PiP, also supporting up to four simultaneous streams in a 2x2 grid
+- **Channel & EPG Search** - instant results with advanced filtering options
+- **Watchlist & Reminders** - auto-swaps to a channel when a program goes live
+- **Built-in DVR** - record any stream or schedule for later
+- **TV Calendar** - powered by TVMaze for auto-setting reminders on upcoming shows
+- **Reprogrammable Hotkeys** - fast navigation
+- **40+ Built-in Themes** - something for every preference
 
 ---
 
@@ -232,6 +235,18 @@ All shortcuts are fully customizable in Settings > Shortcuts.
 
 ---
 
+## Star History
+
+<a href="https://www.star-history.com/?repos=tbeezy%2Fynotv&type=date&legend=top-left">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=tbeezy/ynotv&type=date&theme=dark&legend=top-left" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=tbeezy/ynotv&type=date&legend=top-left" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=tbeezy/ynotv&type=date&legend=top-left" />
+ </picture>
+</a>
+
+---
+
 ## Disclaimer
 
 Built with the help of AI.
@@ -254,7 +269,6 @@ ynoTV builds on the following open source projects and services:
 - [Tauri](https://tauri.app) — desktop application framework
 - [mpv](https://mpv.io) — video playback engine
 - [FFmpeg](https://ffmpeg.org) — recording and thumbnail generation
-- [React](https://react.dev) — UI library
 - [TVMaze](https://www.tvmaze.com) — TV schedule and show metadata
 - [TMDB](https://www.themoviedb.org) — movie and series metadata
 - [MY-1 Mac Stalker Player](https://github.com/Cyogenus/IPTV-MAC-STALKER-PLAYER-BY-MY-1) - Stalker integration

@@ -122,13 +122,24 @@ export async function fetchStreams(
 export async function fetchSubtitles(
   addons: InstalledAddon[],
   type: string,
-  id: string
+  id: string,
+  extra?: Record<string, string>
 ): Promise<StremioSubtitle[]> {
   const results: StremioSubtitle[] = [];
   for (const addon of addons) {
     if (!addonHasResource(addon, 'subtitles')) continue;
     try {
-      const url = `${normalizeBaseUrl(addon.baseUrl)}/subtitles/${type}/${id}.json`;
+      let url = `${normalizeBaseUrl(addon.baseUrl)}/subtitles/${type}/${id}`;
+      const extraArgs = extra
+        ? Object.entries(extra)
+          .filter(([, v]) => v)
+          .map(([k, v]) => `${k}=${encodeURIComponent(v)}`)
+          .join('&')
+        : '';
+      if (extraArgs) {
+        url += `/${extraArgs}`;
+      }
+      url += '.json';
       const data = await fetchJson(url) as { subtitles: StremioSubtitle[] };
       if (data?.subtitles) {
         for (const sub of data.subtitles) {

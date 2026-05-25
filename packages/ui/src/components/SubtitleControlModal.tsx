@@ -4,10 +4,14 @@ import {
   searchSubSourceMovies,
   searchSubSourceSubtitles,
   downloadSubSourceSubtitle,
+  downloadSubSourceZip,
+  getZipEntries,
+  decompressZipEntry,
   toSubSourceLang,
   fromSubSourceLang,
   type SubSourceMovie,
   type SubSourceSubtitle,
+  type ZipEntry,
 } from '../services/subsource';
 import './SubtitleControlModal.css';
 
@@ -32,7 +36,7 @@ interface SubtitleControlModalProps {
   episodeNum?: number;
 }
 
-type ViewState = 'tracks' | 'movies' | 'subtitles';
+type ViewState = 'tracks' | 'movies' | 'subtitles' | 'zip-files';
 
 /** Strip quality tags like 4K, UHD, HDR from titles before searching. */
 function cleanTitleForSearch(title: string): string {
@@ -185,6 +189,9 @@ export function SubtitleControlModal({
   const [selectedMovie, setSelectedMovie] = useState<SubSourceMovie | null>(null);
   const [subtitles, setSubtitles] = useState<SubSourceSubtitle[]>([]);
   const [downloadingSubId, setDownloadingSubId] = useState<number | null>(null);
+  const [zipEntries, setZipEntries] = useState<ZipEntry[]>([]);
+  const [pendingZipData, setPendingZipData] = useState<Uint8Array | null>(null);
+  const [activeSubSourceSubtitle, setActiveSubSourceSubtitle] = useState<SubSourceSubtitle | null>(null);
 
   // Episode filter
   const [episodeFilter, setEpisodeFilter] = useState<number | null>(null);
@@ -609,18 +616,13 @@ export function SubtitleControlModal({
   /*  Download subtitle                                               */
   /* -------------------------------------------------------------- */
 
-  const handleDownloadSubtitle = async (sub: SubSourceSubtitle) => {
+  const extractAndLoadZipEntry = async (zipData: Uint8Array, entry: ZipEntry, sub: SubSourceSubtitle) => {
     setDownloadingSubId(sub.subtitleId);
     setSearchError('');
-
-    console.log('[SubtitleModal] Downloading subtitle:', { subtitleId: sub.subtitleId, releaseInfo: sub.releaseInfo });
-
     try {
-      const result = await downloadSubSourceSubtitle(apiKey, sub.subtitleId);
-      console.log('[SubtitleModal] Download result:', { success: result.success, error: result.error, hasText: !!result.content });
-
-      if (!result.success || !result.content) {
-        setSearchError(result.error || 'Download failed');
+      const content = await decompressZipEntry(zipData, entry);
+      if (!content) {
+        setSearchError('Failed to extract subtitle from ZIP.');
         return;
       }
 
@@ -632,22 +634,79 @@ export function SubtitleControlModal({
         if (!val) return 'unknown';
         return val.replace(/__/g, '_').replace(/ /g, '_').replace(/[^a-zA-Z0-9_]/g, '');
       };
-      const cleanRelease = sanitizePart(sub.releaseInfo?.join('_') || 'subtitle');
-      const cleanLang = sanitizePart(sub.language);
-      const relPath = `subtitles/subsource__${cleanRelease}__${cleanLang}__${sub.subtitleId}.srt`;
+      
+      const releaseStr = sub.releaseInfo && sub.releaseInfo.length > 0 ? sub.releaseInfo[0] : 'subtitle';
+      const cleanRelease = sanitizePart(releaseStr).slice(0, 40);
+      const cleanLang = sanitizePart(sub.language).slice(0, 10);
+      
+      // Clean target filename within ZIP
+      const entryBase = entry.fileName.split(/[/\\]/).pop() || entry.fileName;
+      const cleanFile = sanitizePart(entryBase.replace(/\.(srt|vtt)$/i, '')).slice(0, 40);
+      const ext = entry.fileName.toLowerCase().endsWith('.vtt') ? 'vtt' : 'srt';
+      
+      const relPath = `subtitles/subsource__${cleanRelease}__${cleanFile}__${cleanLang}__${sub.subtitleId}.${ext}`;
       const filePath = await join(appDir, relPath);
 
       await mkdir('subtitles', { baseDir: BaseDirectory.AppLocalData, recursive: true }).catch(() => {});
-      await writeTextFile(relPath, result.content, { baseDir: BaseDirectory.AppLocalData });
+      await writeTextFile(relPath, content, { baseDir: BaseDirectory.AppLocalData });
       console.log('[SubtitleModal] Saved SRT to:', filePath);
 
-      // Load into MPV
+      // Load into MPV (using the default 'select' flag so the user's manual load takes action immediately)
       await Bridge.addSubtitleFile(filePath);
       console.log('[SubtitleModal] Added subtitle to MPV');
 
       // Refresh tracks
       await loadTracks();
       setViewState('tracks');
+      
+      // Reset ZIP state
+      setZipEntries([]);
+      setPendingZipData(null);
+      setActiveSubSourceSubtitle(null);
+    } catch (e: any) {
+      console.error('[SubtitleModal] Extraction exception:', e);
+      setSearchError(e?.message || 'Failed to extract subtitle');
+    } finally {
+      setDownloadingSubId(null);
+    }
+  };
+
+  const handleExtractAndLoadZipEntry = async (entry: ZipEntry) => {
+    if (!pendingZipData || !activeSubSourceSubtitle) return;
+    await extractAndLoadZipEntry(pendingZipData, entry, activeSubSourceSubtitle);
+  };
+
+  const handleDownloadSubtitle = async (sub: SubSourceSubtitle) => {
+    setDownloadingSubId(sub.subtitleId);
+    setSearchError('');
+
+    console.log('[SubtitleModal] Downloading subtitle ZIP:', { subtitleId: sub.subtitleId, releaseInfo: sub.releaseInfo });
+
+    try {
+      const zipResult = await downloadSubSourceZip(apiKey, sub.subtitleId);
+      if (!zipResult.success || !zipResult.data) {
+        setSearchError(zipResult.error || 'Download failed');
+        return;
+      }
+
+      const zipData = zipResult.data;
+      const entries = getZipEntries(zipData);
+
+      if (entries.length === 0) {
+        setSearchError('No subtitle files (.srt or .vtt) found in the ZIP archive.');
+        return;
+      }
+
+      if (entries.length === 1) {
+        // Just one file, extract it directly
+        await extractAndLoadZipEntry(zipData, entries[0], sub);
+      } else {
+        // Multiple files, show selection list
+        setZipEntries(entries);
+        setPendingZipData(zipData);
+        setActiveSubSourceSubtitle(sub);
+        setViewState('zip-files');
+      }
     } catch (e: any) {
       console.error('[SubtitleModal] Download exception:', e);
       setSearchError(e?.message || 'Failed to download subtitle');
@@ -781,11 +840,81 @@ export function SubtitleControlModal({
             </div>
           </div>
 
-          {/* ── Column 2: Tracks / Movies / Subtitles ── */}
+          {/* ── Column 2: Loaded Subtitles ── */}
           <div className="subtitle-col subtitle-col-tracks">
-            {/* Dynamic header */}
+            <div className="subtitle-col-title">Loaded Subtitles</div>
+            {loading ? (
+              <div className="subtitle-empty">Loading tracks…</div>
+            ) : (
+              <div className="subtitle-track-list">
+                {searchLang === 'off' ? (
+                  <button
+                    className={`subtitle-track-btn ${selectedId === 0 ? 'active' : ''}`}
+                    onClick={handleDisable}
+                  >
+                    <div className="subtitle-track-variant-wrapper">
+                      <div className="subtitle-track-variant-title">
+                        None
+                      </div>
+                      <div className="subtitle-track-variant-origin">
+                        Subtitles disabled
+                      </div>
+                    </div>
+                    {selectedId === 0 && <span className="subtitle-active-dot"></span>}
+                  </button>
+                ) : (
+                  <>
+                    {filteredSubTracks.map((track) => {
+                      const info = track.external && track['external-filename']
+                        ? parseExternalTrack(track['external-filename'])
+                        : { label: track.title || `Track ${track.id}`, origin: 'Embedded' };
+                      
+                      return (
+                        <button
+                          key={track.id}
+                          className={`subtitle-track-btn ${selectedId === track.id ? 'active' : ''}`}
+                          onClick={() => handleSelect(track.id)}
+                        >
+                          <div className="subtitle-track-variant-wrapper">
+                            <div className="subtitle-track-variant-title">
+                              {info.label}
+                            </div>
+                            <div className="subtitle-track-variant-origin">
+                              {info.origin}
+                            </div>
+                          </div>
+                          <span className="subtitle-track-meta">
+                            {track.lang?.toUpperCase()}
+                            {track.external && (
+                              <span
+                                className="subtitle-track-remove"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleRemoveExternal(track.id);
+                                }}
+                                title="Remove"
+                              >
+                                ×
+                              </span>
+                            )}
+                          </span>
+                          {selectedId === track.id && <span className="subtitle-active-dot"></span>}
+                        </button>
+                      );
+                    })}
+                    {filteredSubTracks.length === 0 && (
+                      <div className="subtitle-empty">No subtitles loaded for this language</div>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* ── Column 3: SubSource Search & Download ── */}
+          <div className="subtitle-col subtitle-col-search">
             <div className="subtitle-col-title">
-              {viewState === 'tracks' && 'Subtitles Variants'}
+              {viewState === 'tracks' && 'SubSource Search'}
               {viewState === 'movies' && (
                 <button className="subtitle-back-btn" onClick={() => setViewState('tracks')}>
                   ← Back
@@ -804,89 +933,32 @@ export function SubtitleControlModal({
                   ← Back
                 </button>
               )}
+              {viewState === 'zip-files' && (
+                <button
+                  className="subtitle-back-btn"
+                  onClick={() => {
+                    setViewState('subtitles');
+                    setZipEntries([]);
+                    setPendingZipData(null);
+                    setActiveSubSourceSubtitle(null);
+                  }}
+                >
+                  ← Back
+                </button>
+              )}
             </div>
 
-            {/* TRACKS view */}
+            {/* Default / Empty / Initial search state */}
             {viewState === 'tracks' && (
-              <>
-                {loading ? (
-                  <div className="subtitle-empty">Loading tracks…</div>
+              <div className="subtitle-empty">
+                {movies.length > 0 ? (
+                  <button className="subtitle-back-btn" onClick={() => setViewState('movies')}>
+                    Show {movies.length} result{movies.length !== 1 ? 's' : ''} →
+                  </button>
                 ) : (
-                  <div className="subtitle-track-list">
-                    {searchLang === 'off' ? (
-                      <button
-                        className={`subtitle-track-btn ${selectedId === 0 ? 'active' : ''}`}
-                        onClick={handleDisable}
-                      >
-                        <div className="subtitle-track-variant-wrapper">
-                          <div className="subtitle-track-variant-title">
-                            None
-                          </div>
-                          <div className="subtitle-track-variant-origin">
-                            Subtitles disabled
-                          </div>
-                        </div>
-                        {selectedId === 0 && <span className="subtitle-active-dot"></span>}
-                      </button>
-                    ) : (
-                      <>
-                        {filteredSubTracks.map((track) => {
-                          const info = track.external && track['external-filename']
-                            ? parseExternalTrack(track['external-filename'])
-                            : { label: track.title || `Track ${track.id}`, origin: 'Embedded' };
-                          
-                          return (
-                            <button
-                              key={track.id}
-                              className={`subtitle-track-btn ${selectedId === track.id ? 'active' : ''}`}
-                              onClick={() => handleSelect(track.id)}
-                            >
-                              <div className="subtitle-track-variant-wrapper">
-                                <div className="subtitle-track-variant-title">
-                                  {info.label}
-                                </div>
-                                <div className="subtitle-track-variant-origin">
-                                  {info.origin}
-                                </div>
-                              </div>
-                              <span className="subtitle-track-meta">
-                                {track.lang?.toUpperCase()}
-                                {track.external && (
-                                  <span
-                                    className="subtitle-track-remove"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleRemoveExternal(track.id);
-                                    }}
-                                    title="Remove"
-                                  >
-                                    ×
-                                  </span>
-                                )}
-                              </span>
-                              {selectedId === track.id && <span className="subtitle-active-dot"></span>}
-                            </button>
-                          );
-                        })}
-                        {filteredSubTracks.length === 0 && (
-                          <div className="subtitle-empty">No subtitles loaded for this language</div>
-                        )}
-                      </>
-                    )}
-                  </div>
+                  'Search above to find subtitles on SubSource'
                 )}
-
-                {/* Show movie search results inline when available but view is tracks */}
-                {movies.length > 0 && (
-                  <>
-                    <div className="subtitle-col-title" style={{ marginTop: 12 }}>
-                      <button className="subtitle-back-btn" onClick={() => setViewState('movies')}>
-                        Show {movies.length} result{movies.length !== 1 ? 's' : ''} →
-                      </button>
-                    </div>
-                  </>
-                )}
-              </>
+              </div>
             )}
 
             {/* MOVIES view */}
@@ -982,6 +1054,40 @@ export function SubtitleControlModal({
                     No subtitles found for E{episodeFilter.toString().padStart(2, '0')}.
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* ZIP FILES view */}
+            {viewState === 'zip-files' && (
+              <div className="subtitle-result-list">
+                <div className="subtitle-result-header">
+                  Select subtitle file from ZIP archive:
+                </div>
+                <div className="subtitle-movie-list">
+                  {zipEntries.map((entry, index) => {
+                    const entryBase = entry.fileName.split(/[/\\]/).pop() || entry.fileName;
+                    return (
+                      <button
+                        key={index}
+                        className="subtitle-movie-btn"
+                        onClick={() => handleExtractAndLoadZipEntry(entry)}
+                        style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', textAlign: 'left', width: '100%' }}
+                      >
+                        <span className="subtitle-movie-title" style={{ fontSize: '0.9rem', fontWeight: 600 }}>
+                          {entryBase}
+                        </span>
+                        {entry.fileName !== entryBase && (
+                          <span className="subtitle-movie-alt" style={{ fontSize: '0.75rem', opacity: 0.7 }}>
+                            {entry.fileName}
+                          </span>
+                        )}
+                        <span className="subtitle-movie-meta" style={{ fontSize: '0.75rem', marginTop: '2px' }}>
+                          {(entry.uncompressedSize / 1024).toFixed(1)} KB · Load
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             )}
           </div>

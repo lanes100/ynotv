@@ -140,7 +140,7 @@ export function Settings({
   // Stream retry settings
   const [streamWatchdogSeconds, setStreamWatchdogSeconds] = useState(10);
   const [streamMaxRetries, setStreamMaxRetries] = useState(20);
-  const [useEventBasedReconnect, setUseEventBasedReconnect] = useState(true);
+  const [useEventBasedReconnect, setUseEventBasedReconnect] = useState(false);
   const [stallDetectionEnabled, setStallDetectionEnabled] = useState(true);
   // Stremio settings
   const [stremioStreamPickerMode, setStremioStreamPickerMode] = useState<StremioStreamPickerMode>('modal');
@@ -418,7 +418,7 @@ export function Settings({
       setLiveBufferOffset(settings.liveBufferOffset ?? 0);
       setStreamWatchdogSeconds(settings.streamWatchdogSeconds ?? 10);
       setStreamMaxRetries(settings.streamMaxRetries ?? 20);
-      setUseEventBasedReconnect(settings.useEventBasedReconnect ?? true);
+      setUseEventBasedReconnect(settings.useEventBasedReconnect ?? false);
       setStallDetectionEnabled(settings.stallDetectionEnabled ?? true);
       setStremioStreamPickerMode(settings.stremioStreamPickerMode ?? 'modal');
 

@@ -597,14 +597,14 @@ async fn mpv_set_subtitle<R: Runtime>(app: AppHandle<R>, id: i64) -> Result<(), 
 }
 
 #[tauri::command]
-async fn mpv_add_subtitle<R: Runtime>(app: AppHandle<R>, file_path: String) -> Result<(), String> {
+async fn mpv_add_subtitle<R: Runtime>(app: AppHandle<R>, file_path: String, flag: Option<String>) -> Result<(), String> {
     #[cfg(target_os = "macos")]
     {
-        mpv_macos::add_subtitle_file(&app, file_path).await
+        mpv_macos::add_subtitle_file(&app, file_path, flag).await
     }
     #[cfg(target_os = "windows")]
     {
-        mpv_windows::add_subtitle_file(&app, file_path).await
+        mpv_windows::add_subtitle_file(&app, file_path, flag).await
     }
 }
 

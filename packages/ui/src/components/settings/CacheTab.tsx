@@ -60,7 +60,7 @@ export function CacheTab({ timeshiftEnabled, timeshiftCacheBytes, liveBufferOffs
           <div className="timeshift-toggle-row">
             <div className="timeshift-toggle-info">
               <span className="timeshift-toggle-label">Enable Time Shift</span>
-              <span className="timeshift-toggle-sub">Allows rewinding live TV up to the cache window. Takes effect on next channel load.</span>
+              <span className="timeshift-toggle-sub">Allows rewinding live TV up to the cache window. Takes effect on next restart.</span>
             </div>
             <label className="toggle-switch">
               <input
