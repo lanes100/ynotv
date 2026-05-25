@@ -1099,6 +1099,20 @@ async fn schedule_recording(
         })?;
 
     debug!("[DVR Command] Successfully scheduled with ID: {}", id);
+
+    // If the recording is scheduled to start immediately (actual start <= now), trigger it now
+    if let Some(schedule) = state.db.get_schedule(id).map_err(|e| e.to_string())? {
+        let now = chrono::Utc::now().timestamp();
+        if schedule.actual_start() <= now {
+            info!("[DVR Command] Triggering instant recording for schedule {}", id);
+            crate::dvr::scheduler::start_recording(&state.db, &state.recorder, schedule).await
+                .map_err(|e| {
+                    error!("[DVR Command] Failed to start instant recording: {}", e);
+                    format!("Failed to start instant recording: {}", e)
+                })?;
+        }
+    }
+
     Ok(id)
 }
 

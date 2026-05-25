@@ -11,17 +11,12 @@ import { SourceContextMenu } from './SourceContextMenu';
 import { ManageVodCategories } from './vod/ManageVodCategories';
 import { useVodCategories, useRecentlyWatchedMovies, useRecentlyWatchedSeries } from '../hooks/useVod';
 import {
-  useTrendingMovies,
-  usePopularMovies,
-  useTopRatedMovies,
-  useNowPlayingMovies,
-  useTrendingSeries,
-  usePopularSeries,
-  useTopRatedSeries,
-  useOnTheAirSeries,
-  useFeaturedContent,
-  useTmdbApiKey,
-} from '../hooks/useTmdbLists';
+  useCinemetaPopular,
+  useCinemetaNew,
+  useCinemetaFeatured,
+  useCinemetaHero,
+} from '../hooks/useCinemetaCatalogs';
+import { useTmdbApiKey } from '../hooks/useTmdbLists';
 import {
   useMoviesCategory,
   useSetMoviesCategory,
@@ -80,7 +75,6 @@ const HomeHeader: React.ComponentType<{ context?: HomeVirtuosoContext }> = ({ co
       type={type}
       onPlay={onHeroPlay}
       onMoreInfo={onItemClick}
-      apiKey={tmdbApiKey}
       loading={heroLoading}
     />
   );
@@ -159,35 +153,14 @@ export function VodPage({ type, onPlay, onClose }: VodPageProps) {
   const selectedSeason = type === 'series' ? seriesSelectedSeason : undefined;
   const setSelectedSeason = type === 'series' ? setSeriesSelectedSeason : () => {};
 
-  // API key for TMDB
+  // TMDB API key for detail view enrichment (optional)
   const tmdbApiKey = useTmdbApiKey();
 
-  // Featured content for hero
-  const { items: featuredItems } = useFeaturedContent(tmdbApiKey, type === 'movie' ? 'movies' : 'series', 5);
-
-  // Trending and popular from TMDB (if API key available)
-  const { movies: trendingMovies, loading: trendingMoviesLoading } = useTrendingMovies(type === 'movie' ? tmdbApiKey : null);
-  const { series: trendingSeries, loading: trendingSeriesLoading } = useTrendingSeries(type === 'series' ? tmdbApiKey : null);
-  const { movies: popularMovies, loading: popularMoviesLoading } = usePopularMovies(type === 'movie' ? tmdbApiKey : null);
-  const { series: popularSeries, loading: popularSeriesLoading } = usePopularSeries(type === 'series' ? tmdbApiKey : null);
-
-  // Top rated
-  const { movies: topRatedMovies, loading: topRatedMoviesLoading } = useTopRatedMovies(type === 'movie' ? tmdbApiKey : null);
-  const { series: topRatedSeries, loading: topRatedSeriesLoading } = useTopRatedSeries(type === 'series' ? tmdbApiKey : null);
-
-  // Now playing (movies) / On the air (series)
-  const { movies: nowPlayingMovies, loading: nowPlayingLoading } = useNowPlayingMovies(type === 'movie' ? tmdbApiKey : null);
-  const { series: onTheAirSeries, loading: onTheAirLoading } = useOnTheAirSeries(type === 'series' ? tmdbApiKey : null);
-
-  // Select the right data based on type
-  const trendingItems = type === 'movie' ? trendingMovies : trendingSeries;
-  const trendingLoading = type === 'movie' ? trendingMoviesLoading : trendingSeriesLoading;
-  const popularItems = type === 'movie' ? popularMovies : popularSeries;
-  const popularLoading = type === 'movie' ? popularMoviesLoading : popularSeriesLoading;
-  const topRatedItems = type === 'movie' ? topRatedMovies : topRatedSeries;
-  const topRatedLoading = type === 'movie' ? topRatedMoviesLoading : topRatedSeriesLoading;
-  const nowOrOnAirItems = type === 'movie' ? nowPlayingMovies : onTheAirSeries;
-  const nowOrOnAirLoading = type === 'movie' ? nowPlayingLoading : onTheAirLoading;
+  // Cinemeta-based content for home page
+  const { items: featuredItems, loading: heroLoading } = useCinemetaHero(type);
+  const { items: popularItems, loading: popularLoading } = useCinemetaPopular(type);
+  const { items: newItems, loading: newLoading } = useCinemetaNew(type);
+  const { items: topRatedItems, loading: topRatedLoading } = useCinemetaFeatured(type);
 
   // Recently Watched - user's viewing history
   const { movies: recentlyWatchedMoviesData, loading: recentlyWatchedMoviesLoading } = useRecentlyWatchedMovies(20);
@@ -244,29 +217,7 @@ export function VodPage({ type, onPlay, onClose }: VodPageProps) {
       });
     }
 
-    // Check if we have any TMDB-matched content (not just fetched)
-    const hasMatchedTmdbContent = (trendingItems.length > 0 && !trendingLoading) || 
-                                   (popularItems.length > 0 && !popularLoading) || 
-                                   (topRatedItems.length > 0 && !topRatedLoading);
-
-    // Trending
-    if (trendingItems.length > 0) {
-      rows.push({
-        key: 'trending',
-        title: 'Trending Now',
-        items: trendingItems,
-        loading: false,
-      });
-    } else if (trendingLoading) {
-      rows.push({
-        key: 'trending',
-        title: 'Trending Now',
-        items: [],
-        loading: true,
-      });
-    }
-
-    // Popular
+    // Popular (Cinemeta "top" catalog)
     if (popularItems.length > 0) {
       rows.push({
         key: 'popular',
@@ -283,38 +234,44 @@ export function VodPage({ type, onPlay, onClose }: VodPageProps) {
       });
     }
 
-    // Top Rated
-    if (topRatedItems.length > 0 || topRatedLoading) {
+    // New Releases (Cinemeta "year" catalog)
+    if (newItems.length > 0) {
       rows.push({
-        key: 'top-rated',
-        title: 'Top Rated',
-        items: topRatedItems,
-        loading: topRatedLoading,
+        key: 'new',
+        title: 'New Releases',
+        items: newItems,
+        loading: false,
+      });
+    } else if (newLoading) {
+      rows.push({
+        key: 'new',
+        title: 'New Releases',
+        items: [],
+        loading: true,
       });
     }
 
-    // Now Playing / On The Air
-    if (nowOrOnAirItems.length > 0 || nowOrOnAirLoading) {
+    // Featured (Cinemeta "imdbRating" catalog)
+    if (topRatedItems.length > 0 || topRatedLoading) {
       rows.push({
-        key: 'now-or-onair',
-        title: type === 'movie' ? 'Now Playing' : 'On The Air',
-        items: nowOrOnAirItems,
-        loading: nowOrOnAirLoading,
+        key: 'featured',
+        title: 'Featured',
+        items: topRatedItems,
+        loading: topRatedLoading,
       });
     }
 
     return rows;
   }, [
     recentlyWatchedItems, recentlyWatchedLoading, recentlyWatchedProgressMap,
-    trendingItems, trendingLoading,
     popularItems, popularLoading,
+    newItems, newLoading,
     topRatedItems, topRatedLoading,
-    nowOrOnAirItems, nowOrOnAirLoading,
     type,
   ]);
 
   const handleItemClick = useCallback((item: MediaItem) => {
-    if (item.source_id === 'tmdb') {
+    if (item.source_id === 'tmdb' || item.source_id === 'cinemeta') {
       const title = item.title || item.name || '';
       if (title) {
         setSearchQuery(title);
@@ -343,7 +300,7 @@ export function VodPage({ type, onPlay, onClose }: VodPageProps) {
 
   // Handle clicks from Recent view (includes season/episode info for series)
   const handleRecentItemClick = useCallback((item: MediaItem, seasonNum?: number, episodeNum?: number, episodeTitle?: string) => {
-    if (item.source_id === 'tmdb') {
+    if (item.source_id === 'tmdb' || item.source_id === 'cinemeta') {
       const title = item.title || item.name || '';
       if (title) {
         setSearchQuery(title);
@@ -388,7 +345,7 @@ export function VodPage({ type, onPlay, onClose }: VodPageProps) {
 
   // Handle hero play button - movies play directly, series open detail
   const handleHeroPlay = useCallback((item: MediaItem) => {
-    if (item.source_id === 'tmdb') {
+    if (item.source_id === 'tmdb' || item.source_id === 'cinemeta') {
       const title = item.title || item.name || '';
       if (title) {
         setSearchQuery(title);
@@ -428,20 +385,16 @@ export function VodPage({ type, onPlay, onClose }: VodPageProps) {
     }
   }, [type, handlePlay]);
 
-  // Hero is loading if we have no items AND data is still being fetched
-  const heroLoading = featuredItems.length === 0 &&
-    (trendingLoading || popularLoading);
-
   // Memoized context for Virtuoso to prevent unnecessary re-renders
   const homeVirtuosoContext = useMemo((): HomeVirtuosoContext => ({
     type,
-    tmdbApiKey,
+    tmdbApiKey: null,
     featuredItems,
     heroLoading,
     onItemClick: handleItemClick,
     onHeroPlay: handleHeroPlay,
     onRemoveFromRecentlyWatched: handleRemoveFromRecentlyWatched,
-  }), [type, tmdbApiKey, featuredItems, heroLoading, handleItemClick, handleHeroPlay, handleRemoveFromRecentlyWatched]);
+  }), [type, featuredItems, heroLoading, handleItemClick, handleHeroPlay, handleRemoveFromRecentlyWatched]);
 
   // Handle category selection - also close detail view and clear search
   const handleCategorySelect = useCallback((id: string | null) => {

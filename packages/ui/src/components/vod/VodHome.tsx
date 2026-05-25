@@ -1,7 +1,7 @@
 /**
  * VodHome - Netflix-style home view with hero and carousels
  *
- * Shows TMDB-curated content rows matched against local Xtream content.
+ * Shows Cinemeta-curated content rows for discovery.
  */
 
 import { useCallback, useEffect } from 'react';
@@ -9,27 +9,13 @@ import { HeroSection } from './HeroSection';
 import { HorizontalCarousel } from './HorizontalCarousel';
 import type { StoredMovie, StoredSeries } from '../../db';
 import {
-  useTmdbApiKey,
-  useFeaturedContent,
-  useTrendingMovies,
-  usePopularMovies,
-  useTopRatedMovies,
-  useTrendingSeries,
-  usePopularSeries,
-  useTopRatedSeries,
-  useMoviesByGenre,
-  useSeriesByGenre,
-  useMovieGenres,
-  useTvGenres,
-} from '../../hooks/useTmdbLists';
-import { useRecentMovies, useRecentSeries, useRecentlyWatchedMovies, useRecentlyWatchedSeries } from '../../hooks/useVod';
+  useCinemetaPopular,
+  useCinemetaNew,
+  useCinemetaFeatured,
+  useCinemetaHero,
+} from '../../hooks/useCinemetaCatalogs';
+import { useRecentlyWatchedMovies, useRecentlyWatchedSeries } from '../../hooks/useVod';
 import './VodHome.css';
-
-// TMDB genre IDs
-const GENRE_ACTION = 28;
-const GENRE_COMEDY = 35;
-const GENRE_ACTION_TV = 10759; // Action & Adventure for TV
-const GENRE_COMEDY_TV = 35;
 
 export interface VodHomeProps {
   type: 'movies' | 'series';
@@ -38,27 +24,13 @@ export interface VodHomeProps {
 }
 
 export function VodHome({ type, onItemClick, onPlay }: VodHomeProps) {
-  console.log('[VodHome] Rendering with type:', type);
-  const tmdbApiKey = useTmdbApiKey();
+  const movieType = type === 'movies' ? 'movie' : 'series';
 
-  // Featured content for hero
-  const { items: featuredItems } = useFeaturedContent(tmdbApiKey, type, 5);
-
-  // Movie hooks
-  const { movies: trendingMovies, loading: trendingMoviesLoading } = useTrendingMovies(tmdbApiKey);
-  const { movies: popularMovies, loading: popularMoviesLoading } = usePopularMovies(tmdbApiKey);
-  const { movies: topRatedMovies, loading: topRatedMoviesLoading } = useTopRatedMovies(tmdbApiKey);
-  const { movies: actionMovies, loading: actionMoviesLoading } = useMoviesByGenre(tmdbApiKey, GENRE_ACTION);
-  const { movies: comedyMovies, loading: comedyMoviesLoading } = useMoviesByGenre(tmdbApiKey, GENRE_COMEDY);
-  const { movies: recentMovies, loading: recentMoviesLoading } = useRecentMovies(20);
-
-  // Series hooks
-  const { series: trendingSeries, loading: trendingSeriesLoading } = useTrendingSeries(tmdbApiKey);
-  const { series: popularSeries, loading: popularSeriesLoading } = usePopularSeries(tmdbApiKey);
-  const { series: topRatedSeries, loading: topRatedSeriesLoading } = useTopRatedSeries(tmdbApiKey);
-  const { series: actionSeries, loading: actionSeriesLoading } = useSeriesByGenre(tmdbApiKey, GENRE_ACTION_TV);
-  const { series: comedySeries, loading: comedySeriesLoading } = useSeriesByGenre(tmdbApiKey, GENRE_COMEDY_TV);
-  const { series: recentSeries, loading: recentSeriesLoading } = useRecentSeries(20);
+  // Cinemeta catalogs
+  const { items: featuredItems, loading: heroLoading } = useCinemetaHero(movieType);
+  const { items: popularItems, loading: popularLoading } = useCinemetaPopular(movieType);
+  const { items: newItems, loading: newLoading } = useCinemetaNew(movieType);
+  const { items: featuredCatalogItems, loading: featuredLoading } = useCinemetaFeatured(movieType);
 
   // Recently watched (user viewing history) - shown at top
   const { movies: recentlyWatchedMoviesData, loading: recentlyWatchedMoviesLoading } = useRecentlyWatchedMovies(20);
@@ -85,6 +57,16 @@ export function VodHome({ type, onItemClick, onPlay }: VodHomeProps) {
   }, [onPlay]);
 
   const handleHeroMoreInfo = useCallback((item: StoredMovie | StoredSeries) => {
+    if ((item as any).source_id === 'cinemeta') {
+      const title = item.title || item.name || '';
+      if (title) {
+        onItemClick({
+          ...item,
+          source_id: 'cinemeta_search',
+        } as any);
+      }
+      return;
+    }
     onItemClick(item);
   }, [onItemClick]);
 
@@ -98,6 +80,7 @@ export function VodHome({ type, onItemClick, onPlay }: VodHomeProps) {
           onMoreInfo={handleHeroMoreInfo}
           autoRotate
           rotateInterval={8000}
+          loading={heroLoading}
         />
 
         <div className="vod-home__carousels">
@@ -114,56 +97,29 @@ export function VodHome({ type, onItemClick, onPlay }: VodHomeProps) {
           )}
 
           <HorizontalCarousel
-            title="Trending This Week"
-            items={trendingMovies}
-            type="movie"
-            onItemClick={onItemClick}
-            loading={trendingMoviesLoading}
-            maxItems={20}
-          />
-
-          <HorizontalCarousel
             title="Popular"
-            items={popularMovies}
+            items={popularItems as StoredMovie[]}
             type="movie"
             onItemClick={onItemClick}
-            loading={popularMoviesLoading}
+            loading={popularLoading}
             maxItems={20}
           />
 
           <HorizontalCarousel
-            title="Top Rated"
-            items={topRatedMovies}
+            title="New Releases"
+            items={newItems as StoredMovie[]}
             type="movie"
             onItemClick={onItemClick}
-            loading={topRatedMoviesLoading}
+            loading={newLoading}
             maxItems={20}
           />
 
           <HorizontalCarousel
-            title="Action"
-            items={actionMovies}
+            title="Featured"
+            items={featuredCatalogItems as StoredMovie[]}
             type="movie"
             onItemClick={onItemClick}
-            loading={actionMoviesLoading}
-            maxItems={20}
-          />
-
-          <HorizontalCarousel
-            title="Comedy"
-            items={comedyMovies}
-            type="movie"
-            onItemClick={onItemClick}
-            loading={comedyMoviesLoading}
-            maxItems={20}
-          />
-
-          <HorizontalCarousel
-            title="Recently Added"
-            items={recentMovies}
-            type="movie"
-            onItemClick={onItemClick}
-            loading={recentMoviesLoading}
+            loading={featuredLoading}
             maxItems={20}
           />
         </div>
@@ -181,6 +137,7 @@ export function VodHome({ type, onItemClick, onPlay }: VodHomeProps) {
         onMoreInfo={handleHeroMoreInfo}
         autoRotate
         rotateInterval={8000}
+        loading={heroLoading}
       />
 
       <div className="vod-home__carousels">
@@ -197,56 +154,29 @@ export function VodHome({ type, onItemClick, onPlay }: VodHomeProps) {
         )}
 
         <HorizontalCarousel
-          title="Trending This Week"
-          items={trendingSeries}
-          type="series"
-          onItemClick={onItemClick}
-          loading={trendingSeriesLoading}
-          maxItems={20}
-        />
-
-        <HorizontalCarousel
           title="Popular"
-          items={popularSeries}
+          items={popularItems as StoredSeries[]}
           type="series"
           onItemClick={onItemClick}
-          loading={popularSeriesLoading}
+          loading={popularLoading}
           maxItems={20}
         />
 
         <HorizontalCarousel
-          title="Top Rated"
-          items={topRatedSeries}
+          title="New Releases"
+          items={newItems as StoredSeries[]}
           type="series"
           onItemClick={onItemClick}
-          loading={topRatedSeriesLoading}
+          loading={newLoading}
           maxItems={20}
         />
 
         <HorizontalCarousel
-          title="Action & Adventure"
-          items={actionSeries}
+          title="Featured"
+          items={featuredCatalogItems as StoredSeries[]}
           type="series"
           onItemClick={onItemClick}
-          loading={actionSeriesLoading}
-          maxItems={20}
-        />
-
-        <HorizontalCarousel
-          title="Comedy"
-          items={comedySeries}
-          type="series"
-          onItemClick={onItemClick}
-          loading={comedySeriesLoading}
-          maxItems={20}
-        />
-
-        <HorizontalCarousel
-          title="Recently Added"
-          items={recentSeries}
-          type="series"
-          onItemClick={onItemClick}
-          loading={recentSeriesLoading}
+          loading={featuredLoading}
           maxItems={20}
         />
       </div>

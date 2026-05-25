@@ -169,7 +169,7 @@ async fn poll_schedules(
 }
 
 /// Start a single recording
-async fn start_recording(
+pub async fn start_recording(
     db: &Arc<DvrDatabase>,
     recorder: &Arc<RecordingManager>,
     schedule: Schedule,
