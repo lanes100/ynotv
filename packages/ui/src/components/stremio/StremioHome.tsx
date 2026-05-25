@@ -33,6 +33,8 @@ type StremioSearchRow = {
   items: StremioSearchResult[];
 };
 
+const HIDDEN_CATALOG_IDS = new Set(['lastVideosIds', 'calendarVideosIds']);
+
 function addonHasResource(addon: InstalledAddon, resource: string): boolean {
   return addon.manifest.resources.some((r) => {
     if (typeof r === 'string') return r === resource;
@@ -103,10 +105,12 @@ export function StremioHome({ addons, onItemClick }: StremioHomeProps) {
 
   const renderedRows = useMemo(() => {
     return addons.flatMap((addon) =>
-      (addon.manifest.catalogs || []).map((cat) => ({
-        addon,
-        catalog: cat,
-      }))
+      (addon.manifest.catalogs || [])
+        .filter((cat) => !HIDDEN_CATALOG_IDS.has(cat.id))
+        .map((cat) => ({
+          addon,
+          catalog: cat,
+        }))
     );
   }, [addons]);
 

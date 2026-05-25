@@ -11,6 +11,8 @@ import {
 import { useStremioHover } from '../../contexts/StremioHoverContext';
 import './StremioHome.css';
 
+const HIDDEN_CATALOG_IDS = new Set(['lastVideosIds', 'calendarVideosIds']);
+
 interface CatalogDetailViewProps {
   addon: InstalledAddon;
   catalog: StremioManifestCatalog;
@@ -52,7 +54,9 @@ export function CatalogDetailView({ addon, catalog, onItemClick }: CatalogDetail
     const set = new Set<string>();
     for (const a of addons) {
       for (const c of a.manifest.catalogs || []) {
-        set.add(c.type);
+        if (!HIDDEN_CATALOG_IDS.has(c.id)) {
+          set.add(c.type);
+        }
       }
     }
     return Array.from(set);
@@ -62,7 +66,7 @@ export function CatalogDetailView({ addon, catalog, onItemClick }: CatalogDetail
     const list: { addon: InstalledAddon; catalog: StremioManifestCatalog }[] = [];
     for (const a of addons) {
       for (const c of a.manifest.catalogs || []) {
-        if (c.type === catalog.type) {
+        if (c.type === catalog.type && !HIDDEN_CATALOG_IDS.has(c.id)) {
           list.push({ addon: a, catalog: c });
         }
       }
