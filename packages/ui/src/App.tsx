@@ -270,6 +270,7 @@ function App() {
     sendToSlot,
     swapWithMain,
     stopSlot,
+    reloadSlot,
     setSlotProperty,
     repositionSecondarySlots,
     enterTabMode,
@@ -2451,7 +2452,9 @@ function App() {
           onMainSetVolume={(vol) => handleVolumeChange({ target: { value: vol.toString() } } as any)}
           onSwapWithMain={(slotId) => swapWithMain(slotId, multiviewSlots)}
           onMainStop={handleStop}
+          onMainReload={currentChannel ? () => handlePlayChannelWrapper(currentChannel) : () => {}}
           onStop={stopSlot}
+          onReload={reloadSlot}
           onSetProperty={setSlotProperty}
           onReposition={repositionSecondarySlots}
           onSwitchLayout={switchLayout}

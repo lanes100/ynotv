@@ -565,6 +565,28 @@ export function useMultiview() {
         }
     }, []);
 
+    /** Reload a slot's stream by re-loading the same URL */
+    const reloadSlot = useCallback(async (slotId: 2 | 3 | 4) => {
+        const slot = slotsRef.current.find(s => s.id === slotId);
+        if (!slot?.channelUrl || !slot?.channelName) return;
+
+        if (engineModeRef.current === 'hls') {
+            // For HLS, briefly clear the URL then restore to force hls.js re-initialization
+            activeUrlsRef.current[slotId] = null;
+            setSlots(prev => prev.map(s =>
+                s.id === slotId ? { ...s, channelUrl: null, active: false } : s
+            ));
+            setTimeout(() => {
+                activeUrlsRef.current[slotId] = slot.channelUrl!;
+                setSlots(prev => prev.map(s =>
+                    s.id === slotId ? { ...s, channelUrl: slot.channelUrl, channelName: slot.channelName, sourceName: slot.sourceName, active: true } : s
+                ));
+            }, 150);
+        } else {
+            await sendToSlot(slotId, slot.channelName, slot.channelUrl, slot.sourceName);
+        }
+    }, [sendToSlot]);
+
     /** Enter tab mode: push secondary MPVs off-screen to keep them buffering/playing */
     const enterTabMode = useCallback(async (tabName?: string) => {
         if (isTabModeRef.current) return;
@@ -672,6 +694,7 @@ export function useMultiview() {
         sendToSlot,
         swapWithMain,
         stopSlot,
+        reloadSlot,
         setSlotProperty,
         repositionSecondarySlots,
         notifyMainLoaded,

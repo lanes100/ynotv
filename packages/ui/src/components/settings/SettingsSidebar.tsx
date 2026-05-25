@@ -3,6 +3,7 @@ import './SettingsSidebar.css';
 export type SettingsTabId =
   | 'sources'
   | 'subtitles'
+  | 'strem'
   | 'security'
   | 'debug'
   | 'shortcuts'
@@ -29,6 +30,7 @@ const SETTINGS_TABS: SettingsTab[] = [
   { id: 'livetv', label: 'LiveTV' },
   { id: 'playback', label: 'Playback' },
   { id: 'subtitles', label: 'Subtitles & Audio' },
+  { id: 'strem', label: 'Strem' },
   { id: 'theme', label: 'Theme' },
   { id: 'ui', label: 'UI' },
   { id: 'navigation', label: 'Navigation' },

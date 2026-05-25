@@ -19,7 +19,9 @@ interface MultiviewLayoutProps {
     onMainSetVolume: (vol: number) => void;
     onSwapWithMain: (slotId: 2 | 3 | 4) => void;
     onMainStop: () => void;
+    onMainReload: () => void;
     onStop: (slotId: 2 | 3 | 4) => void;
+    onReload: (slotId: 2 | 3 | 4) => void;
     onSetProperty: (slotId: 2 | 3 | 4, property: string, value: any) => void;
     onReposition: () => void;
     onSwitchLayout?: (layout: 'main' | 'pip' | '2x2' | 'bigbottom' | 'sbs') => void;
@@ -39,7 +41,9 @@ export function MultiviewLayout({
     onMainSetVolume,
     onSwapWithMain,
     onMainStop,
+    onMainReload,
     onStop,
+    onReload,
     onSetProperty,
     onReposition,
     onSwitchLayout,
@@ -71,6 +75,7 @@ export function MultiviewLayout({
                 active={slot.active}
                 onSwapWithMain={() => onSwapWithMain(slot.id)}
                 onStop={() => onStop(slot.id)}
+                onReload={() => onReload(slot.id)}
             />
         ) : (
             <MultiviewCell
@@ -82,6 +87,7 @@ export function MultiviewLayout({
                 active={slot.active}
                 onSwapWithMain={() => onSwapWithMain(slot.id)}
                 onStop={() => onStop(slot.id)}
+                onReload={() => onReload(slot.id)}
                 onSetProperty={(prop: string, val: any) => onSetProperty(slot.id, prop, val)}
             />
         );
@@ -136,12 +142,14 @@ export function MultiviewLayout({
                         title="Volume"
                     />
                 </div>
-                <button className="multiview-cell-controls-btn" onClick={onMainTogglePlayPause} title={mainPlaying ? 'Pause' : 'Play'}>
-                    {mainPlaying ? (
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" /></svg>
-                    ) : (
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>
-                    )}
+                <button className="multiview-cell-controls-btn" onClick={onMainTogglePlayPause} title="Play">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>
+                </button>
+                <button className="multiview-cell-controls-btn" onClick={onMainTogglePlayPause} title="Pause">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" /></svg>
+                </button>
+                <button className="multiview-cell-controls-btn" onClick={onMainReload} title="Reload Stream">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.65 6.35A8 8 0 1 0 19 12h-2a6 6 0 1 1-2.23-4.69l2.64-2.64 1.42 1.42-3.54 3.54-3.54-3.54 1.41-1.41L13.76 5.1a8 8 0 0 1 3.89 1.25z" /></svg>
                 </button>
                 <button className="multiview-cell-controls-btn danger" onClick={onMainStop} title="Stop">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h12v12H6z" /></svg>

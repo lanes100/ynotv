@@ -16,6 +16,7 @@ interface MultiviewCellProps {
     active: boolean;
     onSwapWithMain: () => void;
     onStop: () => void;
+    onReload: () => void;
     onSetProperty: (property: string, value: any) => void;
 }
 
@@ -27,6 +28,7 @@ export function MultiviewCell({
     active,
     onSwapWithMain,
     onStop,
+    onReload,
     onSetProperty,
 }: MultiviewCellProps) {
     // Check if source name should be shown in multiview
@@ -57,6 +59,11 @@ export function MultiviewCell({
 
     const handleClick = () => {
         if (active) onSwapWithMain();
+    };
+
+    const handleReload = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        onReload();
     };
 
     const handleRightClick = (e: React.MouseEvent) => {
@@ -154,6 +161,9 @@ export function MultiviewCell({
                         <button className="multiview-cell-controls-btn" onClick={(e) => { e.stopPropagation(); onSetProperty('pause', true); }} title="Pause">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" /></svg>
                         </button>
+                        <button className="multiview-cell-controls-btn" onClick={handleReload} title="Reload Stream">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.65 6.35A8 8 0 1 0 19 12h-2a6 6 0 1 1-2.23-4.69l2.64-2.64 1.42 1.42-3.54 3.54-3.54-3.54 1.41-1.41L13.76 5.1a8 8 0 0 1 3.89 1.25z" /></svg>
+                        </button>
                         <button className="multiview-cell-controls-btn danger" onClick={(e) => { e.stopPropagation(); onStop(); }} title="Stop / Clear Box">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h12v12H6z" /></svg>
                         </button>
@@ -167,6 +177,7 @@ export function MultiviewCell({
                     channelName={channelName}
                     onPlay={() => { onSetProperty('pause', false); setContextMenu(null); }}
                     onPause={() => { onSetProperty('pause', true); setContextMenu(null); }}
+                    onReload={() => { onReload(); setContextMenu(null); }}
                     onStop={() => { onStop(); setContextMenu(null); }}
                     onClose={() => setContextMenu(null)}
                 />
@@ -180,6 +191,7 @@ function CellContextMenu({
     channelName,
     onPlay,
     onPause,
+    onReload,
     onStop,
     onClose,
 }: {
@@ -187,6 +199,7 @@ function CellContextMenu({
     channelName: string | null;
     onPlay: () => void;
     onPause: () => void;
+    onReload: () => void;
     onStop: () => void;
     onClose: () => void;
 }) {
@@ -212,6 +225,9 @@ function CellContextMenu({
             </button>
             <button className="cell-context-item" onClick={onPause}>
                 ⏸ Pause Stream
+            </button>
+            <button className="cell-context-item" onClick={onReload}>
+                🔄 Reload Stream
             </button>
             <button className="cell-context-item cell-context-danger" onClick={onStop}>
                 ⏹ Stop / Clear Slot

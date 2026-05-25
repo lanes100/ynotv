@@ -24,6 +24,7 @@ interface HlsMultiviewCellProps {
     active: boolean;
     onSwapWithMain: () => void;
     onStop: () => void;
+    onReload: () => void;
 }
 
 export function HlsMultiviewCell({
@@ -34,6 +35,7 @@ export function HlsMultiviewCell({
     active,
     onSwapWithMain,
     onStop,
+    onReload,
 }: HlsMultiviewCellProps) {
     const videoRef = useRef<HTMLVideoElement>(null);
     const hlsRef = useRef<Hls | null>(null);
@@ -288,6 +290,9 @@ export function HlsMultiviewCell({
                         <button className="multiview-cell-controls-btn" onClick={handlePause} title="Pause">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" /></svg>
                         </button>
+                        <button className="multiview-cell-controls-btn" onClick={(e) => { e.stopPropagation(); onReload(); }} title="Reload Stream">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.65 6.35A8 8 0 1 0 19 12h-2a6 6 0 1 1-2.23-4.69l2.64-2.64 1.42 1.42-3.54 3.54-3.54-3.54 1.41-1.41L13.76 5.1a8 8 0 0 1 3.89 1.25z" /></svg>
+                        </button>
                         <button className="multiview-cell-controls-btn danger" onClick={(e) => { e.stopPropagation(); onStop(); }} title="Stop / Clear Box">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h12v12H6z" /></svg>
                         </button>
@@ -301,6 +306,7 @@ export function HlsMultiviewCell({
                     channelName={channelName}
                     onPlay={() => { videoRef.current?.play().catch(() => {}); setContextMenu(null); }}
                     onPause={() => { videoRef.current?.pause(); setContextMenu(null); }}
+                    onReload={() => { onReload(); setContextMenu(null); }}
                     onStop={() => { onStop(); setContextMenu(null); }}
                     onClose={() => setContextMenu(null)}
                 />
@@ -314,6 +320,7 @@ function HlsCellContextMenu({
     channelName,
     onPlay,
     onPause,
+    onReload,
     onStop,
     onClose,
 }: {
@@ -321,6 +328,7 @@ function HlsCellContextMenu({
     channelName: string | null;
     onPlay: () => void;
     onPause: () => void;
+    onReload: () => void;
     onStop: () => void;
     onClose: () => void;
 }) {
@@ -343,6 +351,7 @@ function HlsCellContextMenu({
             {channelName && <div className="cell-context-header">{channelName}</div>}
             <button className="cell-context-item" onClick={onPlay}>▶ Play Stream</button>
             <button className="cell-context-item" onClick={onPause}>⏸ Pause Stream</button>
+            <button className="cell-context-item" onClick={onReload}>🔄 Reload Stream</button>
             <button className="cell-context-item cell-context-danger" onClick={onStop}>⏹ Stop / Clear Slot</button>
         </div>
     );

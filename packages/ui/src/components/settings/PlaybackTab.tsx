@@ -3,7 +3,6 @@ import { invoke } from '@tauri-apps/api/core';
 import { relaunch } from '@tauri-apps/plugin-process';
 import '../Modal.css';
 import './PlaybackTab.css';
-import type { StremioStreamPickerMode } from '../../types/stremio';
 import { PopoutTab } from './PopoutTab';
 import { SkipIntroTab } from './SkipIntroTab';
 
@@ -16,8 +15,6 @@ interface PlaybackTabProps {
   streamMaxRetries: number;
   onStreamWatchdogSecondsChange: (seconds: number) => Promise<void>;
   onStreamMaxRetriesChange: (retries: number) => Promise<void>;
-  stremioStreamPickerMode: StremioStreamPickerMode;
-  onStremioStreamPickerModeChange: (mode: StremioStreamPickerMode) => Promise<void>;
   castEnabled?: boolean;
   onCastEnabledChange?: (enabled: boolean) => Promise<void>;
   useEventBasedReconnect: boolean;
@@ -65,8 +62,6 @@ export function PlaybackTab({
   streamMaxRetries,
   onStreamWatchdogSecondsChange,
   onStreamMaxRetriesChange,
-  stremioStreamPickerMode,
-  onStremioStreamPickerModeChange,
   castEnabled,
   onCastEnabledChange,
   useEventBasedReconnect,
@@ -442,38 +437,6 @@ export function PlaybackTab({
                     }}
                   />
                   <span className="retry-input-unit">retries</span>
-                </div>
-              </div>
-
-              {/* Stremio Stream Picker Mode */}
-              <div className="settings-section" style={{ marginTop: '24px', paddingTop: '20px', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
-                <h3 style={{ margin: '0 0 8px 0', fontSize: '0.95rem', fontWeight: 500, color: 'rgba(255,255,255,0.9)' }}>
-                  Stremio Stream Playback
-                </h3>
-                <p style={{ margin: '0 0 12px 0', fontSize: '0.82rem', color: 'rgba(255,255,255,0.5)' }}>
-                  Choose how streams from Stremio addons are played.
-                </p>
-                <div className="retry-setting-row" style={{ borderBottom: 'none' }}>
-                  <div className="timeshift-toggle-info">
-                    <span className="timeshift-toggle-label">Stream Picker Mode</span>
-                    <span className="timeshift-toggle-sub">
-                      Show a picker modal to choose which stream to play, or auto-play the first direct stream.
-                    </span>
-                  </div>
-                  <div className="stremio-picker-toggle">
-                    <button
-                      className={`stremio-picker-btn ${stremioStreamPickerMode === 'modal' ? 'active' : ''}`}
-                      onClick={() => onStremioStreamPickerModeChange('modal')}
-                    >
-                      Show Picker
-                    </button>
-                    <button
-                      className={`stremio-picker-btn ${stremioStreamPickerMode === 'autoplay' ? 'active' : ''}`}
-                      onClick={() => onStremioStreamPickerModeChange('autoplay')}
-                    >
-                      Auto-play
-                    </button>
-                  </div>
                 </div>
               </div>
 

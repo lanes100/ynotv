@@ -17,6 +17,7 @@ import { AboutTab } from './settings/AboutTab';
 import { LiveTVTab } from './settings/LiveTVTab';
 import { SubtitlesTab, type SubtitleSettings } from './settings/SubtitlesTab';
 import { ScrobblingTab } from './settings/ScrobblingTab';
+import { StremTab } from './settings/StremTab';
 import type { ShortcutsMap, ThemeId } from '../types/app';
 import type { StremioStreamPickerMode } from '../types/stremio';
 import './Settings.css';
@@ -953,6 +954,13 @@ export function Settings({
             onSettingsChange={handleSubtitleSettingsChange}
           />
         );
+      case 'strem':
+        return (
+          <StremTab
+            stremioStreamPickerMode={stremioStreamPickerMode}
+            onStremioStreamPickerModeChange={handleStremioStreamPickerModeChange}
+          />
+        );
       case 'security':
         return (
           <SecurityTab
@@ -1025,8 +1033,6 @@ export function Settings({
             streamMaxRetries={streamMaxRetries}
             onStreamWatchdogSecondsChange={handleStreamWatchdogSecondsChange}
             onStreamMaxRetriesChange={handleStreamMaxRetriesChange}
-            stremioStreamPickerMode={stremioStreamPickerMode}
-            onStremioStreamPickerModeChange={handleStremioStreamPickerModeChange}
             castEnabled={castEnabled}
             onCastEnabledChange={handleCastEnabledChange}
             useEventBasedReconnect={useEventBasedReconnect}
