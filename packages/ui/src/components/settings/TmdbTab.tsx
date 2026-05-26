@@ -72,7 +72,7 @@ export function TmdbTab({
   }
 
   return (
-    <div className="settings-tab-content">
+    <div>
       {/* TMDB Section */}
       <div className="settings-section">
         <div className="section-header">
@@ -122,7 +122,7 @@ export function TmdbTab({
       <div className="settings-section" style={{ marginTop: '2rem' }}>
         <div className="section-header">
           <h3>RatingPosterDB Integration</h3>
-          {tier && rpdbKeyValid && (
+          {tier != null && rpdbKeyValid === true && (
             <span className="tier-badge">Tier {tier}</span>
           )}
         </div>
@@ -171,7 +171,7 @@ export function TmdbTab({
         </div>
 
         {/* Backdrops option - only show if key is valid */}
-        {rpdbKeyValid && (
+        {rpdbKeyValid === true && (
           <div className="tmdb-form" style={{ marginTop: '1.5rem' }}>
             <label
               className="genre-checkbox"

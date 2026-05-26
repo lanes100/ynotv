@@ -46,11 +46,11 @@ export function PosterDbTab({
   }
 
   return (
-    <div className="settings-tab-content">
+    <div>
       <div className="settings-section">
         <div className="section-header">
           <h3>RatingPosterDB Integration</h3>
-          {tier && apiKeyValid && (
+          {tier != null && apiKeyValid === true && (
             <span className="tier-badge">Tier {tier}</span>
           )}
         </div>
@@ -99,7 +99,7 @@ export function PosterDbTab({
         </div>
 
         {/* Backdrops option - only show if key is valid */}
-        {apiKeyValid && (
+        {apiKeyValid === true && (
           <div className="tmdb-form" style={{ marginTop: '1.5rem' }}>
             <label
               className="genre-checkbox"
