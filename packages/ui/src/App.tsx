@@ -31,6 +31,7 @@ import { CustomGroupWidget } from './components/CustomGroupWidget';
 import { WhatsNextWidget } from './components/WhatsNextWidget';
 import { GroupPickerModal } from './components/GroupPickerModal';
 import { useActiveRecordings } from './hooks/useActiveRecordings';
+import { useSearchHistory } from './hooks/useSearchHistory';
 import { RecordingIndicator } from './components/RecordingIndicator';
 import { Logo } from './components/Logo';
 import { useSelectedCategory, useChannelSearch, useProgramSearch, useChannels } from './hooks/useChannels';
@@ -921,6 +922,11 @@ function App() {
   // even if "use for regular" is disabled. Cleared when user manually edits the title bar query.
   const [forceAdvancedFilters, setForceAdvancedFilters] = useState(false);
 
+  // Search history for titlebar
+  const titlebarSearchHistory = useSearchHistory('titlebar');
+  const [showTitlebarHistory, setShowTitlebarHistory] = useState(false);
+  const titlebarHistoryRef = useRef<HTMLDivElement | null>(null);
+
   // Determine active filters for search
   const activeSearchSourceIds = useMemo(() => {
     if (!useAdvancedSearchForRegular && !forceAdvancedFilters) return undefined;
@@ -950,6 +956,19 @@ function App() {
     activeSearchSourceIds,
     activeSearchCategoryIds
   );
+
+  // Click outside to close titlebar search history
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (titlebarHistoryRef.current && !titlebarHistoryRef.current.contains(e.target as Node)) {
+        setShowTitlebarHistory(false);
+      }
+    };
+    if (showTitlebarHistory) {
+      document.addEventListener('mousedown', handleClick);
+    }
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [showTitlebarHistory]);
 
   // ==========================================================================
   // Track Selection Modal State
@@ -2081,9 +2100,19 @@ function App() {
                   }
                 }}
                 onFocus={() => {
+                  setShowTitlebarHistory(true);
                   if (!isSearchMode && activeView !== 'guide') {
                     setCategoriesOpen(true);
                     setActiveView('guide');
+                  }
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    const val = searchQuery.trim();
+                    if (val) {
+                      titlebarSearchHistory.addToHistory(val);
+                    }
+                    setShowTitlebarHistory(false);
                   }
                 }}
               />
@@ -2111,6 +2140,49 @@ function App() {
                   <line x1="19" y1="5" x2="23" y2="5"></line>
                 </svg>
               </button>
+              {showTitlebarHistory && titlebarSearchHistory.history.length > 0 && (
+                <div className="title-bar-search-history" ref={titlebarHistoryRef}>
+                  {titlebarSearchHistory.history.map((item) => (
+                    <div
+                      key={item}
+                      className="title-bar-search-history-item"
+                      onMouseDown={() => {
+                        setSearchQuery(item);
+                        setShowTitlebarHistory(false);
+                        setCategoriesOpen(true);
+                        if (activeView !== 'guide') {
+                          setActiveView('guide');
+                        }
+                      }}
+                    >
+                      <svg className="title-bar-search-history-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <circle cx="12" cy="12" r="10" />
+                        <polyline points="12 6 12 12 16 14" />
+                      </svg>
+                      <span className="title-bar-search-history-text">{item}</span>
+                      <button
+                        className="title-bar-search-history-remove"
+                        onMouseDown={(e) => {
+                          e.stopPropagation();
+                          titlebarSearchHistory.removeFromHistory(item);
+                        }}
+                        title="Remove"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))}
+                  <div
+                    className="title-bar-search-history-clear-all"
+                    onMouseDown={() => {
+                      titlebarSearchHistory.clearHistory();
+                      setShowTitlebarHistory(false);
+                    }}
+                  >
+                    Clear search history
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

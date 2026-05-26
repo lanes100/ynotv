@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import type { InstalledAddon } from '../../types/stremio';
 import {
   useStremioSearchQuery,
@@ -10,6 +10,7 @@ import {
   useStremioView,
   useSetStremioView,
 } from '../../stores/uiStore';
+import { useSearchHistory } from '../../hooks/useSearchHistory';
 import './StremioTopbar.css';
 
 interface StremioTopbarProps {
@@ -27,6 +28,21 @@ export function StremioTopbar({ addons, onOpenAddonManager }: StremioTopbarProps
   const searchQuery = useStremioSearchQuery();
   const setSearchQuery = useSetStremioSearchQuery();
   const [inputValue, setInputValue] = useState(searchQuery);
+  const stremioSearchHistory = useSearchHistory('stremio');
+  const [showStremioHistory, setShowStremioHistory] = useState(false);
+  const stremioHistoryRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (stremioHistoryRef.current && !stremioHistoryRef.current.contains(e.target as Node)) {
+        setShowStremioHistory(false);
+      }
+    };
+    if (showStremioHistory) {
+      document.addEventListener('mousedown', handleClick);
+    }
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [showStremioHistory]);
 
   const isHomeActive = view === 'home' && !selectedAddonId && !selectedCatalogId;
   const isDiscoverActive = view === 'home' && !!selectedAddonId && !!selectedCatalogId;
@@ -62,14 +78,18 @@ export function StremioTopbar({ addons, onOpenAddonManager }: StremioTopbarProps
   const handleSearchKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       const val = inputValue.trim();
+      if (val) {
+        stremioSearchHistory.addToHistory(val);
+      }
       setSearchQuery(val);
+      setShowStremioHistory(false);
       if (val.length >= 2) {
         setView('search');
       } else {
         setView('home');
       }
     }
-  }, [inputValue, setSearchQuery, setView]);
+  }, [inputValue, setSearchQuery, setView, stremioSearchHistory]);
 
   const handleSearchClear = useCallback(() => {
     setInputValue('');
@@ -162,6 +182,7 @@ export function StremioTopbar({ addons, onOpenAddonManager }: StremioTopbarProps
               placeholder="Search"
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
+              onFocus={() => setShowStremioHistory(true)}
               onKeyDown={handleSearchKeyDown}
             />
             {inputValue && (
@@ -172,6 +193,53 @@ export function StremioTopbar({ addons, onOpenAddonManager }: StremioTopbarProps
               </button>
             )}
           </div>
+          {showStremioHistory && stremioSearchHistory.history.length > 0 && (
+            <div className="stremio-topbar-search-history" ref={stremioHistoryRef}>
+              {stremioSearchHistory.history.map((item) => (
+                <div
+                  key={item}
+                  className="stremio-topbar-search-history-item"
+                  onMouseDown={() => {
+                    setInputValue(item);
+                    setSearchQuery(item);
+                    setShowStremioHistory(false);
+                    if (item.length >= 2) {
+                      setView('search');
+                    } else {
+                      setView('home');
+                    }
+                  }}
+                >
+                  <svg className="stremio-topbar-search-history-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="12" cy="12" r="10" />
+                    <polyline points="12 6 12 12 16 14" />
+                  </svg>
+                  <span className="stremio-topbar-search-history-text">{item}</span>
+                  <button
+                    className="stremio-topbar-search-history-remove"
+                    onMouseDown={(e) => {
+                      e.stopPropagation();
+                      stremioSearchHistory.removeFromHistory(item);
+                    }}
+                    title="Remove"
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M18 6L6 18M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              ))}
+              <div
+                className="stremio-topbar-search-history-clear-all"
+                onMouseDown={() => {
+                  stremioSearchHistory.clearHistory();
+                  setShowStremioHistory(false);
+                }}
+              >
+                Clear search history
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

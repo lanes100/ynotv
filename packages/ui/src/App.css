@@ -167,6 +167,7 @@
   border-radius: 4px;
   background: transparent;
   transition: all 0.2s ease;
+  position: relative;
 }
 
 .title-bar-search-integrated:focus-within {
@@ -238,6 +239,83 @@
 .title-bar-advanced-search-btn:hover {
   background: rgba(255, 255, 255, 0.15);
   color: rgba(255, 255, 255, 0.8);
+}
+
+/* Title Bar Search History Dropdown */
+.title-bar-search-history {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  min-width: 200px;
+  background: #1e1e2e;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  padding: 4px 0;
+  margin-top: 4px;
+  overflow: hidden;
+}
+
+.title-bar-search-history-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  cursor: pointer;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 12px;
+  transition: background 0.1s ease;
+}
+
+.title-bar-search-history-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.title-bar-search-history-icon {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+  color: rgba(255, 255, 255, 0.35);
+}
+
+.title-bar-search-history-text {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.title-bar-search-history-remove {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.3);
+  font-size: 9px;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 3px;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.title-bar-search-history-remove:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.title-bar-search-history-clear-all {
+  padding: 6px 10px;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.4);
+  cursor: pointer;
+  text-align: center;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  transition: color 0.1s ease;
+}
+
+.title-bar-search-history-clear-all:hover {
+  color: rgba(255, 255, 255, 0.7);
 }
 
 /* Title Bar Recording Indicator */
