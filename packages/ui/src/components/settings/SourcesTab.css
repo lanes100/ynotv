@@ -32,6 +32,15 @@
 }
 
 /* Scrollbar Styling matching the app theme */
+.sources-list {
+    scrollbar-width: thin;
+    scrollbar-color: var(--surface-hover, rgba(255, 255, 255, 0.15)) transparent;
+}
+
+.sources-list:hover {
+    scrollbar-color: var(--accent-primary, rgba(0, 212, 255, 0.5)) transparent;
+}
+
 .sources-list::-webkit-scrollbar {
     width: 6px;
 }
@@ -41,12 +50,12 @@
 }
 
 .sources-list::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.15);
+    background: var(--surface-hover, rgba(255, 255, 255, 0.15));
     border-radius: 3px;
 }
 
 .sources-list::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.3);
+    background: var(--accent-primary, rgba(0, 212, 255, 0.5));
 }
 
 /* Fix "random 0" rendering issue overrides if needed */

@@ -57,16 +57,18 @@ export function SettingsSidebar({
 }: SettingsSidebarProps) {
   return (
     <nav className="settings-sidebar">
-      {SETTINGS_TABS.map((tab) => (
-        <button
-          key={tab.id}
-          className={`settings-nav-item ${activeTab === tab.id ? 'active' : ''}`}
-          onClick={() => onTabChange(tab.id)}
-        >
-          {tab.icon && <span className="icon">{tab.icon}</span>}
-          {tab.label}
-        </button>
-      ))}
+      <div className="settings-nav">
+        {SETTINGS_TABS.map((tab) => (
+          <button
+            key={tab.id}
+            className={`settings-nav-item ${activeTab === tab.id ? 'active' : ''}`}
+            onClick={() => onTabChange(tab.id)}
+          >
+            {tab.icon && <span className="icon">{tab.icon}</span>}
+            {tab.label}
+          </button>
+        ))}
+      </div>
     </nav>
   );
 }

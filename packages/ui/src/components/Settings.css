@@ -434,8 +434,12 @@
   border-radius: 3px;
 }
 
+.source-form:hover {
+  scrollbar-color: var(--accent-primary, rgba(0, 212, 255, 0.5)) transparent;
+}
+
 .source-form::-webkit-scrollbar-thumb:hover {
-  background: var(--surface-active, rgba(255, 255, 255, 0.3));
+  background: var(--accent-primary, rgba(0, 212, 255, 0.5));
 }
 
 .source-form h3 {
@@ -721,12 +725,12 @@
 }
 
 .settings-tab-panel::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--surface-hover, rgba(255, 255, 255, 0.1));
   border-radius: 3px;
 }
 
 .settings-tab-panel::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.2);
+  background: var(--accent-primary, rgba(0, 212, 255, 0.5));
 }
 
 .settings-tab-content {
@@ -735,6 +739,12 @@
   height: 100%;
   overflow-y: auto;
   overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: var(--surface-hover, rgba(255, 255, 255, 0.1)) transparent;
+}
+
+.settings-tab-content:hover {
+  scrollbar-color: var(--accent-primary, rgba(0, 212, 255, 0.5)) transparent;
 }
 
 .settings-tab-content::-webkit-scrollbar {
@@ -746,12 +756,12 @@
 }
 
 .settings-tab-content::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--surface-hover, rgba(255, 255, 255, 0.1));
   border-radius: 3px;
 }
 
 .settings-tab-content::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.2);
+  background: var(--accent-primary, rgba(0, 212, 255, 0.5));
 }
 
 @keyframes fadeIn {
@@ -782,8 +792,12 @@
   flex: 1;
   overflow-y: auto;
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+  scrollbar-color: var(--surface-hover, rgba(255, 255, 255, 0.1)) transparent;
   margin-top: 8px;
+}
+
+.genre-grid-container:hover {
+  scrollbar-color: var(--accent-primary, rgba(0, 212, 255, 0.5)) transparent;
 }
 
 .genre-grid-container::-webkit-scrollbar {
@@ -795,12 +809,12 @@
 }
 
 .genre-grid-container::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--surface-hover, rgba(255, 255, 255, 0.1));
   border-radius: 3px;
 }
 
 .genre-grid-container::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.2);
+  background: var(--accent-primary, rgba(0, 212, 255, 0.5));
 }
 
 .genre-grid {
@@ -1469,7 +1483,11 @@
   padding-right: 6px;
   /* Custom Scrollbar */
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+  scrollbar-color: var(--surface-hover, rgba(255, 255, 255, 0.2)) transparent;
+}
+
+.shortcuts-scroll-container:hover {
+  scrollbar-color: var(--accent-primary, rgba(0, 212, 255, 0.5)) transparent;
 }
 
 .shortcuts-scroll-container::-webkit-scrollbar {
@@ -1477,8 +1495,12 @@
 }
 
 .shortcuts-scroll-container::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.2);
+  background: var(--surface-hover, rgba(255, 255, 255, 0.2));
   border-radius: 3px;
+}
+
+.shortcuts-scroll-container::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-primary, rgba(0, 212, 255, 0.5));
 }
 
 .shortcuts-scroll-container::-webkit-scrollbar-track {

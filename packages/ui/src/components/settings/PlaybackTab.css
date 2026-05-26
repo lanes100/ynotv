@@ -4,6 +4,15 @@
 
 /* ─── Themed Scrollbar ─────────────────────────────────────── */
 
+.playback-tab-content {
+  scrollbar-width: thin;
+  scrollbar-color: var(--surface-hover, rgba(255, 255, 255, 0.15)) transparent;
+}
+
+.playback-tab-content:hover {
+  scrollbar-color: var(--accent-primary, rgba(0, 212, 255, 0.5)) transparent;
+}
+
 .playback-tab-content::-webkit-scrollbar {
   width: 8px;
 }
@@ -14,12 +23,12 @@
 }
 
 .playback-tab-content::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.15);
+  background: var(--surface-hover, rgba(255, 255, 255, 0.15));
   border-radius: 4px;
 }
 
 .playback-tab-content::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.25);
+  background: var(--accent-primary, rgba(0, 212, 255, 0.5));
 }
 
 .playback-section {
