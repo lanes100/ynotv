@@ -111,16 +111,24 @@ export async function getChannelMetadata(streamId: string): Promise<ChannelMetad
 
 /**
  * Capture and save metadata for currently playing channel
- * Should be called after video starts playing successfully
+ * Should be called after video starts playing successfully.
+ * Retries with exponential backoff if stream hasn't loaded yet.
  */
 export async function captureAndSaveMetadata(streamId: string, sourceId: string): Promise<void> {
-    // Wait a bit for video to load and properties to be available
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    const maxRetries = 10;
+    const baseDelay = 1000;
 
-    const metadata = await captureVideoMetadata();
-    if (metadata && metadata.width > 0) {
-        await saveChannelMetadata(streamId, sourceId, metadata);
-    } else {
-        console.warn('[VideoMetadata] No valid metadata captured for', streamId);
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+        await new Promise(resolve => setTimeout(resolve, attempt === 0 ? 1500 : baseDelay * Math.pow(1.5, attempt)));
+
+        const metadata = await captureVideoMetadata();
+        if (metadata && metadata.width > 0) {
+            await saveChannelMetadata(streamId, sourceId, metadata);
+            return;
+        }
+
+        console.log(`[VideoMetadata] Retry ${attempt + 1}/${maxRetries} for`, streamId);
     }
+
+    console.warn('[VideoMetadata] No valid metadata captured for', streamId, 'after', maxRetries, 'attempts');
 }
