@@ -18,7 +18,7 @@ export function StremioLibrary({ onItemClick }: StremioLibraryProps) {
   const library = useStremioLibraryStore((s) => s.library);
   const updateLibraryItem = useStremioLibraryStore((s) => s.updateLibraryItem);
   const addons = useStremioAddonStore((s) => s.enabledAddons);
-  const episodeProgress = useStremioWatchStore((s) => s.episodeProgress);
+  const episodeProgress = useStremioWatchStore((s) => s.episodeProgress || {});
 
   const [search, setSearch] = useState('');
   const [selectedType, setSelectedType] = useState('All');

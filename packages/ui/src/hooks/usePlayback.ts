@@ -1497,6 +1497,11 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
       return;
     }
 
+    if (resolved.url.startsWith('infoHash:')) {
+      setError('Torrent playback requires TorrServer or a Debrid addon. Raw torrent streams cannot be played directly.');
+      return;
+    }
+
     // Stalker/MAC sources require session headers that MPV doesn't send,
     // so they always trigger a 401/403 HTTP error — but the stream plays fine.
     // Suppress these false positives. We also suppress local URLs.

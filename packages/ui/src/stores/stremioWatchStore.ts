@@ -81,7 +81,8 @@ export const useStremioWatchStore = create<StremioWatchStore>()(
 
       recordMovieWatch: (metaId, name, poster, lastSelectedStream) => {
         set((state) => {
-          const existing = state.history.find((h) => h.metaId === metaId);
+          const history = state.history || [];
+          const existing = history.find((h) => h.metaId === metaId);
           const entry: StremioWatchEntry = {
             metaId,
             type: 'movie',
@@ -91,16 +92,17 @@ export const useStremioWatchStore = create<StremioWatchStore>()(
             watchedAt: Date.now(),
             lastSelectedStream: lastSelectedStream ?? existing?.lastSelectedStream,
           };
-          const filtered = state.history.filter((h) => h.metaId !== metaId);
+          const filtered = history.filter((h) => h.metaId !== metaId);
           return { history: [entry, ...filtered].slice(0, MAX_HISTORY) };
         });
       },
 
       updateMovieProgress: (metaId, progressFraction) => {
         set((state) => {
-          const idx = state.history.findIndex((h) => h.metaId === metaId);
+          const history = state.history || [];
+          const idx = history.findIndex((h) => h.metaId === metaId);
           if (idx === -1) return state;
-          const updated = [...state.history];
+          const updated = [...history];
           updated[idx] = { ...updated[idx], progressFraction };
           return { history: updated };
         });
@@ -109,8 +111,10 @@ export const useStremioWatchStore = create<StremioWatchStore>()(
       recordEpisodeStart: (metaId, name, poster, videoId, season, episode, nextVideoId, nextSeason, nextEpisode, lastSelectedStream) => {
         const now = Date.now();
         set((state) => {
-          const existingEntry = state.history.find((h) => h.metaId === metaId);
-          const existingEp = state.episodeProgress[videoId];
+          const history = state.history || [];
+          const episodeProgress = state.episodeProgress || {};
+          const existingEntry = history.find((h) => h.metaId === metaId);
+          const existingEp = episodeProgress[videoId];
 
           const epProgress: StremioEpisodeProgress = {
             videoId,
@@ -139,10 +143,10 @@ export const useStremioWatchStore = create<StremioWatchStore>()(
             lastSelectedStream: lastSelectedStream ?? existingEntry?.lastSelectedStream,
           };
 
-          const filtered = state.history.filter((h) => h.metaId !== metaId);
+          const filtered = history.filter((h) => h.metaId !== metaId);
           return {
             history: [entry, ...filtered].slice(0, MAX_HISTORY),
-            episodeProgress: { ...state.episodeProgress, [videoId]: epProgress },
+            episodeProgress: { ...episodeProgress, [videoId]: epProgress },
           };
         });
       },
@@ -150,7 +154,9 @@ export const useStremioWatchStore = create<StremioWatchStore>()(
       updateEpisodeProgress: (metaId, videoId, progressFraction, season, episode, nextVideoId, nextSeason, nextEpisode) => {
         const finished = progressFraction >= FINISHED_THRESHOLD;
         set((state) => {
-          const existingEp = state.episodeProgress[videoId];
+          const history = state.history || [];
+          const episodeProgress = state.episodeProgress || {};
+          const existingEp = episodeProgress[videoId];
           const epProgress: StremioEpisodeProgress = {
             videoId,
             metaId,
@@ -161,8 +167,8 @@ export const useStremioWatchStore = create<StremioWatchStore>()(
             watchedAt: Date.now(),
           };
 
-          const historyIdx = state.history.findIndex((h) => h.metaId === metaId);
-          let newHistory = [...state.history];
+          const historyIdx = history.findIndex((h) => h.metaId === metaId);
+          let newHistory = [...history];
           if (historyIdx !== -1) {
             newHistory[historyIdx] = {
               ...newHistory[historyIdx],
@@ -180,27 +186,28 @@ export const useStremioWatchStore = create<StremioWatchStore>()(
           void existingEp; // consumed above
           return {
             history: newHistory,
-            episodeProgress: { ...state.episodeProgress, [videoId]: epProgress },
+            episodeProgress: { ...episodeProgress, [videoId]: epProgress },
           };
         });
       },
 
       getEpisodeWatched: (videoId) => {
-        return get().episodeProgress[videoId]?.finished ?? false;
+        return (get().episodeProgress || {})[videoId]?.finished ?? false;
       },
 
       getEpisodeProgressFraction: (videoId) => {
-        return get().episodeProgress[videoId]?.progressFraction ?? 0;
+        return (get().episodeProgress || {})[videoId]?.progressFraction ?? 0;
       },
 
       toggleEpisodeWatched: (videoId, metaId, season, episode) => {
         const state = get();
-        const current = state.episodeProgress[videoId];
+        const episodeProgress = state.episodeProgress || {};
+        const current = episodeProgress[videoId];
         const isFinished = current?.finished ?? false;
 
         if (isFinished) {
           set((s) => {
-            const next = { ...s.episodeProgress };
+            const next = { ...(s.episodeProgress || {}) };
             delete next[videoId];
             return { episodeProgress: next };
           });
@@ -219,7 +226,7 @@ export const useStremioWatchStore = create<StremioWatchStore>()(
             watchedAt: now,
           };
           set((s) => ({
-            episodeProgress: { ...s.episodeProgress, [videoId]: epProgress },
+            episodeProgress: { ...(s.episodeProgress || {}), [videoId]: epProgress },
           }));
           import('../db').then(({ recordEpisodeWatch }) => {
             recordEpisodeWatch(
@@ -238,7 +245,7 @@ export const useStremioWatchStore = create<StremioWatchStore>()(
 
       removeFromHistory: (metaId) => {
         set((state) => ({
-          history: state.history.filter((h) => h.metaId !== metaId),
+          history: (state.history || []).filter((h) => h.metaId !== metaId),
         }));
       },
 

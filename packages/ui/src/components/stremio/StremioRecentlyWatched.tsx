@@ -17,7 +17,7 @@ export function StremioRecentlyWatched({ addons, onItemClick }: StremioRecentlyW
   const [canScrollRight, setCanScrollRight] = useState(false);
   const [loadingId, setLoadingId] = useState<string | null>(null);
 
-  const history = useStremioWatchStore((s) => s.history);
+  const history = useStremioWatchStore((s) => s.history || []);
   const removeFromHistory = useStremioWatchStore((s) => s.removeFromHistory);
   const setSelectedSeason = useSetStremioSelectedSeason();
   const setPreselectVideoId = useSetStremioPreselectVideoId();

@@ -1073,176 +1073,178 @@ function App() {
     nextEpisode?: number;
   } | null>(null);
   const stremioMovieRef = useRef<{ metaId: string; name: string; poster?: string } | null>(null);
-  const stremioMetaRef = useRef<StremioMeta | null>(null);
-
-  useEffect(() => {
+  const stremioMetaRef = useRef<StremioMeta | null>(null);  useEffect(() => {
     const handler = async (e: Event) => {
-      const detail = (e as CustomEvent).detail;
-      if (!detail?.stream || !detail?.meta) return;
-
-      const { stream, meta, episodeVideo } = detail;
-      const url = stream.url || (stream.infoHash ? `infoHash:${stream.infoHash}${stream.fileIdx !== undefined ? `:${stream.fileIdx}` : ''}` : null);
-      if (!url) return;
-
-      // Reset duration and position state/ref to avoid stale values during calculations
-      if (setDurationRef.current) setDurationRef.current(0);
-      if (setPositionRef.current) setPositionRef.current(0);
-      durationRef.current = 0;
-      positionRef.current = 0;
-
-      // Record watch in stremio watch store
-      const watchStore = useStremioWatchStore.getState();
-
-      // Capture saved fraction before recording new start
-      const savedFraction = meta.type === 'series' && episodeVideo
-        ? watchStore.getEpisodeProgressFraction(episodeVideo.id)
-        : (watchStore.history.find((h) => h.metaId === meta.id)?.progressFraction ?? 0);
-
-      if (meta.type === 'series' && episodeVideo) {
-        // Compute next episode: iterate videos sorted by season/episode
-        let nextVideoId: string | undefined;
-        let nextSeason: number | undefined;
-        let nextEpisode: number | undefined;
-        if (meta.videos && Array.isArray(meta.videos)) {
-          const sorted = [...meta.videos].sort((a: any, b: any) => {
-            if ((a.season ?? 0) !== (b.season ?? 0)) return (a.season ?? 0) - (b.season ?? 0);
-            return (a.episode ?? 0) - (b.episode ?? 0);
-          });
-          const idx = sorted.findIndex((v: any) => v.id === episodeVideo.id);
-          if (idx >= 0 && idx < sorted.length - 1) {
-            const nxt = sorted[idx + 1];
-            nextVideoId = nxt.id;
-            nextSeason = nxt.season;
-            nextEpisode = nxt.episode;
-          }
-        }
-        watchStore.recordEpisodeStart(
-          meta.id, meta.name, meta.poster,
-          episodeVideo.id, episodeVideo.season ?? 0, episodeVideo.episode ?? 0,
-          nextVideoId, nextSeason, nextEpisode,
-          stream
-        );
-        stremioEpisodeRef.current = {
-          metaId: meta.id,
-          name: meta.name,
-          poster: meta.poster,
-          videoId: episodeVideo.id,
-          season: episodeVideo.season ?? 0,
-          episode: episodeVideo.episode ?? 0,
-          nextVideoId,
-          nextSeason,
-          nextEpisode,
-        };
-        stremioMovieRef.current = null;
-      } else {
-        watchStore.recordMovieWatch(meta.id, meta.name, meta.poster, stream);
-        stremioMovieRef.current = { metaId: meta.id, name: meta.name, poster: meta.poster };
-        stremioEpisodeRef.current = null;
-      }
-
-      stremioMetaRef.current = meta;
-      setActiveViewRef.current('none');
-      const isSeries = meta.type === 'series' && episodeVideo;
-
-      // Record watch in local DB vod_history to make it show up in Continue Watching on home page
-      void recordVodWatch(
-        meta.id,
-        isSeries ? 'series' : 'movie',
-        'stremio',
-        meta.name,
-        meta.poster,
-        isSeries ? (episodeVideo.season ?? undefined) : undefined,
-        isSeries ? (episodeVideo.episode ?? undefined) : undefined,
-        isSeries ? (episodeVideo.title || `Episode ${episodeVideo.episode}`) : undefined
-      ).catch((err) => {
-        console.error('[Stremio] Failed to record VOD watch in history:', err);
-      });
-
-      await handlePlayVodRef.current({
-        url,
-        title: meta.name,
-        year: meta.year ? String(meta.year) : undefined,
-        plot: isSeries
-          ? (episodeVideo.description || episodeVideo.overview || meta.description)
-          : meta.description,
-        type: isSeries ? 'series' : 'movie',
-        episodeInfo: isSeries
-          ? `S${episodeVideo.season} E${episodeVideo.episode}${episodeVideo.title ? ` · ${episodeVideo.title}` : ''}`
-          : undefined,
-        source_id: 'stremio',
-        mediaId: isSeries ? `${meta.id}_ep_${episodeVideo.id}` : meta.id,
-        seriesId: isSeries ? meta.id : undefined,
-        seasonNum: episodeVideo?.season,
-        episodeNum: episodeVideo?.episode,
-        episodeId: episodeVideo?.id,
-      });
-
-      // Resume from saved stremio progress if available
-      if (savedFraction > 0.02 && savedFraction < 0.95) {
-        const retrySeek = (attempt = 0) => {
-          const dur = durationRef.current;
-          if (dur > 0) {
-            const seekTo = Math.floor(savedFraction * dur);
-            if (seekTo > 0) {
-              Bridge.seek(seekTo).catch(() => {
-                setTimeout(() => Bridge.seek(seekTo).catch(() => {}), 2000);
-              });
-            }
-          } else if (attempt < 10) {
-            setTimeout(() => retrySeek(attempt + 1), 1000);
-          }
-        };
-        setTimeout(() => retrySeek(), 1500);
-      }
-
-      if (stream.infoHash) {
-        console.log('[Stremio] Playing torrent stream:', stream.infoHash);
-      }
-
       try {
-        const addons = useStremioAddonStore.getState().enabledAddons;
-        const subtitleId = isSeries && episodeVideo?.id ? episodeVideo.id : meta.id;
-        const subtitleExtra: Record<string, string> = {};
-        if (stream.behaviorHints?.videoHash) subtitleExtra.videoHash = stream.behaviorHints.videoHash;
-        if (stream.behaviorHints?.videoSize) subtitleExtra.videoSize = String(stream.behaviorHints.videoSize);
-        if (stream.behaviorHints?.filename) subtitleExtra.filename = stream.behaviorHints.filename;
-        const subs = await fetchSubtitles(addons, meta.type, subtitleId, Object.keys(subtitleExtra).length > 0 ? subtitleExtra : undefined);
-        if (subs.length > 0 && window.mpv?.addSubtitleFile) {
-          const { writeTextFile, mkdir, BaseDirectory } = await import('@tauri-apps/plugin-fs');
-          const { appLocalDataDir, join } = await import('@tauri-apps/api/path');
-          const appDir = await appLocalDataDir();
+        const detail = (e as CustomEvent).detail;
+        if (!detail?.stream || !detail?.meta) return;
 
-          await mkdir('subtitles', { baseDir: BaseDirectory.AppLocalData, recursive: true }).catch(() => {});
+        const { stream, meta, episodeVideo } = detail;
+        const url = stream.url || (stream.infoHash ? `infoHash:${stream.infoHash}${stream.fileIdx !== undefined ? `:${stream.fileIdx}` : ''}` : null);
+        if (!url) return;
 
-          for (let i = 0; i < subs.length; i++) {
-            const sub = subs[i];
-            try {
-              const res = await window.fetchProxy.fetch(sub.url);
-              if (res.data?.ok) {
-                const text = res.data.text;
-                const isVtt = sub.url.toLowerCase().includes('.vtt') || text.includes('WEBVTT');
-                const ext = isVtt ? 'vtt' : 'srt';
-                const sanitizePart = (val?: string) => {
-                  if (!val) return 'unknown';
-                  return val.replace(/__/g, '_').replace(/ /g, '_').replace(/[^a-zA-Z0-9_]/g, '');
-                };
-                const cleanAddon = sanitizePart(sub.addonName || 'Addon').slice(0, 30);
-                const cleanLabel = sanitizePart(sub.label || sub.lang.toUpperCase()).slice(0, 40);
-                const cleanMetaId = sanitizePart(meta.id).slice(0, 30);
-                const cleanLang = sanitizePart(sub.lang).slice(0, 10);
-                const relPath = `subtitles/stremio__${cleanAddon}__${cleanLabel}__${cleanMetaId}__${cleanLang}__${i}.${ext}`;
-                const filePath = await join(appDir, relPath);
+        // Reset duration and position state/ref to avoid stale values during calculations
+        if (setDurationRef.current) setDurationRef.current(0);
+        if (setPositionRef.current) setPositionRef.current(0);
+        durationRef.current = 0;
+        positionRef.current = 0;
 
-                await writeTextFile(relPath, text, { baseDir: BaseDirectory.AppLocalData });
-                window.mpv.addSubtitleFile(filePath, 'auto').catch(() => {});
-              }
-            } catch (err) {
-              console.error('[Stremio] Failed to load or save subtitle:', sub.url, err);
+        // Record watch in stremio watch store
+        const watchStore = useStremioWatchStore.getState();
+
+        // Capture saved fraction before recording new start
+        const savedFraction = meta.type === 'series' && episodeVideo
+          ? watchStore.getEpisodeProgressFraction(episodeVideo.id)
+          : ((watchStore.history || []).find((h) => h.metaId === meta.id)?.progressFraction ?? 0);
+
+        if (meta.type === 'series' && episodeVideo) {
+          // Compute next episode: iterate videos sorted by season/episode
+          let nextVideoId: string | undefined;
+          let nextSeason: number | undefined;
+          let nextEpisode: number | undefined;
+          if (meta.videos && Array.isArray(meta.videos)) {
+            const sorted = [...meta.videos].sort((a: any, b: any) => {
+              if ((a.season ?? 0) !== (b.season ?? 0)) return (a.season ?? 0) - (b.season ?? 0);
+              return (a.episode ?? 0) - (b.episode ?? 0);
+            });
+            const idx = sorted.findIndex((v: any) => v.id === episodeVideo.id);
+            if (idx >= 0 && idx < sorted.length - 1) {
+              const nxt = sorted[idx + 1];
+              nextVideoId = nxt.id;
+              nextSeason = nxt.season;
+              nextEpisode = nxt.episode;
             }
           }
+          watchStore.recordEpisodeStart(
+            meta.id, meta.name, meta.poster,
+            episodeVideo.id, episodeVideo.season ?? 0, episodeVideo.episode ?? 0,
+            nextVideoId, nextSeason, nextEpisode,
+            stream
+          );
+          stremioEpisodeRef.current = {
+            metaId: meta.id,
+            name: meta.name,
+            poster: meta.poster,
+            videoId: episodeVideo.id,
+            season: episodeVideo.season ?? 0,
+            episode: episodeVideo.episode ?? 0,
+            nextVideoId,
+            nextSeason,
+            nextEpisode,
+          };
+          stremioMovieRef.current = null;
+        } else {
+          watchStore.recordMovieWatch(meta.id, meta.name, meta.poster, stream);
+          stremioMovieRef.current = { metaId: meta.id, name: meta.name, poster: meta.poster };
+          stremioEpisodeRef.current = null;
+        }
+
+        stremioMetaRef.current = meta;
+        setActiveViewRef.current('none');
+        const isSeries = meta.type === 'series' && episodeVideo;
+
+        // Record watch in local DB vod_history to make it show up in Continue Watching on home page
+        void recordVodWatch(
+          meta.id,
+          isSeries ? 'series' : 'movie',
+          'stremio',
+          meta.name,
+          meta.poster,
+          isSeries ? (episodeVideo.season ?? undefined) : undefined,
+          isSeries ? (episodeVideo.episode ?? undefined) : undefined,
+          isSeries ? (episodeVideo.title || `Episode ${episodeVideo.episode}`) : undefined
+        ).catch((err) => {
+          console.error('[Stremio] Failed to record VOD watch in history:', err);
+        });
+
+        await handlePlayVodRef.current({
+          url,
+          title: meta.name,
+          year: meta.year ? String(meta.year) : undefined,
+          plot: isSeries
+            ? (episodeVideo.description || episodeVideo.overview || meta.description)
+            : meta.description,
+          type: isSeries ? 'series' : 'movie',
+          episodeInfo: isSeries
+            ? `S${episodeVideo.season} E${episodeVideo.episode}${episodeVideo.title ? ` · ${episodeVideo.title}` : ''}`
+            : undefined,
+          source_id: 'stremio',
+          mediaId: isSeries ? `${meta.id}_ep_${episodeVideo.id}` : meta.id,
+          seriesId: isSeries ? meta.id : undefined,
+          seasonNum: episodeVideo?.season,
+          episodeNum: episodeVideo?.episode,
+          episodeId: episodeVideo?.id,
+        });
+
+        // Resume from saved stremio progress if available
+        if (savedFraction > 0.02 && savedFraction < 0.95) {
+          const retrySeek = (attempt = 0) => {
+            const dur = durationRef.current;
+            if (dur > 0) {
+              const seekTo = Math.floor(savedFraction * dur);
+              if (seekTo > 0) {
+                Bridge.seek(seekTo).catch(() => {
+                  setTimeout(() => Bridge.seek(seekTo).catch(() => {}), 2000);
+                });
+              }
+            } else if (attempt < 10) {
+              setTimeout(() => retrySeek(attempt + 1), 1000);
+            }
+          };
+          setTimeout(() => retrySeek(), 1500);
+        }
+
+        if (stream.infoHash) {
+          console.log('[Stremio] Playing torrent stream:', stream.infoHash);
+        }
+
+        try {
+          const addons = useStremioAddonStore.getState().enabledAddons;
+          const subtitleId = isSeries && episodeVideo?.id ? episodeVideo.id : meta.id;
+          const subtitleExtra: Record<string, string> = {};
+          if (stream.behaviorHints?.videoHash) subtitleExtra.videoHash = stream.behaviorHints.videoHash;
+          if (stream.behaviorHints?.videoSize) subtitleExtra.videoSize = String(stream.behaviorHints.videoSize);
+          if (stream.behaviorHints?.filename) subtitleExtra.filename = stream.behaviorHints.filename;
+          const subs = await fetchSubtitles(addons, meta.type, subtitleId, Object.keys(subtitleExtra).length > 0 ? subtitleExtra : undefined);
+          if (subs.length > 0 && window.mpv?.addSubtitleFile) {
+            const { writeTextFile, mkdir, BaseDirectory } = await import('@tauri-apps/plugin-fs');
+            const { appLocalDataDir, join } = await import('@tauri-apps/api/path');
+            const appDir = await appLocalDataDir();
+
+            await mkdir('subtitles', { baseDir: BaseDirectory.AppLocalData, recursive: true }).catch(() => {});
+
+            for (let i = 0; i < subs.length; i++) {
+              const sub = subs[i];
+              try {
+                const res = await window.fetchProxy.fetch(sub.url);
+                if (res.data?.ok) {
+                  const text = res.data.text;
+                  const isVtt = sub.url.toLowerCase().includes('.vtt') || text.includes('WEBVTT');
+                  const ext = isVtt ? 'vtt' : 'srt';
+                  const sanitizePart = (val?: string) => {
+                    if (!val) return 'unknown';
+                    return val.replace(/__/g, '_').replace(/ /g, '_').replace(/[^a-zA-Z0-9_]/g, '');
+                  };
+                  const cleanAddon = sanitizePart(sub.addonName || 'Addon').slice(0, 30);
+                  const cleanLabel = sanitizePart(sub.label || sub.lang.toUpperCase()).slice(0, 40);
+                  const cleanMetaId = sanitizePart(meta.id).slice(0, 30);
+                  const cleanLang = sanitizePart(sub.lang).slice(0, 10);
+                  const relPath = `subtitles/stremio__${cleanAddon}__${cleanLabel}__${cleanMetaId}__${cleanLang}__${i}.${ext}`;
+                  const filePath = await join(appDir, relPath);
+
+                  await writeTextFile(relPath, text, { baseDir: BaseDirectory.AppLocalData });
+                  window.mpv.addSubtitleFile(filePath, 'auto').catch(() => {});
+                }
+              } catch (err) {
+                console.error('[Stremio] Failed to load or save subtitle:', sub.url, err);
+              }
+            }
+          }
+        } catch (err) {
+          console.error('[Stremio] Error processing subtitles:', err);
         }
       } catch (err) {
-        console.error('[Stremio] Error processing subtitles:', err);
+        console.error('[Stremio] Playback handler error:', err);
       }
     };
     window.addEventListener('ynotv:stremio-play', handler);

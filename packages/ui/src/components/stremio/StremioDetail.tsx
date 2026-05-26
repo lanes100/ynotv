@@ -47,7 +47,7 @@ export function StremioDetail({ meta, onBack, onPlay, streamPickerMode }: Stremi
   const removeFromLibrary = useStremioLibraryStore((s) => s.removeFromLibrary);
   const isInLibrary = useStremioLibraryStore((s) => s.isInLibrary);
 
-  const episodeProgress = useStremioWatchStore((s) => s.episodeProgress);
+  const episodeProgress = useStremioWatchStore((s) => s.episodeProgress || {});
   const toggleEpisodeWatched = useStremioWatchStore((s) => s.toggleEpisodeWatched);
   const preselectVideoId = useStremioPreselectVideoId();
   const setPreselectVideoId = useSetStremioPreselectVideoId();

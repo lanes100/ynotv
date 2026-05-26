@@ -72,7 +72,7 @@ type ViewMode = 'calendar' | 'list';
 export function StremioCalendar({ onItemClick }: StremioCalendarProps) {
   const library = useStremioLibraryStore((s) => s.library);
   const addons = useStremioAddonStore((s) => s.enabledAddons);
-  const episodeProgress = useStremioWatchStore((s) => s.episodeProgress);
+  const episodeProgress = useStremioWatchStore((s) => s.episodeProgress || {});
 
   const [viewMode, setViewMode] = useState<ViewMode>('calendar');
   const [calendarYear, setCalendarYear] = useState(() => new Date().getFullYear());
