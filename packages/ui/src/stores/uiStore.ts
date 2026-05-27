@@ -72,6 +72,8 @@ interface UIState {
   setStremioSelectedAddonId: (id: string | null) => void;
   stremioSelectedCatalogId: string | null;
   setStremioSelectedCatalogId: (id: string | null) => void;
+  stremioSelectedCatalogType: string | null;
+  setStremioSelectedCatalogType: (type: string | null) => void;
   stremioActiveMeta: StremioMeta | null;
   setStremioActiveMeta: (meta: StremioMeta | null) => void;
   stremioSearchQuery: string;
@@ -150,6 +152,8 @@ export const useUIStore = create<UIState>((set) => ({
   setStremioSelectedAddonId: (id) => set({ stremioSelectedAddonId: id }),
   stremioSelectedCatalogId: null,
   setStremioSelectedCatalogId: (id) => set({ stremioSelectedCatalogId: id }),
+  stremioSelectedCatalogType: null,
+  setStremioSelectedCatalogType: (type) => set({ stremioSelectedCatalogType: type }),
   stremioActiveMeta: null,
   setStremioActiveMeta: (meta) => set({ stremioActiveMeta: meta }),
   stremioSearchQuery: '',
@@ -223,6 +227,8 @@ export const useStremioSelectedAddonId = () => useUIStore((s) => s.stremioSelect
 export const useSetStremioSelectedAddonId = () => useUIStore((s) => s.setStremioSelectedAddonId);
 export const useStremioSelectedCatalogId = () => useUIStore((s) => s.stremioSelectedCatalogId);
 export const useSetStremioSelectedCatalogId = () => useUIStore((s) => s.setStremioSelectedCatalogId);
+export const useStremioSelectedCatalogType = () => useUIStore((s) => s.stremioSelectedCatalogType);
+export const useSetStremioSelectedCatalogType = () => useUIStore((s) => s.setStremioSelectedCatalogType);
 export const useStremioActiveMeta = () => useUIStore((s) => s.stremioActiveMeta);
 export const useSetStremioActiveMeta = () => useUIStore((s) => s.setStremioActiveMeta);
 export const useStremioSearchQuery = () => useUIStore((s) => s.stremioSearchQuery);

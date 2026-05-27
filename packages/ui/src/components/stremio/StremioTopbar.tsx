@@ -7,6 +7,8 @@ import {
   useSetStremioSelectedAddonId,
   useStremioSelectedCatalogId,
   useSetStremioSelectedCatalogId,
+  useStremioSelectedCatalogType,
+  useSetStremioSelectedCatalogType,
   useStremioView,
   useSetStremioView,
 } from '../../stores/uiStore';
@@ -23,6 +25,8 @@ export function StremioTopbar({ addons, onOpenAddonManager }: StremioTopbarProps
   const setSelectedAddonId = useSetStremioSelectedAddonId();
   const selectedCatalogId = useStremioSelectedCatalogId();
   const setSelectedCatalogId = useSetStremioSelectedCatalogId();
+  const selectedCatalogType = useStremioSelectedCatalogType();
+  const setSelectedCatalogType = useSetStremioSelectedCatalogType();
   const setView = useSetStremioView();
   const view = useStremioView();
   const searchQuery = useStremioSearchQuery();
@@ -52,17 +56,19 @@ export function StremioTopbar({ addons, onOpenAddonManager }: StremioTopbarProps
   const handleHomeClick = () => {
     setSelectedAddonId(null);
     setSelectedCatalogId(null);
+    setSelectedCatalogType(null);
     setView('home');
   };
 
   const handleDiscoverClick = () => {
     setView('home');
-    if (!selectedAddonId || !selectedCatalogId) {
+    if (!selectedAddonId || !selectedCatalogId || !selectedCatalogType) {
       const firstAddon = addons.find((a) => (a.manifest.catalogs?.length ?? 0) > 0);
       const firstCat = firstAddon?.manifest.catalogs?.[0];
       if (firstAddon && firstCat) {
         setSelectedAddonId(firstAddon.id);
         setSelectedCatalogId(firstCat.id);
+        setSelectedCatalogType(firstCat.type);
       }
     }
   };

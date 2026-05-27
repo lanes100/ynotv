@@ -7,6 +7,7 @@ import {
   useSetStremioCatalogScrollPosition,
   useSetStremioSelectedAddonId,
   useSetStremioSelectedCatalogId,
+  useSetStremioSelectedCatalogType,
 } from '../../stores/uiStore';
 import { useStremioHover } from '../../contexts/StremioHoverContext';
 import './StremioHome.css';
@@ -25,6 +26,7 @@ export function CatalogDetailView({ addon, catalog, onItemClick }: CatalogDetail
   const setScrollPosition = useSetStremioCatalogScrollPosition();
   const setSelectedAddonId = useSetStremioSelectedAddonId();
   const setSelectedCatalogId = useSetStremioSelectedCatalogId();
+  const setSelectedCatalogType = useSetStremioSelectedCatalogType();
 
   const addons = useStremioAddonStore((s) => s.enabledAddons);
 
@@ -89,14 +91,16 @@ export function CatalogDetailView({ addon, catalog, onItemClick }: CatalogDetail
     if (match) {
       setSelectedAddonId(match.addon.id);
       setSelectedCatalogId(match.catalog.id);
+      setSelectedCatalogType(match.catalog.type);
       setSelectedGenre('');
     }
   };
 
   const handleCatalogChange = (compositeKey: string) => {
-    const [addonId, catalogId] = compositeKey.split('|');
+    const [addonId, catalogId, catalogType] = compositeKey.split('|');
     setSelectedAddonId(addonId);
     setSelectedCatalogId(catalogId);
+    setSelectedCatalogType(catalogType);
     setSelectedGenre('');
   };
 
@@ -231,6 +235,7 @@ export function CatalogDetailView({ addon, catalog, onItemClick }: CatalogDetail
               onClick={() => {
                 setSelectedAddonId(null);
                 setSelectedCatalogId(null);
+                setSelectedCatalogType(null);
               }}
             >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14">
@@ -250,7 +255,7 @@ export function CatalogDetailView({ addon, catalog, onItemClick }: CatalogDetail
             >
               {types.map((t) => (
                 <option key={t} value={t}>
-                  {t.charAt(0).toUpperCase() + t.slice(1)}s
+                  {t === 'series' ? 'Series' : t.charAt(0).toUpperCase() + t.slice(1) + 's'}
                 </option>
               ))}
             </select>
@@ -258,11 +263,11 @@ export function CatalogDetailView({ addon, catalog, onItemClick }: CatalogDetail
             {/* Catalog selector */}
             <select
               className="stremio-discover-select"
-              value={`${addon.id}|${catalog.id}`}
+              value={`${addon.id}|${catalog.id}|${catalog.type}`}
               onChange={(e) => handleCatalogChange(e.target.value)}
             >
               {availableCatalogs.map(({ addon: a, catalog: c }) => (
-                <option key={`${a.id}|${c.id}`} value={`${a.id}|${c.id}`}>
+                <option key={`${a.id}|${c.id}|${c.type}`} value={`${a.id}|${c.id}|${c.type}`}>
                   {c.name || `${a.manifest.name} - ${c.type}`}
                 </option>
               ))}

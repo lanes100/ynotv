@@ -10,6 +10,8 @@ import {
   useSetStremioSelectedAddonId,
   useStremioSelectedCatalogId,
   useSetStremioSelectedCatalogId,
+  useStremioSelectedCatalogType,
+  useSetStremioSelectedCatalogType,
 } from '../../stores/uiStore';
 import { StremioCatalogRow } from './StremioCatalogRow';
 import { CatalogDetailView } from './CatalogDetailView';
@@ -50,6 +52,8 @@ export function StremioHome({ addons, onItemClick }: StremioHomeProps) {
   const setSelectedAddonId = useSetStremioSelectedAddonId();
   const selectedCatalogId = useStremioSelectedCatalogId();
   const setSelectedCatalogId = useSetStremioSelectedCatalogId();
+  const selectedCatalogType = useStremioSelectedCatalogType();
+  const setSelectedCatalogType = useSetStremioSelectedCatalogType();
   const [searchRows, setSearchRows] = useState<StremioSearchRow[]>([]);
   const [expandedSearchRowId, setExpandedSearchRowId] = useState<string | null>(null);
   const [searching, setSearching] = useState(false);
@@ -191,15 +195,17 @@ export function StremioHome({ addons, onItemClick }: StremioHomeProps) {
   }, [addons, onItemClick]);
 
   const selectedCatalogItems = useMemo(() => {
-    if (selectedAddonId && selectedCatalogId) {
+    if (selectedAddonId && selectedCatalogId && selectedCatalogType) {
       const addon = addons.find(a => a.id === selectedAddonId);
       if (addon) {
-        const cat = addon.manifest.catalogs?.find(c => c.id === selectedCatalogId);
+        const cat = addon.manifest.catalogs?.find(
+          c => c.id === selectedCatalogId && c.type === selectedCatalogType
+        );
         if (cat) return { addon, catalog: cat };
       }
     }
     return null;
-  }, [addons, selectedAddonId, selectedCatalogId]);
+  }, [addons, selectedAddonId, selectedCatalogId, selectedCatalogType]);
 
   if (view === 'search') {
     return (
@@ -343,6 +349,7 @@ export function StremioHome({ addons, onItemClick }: StremioHomeProps) {
               onSeeAll={() => {
                 setSelectedAddonId(addon.id);
                 setSelectedCatalogId(catalog.id);
+                setSelectedCatalogType(catalog.type);
                 setView('home');
               }}
             />
