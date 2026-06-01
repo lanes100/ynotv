@@ -226,13 +226,8 @@ export function StremioHome({ addons, onItemClick }: StremioHomeProps) {
       setPreselectVideoId(`${p.id}:${p.traktSeason}:${p.traktEpisode}`);
     }
 
-    const sourceAddonId = (preview as StremioSearchResult).sourceAddonId;
-    const addon = sourceAddonId
-      ? addons.find(a => a.id === sourceAddonId)
-      : addons.find(a => a.manifest.catalogs?.some(c => c.type === preview.type));
-    
-    // Fallback: If no specific addon matches, query across all addons to fetch full metadata
-    const meta = await fetchMeta(addon ? [addon] : addons, preview.type, preview.id);
+    // Query across all addons to fetch full metadata
+    const meta = await fetchMeta(addons, preview.type, preview.id);
     if (meta) {
       onItemClick(meta);
     }
