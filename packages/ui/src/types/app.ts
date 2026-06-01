@@ -106,6 +106,8 @@ export interface AppSettings {
     traktSyncEnabled?: boolean;
     traktWatchlistEnabled?: boolean;
     traktCatalogsEnabled?: Record<string, boolean>;
+    traktCatalogOrder?: string[];
+    traktCatalogsBeforeAddon?: boolean;
     traktEnabledLists?: { id: string; name: string }[];
     simklEnabled?: boolean;
     simklAccessToken?: string | null;

@@ -72,6 +72,7 @@ export function StremioHome({ addons, onItemClick }: StremioHomeProps) {
     items: StremioMetaPreview[];
   }
   const [cloudCatalogRows, setCloudCatalogRows] = useState<CloudCatalogRow[]>([]);
+  const [traktCatalogsBeforeAddon, setTraktCatalogsBeforeAddon] = useState(false);
   const [simklWatchlist, setSimklWatchlist] = useState<StremioMetaPreview[]>([]);
 
   // Fetch cloud catalogs on mount or when view changes back to home/search
@@ -121,8 +122,23 @@ export function StremioHome({ addons, onItemClick }: StremioHomeProps) {
             )
           );
           rows.push(...listResults.filter((r) => r.items.length > 0));
+
+          // Apply catalog order from settings
+          const order = s.traktCatalogOrder || [];
+          if (order.length > 0) {
+            rows.sort((a, b) => {
+              const keyA = a.key.replace('trakt-', '');
+              const keyB = b.key.replace('trakt-', '');
+              const iA = order.indexOf(keyA);
+              const iB = order.indexOf(keyB);
+              return (iA === -1 ? 999 : iA) - (iB === -1 ? 999 : iB);
+            });
+          }
         }
-        if (active) setCloudCatalogRows(rows);
+        if (active) {
+          setCloudCatalogRows(rows);
+          setTraktCatalogsBeforeAddon(s.traktCatalogsBeforeAddon ?? false);
+        }
 
         if (s.simklEnabled && s.simklAccessToken) {
           scrobbler.fetchSimklCatalog('watchlist').then((items) => {
@@ -355,7 +371,7 @@ export function StremioHome({ addons, onItemClick }: StremioHomeProps) {
           onItemClick={onItemClick}
         />
 
-        {cloudCatalogRows.map((row) => (
+        {traktCatalogsBeforeAddon && cloudCatalogRows.map((row) => (
           <StremioCatalogRow
             key={row.key}
             title={row.title}
@@ -363,15 +379,6 @@ export function StremioHome({ addons, onItemClick }: StremioHomeProps) {
             onItemClick={handleItemClickWrapper}
           />
         ))}
-
-        {simklWatchlist.length > 0 && (
-          <StremioCatalogRow
-            key="simkl-watchlist"
-            title="Simkl Watchlist"
-            items={simklWatchlist}
-            onItemClick={handleItemClickWrapper}
-          />
-        )}
 
         {filteredRows.length === 0 ? (
           <div className="stremio-loading-text">
@@ -393,6 +400,24 @@ export function StremioHome({ addons, onItemClick }: StremioHomeProps) {
               }}
             />
           ))
+        )}
+
+        {!traktCatalogsBeforeAddon && cloudCatalogRows.map((row) => (
+          <StremioCatalogRow
+            key={row.key}
+            title={row.title}
+            items={row.items}
+            onItemClick={handleItemClickWrapper}
+          />
+        ))}
+
+        {simklWatchlist.length > 0 && (
+          <StremioCatalogRow
+            key="simkl-watchlist"
+            title="Simkl Watchlist"
+            items={simklWatchlist}
+            onItemClick={handleItemClickWrapper}
+          />
         )}
       </div>
     </div>

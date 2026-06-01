@@ -55,6 +55,10 @@ const TRAKT_CATALOG_URLS: Record<TraktCatalogType, string> = {
 const WRAPPED_CATALOGS = new Set<TraktCatalogType>([
   'watchlist', 'history',
   'collection-movies', 'collection-shows',
+  'trending-movies', 'trending-shows',
+  'watched-movies', 'watched-shows',
+  'collected-movies', 'collected-shows',
+  'anticipated-movies', 'anticipated-shows',
 ]);
 
 export interface TraktCatalogDefinition {
@@ -816,7 +820,9 @@ class ScrobblerService {
               else itemType = type.includes('movie') ? 'movie' : 'series';
             } else {
               media = item;
-              itemType = item.type === 'movie' ? 'movie' : 'series';
+              if (item.type === 'movie') itemType = 'movie';
+              else if (item.type === 'show' || item.type === 'series') itemType = 'series';
+              else itemType = type.includes('movie') ? 'movie' : 'series';
             }
 
             const imdbId = media?.ids?.imdb;
@@ -913,7 +919,14 @@ class ScrobblerService {
         if (Array.isArray(rawItems)) {
           return rawItems.map((item: any) => {
             const media = item.movie || item.show || item;
-            const itemType = item.type === 'movie' ? 'movie' : 'series';
+            let itemType: 'movie' | 'series' = 'series';
+            if (item.type === 'movie' || item.movie) {
+              itemType = 'movie';
+            } else if (item.type === 'show' || item.type === 'series' || item.type === 'episode' || item.show) {
+              itemType = 'series';
+            } else {
+              itemType = item.type === 'movie' ? 'movie' : 'series';
+            }
             const imdbId = media?.ids?.imdb;
             if (!imdbId) return null;
 

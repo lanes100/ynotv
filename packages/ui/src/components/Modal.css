@@ -260,3 +260,31 @@
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
 }
+
+/* Custom scrollbar for Strem Catalogs Modal Body */
+.strem-catalogs-modal-body {
+  scrollbar-width: thin;
+  scrollbar-color: var(--surface-hover, rgba(255, 255, 255, 0.15)) transparent;
+}
+
+.strem-catalogs-modal-body:hover {
+  scrollbar-color: var(--accent-primary, rgba(0, 212, 255, 0.5)) transparent;
+}
+
+.strem-catalogs-modal-body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.strem-catalogs-modal-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.strem-catalogs-modal-body::-webkit-scrollbar-thumb {
+  background: var(--surface-hover, rgba(255, 255, 255, 0.15));
+  border-radius: 4px;
+}
+
+.strem-catalogs-modal-body:hover::-webkit-scrollbar-thumb,
+.strem-catalogs-modal-body::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-primary, rgba(0, 212, 255, 0.5));
+}
