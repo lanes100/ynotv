@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef, type CSSProperties } from 'react';
-import { getScrobblerCredentialStatus, scrobbler } from '../../services/scrobbler';
+import { getScrobblerCredentialStatus, scrobbler, TRAKT_CATALOG_DEFINITIONS } from '../../services/scrobbler';
+import { useSetTraktCatalogRefreshToken } from '../../stores/uiStore';
+import '../Modal.css';
 import './PlaybackTab.css';
 
 export function ScrobblingTab() {
@@ -11,12 +13,20 @@ export function ScrobblingTab() {
   const [simklSyncEnabled, setSimklSyncEnabled] = useState(false);
   const [simklLinked, setSimklLinked] = useState(false);
 
+  const bumpRefreshToken = useSetTraktCatalogRefreshToken();
+
   const credentialStatus = getScrobblerCredentialStatus();
 
   const [traktAuthState, setTraktAuthState] = useState<'idle' | 'polling' | 'success' | 'error'>('idle');
   const [traktUserCode, setTraktUserCode] = useState('');
   const [traktVerificationUrl, setTraktVerificationUrl] = useState('');
   const [traktExpiresIn, setTraktExpiresIn] = useState(0);
+
+  const [catalogModalOpen, setCatalogModalOpen] = useState(false);
+  const [catalogSettings, setCatalogSettings] = useState<Record<string, boolean>>({});
+  const [traktLists, setTraktLists] = useState<{ id: { trakt: number; slug: string }; name: string }[]>([]);
+  const [traktEnabledLists, setTraktEnabledLists] = useState<{ id: string; name: string }[]>([]);
+  const [listsLoading, setListsLoading] = useState(false);
 
   const [simklAuthState, setSimklAuthState] = useState<'idle' | 'polling' | 'success' | 'error'>('idle');
   const [simklUserCode, setSimklUserCode] = useState('');
@@ -54,6 +64,16 @@ export function ScrobblingTab() {
       setTraktScrobbleEnabled(s.traktScrobbleEnabled ?? false);
       setTraktWatchlistEnabled(s.traktWatchlistEnabled ?? true);
       setTraktLinked(!!s.traktAccessToken);
+
+      // Migrate legacy traktWatchlistEnabled to new catalog settings
+      if (s.traktCatalogsEnabled === undefined && s.traktWatchlistEnabled !== undefined) {
+        const migrated = { watchlist: s.traktWatchlistEnabled !== false };
+        setCatalogSettings(migrated);
+        window.storage?.updateSettings({ traktCatalogsEnabled: migrated });
+      } else {
+        setCatalogSettings(s.traktCatalogsEnabled || {});
+      }
+      setTraktEnabledLists(s.traktEnabledLists || []);
 
       setSimklScrobbleEnabled(s.simklScrobbleEnabled ?? false);
       setSimklSyncEnabled(s.simklSyncEnabled ?? false);
@@ -137,6 +157,41 @@ export function ScrobblingTab() {
 
   const handleCopyCode = (text: string) => {
     navigator.clipboard.writeText(text);
+  };
+
+  const handleCatalogToggle = async (type: string, enabled: boolean) => {
+    const next = { ...catalogSettings, [type]: enabled };
+    setCatalogSettings(next);
+    await handleSettingUpdate({ traktCatalogsEnabled: next, traktWatchlistEnabled: next['watchlist'] !== false });
+    bumpRefreshToken(Date.now());
+  };
+
+  const handleListToggle = async (listId: string, listName: string, enabled: boolean) => {
+    const next = enabled
+      ? [...traktEnabledLists, { id: listId, name: listName }]
+      : traktEnabledLists.filter(l => l.id !== listId);
+    setTraktEnabledLists(next);
+    await handleSettingUpdate({ traktEnabledLists: next });
+    bumpRefreshToken(Date.now());
+  };
+
+  const loadTraktLists = async () => {
+    setListsLoading(true);
+    try {
+      const lists = await scrobbler.fetchTraktLists();
+      setTraktLists(lists);
+    } catch (e) {
+      console.error('Failed to load Trakt lists:', e);
+    }
+    setListsLoading(false);
+  };
+
+  const openCatalogModal = () => {
+    setCatalogModalOpen(true);
+  };
+
+  const closeCatalogModal = () => {
+    setCatalogModalOpen(false);
   };
 
   const authContainerStyle: CSSProperties = {
@@ -285,15 +340,123 @@ export function ScrobblingTab() {
                 <input
                   type="checkbox"
                   checked={traktWatchlistEnabled}
-                  onChange={(e) => handleSettingUpdate({ traktWatchlistEnabled: e.target.checked })}
+                  onChange={(e) => {
+                    handleSettingUpdate({ traktWatchlistEnabled: e.target.checked });
+                    handleCatalogToggle('watchlist', e.target.checked);
+                    bumpRefreshToken(Date.now());
+                  }}
                 />
                 <span className="toggle-slider"></span>
               </label>
             </div>
 
+            <div style={{ marginBottom: '16px' }}>
+              <button
+                className="sync-btn"
+                onClick={openCatalogModal}
+                style={{ padding: '8px 20px', fontSize: '0.9rem' }}
+              >
+                Manage Strem Catalogs
+              </button>
+            </div>
+
             <button className="sync-btn danger" onClick={handleTraktUnlink}>
               Disconnect Trakt Account
             </button>
+          </div>
+        )}
+
+        {catalogModalOpen && (
+          <div className="modal-overlay" onClick={closeCatalogModal}>
+            <div className="modal-container" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '560px', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+              <div className="modal-header">
+                <h3 className="modal-title">Trakt Strem Catalogs</h3>
+                <button className="modal-close-btn" onClick={closeCatalogModal}>
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M18 6L6 18M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              <div className="modal-body" style={{ maxHeight: '60vh', overflowY: 'auto', paddingBottom: '8px' }}>
+                <p style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.5)', margin: '0 0 16px 0', lineHeight: '1.5' }}>
+                  Toggle which Trakt catalogs appear on your Stremio home page. Each enabled catalog shows as a separate row.
+                </p>
+                {TRAKT_CATALOG_DEFINITIONS.reduce<{ group: string; items: typeof TRAKT_CATALOG_DEFINITIONS }[]>((acc, def) => {
+                  const existing = acc.find(g => g.group === def.group);
+                  if (existing) existing.items.push(def);
+                  else acc.push({ group: def.group, items: [def] });
+                  return acc;
+                }, []).map((section) => (
+                  <div key={section.group} style={{ marginBottom: '14px' }}>
+                    <div style={{ fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'rgba(255,255,255,0.35)', marginBottom: '8px' }}>
+                      {section.group}
+                    </div>
+                    {section.items.map((def) => {
+                      const isOn = catalogSettings[def.type] !== false;
+                      return (
+                        <div key={def.type} className="timeshift-toggle-row" style={{ padding: '10px 0' }}>
+                          <div className="timeshift-toggle-info">
+                            <span className="timeshift-toggle-label" style={{ fontSize: '0.9rem' }}>{def.label}</span>
+                            <span className="timeshift-toggle-sub">{def.description}</span>
+                          </div>
+                          <label className="toggle-switch">
+                            <input
+                              type="checkbox"
+                              checked={isOn}
+                              onChange={(e) => handleCatalogToggle(def.type, e.target.checked)}
+                            />
+                            <span className="toggle-slider"></span>
+                          </label>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ))}
+
+                {/* Custom Lists Section */}
+                <div style={{ marginBottom: '14px' }}>
+                  <div style={{ fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'rgba(255,255,255,0.35)', marginBottom: '8px' }}>
+                    Custom Lists
+                  </div>
+                  <button
+                    className="sync-btn"
+                    onClick={loadTraktLists}
+                    disabled={listsLoading}
+                    style={{ padding: '6px 16px', fontSize: '0.85rem', marginBottom: '10px' }}
+                  >
+                    {listsLoading ? 'Loading...' : 'Load My Lists'}
+                  </button>
+                  {traktLists.length === 0 && (
+                    <p style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.35)', margin: '0', lineHeight: '1.5' }}>
+                      {listsLoading ? '' : 'Click "Load My Lists" to fetch your Trakt custom lists.'}
+                    </p>
+                  )}
+                  {traktLists.map((list) => {
+                    const isOn = traktEnabledLists.some(l => l.id === list.id.slug);
+                    return (
+                      <div key={list.id.slug} className="timeshift-toggle-row" style={{ padding: '10px 0' }}>
+                        <div className="timeshift-toggle-info">
+                          <span className="timeshift-toggle-label" style={{ fontSize: '0.9rem' }}>{list.name}</span>
+                        </div>
+                        <label className="toggle-switch">
+                          <input
+                            type="checkbox"
+                            checked={isOn}
+                            onChange={(e) => handleListToggle(list.id.slug, list.name, e.target.checked)}
+                          />
+                          <span className="toggle-slider"></span>
+                        </label>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button className="modal-btn modal-btn-primary" onClick={closeCatalogModal}>
+                  Done
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </div>

@@ -136,13 +136,18 @@ export function StremioCatalogRow({
               }}
             >
               {item.poster && (
-                <img
-                  className="stremio-row-poster"
-                  src={item.poster}
-                  alt={item.name}
-                  loading="lazy"
-                  onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                />
+                <div style={{ position: 'relative' }}>
+                  <img
+                    className="stremio-row-poster"
+                    src={item.poster}
+                    alt={item.name}
+                    loading="lazy"
+                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                  />
+                  {item.releaseInfo && /^S\d/i.test(item.releaseInfo) && (
+                    <div className="stremio-rw-ep-badge">{item.releaseInfo}</div>
+                  )}
+                </div>
               )}
               <div className="stremio-row-card-info">
                 <div className="stremio-row-card-title">{item.name}</div>

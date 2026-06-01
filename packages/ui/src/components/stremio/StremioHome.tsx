@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import type { InstalledAddon, StremioMetaPreview, StremioMeta } from '../../types/stremio';
 import { fetchCatalog, fetchMeta } from '../../services/stremio-addon';
-import { scrobbler } from '../../services/scrobbler';
+import { scrobbler, TRAKT_CATALOG_DEFINITIONS } from '../../services/scrobbler';
 import {
   useStremioSearchQuery,
   useStremioView,
@@ -12,6 +12,9 @@ import {
   useSetStremioSelectedCatalogId,
   useStremioSelectedCatalogType,
   useSetStremioSelectedCatalogType,
+  useTraktCatalogRefreshToken,
+  useSetStremioSelectedSeason,
+  useSetStremioPreselectVideoId,
 } from '../../stores/uiStore';
 import { StremioCatalogRow } from './StremioCatalogRow';
 import { CatalogDetailView } from './CatalogDetailView';
@@ -59,9 +62,16 @@ export function StremioHome({ addons, onItemClick }: StremioHomeProps) {
   const [searching, setSearching] = useState(false);
   const [catalogFilter, setCatalogFilter] = useState('');
 
-  // Trakt and Simkl Catalog States
-  const [traktWatchlist, setTraktWatchlist] = useState<StremioMetaPreview[]>([]);
-  // const [traktRecommendations, setTraktRecommendations] = useState<StremioMetaPreview[]>([]);
+  const refreshToken = useTraktCatalogRefreshToken();
+  const setSelectedSeason = useSetStremioSelectedSeason();
+  const setPreselectVideoId = useSetStremioPreselectVideoId();
+
+  interface CloudCatalogRow {
+    key: string;
+    title: string;
+    items: StremioMetaPreview[];
+  }
+  const [cloudCatalogRows, setCloudCatalogRows] = useState<CloudCatalogRow[]>([]);
   const [simklWatchlist, setSimklWatchlist] = useState<StremioMetaPreview[]>([]);
 
   // Fetch cloud catalogs on mount or when view changes back to home/search
@@ -75,17 +85,44 @@ export function StremioHome({ addons, onItemClick }: StremioHomeProps) {
         
         if (!active) return;
         
-        if (s.traktEnabled && s.traktAccessToken && s.traktWatchlistEnabled !== false) {
-          scrobbler.fetchTraktCatalog('watchlist').then((items) => {
-            if (active) setTraktWatchlist(items);
-          });
-          // scrobbler.fetchTraktCatalog('recommendations').then((items) => {
-          //   if (active) setTraktRecommendations(items);
-          // });
-        } else {
-          setTraktWatchlist([]);
-          // setTraktRecommendations([]);
+        // Load Trakt catalogs dynamically based on enabled settings
+        const rows: CloudCatalogRow[] = [];
+        if (s.traktEnabled && s.traktAccessToken) {
+          const enabledCatalogs: Record<string, boolean> = s.traktCatalogsEnabled || {};
+          // Legacy migration: if traktCatalogsEnabled is undefined but old setting exists
+          if (s.traktCatalogsEnabled === undefined && s.traktWatchlistEnabled !== undefined) {
+            enabledCatalogs.watchlist = s.traktWatchlistEnabled !== false;
+          }
+
+          const enabledDefs = TRAKT_CATALOG_DEFINITIONS.filter(
+            (def) => enabledCatalogs[def.type] === true
+          );
+
+          const results = await Promise.all(
+            enabledDefs.map((def) =>
+              scrobbler.fetchTraktCatalog(def.type).then((items) => ({
+                key: `trakt-${def.type}`,
+                title: `Trakt ${def.label}`,
+                items,
+              }))
+            )
+          );
+          rows.push(...results.filter((r) => r.items.length > 0));
+
+          // Load Trakt custom lists
+          const enabledLists: { id: string; name: string }[] = s.traktEnabledLists || [];
+          const listResults = await Promise.all(
+            enabledLists.map((list) =>
+              scrobbler.fetchTraktListCatalog(list.id).then((items) => ({
+                key: `trakt-list-${list.id}`,
+                title: `Trakt \u2014 ${list.name}`,
+                items,
+              }))
+            )
+          );
+          rows.push(...listResults.filter((r) => r.items.length > 0));
         }
+        if (active) setCloudCatalogRows(rows);
 
         if (s.simklEnabled && s.simklAccessToken) {
           scrobbler.fetchSimklCatalog('watchlist').then((items) => {
@@ -103,7 +140,7 @@ export function StremioHome({ addons, onItemClick }: StremioHomeProps) {
     return () => {
       active = false;
     };
-  }, [view]);
+  }, [view, refreshToken]);
 
   const { onCardMouseEnter, onCardMouseLeave, onCardClick } = useStremioHover();
 
@@ -182,6 +219,13 @@ export function StremioHome({ addons, onItemClick }: StremioHomeProps) {
   }, [searchQuery, view, doSearch]);
 
   const handleItemClickWrapper = useCallback(async (preview: StremioMetaPreview | StremioSearchResult) => {
+    const p = preview as any;
+    // Deep-link to specific season/episode for Trakt history items
+    if (p.traktSeason != null && p.traktEpisode != null) {
+      setSelectedSeason(p.traktSeason);
+      setPreselectVideoId(`${p.id}:${p.traktSeason}:${p.traktEpisode}`);
+    }
+
     const sourceAddonId = (preview as StremioSearchResult).sourceAddonId;
     const addon = sourceAddonId
       ? addons.find(a => a.id === sourceAddonId)
@@ -192,7 +236,7 @@ export function StremioHome({ addons, onItemClick }: StremioHomeProps) {
     if (meta) {
       onItemClick(meta);
     }
-  }, [addons, onItemClick]);
+  }, [addons, onItemClick, setSelectedSeason, setPreselectVideoId]);
 
   const selectedCatalogItems = useMemo(() => {
     if (selectedAddonId && selectedCatalogId && selectedCatalogType) {
@@ -316,14 +360,14 @@ export function StremioHome({ addons, onItemClick }: StremioHomeProps) {
           onItemClick={onItemClick}
         />
 
-        {traktWatchlist.length > 0 && (
+        {cloudCatalogRows.map((row) => (
           <StremioCatalogRow
-            key="trakt-watchlist"
-            title="Trakt Watchlist"
-            items={traktWatchlist}
+            key={row.key}
+            title={row.title}
+            items={row.items}
             onItemClick={handleItemClickWrapper}
           />
-        )}
+        ))}
 
         {simklWatchlist.length > 0 && (
           <StremioCatalogRow

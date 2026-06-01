@@ -105,6 +105,8 @@ export interface AppSettings {
     traktScrobbleEnabled?: boolean;
     traktSyncEnabled?: boolean;
     traktWatchlistEnabled?: boolean;
+    traktCatalogsEnabled?: Record<string, boolean>;
+    traktEnabledLists?: { id: string; name: string }[];
     simklEnabled?: boolean;
     simklAccessToken?: string | null;
     simklScrobbleEnabled?: boolean;

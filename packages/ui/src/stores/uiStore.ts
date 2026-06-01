@@ -84,6 +84,10 @@ interface UIState {
   setStremioPreselectVideoId: (id: string | null) => void;
   stremioCatalogScrollPositions: Record<string, number>;
   setStremioCatalogScrollPosition: (key: string, value: number) => void;
+
+  // Trakt catalog hot-reload token
+  traktCatalogRefreshToken: number;
+  setTraktCatalogRefreshToken: (value: number) => void;
 }
 
 export const useUIStore = create<UIState>((set) => ({
@@ -163,14 +167,12 @@ export const useUIStore = create<UIState>((set) => ({
   stremioPreselectVideoId: null,
   setStremioPreselectVideoId: (id) => set({ stremioPreselectVideoId: id }),
   stremioCatalogScrollPositions: {},
-  setStremioCatalogScrollPosition: (key, value) =>
-    set((state) => ({
-      stremioCatalogScrollPositions: {
-        ...state.stremioCatalogScrollPositions,
-        [key]: value,
-      },
-    })),
+  setStremioCatalogScrollPosition: (key, value) => set((state) => ({
+    stremioCatalogScrollPositions: { ...state.stremioCatalogScrollPositions, [key]: value },
+  })),
 
+  traktCatalogRefreshToken: 0,
+  setTraktCatalogRefreshToken: (value) => set({ traktCatalogRefreshToken: value }),
 }));
 
 // Selectors for cleaner component code
@@ -239,3 +241,6 @@ export const useStremioPreselectVideoId = () => useUIStore((s) => s.stremioPrese
 export const useSetStremioPreselectVideoId = () => useUIStore((s) => s.setStremioPreselectVideoId);
 export const useStremioCatalogScrollPositions = () => useUIStore((s) => s.stremioCatalogScrollPositions);
 export const useSetStremioCatalogScrollPosition = () => useUIStore((s) => s.setStremioCatalogScrollPosition);
+
+export const useTraktCatalogRefreshToken = () => useUIStore((s) => s.traktCatalogRefreshToken);
+export const useSetTraktCatalogRefreshToken = () => useUIStore((s) => s.setTraktCatalogRefreshToken);
