@@ -160,22 +160,42 @@ export function StremioCatalogRow({
                 onItemClick(item);
               }}
             >
-              {item.poster && (
+              {item.poster || (item as any).progress != null ? (
                 <div style={{ position: 'relative' }}>
-                  <img
-                    className="stremio-row-poster"
-                    src={item.poster}
-                    alt={item.name}
-                    loading="lazy"
-                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                  />
+                  {item.poster && (
+                    <img
+                      className="stremio-row-poster"
+                      src={item.poster}
+                      alt={item.name}
+                      loading="lazy"
+                      onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                    />
+                  )}
                   {item.releaseInfo && /^S\d/i.test(item.releaseInfo) && (
                     <div className="stremio-rw-ep-badge">{item.releaseInfo}</div>
                   )}
+                  {(() => {
+                    const pct = (item as any).progress;
+                    if (typeof pct === 'number' && pct > 2 && pct < 98) {
+                      return (
+                        <div className="stremio-rw-progress-track">
+                          <div className="stremio-rw-progress-fill" style={{ width: `${pct}%` }} />
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
                 </div>
-              )}
+              ) : null}
               <div className="stremio-row-card-info">
                 <div className="stremio-row-card-title">{item.name}</div>
+                {(() => {
+                  const pct = (item as any).progress;
+                  if (typeof pct === 'number' && pct > 2 && pct < 98) {
+                    return <div className="stremio-rw-card-sub">{Math.round(pct)}% watched</div>;
+                  }
+                  return null;
+                })()}
               </div>
             </div>
           ))}

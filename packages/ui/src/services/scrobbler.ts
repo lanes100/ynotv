@@ -15,6 +15,7 @@ const SIMKL_API_URL = 'https://api.simkl.com';
 // Trakt Catalog Definitions
 // ---------------------------------------------------------------------------
 export type TraktCatalogType =
+  | 'playback'
   | 'watchlist'
   | 'history'
   | 'recommendations-movies'
@@ -35,6 +36,7 @@ export type TraktCatalogType =
 const TRAKT_PAGE_LIMIT = 30;
 
 const TRAKT_CATALOG_URLS: Record<TraktCatalogType, string> = {
+  'playback': `${TRAKT_API_URL}/sync/playback?limit=${TRAKT_PAGE_LIMIT}`,
   'watchlist': `${TRAKT_API_URL}/users/me/watchlist?limit=${TRAKT_PAGE_LIMIT}`,
   'history': `${TRAKT_API_URL}/users/me/history?limit=${TRAKT_PAGE_LIMIT}`,
   'recommendations-movies': `${TRAKT_API_URL}/recommendations/movies?limit=${TRAKT_PAGE_LIMIT}`,
@@ -55,6 +57,7 @@ const TRAKT_CATALOG_URLS: Record<TraktCatalogType, string> = {
 
 // Which catalog types use a wrapped response (item.movie / item.show) vs flat
 const WRAPPED_CATALOGS = new Set<TraktCatalogType>([
+  'playback',
   'watchlist', 'history',
   'collection-movies', 'collection-shows',
   'trending-movies', 'trending-shows',
@@ -71,6 +74,7 @@ export interface TraktCatalogDefinition {
 }
 
 export const TRAKT_CATALOG_DEFINITIONS: TraktCatalogDefinition[] = [
+  { type: 'playback', label: 'Resume Watching', description: 'In-progress movies and episodes from your Trakt playback history', group: 'Your Library' },
   { type: 'watchlist', label: 'Watchlist', description: 'Items you have saved to watch later', group: 'Your Library' },
   { type: 'history', label: 'History', description: 'Items you have watched', group: 'Your Library' },
   { type: 'collection-movies', label: 'Movie Collection', description: 'Movies in your collection', group: 'Your Library' },
@@ -841,6 +845,13 @@ class ScrobblerService {
               releaseInfo = `S${ep.season}:E${ep.number}`;
             }
 
+            // Tag playback items with season/episode and progress
+            if (type === 'playback' && !item.movie && item.episode) {
+              const ep = item.episode;
+              name = `${media.title} \u2014 S${ep.season}:E${ep.number}`;
+              releaseInfo = `S${ep.season}:E${ep.number}`;
+            }
+
             const result: Record<string, any> = {
               id: imdbId,
               type: itemType,
@@ -851,8 +862,19 @@ class ScrobblerService {
               releaseInfo,
             };
 
+            // Carry progress for resume-playback support
+            if (type === 'playback' && typeof item.progress === 'number') {
+              result.progress = item.progress;
+            }
+
             // Carry season/episode for deep-link navigation
             if (type === 'history' && !item.movie && item.episode) {
+              result.traktSeason = item.episode.season;
+              result.traktEpisode = item.episode.number;
+            }
+
+            // Carry season/episode for playback deep-links
+            if (type === 'playback' && !item.movie && item.episode) {
               result.traktSeason = item.episode.season;
               result.traktEpisode = item.episode.number;
             }
