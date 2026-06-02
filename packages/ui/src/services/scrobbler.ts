@@ -32,23 +32,25 @@ export type TraktCatalogType =
   | 'anticipated-movies'
   | 'anticipated-shows';
 
+const TRAKT_PAGE_LIMIT = 30;
+
 const TRAKT_CATALOG_URLS: Record<TraktCatalogType, string> = {
-  'watchlist': `${TRAKT_API_URL}/users/me/watchlist?limit=30`,
-  'history': `${TRAKT_API_URL}/users/me/history?limit=30`,
-  'recommendations-movies': `${TRAKT_API_URL}/recommendations/movies?limit=30`,
-  'recommendations-shows': `${TRAKT_API_URL}/recommendations/shows?limit=30`,
-  'collection-movies': `${TRAKT_API_URL}/users/me/collection/movies?limit=30`,
-  'collection-shows': `${TRAKT_API_URL}/users/me/collection/shows?limit=30`,
-  'trending-movies': `${TRAKT_API_URL}/movies/trending?limit=30`,
-  'trending-shows': `${TRAKT_API_URL}/shows/trending?limit=30`,
-  'popular-movies': `${TRAKT_API_URL}/movies/popular?limit=30`,
-  'popular-shows': `${TRAKT_API_URL}/shows/popular?limit=30`,
-  'watched-movies': `${TRAKT_API_URL}/movies/watched?limit=30`,
-  'watched-shows': `${TRAKT_API_URL}/shows/watched?limit=30`,
-  'collected-movies': `${TRAKT_API_URL}/movies/collected?limit=30`,
-  'collected-shows': `${TRAKT_API_URL}/shows/collected?limit=30`,
-  'anticipated-movies': `${TRAKT_API_URL}/movies/anticipated?limit=30`,
-  'anticipated-shows': `${TRAKT_API_URL}/shows/anticipated?limit=30`,
+  'watchlist': `${TRAKT_API_URL}/users/me/watchlist?limit=${TRAKT_PAGE_LIMIT}`,
+  'history': `${TRAKT_API_URL}/users/me/history?limit=${TRAKT_PAGE_LIMIT}`,
+  'recommendations-movies': `${TRAKT_API_URL}/recommendations/movies?limit=${TRAKT_PAGE_LIMIT}`,
+  'recommendations-shows': `${TRAKT_API_URL}/recommendations/shows?limit=${TRAKT_PAGE_LIMIT}`,
+  'collection-movies': `${TRAKT_API_URL}/users/me/collection/movies?limit=${TRAKT_PAGE_LIMIT}`,
+  'collection-shows': `${TRAKT_API_URL}/users/me/collection/shows?limit=${TRAKT_PAGE_LIMIT}`,
+  'trending-movies': `${TRAKT_API_URL}/movies/trending?limit=${TRAKT_PAGE_LIMIT}`,
+  'trending-shows': `${TRAKT_API_URL}/shows/trending?limit=${TRAKT_PAGE_LIMIT}`,
+  'popular-movies': `${TRAKT_API_URL}/movies/popular?limit=${TRAKT_PAGE_LIMIT}`,
+  'popular-shows': `${TRAKT_API_URL}/shows/popular?limit=${TRAKT_PAGE_LIMIT}`,
+  'watched-movies': `${TRAKT_API_URL}/movies/watched?limit=${TRAKT_PAGE_LIMIT}`,
+  'watched-shows': `${TRAKT_API_URL}/shows/watched?limit=${TRAKT_PAGE_LIMIT}`,
+  'collected-movies': `${TRAKT_API_URL}/movies/collected?limit=${TRAKT_PAGE_LIMIT}`,
+  'collected-shows': `${TRAKT_API_URL}/shows/collected?limit=${TRAKT_PAGE_LIMIT}`,
+  'anticipated-movies': `${TRAKT_API_URL}/movies/anticipated?limit=${TRAKT_PAGE_LIMIT}`,
+  'anticipated-shows': `${TRAKT_API_URL}/shows/anticipated?limit=${TRAKT_PAGE_LIMIT}`,
 };
 
 // Which catalog types use a wrapped response (item.movie / item.show) vs flat
@@ -763,9 +765,9 @@ class ScrobblerService {
   // --------------------------------------------------------------------------
   // Catalog Fetching (Transforms Trakt/Simkl APIs into Stremio-friendly items)
   // --------------------------------------------------------------------------
-  async fetchTraktCatalog(type: TraktCatalogType): Promise<StremioMetaPreview[]> {
+  async fetchTraktCatalog(type: TraktCatalogType, page: number = 1): Promise<{ items: StremioMetaPreview[]; hasMore: boolean }> {
     const settings = await this.getSettings();
-    if (!settings.traktEnabled || !settings.traktAccessToken) return [];
+    if (!settings.traktEnabled || !settings.traktAccessToken) return { items: [], hasMore: false };
 
     try {
       const { clientId } = getTraktCredentials();
@@ -775,10 +777,11 @@ class ScrobblerService {
         'trakt-api-key': clientId,
       };
 
-      const url = TRAKT_CATALOG_URLS[type];
-      if (!url) return [];
+      const baseUrl = TRAKT_CATALOG_URLS[type];
+      if (!baseUrl) return { items: [], hasMore: false };
+      const url = `${baseUrl}&page=${page}`;
 
-      logInfo(`Fetching Trakt ${type} catalog...`);
+      logInfo(`Fetching Trakt ${type} catalog page ${page}...`);
       const response = await makeRequest(url, { method: 'GET', headers });
 
       if (response.ok) {
@@ -807,7 +810,7 @@ class ScrobblerService {
           }
 
           const isWrapped = WRAPPED_CATALOGS.has(type);
-          return rawItems.map((item: any) => {
+          const items = rawItems.map((item: any) => {
             let media: any;
             let itemType: 'movie' | 'series';
 
@@ -856,12 +859,15 @@ class ScrobblerService {
 
             return result;
           }).filter(Boolean) as StremioMetaPreview[];
+
+          const hasMore = items.length >= TRAKT_PAGE_LIMIT;
+          return { items, hasMore };
         }
       }
     } catch (e) {
       logError(`Failed to fetch Trakt catalog ${type}:`, e);
     }
-    return [];
+    return { items: [], hasMore: false };
   }
 
   // --------------------------------------------------------------------------
@@ -898,9 +904,9 @@ class ScrobblerService {
     return [];
   }
 
-  async fetchTraktListCatalog(listId: string): Promise<StremioMetaPreview[]> {
+  async fetchTraktListCatalog(listId: string, page: number = 1): Promise<{ items: StremioMetaPreview[]; hasMore: boolean }> {
     const settings = await this.getSettings();
-    if (!settings.traktEnabled || !settings.traktAccessToken) return [];
+    if (!settings.traktEnabled || !settings.traktAccessToken) return { items: [], hasMore: false };
 
     try {
       const { clientId } = getTraktCredentials();
@@ -910,14 +916,14 @@ class ScrobblerService {
         'trakt-api-key': clientId,
       };
 
-      const url = `${TRAKT_API_URL}/users/me/lists/${listId}/items?limit=30`;
-      logInfo(`Fetching Trakt list catalog ${listId}...`);
+      const url = `${TRAKT_API_URL}/users/me/lists/${listId}/items?limit=${TRAKT_PAGE_LIMIT}&page=${page}`;
+      logInfo(`Fetching Trakt list catalog ${listId} page ${page}...`);
       const response = await makeRequest(url, { method: 'GET', headers });
 
       if (response.ok) {
         const rawItems = await response.json();
         if (Array.isArray(rawItems)) {
-          return rawItems.map((item: any) => {
+          const items = rawItems.map((item: any) => {
             const media = item.movie || item.show || item;
             let itemType: 'movie' | 'series' = 'series';
             if (item.type === 'movie' || item.movie) {
@@ -939,12 +945,15 @@ class ScrobblerService {
               year: media.year,
             };
           }).filter(Boolean) as StremioMetaPreview[];
+
+          const hasMore = items.length >= TRAKT_PAGE_LIMIT;
+          return { items, hasMore };
         }
       }
     } catch (e) {
       logError(`Failed to fetch Trakt list catalog ${listId}:`, e);
     }
-    return [];
+    return { items: [], hasMore: false };
   }
 
   async fetchSimklCatalog(type: 'watchlist' | 'history'): Promise<any[]> {

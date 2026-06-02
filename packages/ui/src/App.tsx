@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 const AUTO_SYNC_CHECK_INTERVAL_MS = 10 * 60 * 1000;
 let hasStartupAutoSyncTriggered = false;
 import { invoke } from '@tauri-apps/api/core';
-import type { StremioStreamPickerMode, StremioMeta } from './types/stremio';
+import type { StremioStreamPickerMode, StremioMeta, BadgeSource } from './types/stremio';
 import './services/tauri-bridge'; // Initialize Tauri bridge and polyfills
 import { checkForUpdates, checkForUpdatesSilent } from './services/updater';
 import { Settings } from './components/Settings';
@@ -164,6 +164,23 @@ function App() {
     }
   }, []);
 
+  // Stremio stream badges
+  const [showStremioStreamBadges, setShowStremioStreamBadges] = useState(true);
+  const handleShowStremioStreamBadgesChange = useCallback(async (show: boolean) => {
+    setShowStremioStreamBadges(show);
+    if (window.storage) {
+      await window.storage.updateSettings({ showStremioStreamBadges: show });
+    }
+  }, []);
+
+  const [badgeSources, setBadgeSources] = useState<BadgeSource[]>([]);
+  const handleBadgeSourcesChange = useCallback(async (sources: BadgeSource[]) => {
+    setBadgeSources(sources);
+    if (window.storage) {
+      await window.storage.updateSettings({ badgeSources: sources });
+    }
+  }, []);
+
   // Load stremioStreamPickerMode from storage
   useEffect(() => {
     if (!layoutSettingsLoaded) return;
@@ -172,6 +189,12 @@ function App() {
         const res = await window.storage.getSettings();
         if (res.data?.stremioStreamPickerMode) {
           setStremioStreamPickerMode(res.data.stremioStreamPickerMode as StremioStreamPickerMode);
+        }
+        if (res.data?.showStremioStreamBadges !== undefined) {
+          setShowStremioStreamBadges(res.data.showStremioStreamBadges as boolean);
+        }
+        if (Array.isArray(res.data?.badgeSources)) {
+          setBadgeSources(res.data.badgeSources as BadgeSource[]);
         }
       } catch {}
     };
@@ -2787,6 +2810,8 @@ function App() {
           onClose={() => setActiveView('none')}
           stremioStreamPickerMode={stremioStreamPickerMode}
           onStreamPickerModeChange={handleStremioStreamPickerModeChange}
+          showStremioStreamBadges={showStremioStreamBadges}
+          badgeSources={badgeSources}
         />
       )}
 

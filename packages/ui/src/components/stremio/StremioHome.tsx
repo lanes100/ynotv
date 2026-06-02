@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import type { InstalledAddon, StremioMetaPreview, StremioMeta } from '../../types/stremio';
 import { fetchCatalog, fetchMeta } from '../../services/stremio-addon';
-import { scrobbler, TRAKT_CATALOG_DEFINITIONS } from '../../services/scrobbler';
+import { scrobbler, TRAKT_CATALOG_DEFINITIONS, type TraktCatalogType } from '../../services/scrobbler';
 import {
   useStremioSearchQuery,
   useStremioView,
@@ -70,6 +70,8 @@ export function StremioHome({ addons, onItemClick }: StremioHomeProps) {
     key: string;
     title: string;
     items: StremioMetaPreview[];
+    page: number;
+    hasMore: boolean;
   }
   const [cloudCatalogRows, setCloudCatalogRows] = useState<CloudCatalogRow[]>([]);
   const [traktCatalogsBeforeAddon, setTraktCatalogsBeforeAddon] = useState(false);
@@ -101,10 +103,12 @@ export function StremioHome({ addons, onItemClick }: StremioHomeProps) {
 
           const results = await Promise.all(
             enabledDefs.map((def) =>
-              scrobbler.fetchTraktCatalog(def.type).then((items) => ({
+              scrobbler.fetchTraktCatalog(def.type, 1).then(({ items, hasMore }) => ({
                 key: `trakt-${def.type}`,
                 title: `Trakt ${def.label}`,
                 items,
+                page: 1,
+                hasMore,
               }))
             )
           );
@@ -114,10 +118,12 @@ export function StremioHome({ addons, onItemClick }: StremioHomeProps) {
           const enabledLists: { id: string; name: string }[] = s.traktEnabledLists || [];
           const listResults = await Promise.all(
             enabledLists.map((list) =>
-              scrobbler.fetchTraktListCatalog(list.id).then((items) => ({
+              scrobbler.fetchTraktListCatalog(list.id, 1).then(({ items, hasMore }) => ({
                 key: `trakt-list-${list.id}`,
                 title: `Trakt \u2014 ${list.name}`,
                 items,
+                page: 1,
+                hasMore,
               }))
             )
           );
@@ -157,6 +163,30 @@ export function StremioHome({ addons, onItemClick }: StremioHomeProps) {
       active = false;
     };
   }, [view, refreshToken]);
+
+  const handleTraktPageChange = useCallback(async (row: CloudCatalogRow, newPage: number) => {
+    if (newPage < 1) return;
+    try {
+      const isList = row.key.startsWith('trakt-list-');
+      let result: { items: StremioMetaPreview[]; hasMore: boolean };
+      if (isList) {
+        const listId = row.key.slice('trakt-list-'.length);
+        result = await scrobbler.fetchTraktListCatalog(listId, newPage);
+      } else {
+        const type = row.key.replace('trakt-', '') as TraktCatalogType;
+        result = await scrobbler.fetchTraktCatalog(type, newPage);
+      }
+      setCloudCatalogRows((prev) =>
+        prev.map((r) =>
+          r.key === row.key
+            ? { ...r, items: result.items, page: newPage, hasMore: result.hasMore }
+            : r
+        )
+      );
+    } catch (e) {
+      console.error(`Failed to load Trakt page ${newPage} for ${row.key}:`, e);
+    }
+  }, []);
 
   const { onCardMouseEnter, onCardMouseLeave, onCardClick } = useStremioHover();
 
@@ -377,6 +407,9 @@ export function StremioHome({ addons, onItemClick }: StremioHomeProps) {
             title={row.title}
             items={row.items}
             onItemClick={handleItemClickWrapper}
+            currentPage={row.page}
+            hasMore={row.hasMore}
+            onPageChange={(dir) => handleTraktPageChange(row, row.page + dir)}
           />
         ))}
 
@@ -408,6 +441,9 @@ export function StremioHome({ addons, onItemClick }: StremioHomeProps) {
             title={row.title}
             items={row.items}
             onItemClick={handleItemClickWrapper}
+            currentPage={row.page}
+            hasMore={row.hasMore}
+            onPageChange={(dir) => handleTraktPageChange(row, row.page + dir)}
           />
         ))}
 

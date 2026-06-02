@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import type { StremioMeta, StremioStream, StremioVideo } from '../../types/stremio';
+import type { StremioMeta, StremioStream, StremioVideo, StremioStreamBadge } from '../../types/stremio';
 import { useStremioAddonStore } from '../../stores/stremioAddonStore';
 import {
   useStremioSelectedSeason,
@@ -13,6 +13,7 @@ import {
 import { useStremioLibraryStore } from '../../stores/stremioLibraryStore';
 import { useStremioWatchStore } from '../../stores/stremioWatchStore';
 import { fetchStreams, fetchMeta } from '../../services/stremio-addon';
+import { extractStreamBadges } from '../../utils/streamBadges';
 import { useLazyStremioCast } from '../../hooks/useLazyStremioCast';
 import { useLazyStremioTrailer } from '../../hooks/useLazyStremioTrailer';
 import { useLazyStremioRecommendations, type RecommendationItem } from '../../hooks/useLazyStremioRecommendations';
@@ -25,6 +26,8 @@ interface StremioDetailProps {
   onBack: () => void;
   onPlay: (stream: StremioStream, meta: StremioMeta, episodeVideo?: StremioVideo) => void;
   streamPickerMode: 'modal' | 'autoplay';
+  showStreamBadges?: boolean;
+  compiledBadgeRules?: { pattern: RegExp; badge: StremioStreamBadge }[];
 }
 
 function formatReleaseDate(dStr?: string) {
@@ -38,7 +41,7 @@ function formatReleaseDate(dStr?: string) {
   }
 }
 
-export function StremioDetail({ meta, onBack, onPlay, streamPickerMode }: StremioDetailProps) {
+export function StremioDetail({ meta, onBack, onPlay, streamPickerMode, showStreamBadges = false, compiledBadgeRules }: StremioDetailProps) {
   const addons = useStremioAddonStore((s) => s.enabledAddons);
   const selectedSeason = useStremioSelectedSeason();
   const setSelectedSeason = useSetStremioSelectedSeason();
@@ -664,6 +667,7 @@ export function StremioDetail({ meta, onBack, onPlay, streamPickerMode }: Stremi
                     const desc = stream.description || stream.title || '';
                     const displayName = name.trim();
                     const displayDesc = displayName ? desc : '';
+                    const badges = showStreamBadges ? extractStreamBadges(stream, compiledBadgeRules) : [];
                     return (
                       <div
                         key={idx}
@@ -680,6 +684,36 @@ export function StremioDetail({ meta, onBack, onPlay, streamPickerMode }: Stremi
                             </span>
                           )}
                         </div>
+                        {badges.length > 0 && (
+                          <div className="stremio-detail-stream-badges">
+                            {badges.map((badge) =>
+                              badge.imageUrl ? (
+                                <span
+                                  key={badge.label}
+                                  className="stremio-stream-badge-img"
+                                  style={{
+                                    backgroundColor: badge.color,
+                                    borderColor: badge.borderColor,
+                                  }}
+                                >
+                                  <img src={badge.imageUrl} alt={badge.label} title={badge.label} />
+                                </span>
+                              ) : (
+                                <span
+                                  key={badge.label}
+                                  className="stremio-stream-badge"
+                                  style={{
+                                    backgroundColor: badge.color,
+                                    color: badge.textColor || '#fff',
+                                    borderColor: badge.borderColor,
+                                  }}
+                                >
+                                  {badge.label}
+                                </span>
+                              ),
+                            )}
+                          </div>
+                        )}
                         {displayDesc && (
                           <div className="stremio-detail-stream-description">
                             {displayDesc}

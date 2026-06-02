@@ -101,4 +101,44 @@ export interface StremioSubtitle {
   addonName?: string;
 }
 
+export interface StremioStreamBadge {
+  label: string;
+  color: string;
+  textColor?: string;
+  imageUrl?: string;
+  borderColor?: string;
+}
+
+export interface ImportedBadgeFilter {
+  id: string;
+  groupId: string;
+  name: string;
+  pattern: string;
+  imageURL: string;
+  isEnabled: boolean;
+  tagColor: string;
+  tagStyle: string;
+  textColor: string;
+  borderColor: string;
+}
+
+export interface ImportedBadgeGroup {
+  id: string;
+  name: string;
+  color: string;
+  isExpanded: boolean;
+}
+
+export interface ImportedBadgePayload {
+  filters: ImportedBadgeFilter[];
+  groups: ImportedBadgeGroup[];
+}
+
+export interface BadgeSource {
+  url: string;
+  name: string;
+  payload: ImportedBadgePayload;
+  isActive: boolean;
+}
+
 export type StremioStreamPickerMode = 'modal' | 'autoplay';

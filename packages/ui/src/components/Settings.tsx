@@ -19,7 +19,7 @@ import { SubtitlesTab, type SubtitleSettings } from './settings/SubtitlesTab';
 import { ScrobblingTab } from './settings/ScrobblingTab';
 import { StremTab } from './settings/StremTab';
 import type { ShortcutsMap, ThemeId } from '../types/app';
-import type { StremioStreamPickerMode } from '../types/stremio';
+import type { StremioStreamPickerMode, BadgeSource } from '../types/stremio';
 import './Settings.css';
 
 interface SettingsProps {
@@ -144,6 +144,8 @@ export function Settings({
   const [stallDetectionEnabled, setStallDetectionEnabled] = useState(true);
   // Stremio settings
   const [stremioStreamPickerMode, setStremioStreamPickerMode] = useState<StremioStreamPickerMode>('modal');
+  const [showStremioStreamBadges, setShowStremioStreamBadges] = useState(true);
+  const [badgeSources, setBadgeSources] = useState<BadgeSource[]>([]);
 
   // LiveTV settings state
   const [epgDarkenCurrent, setEpgDarkenCurrent] = useState(false);
@@ -319,6 +321,8 @@ export function Settings({
         sportsScale?: number;
         sportsBgOpacity?: number;
         stremioStreamPickerMode?: 'modal' | 'autoplay';
+        showStremioStreamBadges?: boolean;
+        badgeSources?: BadgeSource[];
         navHiddenTabs?: string[];
         castEnabled?: boolean;
       };
@@ -421,6 +425,10 @@ export function Settings({
       setUseEventBasedReconnect(settings.useEventBasedReconnect ?? false);
       setStallDetectionEnabled(settings.stallDetectionEnabled ?? true);
       setStremioStreamPickerMode(settings.stremioStreamPickerMode ?? 'modal');
+      setShowStremioStreamBadges(settings.showStremioStreamBadges ?? true);
+      if (Array.isArray(settings.badgeSources)) {
+        setBadgeSources(settings.badgeSources as BadgeSource[]);
+      }
 
       // Load LiveTV settings
       const darkenCurrent = settings.epgDarkenCurrent ?? false;
@@ -562,6 +570,20 @@ export function Settings({
     setStremioStreamPickerMode(mode);
     if (window.storage) {
       await window.storage.updateSettings({ stremioStreamPickerMode: mode });
+    }
+  };
+
+  const handleShowStremioStreamBadgesChange = async (show: boolean) => {
+    setShowStremioStreamBadges(show);
+    if (window.storage) {
+      await window.storage.updateSettings({ showStremioStreamBadges: show });
+    }
+  };
+
+  const handleBadgeSourcesChange = async (sources: BadgeSource[]) => {
+    setBadgeSources(sources);
+    if (window.storage) {
+      await window.storage.updateSettings({ badgeSources: sources });
     }
   };
 
@@ -959,6 +981,10 @@ export function Settings({
           <StremTab
             stremioStreamPickerMode={stremioStreamPickerMode}
             onStremioStreamPickerModeChange={handleStremioStreamPickerModeChange}
+            showStremioStreamBadges={showStremioStreamBadges}
+            onShowStremioStreamBadgesChange={handleShowStremioStreamBadgesChange}
+            badgeSources={badgeSources}
+            onBadgeSourcesChange={handleBadgeSourcesChange}
           />
         );
       case 'security':

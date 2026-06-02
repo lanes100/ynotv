@@ -12,6 +12,9 @@ interface StremioCatalogRowProps {
   onItemClick: (item: StremioMetaPreview) => void;
   onSeeAll?: () => void;
   seeAllLabel?: string;
+  currentPage?: number;
+  hasMore?: boolean;
+  onPageChange?: (dir: -1 | 1) => void;
 }
 
 export function StremioCatalogRow({
@@ -22,12 +25,17 @@ export function StremioCatalogRow({
   onItemClick,
   onSeeAll,
   seeAllLabel = 'See all',
+  currentPage,
+  hasMore,
+  onPageChange,
 }: StremioCatalogRowProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
   const [items, setItems] = useState<StremioMetaPreview[]>(staticItems || []);
   const [loading, setLoading] = useState(!staticItems && !!addon && !!catalog);
+
+  const isPageMode = onPageChange !== undefined;
 
   const update = useCallback(() => {
     const el = scrollRef.current;
@@ -65,10 +73,11 @@ export function StremioCatalogRow({
   }, [addon?.baseUrl, catalog?.type, catalog?.id, staticItems]);
 
   useEffect(() => {
+    if (isPageMode) return;
     update();
     window.addEventListener('resize', update);
     return () => window.removeEventListener('resize', update);
-  }, [update, items.length, loading]);
+  }, [isPageMode, update, items.length, loading]);
 
   const scroll = (dir: 'left' | 'right') => {
     const el = scrollRef.current;
@@ -114,15 +123,31 @@ export function StremioCatalogRow({
               {seeAllLabel}
             </button>
           )}
-          <button className="stremio-row-nav-btn" onClick={() => scroll('left')} disabled={!canScrollLeft}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 18l-6-6 6-6" /></svg>
-          </button>
-          <button className="stremio-row-nav-btn" onClick={() => scroll('right')} disabled={!canScrollRight}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 18l6-6-6-6" /></svg>
-          </button>
+          {isPageMode ? (
+            <>
+              <span className="stremio-row-page-indicator" style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.35)', marginRight: '6px' }}>
+                {currentPage}
+              </span>
+              <button className="stremio-row-nav-btn" onClick={() => onPageChange(-1)} disabled={!currentPage || currentPage <= 1}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 18l-6-6 6-6" /></svg>
+              </button>
+              <button className="stremio-row-nav-btn" onClick={() => onPageChange(1)} disabled={!hasMore}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 18l6-6-6-6" /></svg>
+              </button>
+            </>
+          ) : (
+            <>
+              <button className="stremio-row-nav-btn" onClick={() => scroll('left')} disabled={!canScrollLeft}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 18l-6-6 6-6" /></svg>
+              </button>
+              <button className="stremio-row-nav-btn" onClick={() => scroll('right')} disabled={!canScrollRight}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 18l6-6-6-6" /></svg>
+              </button>
+            </>
+          )}
         </div>
       </div>
-      <div className="stremio-row-scroll" ref={scrollRef} onScroll={update}>
+      <div className="stremio-row-scroll" ref={scrollRef} onScroll={isPageMode ? undefined : update}>
         <div className="stremio-row-track">
           {items.map((item, idx) => (
             <div
@@ -156,8 +181,8 @@ export function StremioCatalogRow({
           ))}
         </div>
       </div>
-      {canScrollLeft && <div className="stremio-row-fade stremio-row-fade-left" />}
-      {canScrollRight && <div className="stremio-row-fade stremio-row-fade-right" />}
+      {!isPageMode && canScrollLeft && <div className="stremio-row-fade stremio-row-fade-left" />}
+      {!isPageMode && canScrollRight && <div className="stremio-row-fade stremio-row-fade-right" />}
     </section>
   );
 }

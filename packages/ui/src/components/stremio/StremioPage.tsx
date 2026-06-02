@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import type { StremioStreamPickerMode, StremioMeta, StremioStream, StremioVideo } from '../../types/stremio';
+import { useMemo } from 'react';
+import type { StremioStreamPickerMode, StremioMeta, StremioStream, StremioVideo, BadgeSource } from '../../types/stremio';
+import { compileBadgeSources } from '../../utils/streamBadges';
 import { useStremioAddonStore } from '../../stores/stremioAddonStore';
 import {
   useStremioView,
@@ -24,12 +26,15 @@ interface StremioPageProps {
   onClose: () => void;
   stremioStreamPickerMode: StremioStreamPickerMode;
   onStreamPickerModeChange: (mode: StremioStreamPickerMode) => void;
+  showStremioStreamBadges: boolean;
+  badgeSources: BadgeSource[];
 }
 
-export function StremioPage({ onClose, stremioStreamPickerMode, onStreamPickerModeChange }: StremioPageProps) {
+export function StremioPage({ onClose, stremioStreamPickerMode, onStreamPickerModeChange, showStremioStreamBadges, badgeSources }: StremioPageProps) {
   const addons = useStremioAddonStore((s) => s.enabledAddons);
   const stremioView = useStremioView();
   const setStremioView = useSetStremioView();
+  const compiledBadgeRules = useMemo(() => compileBadgeSources(badgeSources), [badgeSources]);
   const activeMeta = useStremioActiveMeta();
   const setActiveMeta = useSetStremioActiveMeta();
   const selectedSeason = useStremioSelectedSeason();
@@ -137,6 +142,8 @@ export function StremioPage({ onClose, stremioStreamPickerMode, onStreamPickerMo
               onBack={handleBack}
               onPlay={handlePlayStream}
               streamPickerMode={stremioStreamPickerMode}
+              showStreamBadges={showStremioStreamBadges}
+              compiledBadgeRules={compiledBadgeRules}
             />
           )}
         </div>
