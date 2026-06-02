@@ -999,3 +999,44 @@
   cursor: pointer;
 }
 
+/* Strem Addon Filters */
+.stremio-detail-addon-filters {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  scrollbar-width: none;
+}
+
+.stremio-detail-addon-filters::-webkit-scrollbar {
+  display: none;
+}
+
+.stremio-addon-filter-btn {
+  background: var(--surface-color, rgba(255, 255, 255, 0.05));
+  border: 1px solid var(--surface-border, rgba(255, 255, 255, 0.08));
+  color: var(--text-secondary, rgba(255, 255, 255, 0.7));
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.stremio-addon-filter-btn:hover {
+  background: var(--surface-hover, rgba(255, 255, 255, 0.12));
+  color: var(--text-primary, white);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.stremio-addon-filter-btn.active {
+  background: var(--text-primary, white);
+  color: #0c0c10;
+  border-color: var(--text-primary, white);
+}
+
+

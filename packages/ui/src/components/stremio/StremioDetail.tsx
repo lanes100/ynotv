@@ -194,6 +194,29 @@ export function StremioDetail({ meta, onBack, onPlay, streamPickerMode, showStre
   const [selectedVideo, setSelectedVideo] = useState<StremioVideo | null>(null);
   const [loadingStreams, setLoadingStreams] = useState(false);
   const [videoSearch, setVideoSearch] = useState('');
+  const [selectedAddonFilter, setSelectedAddonFilter] = useState<string>('All');
+
+  // Group streams by addon
+  const addonNames = useMemo(() => {
+    const names = new Set<string>();
+    for (const stream of streams) {
+      if (stream.addonName) {
+        names.add(stream.addonName);
+      }
+    }
+    return Array.from(names).sort();
+  }, [streams]);
+
+  // Reset addon filter when streams change
+  useEffect(() => {
+    setSelectedAddonFilter('All');
+  }, [streams]);
+
+  // Filter streams by addon
+  const filteredStreams = useMemo(() => {
+    if (selectedAddonFilter === 'All') return streams;
+    return streams.filter((s) => s.addonName === selectedAddonFilter);
+  }, [streams, selectedAddonFilter]);
 
   const isSeries = meta.type === 'series';
   const isAdded = isInLibrary(meta.id);
@@ -651,6 +674,26 @@ export function StremioDetail({ meta, onBack, onPlay, streamPickerMode, showStre
                 </h3>
               </div>
 
+              {!loadingStreams && streams.length > 0 && addonNames.length > 0 && (
+                <div className="stremio-detail-addon-filters">
+                  <button
+                    className={`stremio-addon-filter-btn ${selectedAddonFilter === 'All' ? 'active' : ''}`}
+                    onClick={() => setSelectedAddonFilter('All')}
+                  >
+                    All
+                  </button>
+                  {addonNames.map((addon) => (
+                    <button
+                      key={addon}
+                      className={`stremio-addon-filter-btn ${selectedAddonFilter === addon ? 'active' : ''}`}
+                      onClick={() => setSelectedAddonFilter(addon)}
+                    >
+                      {addon}
+                    </button>
+                  ))}
+                </div>
+              )}
+
               <div className="stremio-detail-streams-list">
                 {loadingStreams ? (
                   <div className="stremio-detail-streams-loading">
@@ -661,8 +704,12 @@ export function StremioDetail({ meta, onBack, onPlay, streamPickerMode, showStre
                   <div className="stremio-detail-streams-empty">
                     No streams found. Make sure you have stream provider addons installed.
                   </div>
+                ) : filteredStreams.length === 0 ? (
+                  <div className="stremio-detail-streams-empty">
+                    No streams found for the selected addon filter.
+                  </div>
                 ) : (
-                  streams.map((stream, idx) => {
+                  filteredStreams.map((stream, idx) => {
                     const name = stream.name || '';
                     const desc = stream.description || stream.title || '';
                     const displayName = name.trim();
