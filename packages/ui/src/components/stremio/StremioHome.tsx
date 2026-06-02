@@ -407,9 +407,6 @@ export function StremioHome({ addons, onItemClick }: StremioHomeProps) {
             title={row.title}
             items={row.items}
             onItemClick={handleItemClickWrapper}
-            currentPage={row.page}
-            hasMore={row.hasMore}
-            onPageChange={(dir) => handleTraktPageChange(row, row.page + dir)}
           />
         ))}
 
@@ -441,9 +438,6 @@ export function StremioHome({ addons, onItemClick }: StremioHomeProps) {
             title={row.title}
             items={row.items}
             onItemClick={handleItemClickWrapper}
-            currentPage={row.page}
-            hasMore={row.hasMore}
-            onPageChange={(dir) => handleTraktPageChange(row, row.page + dir)}
           />
         ))}
 

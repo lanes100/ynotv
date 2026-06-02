@@ -9,6 +9,8 @@ interface StremTabProps {
   onShowStremioStreamBadgesChange: (show: boolean) => Promise<void>;
   badgeSources: BadgeSource[];
   onBadgeSourcesChange: (sources: BadgeSource[]) => Promise<void>;
+  stremioBadgeSize: number;
+  onStremioBadgeSizeChange: (size: number) => Promise<void>;
 }
 
 export function StremTab({
@@ -18,6 +20,8 @@ export function StremTab({
   onShowStremioStreamBadgesChange,
   badgeSources,
   onBadgeSourcesChange,
+  stremioBadgeSize,
+  onStremioBadgeSizeChange,
 }: StremTabProps) {
   const [badgeUrl, setBadgeUrl] = useState('');
   const [badgePaste, setBadgePaste] = useState('');
@@ -91,7 +95,8 @@ export function StremTab({
   );
 
   return (
-    <div className="settings-section">
+    <div className="settings-tab-content">
+      <div className="settings-section">
       <h3 style={{ margin: '0 0 8px 0', fontSize: '0.95rem', fontWeight: 500, color: 'rgba(255,255,255,0.9)' }}>
         Strem Playback
       </h3>
@@ -142,6 +147,52 @@ export function StremTab({
           <span className="toggle-slider" />
         </label>
       </div>
+
+      {showStremioStreamBadges && (
+        <div className="retry-setting-row" style={{ borderBottom: 'none', flexDirection: 'column', alignItems: 'stretch', gap: '10px', marginTop: '4px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+            <span className="timeshift-toggle-label" style={{ fontSize: '0.85rem' }}>Badge Scale ({stremioBadgeSize}%)</span>
+          </div>
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'center', width: '100%', boxSizing: 'border-box' }}>
+            <input
+              type="range"
+              min="80"
+              max="180"
+              step="5"
+              value={stremioBadgeSize}
+              onChange={(e) => onStremioBadgeSizeChange(Number(e.target.value))}
+              style={{
+                flex: 1,
+                accentColor: '#00d4ff',
+                cursor: 'pointer',
+                height: '6px',
+                borderRadius: '3px',
+                background: 'rgba(255,255,255,0.1)',
+                outline: 'none',
+              }}
+            />
+          </div>
+          <div style={{ padding: '12px 16px', background: 'rgba(0,0,0,0.25)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.06)', width: '100%', boxSizing: 'border-box' }}>
+            <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)', marginBottom: '8px', fontWeight: 700, letterSpacing: '0.05em' }}>
+              LIVE PREVIEW
+            </div>
+            <div className="stremio-detail-stream-badges" style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
+              <span className="stremio-stream-badge" style={{ backgroundColor: '#1a1a1a', color: '#fff', borderColor: '#FF858283' }}>
+                4K
+              </span>
+              <span className="stremio-stream-badge" style={{ backgroundColor: '#1a1a1a', color: '#fff', borderColor: '#FF858283' }}>
+                HDR
+              </span>
+              <span className="stremio-stream-badge-img" style={{ backgroundColor: '#1a1a1a', borderColor: '#FF858283' }}>
+                <img src="https://raw.githubusercontent.com/9mousaa/BetterFormatter/main/images/mono-webdl.png" alt="WebDL" />
+              </span>
+              <span className="stremio-stream-badge-img" style={{ backgroundColor: '#1a1a1a', borderColor: '#FF858283' }}>
+                <img src="https://raw.githubusercontent.com/9mousaa/BetterFormatter/main/images/5dot1.png" alt="5.1" style={{ filter: 'brightness(0) invert(1)' }} />
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Custom Badge Import */}
       <div style={{ marginTop: '20px', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '16px' }}>
@@ -293,5 +344,6 @@ export function StremTab({
         )}
       </div>
     </div>
-  );
+  </div>
+);
 }

@@ -146,6 +146,7 @@ export function Settings({
   const [stremioStreamPickerMode, setStremioStreamPickerMode] = useState<StremioStreamPickerMode>('modal');
   const [showStremioStreamBadges, setShowStremioStreamBadges] = useState(true);
   const [badgeSources, setBadgeSources] = useState<BadgeSource[]>([]);
+  const [stremioBadgeSize, setStremioBadgeSize] = useState(100);
 
   // LiveTV settings state
   const [epgDarkenCurrent, setEpgDarkenCurrent] = useState(false);
@@ -323,6 +324,7 @@ export function Settings({
         stremioStreamPickerMode?: 'modal' | 'autoplay';
         showStremioStreamBadges?: boolean;
         badgeSources?: BadgeSource[];
+        stremioBadgeSize?: number;
         navHiddenTabs?: string[];
         castEnabled?: boolean;
       };
@@ -429,6 +431,9 @@ export function Settings({
       if (Array.isArray(settings.badgeSources)) {
         setBadgeSources(settings.badgeSources as BadgeSource[]);
       }
+      const loadedBadgeSize = settings.stremioBadgeSize ?? 100;
+      setStremioBadgeSize(loadedBadgeSize);
+      document.documentElement.style.setProperty('--stremio-badge-scale', String(loadedBadgeSize / 100));
 
       // Load LiveTV settings
       const darkenCurrent = settings.epgDarkenCurrent ?? false;
@@ -584,6 +589,14 @@ export function Settings({
     setBadgeSources(sources);
     if (window.storage) {
       await window.storage.updateSettings({ badgeSources: sources });
+    }
+  };
+
+  const handleStremioBadgeSizeChange = async (size: number) => {
+    setStremioBadgeSize(size);
+    document.documentElement.style.setProperty('--stremio-badge-scale', String(size / 100));
+    if (window.storage) {
+      await window.storage.updateSettings({ stremioBadgeSize: size });
     }
   };
 
@@ -985,6 +998,8 @@ export function Settings({
             onShowStremioStreamBadgesChange={handleShowStremioStreamBadgesChange}
             badgeSources={badgeSources}
             onBadgeSourcesChange={handleBadgeSourcesChange}
+            stremioBadgeSize={stremioBadgeSize}
+            onStremioBadgeSizeChange={handleStremioBadgeSizeChange}
           />
         );
       case 'security':
