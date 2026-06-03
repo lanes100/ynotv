@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import type { StremioStreamPickerMode, BadgeSource } from '../../types/stremio';
-import { parseBadgePayload } from '../../utils/streamBadges';
+import { parseBadgePayload, isLightColor, convertArgbToRgba } from '../../utils/streamBadges';
 
 interface StremTabProps {
   stremioStreamPickerMode: StremioStreamPickerMode;
@@ -27,6 +27,7 @@ export function StremTab({
   const [badgePaste, setBadgePaste] = useState('');
   const [badgeImportError, setBadgeImportError] = useState('');
   const [badgeImporting, setBadgeImporting] = useState(false);
+  const [expandedSourceUrl, setExpandedSourceUrl] = useState<string | null>(null);
 
   const handleImportBadge = useCallback(async () => {
     setBadgeImportError('');
@@ -40,8 +41,13 @@ export function StremTab({
     setBadgeImporting(true);
     try {
       let payloadStr = paste;
-      let sourceUrl = url || 'Pasted';
-      if (!paste && url) {
+      let sourceUrl = url;
+      let sourceName = '';
+      if (paste) {
+        sourceUrl = `pasted_${Date.now()}`;
+        const pastedCount = badgeSources.filter((s) => s.url.startsWith('pasted_')).length + 1;
+        sourceName = `Pasted Rule ${pastedCount}`;
+      } else {
         if (!url.startsWith('http://') && !url.startsWith('https://')) {
           setBadgeImportError('URL must start with http:// or https://');
           setBadgeImporting(false);
@@ -50,12 +56,13 @@ export function StremTab({
         const resp = await fetch(url);
         if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
         payloadStr = await resp.text();
+        sourceName = url.split('/').pop() || url;
       }
 
       const payload = parseBadgePayload(payloadStr);
       const newSource: BadgeSource = {
         url: sourceUrl,
-        name: url ? url.split('/').pop() || url : 'Pasted',
+        name: sourceName,
         payload,
         isActive: true,
       };
@@ -79,7 +86,7 @@ export function StremTab({
     async (url: string) => {
       const updated = badgeSources.map((s) => ({
         ...s,
-        isActive: s.url === url,
+        isActive: s.url === url ? !s.isActive : s.isActive,
       }));
       await onBadgeSourcesChange(updated);
     },
@@ -177,17 +184,17 @@ export function StremTab({
               LIVE PREVIEW
             </div>
             <div className="stremio-detail-stream-badges" style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
-              <span className="stremio-stream-badge" style={{ backgroundColor: '#1a1a1a', color: '#fff', borderColor: '#FF858283' }}>
+              <span className="stremio-stream-badge" style={{ backgroundColor: '#FFBE01', color: '#FFBE01', borderColor: '#FFBE01' }}>
                 4K
               </span>
-              <span className="stremio-stream-badge" style={{ backgroundColor: '#1a1a1a', color: '#fff', borderColor: '#FF858283' }}>
+              <span className="stremio-stream-badge" style={{ backgroundColor: '#FFBE01', color: '#ffffff', borderColor: '#FFBE01' }}>
                 HDR
               </span>
-              <span className="stremio-stream-badge-img" style={{ backgroundColor: '#1a1a1a', borderColor: '#FF858283' }}>
-                <img src="https://raw.githubusercontent.com/9mousaa/BetterFormatter/main/images/mono-webdl.png" alt="WebDL" />
+              <span className="stremio-stream-badge-img" style={{ backgroundColor: '#00e932e6', borderColor: '#00ff37ff' }}>
+                <img src="https://raw.githubusercontent.com/ngreyx1/badges/refs/heads/main/images%20w%3Ao%20logo/colored-webdl.png" alt="WebDL" />
               </span>
-              <span className="stremio-stream-badge-img" style={{ backgroundColor: '#1a1a1a', borderColor: '#FF858283' }}>
-                <img src="https://raw.githubusercontent.com/9mousaa/BetterFormatter/main/images/5dot1.png" alt="5.1" style={{ filter: 'brightness(0) invert(1)' }} />
+              <span className="stremio-stream-badge-img" style={{ backgroundColor: '#ffffff', borderColor: '#ffffff' }}>
+                <img src="https://raw.githubusercontent.com/nobnobz/Omni-Template-Bot-Bid-Raiser/main/Other/regex%20tags/51.png" alt="5.1" />
               </span>
             </div>
           </div>
@@ -269,77 +276,143 @@ export function StremTab({
             <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'rgba(255,255,255,0.4)', marginBottom: '8px', letterSpacing: '0.05em' }}>
               IMPORTED SOURCES
             </div>
-            {badgeSources.map((source) => (
-              <div
-                key={source.url}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  padding: '6px 8px',
-                  borderRadius: '6px',
-                  background: 'rgba(255,255,255,0.02)',
-                  border: `1px solid ${source.isActive ? 'rgba(0,212,255,0.25)' : 'rgba(255,255,255,0.04)'}`,
-                  marginBottom: '4px',
-                }}
-              >
-                <div style={{ flex: 1, overflow: 'hidden' }}>
-                  <div style={{
-                    fontSize: '0.8rem',
-                    fontWeight: 600,
-                    color: 'rgba(255,255,255,0.85)',
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                  }}>
-                    {source.name}
+            {badgeSources.map((source) => {
+              const isExpanded = expandedSourceUrl === source.url;
+              return (
+                <div
+                  key={source.url}
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    padding: '8px 10px',
+                    borderRadius: '6px',
+                    background: 'rgba(255,255,255,0.02)',
+                    border: `1px solid ${source.isActive ? 'rgba(0,212,255,0.25)' : 'rgba(255,255,255,0.04)'}`,
+                    marginBottom: '4px',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                    <div
+                      onClick={() => setExpandedSourceUrl(isExpanded ? null : source.url)}
+                      style={{ flex: 1, overflow: 'hidden', cursor: 'pointer' }}
+                    >
+                      <div style={{
+                        fontSize: '0.8rem',
+                        fontWeight: 600,
+                        color: 'rgba(255,255,255,0.85)',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                      }}>
+                        <span>{source.name}</span>
+                        <span style={{
+                          fontSize: '0.55rem',
+                          color: 'rgba(255,255,255,0.3)',
+                          transform: isExpanded ? 'rotate(90deg)' : 'none',
+                          transition: 'transform 0.15s',
+                          display: 'inline-block',
+                        }}>
+                          ▶
+                        </span>
+                      </div>
+                      <div style={{
+                        fontSize: '0.65rem',
+                        color: 'rgba(255,255,255,0.35)',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                      }}>
+                        {source.payload.filters.length} filters · {source.payload.groups.length} groups
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: '6px', marginLeft: '8px' }}>
+                      <button
+                        onClick={() => handleToggleSource(source.url)}
+                        title={source.isActive ? 'Active' : 'Click to activate'}
+                        style={{
+                          background: source.isActive ? 'rgba(0,212,255,0.2)' : 'rgba(255,255,255,0.05)',
+                          border: `1px solid ${source.isActive ? 'rgba(0,212,255,0.4)' : 'rgba(255,255,255,0.08)'}`,
+                          color: source.isActive ? '#00d4ff' : 'rgba(255,255,255,0.4)',
+                          borderRadius: '4px',
+                          padding: '3px 8px',
+                          fontSize: '0.7rem',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        {source.isActive ? 'Active' : 'Inactive'}
+                      </button>
+                      <button
+                        onClick={() => handleDeleteSource(source.url)}
+                        title="Remove"
+                        style={{
+                          background: 'rgba(239,68,68,0.1)',
+                          border: '1px solid rgba(239,68,68,0.2)',
+                          color: '#ef4444',
+                          borderRadius: '4px',
+                          padding: '3px 8px',
+                          fontSize: '0.7rem',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        Delete
+                      </button>
+                    </div>
                   </div>
-                  <div style={{
-                    fontSize: '0.65rem',
-                    color: 'rgba(255,255,255,0.35)',
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                  }}>
-                    {source.payload.filters.length} filters · {source.payload.groups.length} groups
-                  </div>
+
+                  {isExpanded && (
+                    <div style={{
+                      marginTop: '8px',
+                      paddingTop: '8px',
+                      borderTop: '1px solid rgba(255,255,255,0.06)',
+                      width: '100%',
+                      boxSizing: 'border-box'
+                    }}>
+                      <div style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.4)', marginBottom: '8px', fontWeight: 700, letterSpacing: '0.03em' }}>
+                        PREVIEW BADGES ({source.payload.filters.length}):
+                      </div>
+                      <div className="stremio-detail-stream-badges" style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
+                        {source.payload.filters.map((filter, fIdx) => {
+                          const bgColor = convertArgbToRgba(filter.tagColor) || '#1a1a1a';
+                          const isLightBg = isLightColor(bgColor);
+                          const textColor = convertArgbToRgba(filter.textColor) || (isLightBg ? '#000000' : '#ffffff');
+                          const borderColor = convertArgbToRgba(filter.borderColor) || 'transparent';
+
+                          return filter.imageURL ? (
+                            <span
+                              key={filter.id || fIdx}
+                              className="stremio-stream-badge-img"
+                              style={{
+                                backgroundColor: bgColor,
+                                borderColor: borderColor,
+                              }}
+                            >
+                              <img src={filter.imageURL} alt={filter.name} title={filter.name} />
+                            </span>
+                          ) : (
+                            <span
+                              key={filter.id || fIdx}
+                              className="stremio-stream-badge"
+                              style={{
+                                backgroundColor: bgColor,
+                                color: textColor,
+                                borderColor: borderColor,
+                              }}
+                            >
+                              {filter.name}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
                 </div>
-                <div style={{ display: 'flex', gap: '6px', marginLeft: '8px' }}>
-                  <button
-                    onClick={() => handleToggleSource(source.url)}
-                    title={source.isActive ? 'Active' : 'Click to activate'}
-                    style={{
-                      background: source.isActive ? 'rgba(0,212,255,0.2)' : 'rgba(255,255,255,0.05)',
-                      border: `1px solid ${source.isActive ? 'rgba(0,212,255,0.4)' : 'rgba(255,255,255,0.08)'}`,
-                      color: source.isActive ? '#00d4ff' : 'rgba(255,255,255,0.4)',
-                      borderRadius: '4px',
-                      padding: '3px 8px',
-                      fontSize: '0.7rem',
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    {source.isActive ? 'Active' : 'Inactive'}
-                  </button>
-                  <button
-                    onClick={() => handleDeleteSource(source.url)}
-                    title="Remove"
-                    style={{
-                      background: 'rgba(239,68,68,0.1)',
-                      border: '1px solid rgba(239,68,68,0.2)',
-                      color: '#ef4444',
-                      borderRadius: '4px',
-                      padding: '3px 8px',
-                      fontSize: '0.7rem',
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    Delete
-                  </button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

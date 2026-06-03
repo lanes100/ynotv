@@ -2725,6 +2725,12 @@ function App() {
         <Settings
           castEnabled={castEnabled}
           onCastEnabledChange={setCastEnabled}
+          stremioStreamPickerMode={stremioStreamPickerMode}
+          onStremioStreamPickerModeChange={handleStremioStreamPickerModeChange}
+          showStremioStreamBadges={showStremioStreamBadges}
+          onShowStremioStreamBadgesChange={handleShowStremioStreamBadgesChange}
+          badgeSources={badgeSources}
+          onBadgeSourcesChange={handleBadgeSourcesChange}
           initialTab={settingsTab}
           editSourceId={editSourceId}
           onClose={() => {

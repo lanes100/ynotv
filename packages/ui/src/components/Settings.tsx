@@ -45,6 +45,12 @@ interface SettingsProps {
   onOverlayAutohideTimerChange?: (seconds: number) => void;
   castEnabled?: boolean;
   onCastEnabledChange?: (enabled: boolean) => void;
+  stremioStreamPickerMode?: StremioStreamPickerMode;
+  onStremioStreamPickerModeChange?: (mode: StremioStreamPickerMode) => void;
+  showStremioStreamBadges?: boolean;
+  onShowStremioStreamBadgesChange?: (show: boolean) => void;
+  badgeSources?: BadgeSource[];
+  onBadgeSourcesChange?: (sources: BadgeSource[]) => void;
 }
 
 export function Settings({
@@ -70,6 +76,12 @@ export function Settings({
   onOverlayAutohideTimerChange,
   castEnabled: castEnabledProp,
   onCastEnabledChange,
+  stremioStreamPickerMode: stremioStreamPickerModeProp,
+  onStremioStreamPickerModeChange,
+  showStremioStreamBadges: showStremioStreamBadgesProp,
+  onShowStremioStreamBadgesChange,
+  badgeSources: badgeSourcesProp,
+  onBadgeSourcesChange,
 }: SettingsProps) {
   const [activeTab, setActiveTab] = useState<SettingsTabId>(initialTab);
   const [sources, setSources] = useState<Source[]>([]);
@@ -147,6 +159,24 @@ export function Settings({
   const [showStremioStreamBadges, setShowStremioStreamBadges] = useState(true);
   const [badgeSources, setBadgeSources] = useState<BadgeSource[]>([]);
   const [stremioBadgeSize, setStremioBadgeSize] = useState(100);
+
+  useEffect(() => {
+    if (stremioStreamPickerModeProp !== undefined) {
+      setStremioStreamPickerMode(stremioStreamPickerModeProp);
+    }
+  }, [stremioStreamPickerModeProp]);
+
+  useEffect(() => {
+    if (showStremioStreamBadgesProp !== undefined) {
+      setShowStremioStreamBadges(showStremioStreamBadgesProp);
+    }
+  }, [showStremioStreamBadgesProp]);
+
+  useEffect(() => {
+    if (badgeSourcesProp !== undefined) {
+      setBadgeSources(badgeSourcesProp);
+    }
+  }, [badgeSourcesProp]);
 
   // LiveTV settings state
   const [epgDarkenCurrent, setEpgDarkenCurrent] = useState(false);
@@ -573,6 +603,9 @@ export function Settings({
 
   const handleStremioStreamPickerModeChange = async (mode: StremioStreamPickerMode) => {
     setStremioStreamPickerMode(mode);
+    if (onStremioStreamPickerModeChange) {
+      onStremioStreamPickerModeChange(mode);
+    }
     if (window.storage) {
       await window.storage.updateSettings({ stremioStreamPickerMode: mode });
     }
@@ -580,6 +613,9 @@ export function Settings({
 
   const handleShowStremioStreamBadgesChange = async (show: boolean) => {
     setShowStremioStreamBadges(show);
+    if (onShowStremioStreamBadgesChange) {
+      onShowStremioStreamBadgesChange(show);
+    }
     if (window.storage) {
       await window.storage.updateSettings({ showStremioStreamBadges: show });
     }
@@ -587,6 +623,9 @@ export function Settings({
 
   const handleBadgeSourcesChange = async (sources: BadgeSource[]) => {
     setBadgeSources(sources);
+    if (onBadgeSourcesChange) {
+      onBadgeSourcesChange(sources);
+    }
     if (window.storage) {
       await window.storage.updateSettings({ badgeSources: sources });
     }

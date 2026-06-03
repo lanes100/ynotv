@@ -672,7 +672,6 @@
   max-width: 80px;
   object-fit: contain;
   display: block;
-  filter: brightness(0) invert(1);
 }
 
 .stremio-detail-stream-description {

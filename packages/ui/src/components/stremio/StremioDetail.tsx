@@ -13,31 +13,13 @@ import {
 import { useStremioLibraryStore } from '../../stores/stremioLibraryStore';
 import { useStremioWatchStore } from '../../stores/stremioWatchStore';
 import { fetchStreams, fetchMeta } from '../../services/stremio-addon';
-import { extractStreamBadges } from '../../utils/streamBadges';
+import { extractStreamBadges, isLightColor } from '../../utils/streamBadges';
 import { useLazyStremioCast } from '../../hooks/useLazyStremioCast';
 import { useLazyStremioTrailer } from '../../hooks/useLazyStremioTrailer';
 import { useLazyStremioRecommendations, type RecommendationItem } from '../../hooks/useLazyStremioRecommendations';
 import { useTmdbAccessToken } from '../../hooks/useTmdbLists';
 import { getMovieDetails, getTvShowDetails, getTmdbImageUrl } from '../../services/tmdb';
 import './StremioDetail.css';
-
-function isLightColor(color: string): boolean {
-  if (!color) return false;
-  const hex = color.replace('#', '').trim();
-  if (hex.length === 3) {
-    const r = parseInt(hex[0] + hex[0], 16);
-    const g = parseInt(hex[1] + hex[1], 16);
-    const b = parseInt(hex[2] + hex[2], 16);
-    return (r * 299 + g * 587 + b * 114) / 1000 > 180;
-  }
-  if (hex.length === 6 || hex.length === 8) {
-    const r = parseInt(hex.substring(0, 2), 16);
-    const g = parseInt(hex.substring(2, 4), 16);
-    const b = parseInt(hex.substring(4, 6), 16);
-    return (r * 299 + g * 587 + b * 114) / 1000 > 180;
-  }
-  return false;
-}
 
 interface StremioDetailProps {
   meta: StremioMeta;
@@ -752,8 +734,9 @@ export function StremioDetail({ meta, onBack, onPlay, streamPickerMode, showStre
                         {badges.length > 0 && (
                           <div className="stremio-detail-stream-badges">
                             {badges.map((badge) => {
-                              const isLightBg = isLightColor(badge.color);
-                              const bgColor = isLightBg ? '#1a1a1a' : badge.color;
+                              const bgColor = badge.color || '#1a1a1a';
+                              const isLightBg = isLightColor(bgColor);
+                              const textColor = badge.textColor || (isLightBg ? '#000000' : '#ffffff');
                               return badge.imageUrl ? (
                                 <span
                                   key={badge.label}
@@ -771,7 +754,7 @@ export function StremioDetail({ meta, onBack, onPlay, streamPickerMode, showStre
                                   className="stremio-stream-badge"
                                   style={{
                                     backgroundColor: bgColor,
-                                    color: isLightBg ? '#fff' : (badge.textColor || '#fff'),
+                                    color: textColor,
                                     borderColor: badge.borderColor,
                                   }}
                                 >

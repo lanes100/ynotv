@@ -50,6 +50,44 @@ function toJsRegex(pattern: string): RegExp {
   return new RegExp(clean, flags);
 }
 
+export function convertArgbToRgba(color: string): string {
+  if (!color || !color.startsWith('#')) return color;
+  const hex = color.substring(1).trim();
+  if (hex.length === 8) {
+    const a = hex.substring(0, 2);
+    const r = hex.substring(2, 4);
+    const g = hex.substring(4, 6);
+    const b = hex.substring(6, 8);
+    return `#${r}${g}${b}${a}`;
+  }
+  if (hex.length === 4) {
+    const a = hex.substring(0, 1);
+    const r = hex.substring(1, 2);
+    const g = hex.substring(2, 3);
+    const b = hex.substring(3, 4);
+    return `#${r}${g}${b}${a}`;
+  }
+  return color;
+}
+
+export function isLightColor(color: string): boolean {
+  if (!color) return false;
+  const hex = color.replace('#', '').trim();
+  if (hex.length === 3) {
+    const r = parseInt(hex[0] + hex[0], 16);
+    const g = parseInt(hex[1] + hex[1], 16);
+    const b = parseInt(hex[2] + hex[2], 16);
+    return (r * 299 + g * 587 + b * 114) / 1000 > 180;
+  }
+  if (hex.length === 6 || hex.length === 8) {
+    const r = parseInt(hex.substring(0, 2), 16);
+    const g = parseInt(hex.substring(2, 4), 16);
+    const b = parseInt(hex.substring(4, 6), 16);
+    return (r * 299 + g * 587 + b * 114) / 1000 > 180;
+  }
+  return false;
+}
+
 function compileCustomPayload(payload: ImportedBadgePayload): BadgeRule[] {
   return payload.filters
     .filter((f) => f.isEnabled && f.name.trim() && f.pattern.trim())
@@ -57,20 +95,22 @@ function compileCustomPayload(payload: ImportedBadgePayload): BadgeRule[] {
       pattern: toJsRegex(f.pattern),
       badge: {
         label: f.name,
-        color: f.tagColor || '#1A1A1A',
-        textColor: f.textColor || '#fff',
+        color: convertArgbToRgba(f.tagColor) || '#1A1A1A',
+        textColor: convertArgbToRgba(f.textColor) || '#fff',
         imageUrl: f.imageURL || undefined,
-        borderColor: f.borderColor || undefined,
+        borderColor: convertArgbToRgba(f.borderColor) || 'transparent',
       },
     }));
 }
 
 export function compileBadgeSources(sources: BadgeSource[]): BadgeRule[] {
-  const active = sources.find((s) => s.isActive);
-  if (active) {
-    return compileCustomPayload(active.payload);
+  const rules: BadgeRule[] = [];
+  for (const source of sources) {
+    if (source.isActive) {
+      rules.push(...compileCustomPayload(source.payload));
+    }
   }
-  return [];
+  return rules;
 }
 
 export function extractStreamBadges(
