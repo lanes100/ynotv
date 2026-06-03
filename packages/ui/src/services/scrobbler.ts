@@ -28,8 +28,6 @@ export type TraktCatalogType =
   | 'popular-shows'
   | 'watched-movies'
   | 'watched-shows'
-  | 'collected-movies'
-  | 'collected-shows'
   | 'anticipated-movies'
   | 'anticipated-shows';
 
@@ -49,8 +47,6 @@ const TRAKT_CATALOG_URLS: Record<TraktCatalogType, string> = {
   'popular-shows': `${TRAKT_API_URL}/shows/popular?limit=${TRAKT_PAGE_LIMIT}`,
   'watched-movies': `${TRAKT_API_URL}/movies/watched?limit=${TRAKT_PAGE_LIMIT}`,
   'watched-shows': `${TRAKT_API_URL}/shows/watched?limit=${TRAKT_PAGE_LIMIT}`,
-  'collected-movies': `${TRAKT_API_URL}/movies/collected?limit=${TRAKT_PAGE_LIMIT}`,
-  'collected-shows': `${TRAKT_API_URL}/shows/collected?limit=${TRAKT_PAGE_LIMIT}`,
   'anticipated-movies': `${TRAKT_API_URL}/movies/anticipated?limit=${TRAKT_PAGE_LIMIT}`,
   'anticipated-shows': `${TRAKT_API_URL}/shows/anticipated?limit=${TRAKT_PAGE_LIMIT}`,
 };
@@ -62,7 +58,6 @@ const WRAPPED_CATALOGS = new Set<TraktCatalogType>([
   'collection-movies', 'collection-shows',
   'trending-movies', 'trending-shows',
   'watched-movies', 'watched-shows',
-  'collected-movies', 'collected-shows',
   'anticipated-movies', 'anticipated-shows',
 ]);
 
@@ -87,8 +82,6 @@ export const TRAKT_CATALOG_DEFINITIONS: TraktCatalogDefinition[] = [
   { type: 'popular-shows', label: 'Popular Shows', description: 'All-time popular shows on Trakt', group: 'Trending & Popular' },
   { type: 'watched-movies', label: 'Most Watched Movies', description: 'Most watched movies this week on Trakt', group: 'Trending & Popular' },
   { type: 'watched-shows', label: 'Most Watched Shows', description: 'Most watched shows this week on Trakt', group: 'Trending & Popular' },
-  { type: 'collected-movies', label: 'Most Collected Movies', description: 'Most collected movies on Trakt', group: 'Trending & Popular' },
-  { type: 'collected-shows', label: 'Most Collected Shows', description: 'Most collected shows on Trakt', group: 'Trending & Popular' },
   { type: 'anticipated-movies', label: 'Most Anticipated Movies', description: 'Most anticipated upcoming movies on Trakt', group: 'Trending & Popular' },
   { type: 'anticipated-shows', label: 'Most Anticipated Shows', description: 'Most anticipated upcoming shows on Trakt', group: 'Trending & Popular' },
 ];
