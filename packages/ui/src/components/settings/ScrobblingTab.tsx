@@ -7,7 +7,6 @@ import './PlaybackTab.css';
 
 export function ScrobblingTab() {
   const [traktScrobbleEnabled, setTraktScrobbleEnabled] = useState(false);
-  const [traktWatchlistEnabled, setTraktWatchlistEnabled] = useState(false);
   const [traktLinked, setTraktLinked] = useState(false);
 
   const [simklScrobbleEnabled, setSimklScrobbleEnabled] = useState(false);
@@ -65,7 +64,6 @@ export function ScrobblingTab() {
       const s = res.data || {};
 
       setTraktScrobbleEnabled(s.traktScrobbleEnabled ?? false);
-      setTraktWatchlistEnabled(s.traktWatchlistEnabled ?? true);
       setTraktLinked(!!s.traktAccessToken);
 
       // Migrate legacy traktWatchlistEnabled to new catalog settings
@@ -173,7 +171,7 @@ export function ScrobblingTab() {
       nextOrder = [...nextOrder, type];
       setCatalogOrder(nextOrder);
     }
-    await handleSettingUpdate({ traktCatalogsEnabled: next, traktWatchlistEnabled: next['watchlist'] !== false, traktCatalogOrder: nextOrder });
+    await handleSettingUpdate({ traktCatalogsEnabled: next, traktCatalogOrder: nextOrder });
     bumpRefreshToken(Date.now());
   };
 
@@ -441,25 +439,6 @@ export function ScrobblingTab() {
                   type="checkbox"
                   checked={traktScrobbleEnabled}
                   onChange={(e) => handleSettingUpdate({ traktScrobbleEnabled: e.target.checked })}
-                />
-                <span className="toggle-slider"></span>
-              </label>
-            </div>
-
-            <div className="timeshift-toggle-row" style={{ marginBottom: '16px' }}>
-              <div className="timeshift-toggle-info">
-                <span className="timeshift-toggle-label">Show Trakt Watchlist in Strem</span>
-                <span className="timeshift-toggle-sub">Display your Trakt watchlist as a catalog row on the Stremio home page</span>
-              </div>
-              <label className="toggle-switch">
-                <input
-                  type="checkbox"
-                  checked={traktWatchlistEnabled}
-                  onChange={(e) => {
-                    handleSettingUpdate({ traktWatchlistEnabled: e.target.checked });
-                    handleCatalogToggle('watchlist', e.target.checked);
-                    bumpRefreshToken(Date.now());
-                  }}
                 />
                 <span className="toggle-slider"></span>
               </label>

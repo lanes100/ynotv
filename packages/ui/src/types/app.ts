@@ -104,7 +104,6 @@ export interface AppSettings {
     traktTokenExpiresAt?: number | null;
     traktScrobbleEnabled?: boolean;
     traktSyncEnabled?: boolean;
-    traktWatchlistEnabled?: boolean;
     traktCatalogsEnabled?: Record<string, boolean>;
     traktCatalogOrder?: string[];
     traktCatalogsBeforeAddon?: boolean;

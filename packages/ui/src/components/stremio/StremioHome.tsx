@@ -92,11 +92,6 @@ export function StremioHome({ addons, onItemClick }: StremioHomeProps) {
         const rows: CloudCatalogRow[] = [];
         if (s.traktEnabled && s.traktAccessToken) {
           const enabledCatalogs: Record<string, boolean> = s.traktCatalogsEnabled || {};
-          // Legacy migration: if traktCatalogsEnabled is undefined but old setting exists
-          if (s.traktCatalogsEnabled === undefined && s.traktWatchlistEnabled !== undefined) {
-            enabledCatalogs.watchlist = s.traktWatchlistEnabled !== false;
-          }
-
           const enabledDefs = TRAKT_CATALOG_DEFINITIONS.filter(
             (def) => enabledCatalogs[def.type] === true
           );
