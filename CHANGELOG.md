@@ -1,5 +1,23 @@
 # Changelog
 
+## v2.0.1
+
+### Added
+
+- **Dedicated World Cup tab** - A World Cup tab has been added to the Sports page, including support for live and upcoming match listings.
+- **Trakt catalog import** - Your Trakt catalogs can now be imported directly into Strem. Manage catalogs under `Settings → Trakt`. The `Resume Watching` catalog can be used to sync watch progress from Trakt.
+- **Xtream Code autofill** - Pasting an Xtream Code M3U link into the source field will now automatically populate the relevant credentials.
+- **Nuvio/Fusion badge support** - Custom Badge Filters used for Nuvio/Fusion can now be used in Strem links display. Add Badge configs in `Settings → Strem`
+- **Search history** - Live TV and Strem search queries are now saved upon pressing Enter, allowing previous searches to be quickly recalled.
+- **Strem add-on link filter** - Add-on links in Strem can now be filtered by addon for easier navigation.
+
+### Fixed
+
+- **LiveTV Metadata badges not appearing on slow streams** - Badges will now display correctly regardless of stream load time.
+- **Cinemeta Series Discover page not loading** - Resolved an issue preventing the Cinemeta Series Discover page from displaying correctly.
+- **EPG preview resizing at high display scaling** - The EPG preview will no longer resize unexpectedly when display scaling is set to a high amount.
+- **Error overlay persisting after stream recovery** - The error overlay will now dismiss correctly once a stream successfully starts following an error.
+
 ## v2.0.0
 
 ### Added
