@@ -251,7 +251,9 @@ export function ChannelPanel({
 
   const [previewHeightPx, setPreviewHeightPx] = useState(() => {
     const saved = localStorage.getItem('guidePreviewHeight');
-    return saved ? parseInt(saved) : 360; // default 360px
+    if (saved) return parseInt(saved);
+    const vh = typeof window !== 'undefined' ? window.innerHeight : 1080;
+    return Math.min(360, Math.round(vh * 0.35));
   });
 
   // Channel column width state
@@ -990,6 +992,9 @@ export function ChannelPanel({
         newPct = Math.max(20, Math.min(newPct, 80));
 
         previewPaneRef.current.style.flex = `0 0 ${newPct}%`;
+        if (previewPaneRef.current.parentElement) {
+          previewPaneRef.current.parentElement.style.setProperty('--preview-width', `${newPct}%`);
+        }
       }
     };
 
@@ -1037,6 +1042,9 @@ export function ChannelPanel({
       localStorage.setItem('guidePreviewWidth', '42');
       if (previewPaneRef.current) {
         previewPaneRef.current.style.flex = `0 0 42%`;
+        if (previewPaneRef.current.parentElement) {
+          previewPaneRef.current.parentElement.style.setProperty('--preview-width', '42%');
+        }
       }
     }
   }, [epgView]);
@@ -1364,7 +1372,10 @@ export function ChannelPanel({
       className={`guide-panel ${visible ? 'visible' : 'hidden'} ${categoryStripOpen ? 'with-categories' : ''}`}
     >
       {/* Top Section: Preview & Info */}
-      <div className={`guide-top-section ${epgView === 'alternate' ? 'alternate-view' : ''}`}>
+      <div 
+        className={`guide-top-section ${epgView === 'alternate' ? 'alternate-view' : ''}`}
+        style={epgView !== 'alternate' ? { '--preview-width': `${previewWidthPct}%` } as React.CSSProperties : undefined}
+      >
         <div
           className="guide-preview-pane"
           ref={previewPaneRef}

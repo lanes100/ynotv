@@ -4,9 +4,7 @@
  * These hooks provide Netflix-style curated lists by matching
  * TMDB trending/popular lists against local Xtream content.
  *
- * Uses WithCache functions that:
- * - Use direct API when access token is available
- * - Fall back to GitHub-cached lists when no token
+ * Requires a TMDB access token to work (returns empty arrays otherwise).
  *
  * MATCHING STRATEGY:
  * - First checks for already-matched content (by tmdb_id index)
@@ -34,8 +32,6 @@ import {
   getTvGenresWithCache,
   discoverMoviesByGenreWithCache,
   discoverTvShowsByGenreWithCache,
-  getCachedMovieGenreCounts,
-  getCachedTvGenreCounts,
   type TmdbMovieResult,
   type TmdbTvResult,
   type TmdbGenre,
@@ -327,7 +323,7 @@ export function useLocalPopularMovies(limit = 20) {
 }
 
 /**
- * Get movies by genre (uses cache fallback when no access token)
+ * Get movies by genre (requires access token)
  */
 export function useMoviesByGenre(accessToken: string | null, genreId: number | null) {
   const [tmdbMovies, setTmdbMovies] = useState<TmdbMovieResult[]>([]);
@@ -410,7 +406,7 @@ export function useLocalPopularSeries(limit = 20) {
 }
 
 /**
- * Get series by genre (uses cache fallback when no access token)
+ * Get series by genre (requires access token)
  */
 export function useSeriesByGenre(accessToken: string | null, genreId: number | null) {
   const [tmdbSeries, setTmdbSeries] = useState<TmdbTvResult[]>([]);
@@ -472,57 +468,7 @@ export function useTvGenres(accessToken: string | null) {
   return { genres, loading };
 }
 
-/**
- * Get cached movie counts per genre (for settings UI)
- * Used to show which genres have content in cache when no API key
- */
-export function useCachedMovieGenreCounts(hasApiKey: boolean) {
-  const [counts, setCounts] = useState<Map<number, number>>(new Map());
-  const [loading, setLoading] = useState(!hasApiKey);
 
-  useEffect(() => {
-    // Only fetch counts when no API key (cache mode)
-    if (hasApiKey) {
-      setCounts(new Map());
-      setLoading(false);
-      return;
-    }
-
-    setLoading(true);
-    getCachedMovieGenreCounts()
-      .then(setCounts)
-      .catch(console.error)
-      .finally(() => setLoading(false));
-  }, [hasApiKey]);
-
-  return { counts, loading };
-}
-
-/**
- * Get cached TV show counts per genre (for settings UI)
- * Used to show which genres have content in cache when no API key
- */
-export function useCachedTvGenreCounts(hasApiKey: boolean) {
-  const [counts, setCounts] = useState<Map<number, number>>(new Map());
-  const [loading, setLoading] = useState(!hasApiKey);
-
-  useEffect(() => {
-    // Only fetch counts when no API key (cache mode)
-    if (hasApiKey) {
-      setCounts(new Map());
-      setLoading(false);
-      return;
-    }
-
-    setLoading(true);
-    getCachedTvGenreCounts()
-      .then(setCounts)
-      .catch(console.error)
-      .finally(() => setLoading(false));
-  }, [hasApiKey]);
-
-  return { counts, loading };
-}
 
 // ===========================================================================
 // Multi-Genre Hooks (pre-fetch all genres at once)

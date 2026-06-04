@@ -388,15 +388,17 @@ import {
 
 /**
  * Match all unmatched movies using TMDB lists (Trending, Popular, Top Rated)
- * No bulk export download required - uses small API responses
+ * Requires a TMDB access token to perform matching.
  */
-export async function matchAllMoviesLazy(): Promise<number> {
+export async function matchAllMoviesLazy(accessToken?: string | null): Promise<number> {
+  if (!accessToken) return 0;
+
   console.log('[Lazy Match] Starting movie matching...');
 
   const lists = await Promise.all([
-    getTrendingMoviesWithCache(null, 'week'),
-    getPopularMoviesWithCache(null),
-    getTopRatedMoviesWithCache(null),
+    getTrendingMoviesWithCache(accessToken, 'week'),
+    getPopularMoviesWithCache(accessToken),
+    getTopRatedMoviesWithCache(accessToken),
   ]);
 
   const allResults = lists.flat();
@@ -414,15 +416,17 @@ export async function matchAllMoviesLazy(): Promise<number> {
 
 /**
  * Match all unmatched series using TMDB lists (Trending, Popular, Top Rated)
- * No bulk export download required - uses small API responses
+ * Requires a TMDB access token to perform matching.
  */
-export async function matchAllSeriesLazy(): Promise<number> {
+export async function matchAllSeriesLazy(accessToken?: string | null): Promise<number> {
+  if (!accessToken) return 0;
+
   console.log('[Lazy Match] Starting series matching...');
 
   const lists = await Promise.all([
-    getTrendingTvShowsWithCache(null, 'week'),
-    getPopularTvShowsWithCache(null),
-    getTopRatedTvShowsWithCache(null),
+    getTrendingTvShowsWithCache(accessToken, 'week'),
+    getPopularTvShowsWithCache(accessToken),
+    getTopRatedTvShowsWithCache(accessToken),
   ]);
 
   const allResults = lists.flat();

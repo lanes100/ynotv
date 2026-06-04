@@ -14,6 +14,7 @@ import { FavoritesTab } from './FavoritesTab';
 import { NewsTab } from './NewsTab';
 import { LeadersTab } from './LeadersTab';
 import { SettingsTab } from './SettingsTab';
+import { WorldCupTab } from './WorldCupTab';
 import { SportsScoresOverlay } from './SportsScoresOverlay';
 import './SportsHub.css';
 
@@ -400,6 +401,16 @@ export function SportsHub({
             <line x1="3" y1="10" x2="21" y2="10" />
           </svg>
         );
+      case 'worldcup':
+        return (
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" />
+            <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" />
+            <path d="M4 22h16" />
+            <path d="M10 14.66V17c0 .55-.45 1-1 1H4v2h16v-2h-5c-.55 0-1-.45-1-1v-2.34" />
+            <path d="M12 2a6 6 0 0 1 6 6v5a6 6 0 0 1-6 6 6 6 0 0 1-6-6V8a6 6 0 0 1 6-6z" />
+          </svg>
+        );
       case 'leagues':
         return (
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -448,6 +459,8 @@ export function SportsHub({
         return 'Live Now';
       case 'upcoming':
         return 'Upcoming';
+      case 'worldcup':
+        return 'World Cup 2026';
       case 'leagues':
         return 'Leagues';
       case 'favorites':
@@ -468,6 +481,8 @@ export function SportsHub({
           return <LiveScoresTab onSearchChannels={handleSearchChannels} onPlayChannel={onPlayChannel} />;
         case 'upcoming':
           return <UpcomingTab onSearchChannels={handleSearchChannels} onPlayChannel={onPlayChannel} />;
+        case 'worldcup':
+          return <WorldCupTab onSearchChannels={handleSearchChannels} onPlayChannel={onPlayChannel} />;
         case 'leagues':
           return <LeaguesTab onSearchChannels={handleSearchChannels} onPlayChannel={onPlayChannel} />;
         case 'favorites':
@@ -526,7 +541,7 @@ export function SportsHub({
           </div>
 
           <nav className="sports-nav">
-            {(['live', 'upcoming', 'leagues', 'favorites', 'news', 'leaders', 'settings'] as SportsTabId[]).map((tab) => (
+            {(['live', 'upcoming', 'worldcup', 'leagues', 'favorites', 'news', 'leaders', 'settings'] as SportsTabId[]).map((tab) => (
               <button
                 key={tab}
                 className={`sports-nav-item ${activeTab === tab ? 'active' : ''}`}

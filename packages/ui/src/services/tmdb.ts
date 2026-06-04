@@ -4,8 +4,7 @@
  * Wrapper around tmdb-ts for fetching movie/series metadata,
  * trending lists, and search functionality.
  *
- * Uses "accessToken" (TMDB API Read Access Token) for authentication,
- * with GitHub-cached fallback for users without their own token.
+ * Uses "accessToken" (TMDB API Read Access Token) for authentication.
  */
 
 import { TMDB, type Video, type Recommendation, type TvRecommendation } from 'tmdb-ts';
@@ -395,309 +394,80 @@ export async function validateAccessToken(accessToken: string): Promise<boolean>
 }
 
 // ===========================================================================
-// GitHub Cache (fallback for users without access token)
-// ===========================================================================
-
-// URL to the raw cached TMDB data from GitHub (updated daily by GitHub Actions)
-const GITHUB_CACHE_URL = 'https://raw.githubusercontent.com/thesubtleties/sbtlTV-tmdb-cache/main/data/tmdb-cache.json';
-
-// Cache the fetched data in memory
-let cachedTmdbData: TmdbCacheData | null = null;
-let cacheLastFetched: number = 0;
-const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour in-memory cache
-
-interface TmdbCacheData {
-  generated_at: string;
-  movies: {
-    trending_day?: TmdbMovieResult[];
-    trending_week?: TmdbMovieResult[];
-    popular?: TmdbMovieResult[];
-    top_rated?: TmdbMovieResult[];
-    now_playing?: TmdbMovieResult[];
-    upcoming?: TmdbMovieResult[];
-    genres?: TmdbGenre[];
-  };
-  tv: {
-    trending_day?: TmdbTvResult[];
-    trending_week?: TmdbTvResult[];
-    popular?: TmdbTvResult[];
-    top_rated?: TmdbTvResult[];
-    on_the_air?: TmdbTvResult[];
-    airing_today?: TmdbTvResult[];
-    genres?: TmdbGenre[];
-  };
-}
-
-/**
- * Fetch cached TMDB data from GitHub
- * Returns null if cache is unavailable
- */
-async function fetchCachedTmdbData(): Promise<TmdbCacheData | null> {
-  // Return in-memory cache if still valid
-  if (cachedTmdbData && Date.now() - cacheLastFetched < CACHE_TTL_MS) {
-    return cachedTmdbData;
-  }
-
-  try {
-    const response = await fetch(GITHUB_CACHE_URL);
-    if (!response.ok) {
-      console.warn('[TMDB Cache] GitHub cache not available:', response.status);
-      return null;
-    }
-    cachedTmdbData = await response.json();
-    cacheLastFetched = Date.now();
-    console.log('[TMDB Cache] Loaded from GitHub, generated:', cachedTmdbData?.generated_at);
-    return cachedTmdbData;
-  } catch (err) {
-    console.warn('[TMDB Cache] Failed to fetch from GitHub:', err);
-    return null;
-  }
-}
-
-// ===========================================================================
-// Factory for cache-fallback functions
-// ===========================================================================
-
-/**
- * Creates a function that tries the cache first (if no access token),
- * then falls back to the direct API.
- */
-function createCacheFallback<T>(
-  cacheGetter: (cache: TmdbCacheData | null) => T[] | undefined,
-  apiFn: (accessToken: string) => Promise<T[]>
-): (accessToken?: string | null) => Promise<T[]> {
-  return async (accessToken?: string | null): Promise<T[]> => {
-    if (!accessToken) {
-      const cache = await fetchCachedTmdbData();
-      return cacheGetter(cache) ?? [];
-    }
-    return apiFn(accessToken);
-  };
-}
-
-// ===========================================================================
-// Cache-enabled endpoints (use these in hooks)
+// Cache-enabled endpoints (direct API wrappers)
 // ===========================================================================
 
 // Movies
-export const getTrendingMoviesWithCache = (accessToken?: string | null, timeWindow: 'day' | 'week' = 'week') =>
-  createCacheFallback(
-    (c) => timeWindow === 'day' ? c?.movies.trending_day : c?.movies.trending_week,
-    (token) => getTrendingMovies(token, timeWindow)
-  )(accessToken);
+export const getTrendingMoviesWithCache = (accessToken?: string | null, timeWindow: 'day' | 'week' = 'week'): Promise<TmdbMovieResult[]> => {
+  if (!accessToken) return Promise.resolve([]);
+  return getTrendingMovies(accessToken, timeWindow);
+};
 
-export const getPopularMoviesWithCache = createCacheFallback(
-  (c) => c?.movies.popular,
-  getPopularMovies
-);
+export const getPopularMoviesWithCache = (accessToken?: string | null): Promise<TmdbMovieResult[]> => {
+  if (!accessToken) return Promise.resolve([]);
+  return getPopularMovies(accessToken);
+};
 
-export const getTopRatedMoviesWithCache = createCacheFallback(
-  (c) => c?.movies.top_rated,
-  getTopRatedMovies
-);
+export const getTopRatedMoviesWithCache = (accessToken?: string | null): Promise<TmdbMovieResult[]> => {
+  if (!accessToken) return Promise.resolve([]);
+  return getTopRatedMovies(accessToken);
+};
 
-export const getNowPlayingMoviesWithCache = createCacheFallback(
-  (c) => c?.movies.now_playing,
-  getNowPlayingMovies
-);
+export const getNowPlayingMoviesWithCache = (accessToken?: string | null): Promise<TmdbMovieResult[]> => {
+  if (!accessToken) return Promise.resolve([]);
+  return getNowPlayingMovies(accessToken);
+};
 
-export const getUpcomingMoviesWithCache = createCacheFallback(
-  (c) => c?.movies.upcoming,
-  getUpcomingMovies
-);
+export const getUpcomingMoviesWithCache = (accessToken?: string | null): Promise<TmdbMovieResult[]> => {
+  if (!accessToken) return Promise.resolve([]);
+  return getUpcomingMovies(accessToken);
+};
 
-export const getMovieGenresWithCache = createCacheFallback(
-  (c) => c?.movies.genres,
-  getMovieGenres
-);
+export const getMovieGenresWithCache = (accessToken?: string | null): Promise<TmdbGenre[]> => {
+  if (!accessToken) return Promise.resolve([]);
+  return getMovieGenres(accessToken);
+};
 
 // TV Shows
-export const getTrendingTvShowsWithCache = (accessToken?: string | null, timeWindow: 'day' | 'week' = 'week') =>
-  createCacheFallback(
-    (c) => timeWindow === 'day' ? c?.tv.trending_day : c?.tv.trending_week,
-    (token) => getTrendingTvShows(token, timeWindow)
-  )(accessToken);
+export const getTrendingTvShowsWithCache = (accessToken?: string | null, timeWindow: 'day' | 'week' = 'week'): Promise<TmdbTvResult[]> => {
+  if (!accessToken) return Promise.resolve([]);
+  return getTrendingTvShows(accessToken, timeWindow);
+};
 
-export const getPopularTvShowsWithCache = createCacheFallback(
-  (c) => c?.tv.popular,
-  getPopularTvShows
-);
+export const getPopularTvShowsWithCache = (accessToken?: string | null): Promise<TmdbTvResult[]> => {
+  if (!accessToken) return Promise.resolve([]);
+  return getPopularTvShows(accessToken);
+};
 
-export const getTopRatedTvShowsWithCache = createCacheFallback(
-  (c) => c?.tv.top_rated,
-  getTopRatedTvShows
-);
+export const getTopRatedTvShowsWithCache = (accessToken?: string | null): Promise<TmdbTvResult[]> => {
+  if (!accessToken) return Promise.resolve([]);
+  return getTopRatedTvShows(accessToken);
+};
 
-export const getOnTheAirTvShowsWithCache = createCacheFallback(
-  (c) => c?.tv.on_the_air,
-  getOnTheAirTvShows
-);
+export const getOnTheAirTvShowsWithCache = (accessToken?: string | null): Promise<TmdbTvResult[]> => {
+  if (!accessToken) return Promise.resolve([]);
+  return getOnTheAirTvShows(accessToken);
+};
 
-export const getAiringTodayTvShowsWithCache = createCacheFallback(
-  (c) => c?.tv.airing_today,
-  getAiringTodayTvShows
-);
+export const getAiringTodayTvShowsWithCache = (accessToken?: string | null): Promise<TmdbTvResult[]> => {
+  if (!accessToken) return Promise.resolve([]);
+  return getAiringTodayTvShows(accessToken);
+};
 
-export const getTvGenresWithCache = createCacheFallback(
-  (c) => c?.tv.genres,
-  getTvGenres
-);
+export const getTvGenresWithCache = (accessToken?: string | null): Promise<TmdbGenre[]> => {
+  if (!accessToken) return Promise.resolve([]);
+  return getTvGenres(accessToken);
+};
 
-// ===========================================================================
-// Genre Discovery with Cache Fallback
-// ===========================================================================
+export const discoverMoviesByGenreWithCache = (accessToken?: string | null, genreId?: number): Promise<TmdbMovieResult[]> => {
+  if (!accessToken || !genreId) return Promise.resolve([]);
+  return discoverMoviesByGenre(accessToken, genreId);
+};
 
-/**
- * Get movies by genre, with cache fallback.
- * - With API key: uses TMDB discover API (more results)
- * - Without API key: filters cached movies by genre_ids
- */
-export async function discoverMoviesByGenreWithCache(
-  accessToken: string | null | undefined,
-  genreId: number
-): Promise<TmdbMovieResult[]> {
-  if (accessToken) {
-    return discoverMoviesByGenre(accessToken, genreId);
-  }
-
-  // Fallback: filter cached movies by genre
-  const cache = await fetchCachedTmdbData();
-  if (!cache) return [];
-
-  // Collect all movies from cache lists, dedupe by ID
-  const allMovies = [
-    ...(cache.movies.trending_day || []),
-    ...(cache.movies.trending_week || []),
-    ...(cache.movies.popular || []),
-    ...(cache.movies.top_rated || []),
-    ...(cache.movies.now_playing || []),
-    ...(cache.movies.upcoming || []),
-  ];
-
-  const seen = new Set<number>();
-  const uniqueMovies = allMovies.filter((m) => {
-    if (seen.has(m.id)) return false;
-    seen.add(m.id);
-    return true;
-  });
-
-  // Filter by genre and sort by popularity
-  return uniqueMovies
-    .filter((m) => m.genre_ids?.includes(genreId))
-    .sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
-}
-
-/**
- * Get TV shows by genre, with cache fallback.
- * - With API key: uses TMDB discover API (more results)
- * - Without API key: filters cached TV shows by genre_ids
- */
-export async function discoverTvShowsByGenreWithCache(
-  accessToken: string | null | undefined,
-  genreId: number
-): Promise<TmdbTvResult[]> {
-  if (accessToken) {
-    return discoverTvShowsByGenre(accessToken, genreId);
-  }
-
-  // Fallback: filter cached TV shows by genre
-  const cache = await fetchCachedTmdbData();
-  if (!cache) return [];
-
-  // Collect all TV shows from cache lists, dedupe by ID
-  const allTvShows = [
-    ...(cache.tv.trending_day || []),
-    ...(cache.tv.trending_week || []),
-    ...(cache.tv.popular || []),
-    ...(cache.tv.top_rated || []),
-    ...(cache.tv.on_the_air || []),
-    ...(cache.tv.airing_today || []),
-  ];
-
-  const seen = new Set<number>();
-  const uniqueTvShows = allTvShows.filter((s) => {
-    if (seen.has(s.id)) return false;
-    seen.add(s.id);
-    return true;
-  });
-
-  // Filter by genre and sort by popularity
-  return uniqueTvShows
-    .filter((s) => s.genre_ids?.includes(genreId))
-    .sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
-}
-
-/**
- * Get count of cached movies per genre (for showing availability in settings)
- * Returns a Map of genreId -> count
- */
-export async function getCachedMovieGenreCounts(): Promise<Map<number, number>> {
-  const cache = await fetchCachedTmdbData();
-  if (!cache) return new Map();
-
-  // Collect all movies from cache lists, dedupe by ID
-  const allMovies = [
-    ...(cache.movies.trending_day || []),
-    ...(cache.movies.trending_week || []),
-    ...(cache.movies.popular || []),
-    ...(cache.movies.top_rated || []),
-    ...(cache.movies.now_playing || []),
-    ...(cache.movies.upcoming || []),
-  ];
-
-  const seen = new Set<number>();
-  const uniqueMovies = allMovies.filter((m) => {
-    if (seen.has(m.id)) return false;
-    seen.add(m.id);
-    return true;
-  });
-
-  // Count movies per genre
-  const counts = new Map<number, number>();
-  uniqueMovies.forEach((m) => {
-    m.genre_ids?.forEach((genreId) => {
-      counts.set(genreId, (counts.get(genreId) || 0) + 1);
-    });
-  });
-
-  return counts;
-}
-
-/**
- * Get count of cached TV shows per genre (for showing availability in settings)
- * Returns a Map of genreId -> count
- */
-export async function getCachedTvGenreCounts(): Promise<Map<number, number>> {
-  const cache = await fetchCachedTmdbData();
-  if (!cache) return new Map();
-
-  // Collect all TV shows from cache lists, dedupe by ID
-  const allTvShows = [
-    ...(cache.tv.trending_day || []),
-    ...(cache.tv.trending_week || []),
-    ...(cache.tv.popular || []),
-    ...(cache.tv.top_rated || []),
-    ...(cache.tv.on_the_air || []),
-    ...(cache.tv.airing_today || []),
-  ];
-
-  const seen = new Set<number>();
-  const uniqueTvShows = allTvShows.filter((s) => {
-    if (seen.has(s.id)) return false;
-    seen.add(s.id);
-    return true;
-  });
-
-  // Count TV shows per genre
-  const counts = new Map<number, number>();
-  uniqueTvShows.forEach((s) => {
-    s.genre_ids?.forEach((genreId) => {
-      counts.set(genreId, (counts.get(genreId) || 0) + 1);
-    });
-  });
-
-  return counts;
-}
+export const discoverTvShowsByGenreWithCache = (accessToken?: string | null, genreId?: number): Promise<TmdbTvResult[]> => {
+  if (!accessToken || !genreId) return Promise.resolve([]);
+  return discoverTvShowsByGenre(accessToken, genreId);
+};
 
 // ===========================================================================
 // Recommendations endpoints

@@ -23,6 +23,7 @@ export const ALL_LEAGUES: LeagueConfig[] = [
   
   { id: 'nhl', name: 'NHL', sport: 'hockey', category: 'hockey' },
   
+  { id: 'soccer-fifa.world', name: 'FIFA World Cup', sport: 'soccer', category: 'soccer' },
   { id: 'soccer-eng.1', name: 'Premier League', sport: 'soccer', category: 'soccer' },
   { id: 'soccer-eng.2', name: 'Championship', sport: 'soccer', category: 'soccer' },
   { id: 'soccer-esp.1', name: 'La Liga', sport: 'soccer', category: 'soccer' },
@@ -59,8 +60,8 @@ export const ALL_LEAGUES: LeagueConfig[] = [
 
 // Note: DEFAULT_LIVE_LEAGUES is imported from '../services/sports/config'
 // These are local defaults for other sections:
-export const DEFAULT_UPCOMING_LEAGUES = ['nfl', 'college-football', 'nba', 'mens-college-basketball', 'mlb', 'nhl', 'soccer-eng.1', 'soccer-esp.1', 'soccer-ger.1', 'soccer-ita.1', 'soccer-uefa.champions', 'soccer-usa.1', 'ufc', 'f1', 'rugby-180659', 'rugby-164205', 'rugby-267979', 'rugby-242041', 'rugby-270559', 'rugby-league-3'];
-export const DEFAULT_NEWS_LEAGUES = ['nfl', 'nba', 'mlb', 'nhl', 'soccer-eng.1'];
+export const DEFAULT_UPCOMING_LEAGUES = ['soccer-fifa.world', 'nfl', 'college-football', 'nba', 'mens-college-basketball', 'mlb', 'nhl', 'soccer-eng.1', 'soccer-esp.1', 'soccer-ger.1', 'soccer-ita.1', 'soccer-uefa.champions', 'soccer-usa.1', 'ufc', 'f1', 'rugby-180659', 'rugby-164205', 'rugby-267979', 'rugby-242041', 'rugby-270559', 'rugby-league-3'];
+export const DEFAULT_NEWS_LEAGUES = ['soccer-fifa.world', 'nfl', 'nba', 'mlb', 'nhl', 'soccer-eng.1'];
 
 interface SportsSettingsState {
   liveLeagues: string[];

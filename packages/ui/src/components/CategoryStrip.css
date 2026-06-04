@@ -602,3 +602,26 @@
   background: var(--bg-primary, #1a1a1a) !important;
   background-attachment: fixed !important;
 }
+
+/* ==========================================================================
+   RESPONSIVE SCALING FOR HIGH-DPI / SMALL VIEWPORTS
+   ========================================================================== */
+@media (max-height: 750px), (max-width: 1200px) {
+  .category-item {
+    padding: 6px 10px;
+  }
+  .category-name {
+    font-size: 12px !important;
+  }
+  .category-icon {
+    width: 16px !important;
+    height: 16px !important;
+  }
+  .category-source-header {
+    padding: 6px 10px;
+  }
+  .sidebar-section-header {
+    padding: 8px 10px 4px;
+    font-size: 0.58rem;
+  }
+}

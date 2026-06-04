@@ -26,6 +26,7 @@ export const SPORT_CONFIG: Record<string, SportConfig> = {
   'nhl': { sport: 'hockey', league: 'nhl', name: 'NHL', category: 'hockey' },
   
   // Soccer
+  'soccer-fifa.world': { sport: 'soccer', league: 'fifa.world', name: 'FIFA World Cup', category: 'soccer' },
   'soccer-eng.1': { sport: 'soccer', league: 'eng.1', name: 'Premier League', category: 'soccer' },
   'soccer-eng.2': { sport: 'soccer', league: 'eng.2', name: 'Championship', category: 'soccer' },
   'soccer-esp.1': { sport: 'soccer', league: 'esp.1', name: 'La Liga', category: 'soccer' },
@@ -67,6 +68,7 @@ export const SPORT_CONFIG: Record<string, SportConfig> = {
 };
 
 export const DEFAULT_LIVE_LEAGUES = [
+  'soccer-fifa.world',
   'nfl',
   'college-football',
   'nba',
@@ -82,6 +84,7 @@ export const DEFAULT_LIVE_LEAGUES = [
 ];
 
 export const DEFAULT_UPCOMING_LEAGUES = [
+  'soccer-fifa.world',
   'nfl',
   'college-football',
   'nba',

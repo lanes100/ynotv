@@ -1,5 +1,5 @@
 /**
- * Service interfaces for sbtlTV
+ * Service interfaces for ynoTV
  *
  * These interfaces define the contract between the UI layer and the data layer.
  * Different adapters can implement these:

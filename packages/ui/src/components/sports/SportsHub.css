@@ -1528,7 +1528,7 @@
 
 .sports-standings-groups {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
   gap: 24px;
 }
 
@@ -1550,7 +1550,7 @@
 
 .sports-standings-header {
   display: grid;
-  grid-template-columns: 40px 1fr 60px 60px 60px;
+  grid-template-columns: 35px 1fr 45px 45px 55px;
   padding: 12px 16px;
   background: var(--bg-primary, #0f0f0f);
   font-size: 12px;
@@ -1561,7 +1561,7 @@
 
 .sports-standings-row {
   display: grid;
-  grid-template-columns: 40px 1fr 60px 60px 60px;
+  grid-template-columns: 35px 1fr 45px 45px 55px;
   padding: 12px 16px;
   border-top: 1px solid var(--border-color, #2a2a2a);
   font-size: 14px;

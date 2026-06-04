@@ -1,5 +1,5 @@
 /**
- * Core data types for sbtlTV
+ * Core data types for ynoTV
  * Types based on Xtream Codes API standard
  */
 
@@ -279,7 +279,7 @@ export interface SportsBroadcastChannel {
   logo?: string;
 }
 
-export type SportsTabId = 'live' | 'upcoming' | 'leagues' | 'favorites' | 'news' | 'leaders' | 'settings';
+export type SportsTabId = 'live' | 'upcoming' | 'worldcup' | 'leagues' | 'favorites' | 'news' | 'leaders' | 'settings';
 
 // =============================================================================
 // Connection Mode (standalone vs server)

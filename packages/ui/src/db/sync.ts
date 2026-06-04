@@ -2710,11 +2710,20 @@ export async function syncAllVod(): Promise<Map<string, VodSyncResult>> {
 export async function enrichSourceMetadata(source?: Source, _force?: boolean) {
   startTmdbMatching();
   try {
+    let accessToken: string | null = null;
+    if (window.storage) {
+      const settingsResult = await window.storage.getSettings();
+      if (settingsResult.data && 'tmdbApiKey' in settingsResult.data) {
+        accessToken = (settingsResult.data as { tmdbApiKey?: string }).tmdbApiKey ?? null;
+      }
+    }
     const [movieCount, seriesCount] = await Promise.all([
-      matchAllMoviesLazy(),
-      matchAllSeriesLazy(),
+      matchAllMoviesLazy(accessToken),
+      matchAllSeriesLazy(accessToken),
     ]);
-    console.log(`[Lazy Match] Matched ${movieCount} movies, ${seriesCount} series`);
+    if (accessToken) {
+      console.log(`[Lazy Match] Matched ${movieCount} movies, ${seriesCount} series`);
+    }
   } catch (error) {
     console.error('[Lazy Match] Error:', error);
   } finally {

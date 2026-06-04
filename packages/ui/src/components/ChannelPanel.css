@@ -99,11 +99,13 @@
 
 /* Split Layout Styles */
 .guide-top-section {
+  position: relative;
   display: flex;
   /* Height determined by children (aspect-ratio) */
   width: 100%;
-  /* NO background here - video shows through preview pane */
+  /* NO background here - video shows through preview area */
   background: transparent;
+  --preview-width: 42%;
 }
 
 .guide-top-section.alternate-view {
@@ -111,7 +113,7 @@
 }
 
 .guide-preview-pane {
-  flex: 0 0 42%;
+  flex: 0 0 var(--preview-width, 42%);
   /* Video width increased by ~30% from 32% */
   aspect-ratio: 16 / 9;
   /* Fully transparent to show video - NO OVERLAY */
@@ -284,7 +286,11 @@
 }
 
 .guide-info-pane {
-  flex: 1;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  left: var(--preview-width, 42%);
   background: var(--bg-overlay, rgba(0, 0, 0, 0.95));
   backdrop-filter: blur(var(--glass-blur, 20px));
   -webkit-backdrop-filter: blur(var(--glass-blur, 20px));
@@ -307,8 +313,14 @@
 }
 
 .guide-top-section.alternate-view .guide-info-pane {
+  position: relative;
+  left: auto;
+  right: auto;
+  top: auto;
+  bottom: auto;
   flex: none;
   width: 100%;
+  height: auto;
   padding: 16px 24px;
 }
 
@@ -1553,4 +1565,105 @@
 
 .guide-preview-resizer.vertical:active .resizer-dot {
   transform: scaleY(0.9);
+}
+
+/* ==========================================================================
+   RESPONSIVE SCALING FOR HIGH-DPI / SMALL VIEWPORTS
+   ========================================================================== */
+@media (max-height: 750px), (max-width: 1200px) {
+  /* Header */
+  .guide-header {
+    padding: 6px 16px;
+  }
+  .guide-current-time {
+    font-size: 1.1rem;
+  }
+  .guide-category {
+    font-size: 0.85rem;
+  }
+  .guide-channel-count {
+    font-size: 0.75rem;
+  }
+  .guide-manage-channels-btn,
+  .guide-refresh-source-btn,
+  .guide-epg-shift-btn,
+  .guide-now-btn {
+    padding: 2px 8px;
+    font-size: 0.68rem;
+    gap: 4px;
+  }
+
+  /* Info Pane Details */
+  .guide-info-pane {
+    padding: 16px 20px;
+  }
+  .guide-program-title {
+    font-size: 20px !important;
+    margin-bottom: 4px;
+  }
+  .guide-program-meta {
+    margin-bottom: 8px;
+    font-size: 0.85rem;
+    gap: 10px;
+  }
+  .guide-program-description {
+    font-size: 13px !important;
+    line-height: 1.4;
+  }
+
+  /* Grid Layout and rows */
+  .guide-channel-row {
+    min-height: 44px;
+  }
+  .guide-time-header {
+    height: 26px;
+  }
+  .guide-time-header .guide-current-time-indicator::before {
+    border-top-width: 6px;
+    top: -2px;
+  }
+  .guide-time-marker {
+    font-size: 0.7rem;
+    padding-left: 6px;
+  }
+
+  /* Channel details in EPG grid rows */
+  .guide-channel-info {
+    padding: 4px 10px;
+    gap: 8px;
+  }
+  .guide-channel-logo {
+    width: 24px !important;
+    height: 24px !important;
+  }
+  .logo-placeholder {
+    font-size: 0.75rem !important;
+    width: 24px !important;
+    height: 24px !important;
+    line-height: 24px !important;
+  }
+  .guide-channel-name {
+    font-size: 0.8rem !important;
+  }
+  .guide-channel-number {
+    font-size: 0.7rem !important;
+  }
+  .channel-recording-indicator {
+    width: 6px;
+    height: 6px;
+  }
+
+  /* Program Block cell details */
+  .program-block {
+    top: 2px;
+    bottom: 2px;
+    padding: 2px 8px;
+  }
+  .program-block-title {
+    font-size: 0.75rem;
+  }
+  .program-block-desc {
+    font-size: 0.65rem;
+    margin-top: 1px;
+  }
 }
