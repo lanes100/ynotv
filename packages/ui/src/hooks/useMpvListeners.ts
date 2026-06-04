@@ -81,6 +81,11 @@ export function useMpvListeners(options: UseMpvListenersOptions = {}) {
                 if (status.muted !== undefined) setMuted(status.muted);
                 if (status.position !== undefined && !seekingRef.current) setPosition(status.position);
                 if (status.duration !== undefined) setDuration(status.duration);
+
+                // Clear stale playback errors once the stream is playing and making progress
+                if (status.playing && status.position !== undefined && status.position > 0) {
+                    setError(null);
+                }
             });
 
             const unlistenError = await listen('mpv-error', (e: any) => {
