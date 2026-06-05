@@ -1,5 +1,6 @@
 import { memo, useState } from 'react';
 import { FavoriteButton } from './FavoriteButton';
+import { MetadataBadge } from './MetadataBadge';
 import { ChannelContextMenu } from './ChannelContextMenu';
 import { ProgramContextMenu } from './ProgramContextMenu';
 import type { StoredChannel, StoredProgram } from '../db';
@@ -187,6 +188,9 @@ export const SearchResultRow = memo(function SearchResultRow({
               {channel.source_category_display || channel.source_name}
             </span>
           )}
+        </div>
+        <div className="channel-row-metadata">
+          <MetadataBadge streamId={channel.stream_id} variant="detailed" />
         </div>
       </div>
 
