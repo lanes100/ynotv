@@ -272,7 +272,8 @@ async function syncEpgFromUrl(
         : undefined,
       source.advanced_epg_matching,
       source.epg_timeshift_hours ?? 0,
-      true // clearExisting = true for main EPG
+      true, // clearExisting = true for main EPG
+      source.user_agent
     );
 
     debugLog(
@@ -361,6 +362,7 @@ async function syncEpgForSource(source: Source, channels: Channel[], epgUrl?: st
       advancedEpgMatching: source.advanced_epg_matching ?? false,
       timeshiftHours: source.epg_timeshift_hours ?? 0,
       clearExisting: true,
+      userAgent: source.user_agent || null,
     });
 
     console.log(`[EPG] Rust streaming parser COMPLETE:`);
@@ -628,7 +630,8 @@ async function syncAdditionalEpgUrls(
           : undefined,
         source.advanced_epg_matching,
         source.epg_timeshift_hours ?? 0,
-        false // clearExisting = false
+        false, // clearExisting = false
+        source.user_agent
       );
 
       console.log(`[EPG] Additional EPG ${i + 1}: Matched ${result.matched_programs}/${result.total_programs} programs. Inserted: ${result.inserted_programs}`);
@@ -778,7 +781,8 @@ export async function applyGlobalEpgToSource(
             : undefined,
           source.advanced_epg_matching,
           source.epg_timeshift_hours ?? 0,
-          false // clearExisting = false
+          false, // clearExisting = false
+          source.user_agent
         );
 
         console.log(`[EPG] Global EPG ${i + 1}: Matched ${result.matched_programs}/${result.total_programs} programs. Inserted: ${result.inserted_programs}`);
@@ -1050,6 +1054,16 @@ async function syncGlobalEpgLinkStandaloneImpl(
     });
   }
 
+  // Find first custom user agent among the linked sources
+  let userAgent: string | undefined = undefined;
+  for (const sourceId of epgLink.sourceIds) {
+    const source = sourceMap.get(sourceId);
+    if (source && source.user_agent?.trim()) {
+      userAgent = source.user_agent.trim();
+      break;
+    }
+  }
+
   if (sourceConfigs.length === 0) {
     console.log(`[Global EPG] No sources need EPG from ${epgLink.name}`);
     // Mark as synced so we don't retry every 10 min, but only for 30 min freshness window
@@ -1064,7 +1078,7 @@ async function syncGlobalEpgLinkStandaloneImpl(
   let syncSucceeded = false;
 
   try {
-    const results = await epgStreaming.streamParseEpgMulti(url, sourceConfigs);
+    const results = await epgStreaming.streamParseEpgMulti(url, sourceConfigs, userAgent);
     syncSucceeded = true;
 
     for (const result of results) {

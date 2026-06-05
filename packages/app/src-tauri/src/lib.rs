@@ -1569,8 +1569,9 @@ async fn stream_parse_epg(
     advanced_epg_matching: bool,
     timeshift_hours: Option<f64>,
     clear_existing: bool,
+    user_agent: Option<String>,
 ) -> Result<epg_streaming::EpgParseResult, String> {
-    epg_streaming::stream_parse_epg(app, &state.db, source_id, source_name, epg_url, channel_mappings, advanced_epg_matching, timeshift_hours.unwrap_or(0.0), clear_existing)
+    epg_streaming::stream_parse_epg(app, &state.db, source_id, source_name, epg_url, channel_mappings, advanced_epg_matching, timeshift_hours.unwrap_or(0.0), clear_existing, user_agent)
         .await
         .map_err(|e| format!("Stream parse EPG failed: {}", e))
 }
@@ -1599,8 +1600,9 @@ async fn stream_parse_epg_multi(
     state: tauri::State<'_, DvrState>,
     epg_url: String,
     source_configs: Vec<epg_streaming::SourceEpgConfig>,
+    user_agent: Option<String>,
 ) -> Result<Vec<epg_streaming::EpgParseResult>, String> {
-    epg_streaming::stream_parse_epg_multi(app, &state.db, epg_url, source_configs)
+    epg_streaming::stream_parse_epg_multi(app, &state.db, epg_url, source_configs, user_agent)
         .await
         .map_err(|e| format!("Stream parse EPG multi failed: {}", e))
 }

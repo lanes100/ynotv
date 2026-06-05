@@ -312,6 +312,7 @@ pub async fn stream_parse_epg<R: tauri::Runtime>(
     advanced_epg_matching: bool,
     timeshift_hours: f64,
     clear_existing: bool,
+    user_agent: Option<String>,
 ) -> Result<EpgParseResult> {
     let start_time = std::time::Instant::now();
     let src_ctx = format!("{} ({})", source_name, source_id);
@@ -328,12 +329,18 @@ pub async fn stream_parse_epg<R: tauri::Runtime>(
 
     // Create HTTP client with optimized settings and TLS configuration
     // Using native-tls to handle various certificate types including self-signed
+    let ua = match user_agent {
+        Some(ref u) if !u.trim().is_empty() => u.clone(),
+        _ => "ynoTVPlayer".to_string(),
+    };
+
     let client = reqwest::Client::builder()
         .connect_timeout(std::time::Duration::from_secs(30))
         .timeout(std::time::Duration::from_secs(300))
         .pool_max_idle_per_host(10)
         .danger_accept_invalid_certs(true)  // Accept self-signed/invalid certificates
         .danger_accept_invalid_hostnames(true)  // Accept invalid hostnames
+        .user_agent(ua)
         .build()
         .context("Failed to create HTTP client")?;
 
@@ -487,6 +494,7 @@ pub async fn stream_parse_epg_multi<R: tauri::Runtime>(
     db: &DvrDatabase,
     epg_url: String,
     source_configs: Vec<SourceEpgConfig>,
+    user_agent: Option<String>,
 ) -> Result<Vec<EpgParseResult>> {
     let start_time = std::time::Instant::now();
     let source_count = source_configs.len();
@@ -507,12 +515,18 @@ pub async fn stream_parse_epg_multi<R: tauri::Runtime>(
     let is_gzipped = epg_url.ends_with(".gz");
 
     // Create HTTP client
+    let ua = match user_agent {
+        Some(ref u) if !u.trim().is_empty() => u.clone(),
+        _ => "ynoTVPlayer".to_string(),
+    };
+
     let client = reqwest::Client::builder()
         .connect_timeout(std::time::Duration::from_secs(30))
         .timeout(std::time::Duration::from_secs(300))
         .pool_max_idle_per_host(10)
         .danger_accept_invalid_certs(true)
         .danger_accept_invalid_hostnames(true)
+        .user_agent(ua)
         .build()
         .context("Failed to create HTTP client")?;
 
