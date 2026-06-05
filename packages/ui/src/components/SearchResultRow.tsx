@@ -125,6 +125,9 @@ export const SearchResultRow = memo(function SearchResultRow({
     return aStart - bStart;
   });
 
+  // Determine if source info is shown (badge may overlap)
+  const hasSourceInfo = includeSourceInSearch && (channel.source_category_display || channel.source_name);
+
   // Limit to max 4 programs per row to prevent overflow
   const displayPrograms = sortedPrograms.slice(0, 4);
 
@@ -132,7 +135,7 @@ export const SearchResultRow = memo(function SearchResultRow({
     <div className={`guide-channel-row search-result-row ${isRecording ? 'is-recording' : ''} ${isCurrentlyPlaying ? 'currently-playing' : ''}`}>
       {/* Channel info column */}
       <div
-        className={`guide-channel-info ${isRecording ? 'is-recording' : ''}`}
+        className={`guide-channel-info ${isRecording ? 'is-recording' : ''} ${hasSourceInfo ? 'with-source' : ''}`}
         style={{
           width: 'var(--epg-channel-column-width, 264px)',
           minWidth: 'var(--epg-channel-column-width, 264px)',
@@ -178,7 +181,7 @@ export const SearchResultRow = memo(function SearchResultRow({
           {channel.channel_num && (
             <span className="guide-channel-number">Ch. {channel.channel_num}</span>
           )}
-          {includeSourceInSearch && (channel.source_category_display || channel.source_name) && (
+          {hasSourceInfo && (
             <span className="guide-channel-source" style={{
               fontSize: '0.75rem',
               color: 'rgba(255, 255, 255, 0.5)',

@@ -1145,6 +1145,10 @@
   background: rgba(255, 255, 255, 0.05);
 }
 
+.search-result-row .guide-channel-info.with-source {
+  padding-bottom: 28px;
+}
+
 .search-result-row.selected .guide-channel-info {
   background: color-mix(in srgb, var(--accent-primary, #00d4ff) 10%, transparent);
 }
