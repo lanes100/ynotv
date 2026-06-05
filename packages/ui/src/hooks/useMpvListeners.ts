@@ -42,6 +42,11 @@ export function useMpvListeners(options: UseMpvListenersOptions = {}) {
 
     const volumeDraggingRef = useRef(false);
     const seekingRef = useRef(false);
+    const initializedRef = useRef(false);
+    const timeshiftSettingsRef = useRef({
+        enabled: options.timeshiftEnabled,
+        cacheBytes: options.timeshiftCacheBytes,
+    });
 
     // When true, the mpv-http-error event is silenced.
     // Used for Stalker/MAC sources where auth headers cause false 401/403 errors
@@ -53,6 +58,12 @@ export function useMpvListeners(options: UseMpvListenersOptions = {}) {
     // Keep a ref to the onReady callback to avoid re-running the effect on identity changes
     const onReadyRef = useRef(options.onReady);
     useEffect(() => { onReadyRef.current = options.onReady; }, [options.onReady]);
+    useEffect(() => {
+        timeshiftSettingsRef.current = {
+            enabled: options.timeshiftEnabled,
+            cacheBytes: options.timeshiftCacheBytes,
+        };
+    }, [options.timeshiftEnabled, options.timeshiftCacheBytes]);
 
     useEffect(() => {
         if (!Bridge.isTauri) {
@@ -67,6 +78,7 @@ export function useMpvListeners(options: UseMpvListenersOptions = {}) {
         }
 
         let unlistenFns: (() => void)[] = [];
+        let disposed = false;
 
         import('@tauri-apps/api/event').then(async ({ listen }) => {
             const unlistenReady = await listen('mpv-ready', (e: any) => {
@@ -119,17 +131,27 @@ export function useMpvListeners(options: UseMpvListenersOptions = {}) {
                 unlistenHttpError, unlistenEndFileError,
             ];
 
+            if (disposed) {
+                unlistenFns.forEach(fn => fn());
+                return;
+            }
+
             // Init MPV after listeners are registered to catch the ready event
             // Pass timeshift settings from frontend state (already loaded from store)
-            Bridge.initMpv(options.timeshiftEnabled, options.timeshiftCacheBytes);
+            if (!initializedRef.current) {
+                initializedRef.current = true;
+                const { enabled, cacheBytes } = timeshiftSettingsRef.current;
+                Bridge.initMpv(enabled, cacheBytes);
+            }
         });
 
-        return () => { unlistenFns.forEach(fn => fn()); };
+        return () => {
+            disposed = true;
+            unlistenFns.forEach(fn => fn());
+        };
     }, [
         options.settingsLoaded,
-        options.timeshiftEnabled,
-        options.timeshiftCacheBytes
-    ]); // Re-run when settings load or change
+    ]); // Register listeners once after settings load; MPV init is intentionally one-shot.
 
     return {
         mpvReady, playing, volume, muted, position, duration, error,

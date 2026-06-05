@@ -21,6 +21,7 @@ async function getStore() {
 type UnlistenFn = () => void;
 let windowSyncListeners: { move?: UnlistenFn; resize?: UnlistenFn; focus?: UnlistenFn; close?: UnlistenFn } = {};
 let syncDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+let focusSyncTimer: ReturnType<typeof setTimeout> | null = null;
 
 // Callback for app close event
 let onAppCloseCallback: (() => void) | null = null;
@@ -54,6 +55,7 @@ export async function initWindowSync() {
     }
 
     console.log('[WindowSync] Initializing macOS window sync for MPV hole punch');
+    stopWindowSync();
 
     const appWindow = getCurrentWindow();
 
@@ -92,7 +94,11 @@ export async function initWindowSync() {
             if (focused) {
                 console.log('[WindowSync] Window focused, re-syncing MPV');
                 // Small delay to let macOS settle window ordering
-                setTimeout(() => {
+                if (focusSyncTimer) {
+                    clearTimeout(focusSyncTimer);
+                }
+                focusSyncTimer = setTimeout(() => {
+                    focusSyncTimer = null;
                     invoke('mpv_sync_window').catch(err => {
                         console.error('[WindowSync] Failed to sync on focus:', err);
                     });
@@ -106,10 +112,15 @@ export async function initWindowSync() {
 
     // Listen for close request to allow saving progress
     try {
-        windowSyncListeners.close = await appWindow.onCloseRequested((event) => {
+        windowSyncListeners.close = await appWindow.onCloseRequested(async (event) => {
             console.log('[WindowSync] Close requested - calling save callback');
             if (onAppCloseCallback) {
                 onAppCloseCallback();
+            }
+            try {
+                await flushDebouncedSettings();
+            } catch (err) {
+                console.error('[WindowSync] Failed to flush debounced settings on close:', err);
             }
             // Allow the window to close
         });
@@ -143,6 +154,10 @@ export function stopWindowSync() {
     if (syncDebounceTimer) {
         clearTimeout(syncDebounceTimer);
         syncDebounceTimer = null;
+    }
+    if (focusSyncTimer) {
+        clearTimeout(focusSyncTimer);
+        focusSyncTimer = null;
     }
 }
 
@@ -621,6 +636,39 @@ export async function applyAspectRatio(mode: AspectRatioMode) {
     }
 }
 
+// ── Debounced settings helper ────────────────────────────────────────────────
+// Coalesces frequent updateSettings calls (slider/text inputs) into a single write.
+let _debouncedSettingsTimer: ReturnType<typeof setTimeout> | null = null;
+let _pendingSettings: Record<string, any> = {};
+
+export function debouncedUpdateSettings(partial: Record<string, any>): void {
+  Object.assign(_pendingSettings, partial);
+  if (_debouncedSettingsTimer) clearTimeout(_debouncedSettingsTimer);
+  _debouncedSettingsTimer = setTimeout(async () => {
+    const updates = { ..._pendingSettings };
+    _pendingSettings = {};
+    _debouncedSettingsTimer = null;
+    try {
+      await Bridge.updateSettings(updates);
+    } catch (err) {
+      console.error('[DebouncedSettings] Failed to save:', err);
+    }
+  }, 300);
+}
+
+/** Flush any pending debounced settings immediately (e.g. before app close). */
+export async function flushDebouncedSettings(): Promise<void> {
+  if (_debouncedSettingsTimer) {
+    clearTimeout(_debouncedSettingsTimer);
+    _debouncedSettingsTimer = null;
+  }
+  const updates = { ..._pendingSettings };
+  _pendingSettings = {};
+  if (Object.keys(updates).length > 0) {
+    await Bridge.updateSettings(updates);
+  }
+}
+
 export function getAspectRatioLabel(mode: AspectRatioMode): string {
     switch (mode) {
         case '4:3': return '4:3';
@@ -641,6 +689,7 @@ export async function initPolyfills() {
         deleteSource: Bridge.deleteSource,
         getSettings: Bridge.getSettings,
         updateSettings: Bridge.updateSettings,
+        debouncedUpdateSettings: debouncedUpdateSettings,
         getSource: Bridge.getSource,
         saveJsonFile: Bridge.saveJsonFile,
         openJsonFile: Bridge.openJsonFile,
@@ -792,6 +841,11 @@ console.log('[TauriBridge] Initializing fetchProxy Polyfill');
     fetch: async (url: string, options: any) => {
         try {
             const response = await fetch(url, options);
+            const contentLength = response.headers.get('content-length');
+            const sizeMb = contentLength ? (parseInt(contentLength) / (1024 * 1024)).toFixed(1) : 'unknown';
+            if (contentLength && parseInt(contentLength) > 5 * 1024 * 1024) {
+                console.warn(`[fetchProxy] Large fetch (${sizeMb}MB) — consider using native streaming for M3U/EPG:`, url);
+            }
             const text = await response.text();
             return {
                 data: {
@@ -811,6 +865,11 @@ console.log('[TauriBridge] Initializing fetchProxy Polyfill');
         try {
             const response = await fetch(url, options);
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const contentLength = response.headers.get('content-length');
+            const sizeMb = contentLength ? (parseInt(contentLength) / (1024 * 1024)).toFixed(1) : 'unknown';
+            if (contentLength && parseInt(contentLength) > 5 * 1024 * 1024) {
+                console.warn(`[fetchProxy] Large binary fetch (${sizeMb}MB) — consider using native streaming:`, url);
+            }
             const buffer = await response.arrayBuffer();
             return {
                 data: new Uint8Array(buffer),

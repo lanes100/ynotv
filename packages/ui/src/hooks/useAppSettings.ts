@@ -341,7 +341,7 @@ export function useAppSettings(): AppSettings {
     setOverlayAutohideTimerState(seconds);
     if (window.storage) {
       try {
-        await window.storage.updateSettings({ overlayAutohideTimer: seconds });
+        window.storage.debouncedUpdateSettings({ overlayAutohideTimer: seconds });
       } catch (e) {
         console.error('[useAppSettings] Failed to save overlayAutohideTimer:', e);
       }
@@ -353,7 +353,7 @@ export function useAppSettings(): AppSettings {
     document.documentElement.style.setProperty('--cio-font-size', `${size}px`);
     if (window.storage) {
       try {
-        await window.storage.updateSettings({ channelInfoOverlayFontSize: size });
+        window.storage.debouncedUpdateSettings({ channelInfoOverlayFontSize: size });
       } catch (e) {
         console.error('[useAppSettings] Failed to save channelInfoOverlayFontSize:', e);
       }
@@ -365,7 +365,7 @@ export function useAppSettings(): AppSettings {
     document.documentElement.style.setProperty('--cio-logo-size', `${size}px`);
     if (window.storage) {
       try {
-        await window.storage.updateSettings({ channelInfoOverlayLogoSize: size });
+        window.storage.debouncedUpdateSettings({ channelInfoOverlayLogoSize: size });
       } catch (e) {
         console.error('[useAppSettings] Failed to save channelInfoOverlayLogoSize:', e);
       }
@@ -377,7 +377,7 @@ export function useAppSettings(): AppSettings {
     document.documentElement.style.setProperty('--cio-box-width', `${width}px`);
     if (window.storage) {
       try {
-        await window.storage.updateSettings({ channelInfoOverlayBoxWidth: width });
+        window.storage.debouncedUpdateSettings({ channelInfoOverlayBoxWidth: width });
       } catch (e) {
         console.error('[useAppSettings] Failed to save channelInfoOverlayBoxWidth:', e);
       }
@@ -389,7 +389,7 @@ export function useAppSettings(): AppSettings {
     document.documentElement.style.setProperty('--cio-bg-opacity', `${opacity / 100}`);
     if (window.storage) {
       try {
-        await window.storage.updateSettings({ channelInfoOverlayOpacity: opacity });
+        window.storage.debouncedUpdateSettings({ channelInfoOverlayOpacity: opacity });
       } catch (e) {
         console.error('[useAppSettings] Failed to save channelInfoOverlayOpacity:', e);
       }
@@ -466,7 +466,7 @@ export function useAppSettings(): AppSettings {
     setPopoutMpvParamsState(params);
     if (window.storage) {
       try {
-        await window.storage.updateSettings({ popoutMpvParams: params });
+        window.storage.debouncedUpdateSettings({ popoutMpvParams: params });
       } catch (e) {
         console.error('[useAppSettings] Failed to save popoutMpvParams:', e);
       }
@@ -478,7 +478,7 @@ export function useAppSettings(): AppSettings {
     document.documentElement.style.setProperty('--widget-scale', String(scale));
     if (window.storage) {
       try {
-        await window.storage.updateSettings({ widgetScale: scale });
+        window.storage.debouncedUpdateSettings({ widgetScale: scale });
       } catch (e) {
         console.error('[useAppSettings] Failed to save widgetScale:', e);
       }
@@ -490,7 +490,7 @@ export function useAppSettings(): AppSettings {
     document.documentElement.style.setProperty('--widget-bg-opacity', String(opacity));
     if (window.storage) {
       try {
-        await window.storage.updateSettings({ widgetBgOpacity: opacity });
+        window.storage.debouncedUpdateSettings({ widgetBgOpacity: opacity });
       } catch (e) {
         console.error('[useAppSettings] Failed to save widgetBgOpacity:', e);
       }
@@ -502,7 +502,7 @@ export function useAppSettings(): AppSettings {
     document.documentElement.style.setProperty('--sports-scale', String(scale));
     if (window.storage) {
       try {
-        await window.storage.updateSettings({ sportsScale: scale });
+        window.storage.debouncedUpdateSettings({ sportsScale: scale });
       } catch (e) {
         console.error('[useAppSettings] Failed to save sportsScale:', e);
       }
@@ -514,7 +514,7 @@ export function useAppSettings(): AppSettings {
     document.documentElement.style.setProperty('--sports-bg-opacity', String(opacity));
     if (window.storage) {
       try {
-        await window.storage.updateSettings({ sportsBgOpacity: opacity });
+        window.storage.debouncedUpdateSettings({ sportsBgOpacity: opacity });
       } catch (e) {
         console.error('[useAppSettings] Failed to save sportsBgOpacity:', e);
       }
@@ -547,7 +547,7 @@ export function useAppSettings(): AppSettings {
     setExternalPlayerPathState(path);
     if (window.storage) {
       try {
-        await window.storage.updateSettings({ externalPlayerPath: path });
+        window.storage.debouncedUpdateSettings({ externalPlayerPath: path });
       } catch (e) {
         console.error('[useAppSettings] Failed to save externalPlayerPath:', e);
       }
@@ -558,7 +558,7 @@ export function useAppSettings(): AppSettings {
     setExternalPlayerArgsState(args);
     if (window.storage) {
       try {
-        await window.storage.updateSettings({ externalPlayerArgs: args });
+        window.storage.debouncedUpdateSettings({ externalPlayerArgs: args });
       } catch (e) {
         console.error('[useAppSettings] Failed to save externalPlayerArgs:', e);
       }

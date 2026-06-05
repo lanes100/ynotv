@@ -564,7 +564,7 @@ export function Settings({
   const handleStreamWatchdogSecondsChange = async (seconds: number) => {
     setStreamWatchdogSeconds(seconds);
     if (window.storage) {
-      await window.storage.updateSettings({ streamWatchdogSeconds: seconds });
+      window.storage.debouncedUpdateSettings({ streamWatchdogSeconds: seconds });
     }
     window.dispatchEvent(new CustomEvent('ynotv:retry-settings-changed', {
       detail: { streamWatchdogSeconds: seconds }
@@ -574,7 +574,7 @@ export function Settings({
   const handleStreamMaxRetriesChange = async (retries: number) => {
     setStreamMaxRetries(retries);
     if (window.storage) {
-      await window.storage.updateSettings({ streamMaxRetries: retries });
+      window.storage.debouncedUpdateSettings({ streamMaxRetries: retries });
     }
     window.dispatchEvent(new CustomEvent('ynotv:retry-settings-changed', {
       detail: { streamMaxRetries: retries }
@@ -677,19 +677,19 @@ export function Settings({
     }
   };
 
-  const handleEpgTitleFontSizeChange = async (size: number) => {
+  const handleEpgTitleFontSizeChange = (size: number) => {
     setEpgTitleFontSize(size);
     document.documentElement.style.setProperty('--epg-title-font-size', `${size}px`);
     if (window.storage) {
-      await window.storage.updateSettings({ epgTitleFontSize: size });
+      window.storage.debouncedUpdateSettings({ epgTitleFontSize: size });
     }
   };
 
-  const handleEpgBodyFontSizeChange = async (size: number) => {
+  const handleEpgBodyFontSizeChange = (size: number) => {
     setEpgBodyFontSize(size);
     document.documentElement.style.setProperty('--epg-body-font-size', `${size}px`);
     if (window.storage) {
-      await window.storage.updateSettings({ epgBodyFontSize: size });
+      window.storage.debouncedUpdateSettings({ epgBodyFontSize: size });
     }
   };
 
@@ -703,43 +703,43 @@ export function Settings({
     }
   };
 
-  const handleChannelInfoOverlayFontSizeChange = async (size: number) => {
+  const handleChannelInfoOverlayFontSizeChange = (size: number) => {
     setChannelInfoOverlayFontSize(size);
     if (onChannelInfoOverlayFontSizeChange) {
       onChannelInfoOverlayFontSizeChange(size);
     }
     if (window.storage) {
-      await window.storage.updateSettings({ channelInfoOverlayFontSize: size });
+      window.storage.debouncedUpdateSettings({ channelInfoOverlayFontSize: size });
     }
   };
 
-  const handleChannelInfoOverlayLogoSizeChange = async (size: number) => {
+  const handleChannelInfoOverlayLogoSizeChange = (size: number) => {
     setChannelInfoOverlayLogoSize(size);
     if (onChannelInfoOverlayLogoSizeChange) {
       onChannelInfoOverlayLogoSizeChange(size);
     }
     if (window.storage) {
-      await window.storage.updateSettings({ channelInfoOverlayLogoSize: size });
+      window.storage.debouncedUpdateSettings({ channelInfoOverlayLogoSize: size });
     }
   };
 
-  const handleChannelInfoOverlayBoxWidthChange = async (width: number) => {
+  const handleChannelInfoOverlayBoxWidthChange = (width: number) => {
     setChannelInfoOverlayBoxWidth(width);
     if (onChannelInfoOverlayBoxWidthChange) {
       onChannelInfoOverlayBoxWidthChange(width);
     }
     if (window.storage) {
-      await window.storage.updateSettings({ channelInfoOverlayBoxWidth: width });
+      window.storage.debouncedUpdateSettings({ channelInfoOverlayBoxWidth: width });
     }
   };
 
-  const handleChannelInfoOverlayOpacityChange = async (opacity: number) => {
+  const handleChannelInfoOverlayOpacityChange = (opacity: number) => {
     setChannelInfoOverlayOpacity(opacity);
     if (onChannelInfoOverlayOpacityChange) {
       onChannelInfoOverlayOpacityChange(opacity);
     }
     if (window.storage) {
-      await window.storage.updateSettings({ channelInfoOverlayOpacity: opacity });
+      window.storage.debouncedUpdateSettings({ channelInfoOverlayOpacity: opacity });
     }
   };
 
@@ -784,17 +784,17 @@ export function Settings({
     }
   };
 
-  const handlePopoutMpvParamsChange = async (params: string) => {
+  const handlePopoutMpvParamsChange = (params: string) => {
     setPopoutMpvParams(params);
     if (window.storage) {
-      await window.storage.updateSettings({ popoutMpvParams: params });
+      window.storage.debouncedUpdateSettings({ popoutMpvParams: params });
     }
   };
 
-  const handleExternalPlayerPathChange = async (path: string) => {
+  const handleExternalPlayerPathChange = (path: string) => {
     setExternalPlayerPath(path);
     if (window.storage) {
-      await window.storage.updateSettings({ externalPlayerPath: path });
+      window.storage.debouncedUpdateSettings({ externalPlayerPath: path });
     }
   };
 
@@ -805,10 +805,10 @@ export function Settings({
     }
   };
 
-  const handleSkipIntroTimerSecondsChange = async (seconds: number) => {
+  const handleSkipIntroTimerSecondsChange = (seconds: number) => {
     setSkipIntroTimerSeconds(seconds);
     if (window.storage) {
-      await window.storage.updateSettings({ skipIntroTimerSeconds: seconds });
+      window.storage.debouncedUpdateSettings({ skipIntroTimerSeconds: seconds });
     }
     window.dispatchEvent(new CustomEvent('ynotv:skip-intro-settings-changed', {
       detail: { skipIntroTimerSeconds: seconds }
@@ -825,43 +825,43 @@ export function Settings({
     }));
   };
 
-  const handleSubtitleSettingsChange = async (partial: Partial<SubtitleSettings>) => {
+  const handleSubtitleSettingsChange = (partial: Partial<SubtitleSettings>) => {
     const updated = { ...subtitleSettings, ...partial };
     setSubtitleSettings(updated);
     if (window.storage) {
-      await window.storage.updateSettings({ subtitleSettings: updated });
+      window.storage.debouncedUpdateSettings({ subtitleSettings: updated });
     }
   };
 
-  const handleWidgetScaleChange = async (scale: number) => {
+  const handleWidgetScaleChange = (scale: number) => {
     setWidgetScaleState(scale);
     document.documentElement.style.setProperty('--widget-scale', String(scale));
     if (window.storage) {
-      await window.storage.updateSettings({ widgetScale: scale });
+      window.storage.debouncedUpdateSettings({ widgetScale: scale });
     }
   };
 
-  const handleWidgetBgOpacityChange = async (opacity: number) => {
+  const handleWidgetBgOpacityChange = (opacity: number) => {
     setWidgetBgOpacityState(opacity);
     document.documentElement.style.setProperty('--widget-bg-opacity', String(opacity));
     if (window.storage) {
-      await window.storage.updateSettings({ widgetBgOpacity: opacity });
+      window.storage.debouncedUpdateSettings({ widgetBgOpacity: opacity });
     }
   };
 
-  const handleSportsScaleChange = async (scale: number) => {
+  const handleSportsScaleChange = (scale: number) => {
     setSportsScaleState(scale);
     document.documentElement.style.setProperty('--sports-scale', String(scale));
     if (window.storage) {
-      await window.storage.updateSettings({ sportsScale: scale });
+      window.storage.debouncedUpdateSettings({ sportsScale: scale });
     }
   };
 
-  const handleSportsBgOpacityChange = async (opacity: number) => {
+  const handleSportsBgOpacityChange = (opacity: number) => {
     setSportsBgOpacityState(opacity);
     document.documentElement.style.setProperty('--sports-bg-opacity', String(opacity));
     if (window.storage) {
-      await window.storage.updateSettings({ sportsBgOpacity: opacity });
+      window.storage.debouncedUpdateSettings({ sportsBgOpacity: opacity });
     }
   };
 
@@ -914,19 +914,19 @@ export function Settings({
     }
   };
 
-  const handleChannelFontSizeChange = async (size: number) => {
+  const handleChannelFontSizeChange = (size: number) => {
     setChannelFontSize(size);
     document.documentElement.style.setProperty('--channel-font-size', `${size}px`);
     if (window.storage) {
-      await window.storage.updateSettings({ channelFontSize: size });
+      window.storage.debouncedUpdateSettings({ channelFontSize: size });
     }
   };
 
-  const handleCategoryFontSizeChange = async (size: number) => {
+  const handleCategoryFontSizeChange = (size: number) => {
     setCategoryFontSize(size);
     document.documentElement.style.setProperty('--category-font-size', `${size}px`);
     if (window.storage) {
-      await window.storage.updateSettings({ categoryFontSize: size });
+      window.storage.debouncedUpdateSettings({ categoryFontSize: size });
     }
   };
 

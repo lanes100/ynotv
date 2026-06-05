@@ -39,20 +39,28 @@ export function usePopoutPlayer(): PopoutPlayerState {
     if (!Bridge.isTauri) return;
     let unlistenOpened: (() => void) | null = null;
     let unlistenClosed: (() => void) | null = null;
+    let disposed = false;
 
     import('@tauri-apps/api/event').then(({ listen }) => {
       listen('popout-opened', () => {
         setIsOpen(true);
-      }).then((fn) => { unlistenOpened = fn; });
+      }).then((fn) => {
+        if (disposed) fn();
+        else unlistenOpened = fn;
+      });
 
       listen('popout-closed', () => {
         setIsOpen(false);
         setContent(null);
         setIsLoading(false);
-      }).then((fn) => { unlistenClosed = fn; });
+      }).then((fn) => {
+        if (disposed) fn();
+        else unlistenClosed = fn;
+      });
     });
 
     return () => {
+      disposed = true;
       unlistenOpened?.();
       unlistenClosed?.();
     };

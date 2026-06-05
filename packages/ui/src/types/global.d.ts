@@ -21,6 +21,7 @@ declare global {
             deleteSource: (id: string) => Promise<{ success: boolean; error?: string }>;
             getSettings: () => Promise<{ success: boolean; data?: AppSettings; error?: string }>;
             updateSettings: (settings: AppSettings) => Promise<{ success: boolean; error?: string }>;
+            debouncedUpdateSettings: (settings: Partial<AppSettings>) => void;
             getSource: (id: string) => Promise<{ success: boolean; data?: Source; error?: string }>;
             saveJsonFile: (content: string, defaultName: string) => Promise<{ success: boolean; data?: { filePath: string }; error?: string; canceled?: boolean }>;
             openJsonFile: () => Promise<{ success: boolean; data?: string; error?: string; canceled?: boolean }>;

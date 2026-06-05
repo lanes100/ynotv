@@ -48,6 +48,17 @@ export function TVCalendarTab() {
           episodesByShow.set(ep.tvmaze_id, existing);
         }
 
+        // Batch resolve channels to avoid N+1 lookups
+        const allChannelIds = [...new Set([...episodesByShow.values()].flat().filter(ep => ep.channel_id).map(ep => ep.channel_id!))];
+        const channelMap = new Map<string, import('../../db').StoredChannel>();
+        if (allChannelIds.length > 0) {
+          const CHUNK_SIZE = 500;
+          for (let i = 0; i < allChannelIds.length; i += CHUNK_SIZE) {
+            const chunk = allChannelIds.slice(i, i + CHUNK_SIZE);
+            const channels = await db.channels.where('stream_id').anyOf(chunk).toArray();
+            for (const ch of channels) channelMap.set(ch.stream_id, ch);
+          }
+        }
         for (const [tvmazeId, episodes] of episodesByShow) {
           // Clear existing auto-added episodes for this show
           await clearAutoAddedEpisodesForShow(tvmazeId);
@@ -55,7 +66,7 @@ export function TVCalendarTab() {
           // Add new episodes
           for (const ep of episodes) {
             if (ep.channel_id) {
-              const channel = await db.channels.get(ep.channel_id);
+              const channel = channelMap.get(ep.channel_id);
               if (channel) {
                 const added = await addTvEpisodeToWatchlist(ep, channel);
                 if (added) addedCount++;

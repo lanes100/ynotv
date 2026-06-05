@@ -987,6 +987,7 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
     let unlistenEndFileError: (() => void) | null = null;
     let unlistenHttpError: (() => void) | null = null;
     let unlistenMpvError: (() => void) | null = null;
+    let disposed = false;
 
     import('@tauri-apps/api/event').then(({ listen }) => {
       listen('mpv-stream-ended', () => {
@@ -996,7 +997,10 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
         }
         logInfo('[Retry] Received mpv-stream-ended event');
         handleStreamDied();
-      }).then((fn) => { unlistenEnded = fn; });
+      }).then((fn) => {
+        if (disposed) fn();
+        else unlistenEnded = fn;
+      });
 
       listen('mpv-end-file-error', () => {
         if (!useEventBasedReconnectRef.current) {
@@ -1005,7 +1009,10 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
         }
         logInfo('[Retry] Received mpv-end-file-error event');
         handleStreamDied();
-      }).then((fn) => { unlistenEndFileError = fn; });
+      }).then((fn) => {
+        if (disposed) fn();
+        else unlistenEndFileError = fn;
+      });
 
       listen('mpv-http-error', () => {
         if (!useEventBasedReconnectRef.current) {
@@ -1018,7 +1025,10 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
         }
         logInfo('[Retry] Received mpv-http-error event');
         handleStreamDied();
-      }).then((fn) => { unlistenHttpError = fn; });
+      }).then((fn) => {
+        if (disposed) fn();
+        else unlistenHttpError = fn;
+      });
 
       listen('mpv-error', () => {
         if (!useEventBasedReconnectRef.current) {
@@ -1027,10 +1037,14 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
         }
         logInfo('[Retry] Received mpv-error event');
         handleStreamDied();
-      }).then((fn) => { unlistenMpvError = fn; });
+      }).then((fn) => {
+        if (disposed) fn();
+        else unlistenMpvError = fn;
+      });
     });
 
     return () => {
+      disposed = true;
       unlistenEnded?.();
       unlistenEndFileError?.();
       unlistenHttpError?.();

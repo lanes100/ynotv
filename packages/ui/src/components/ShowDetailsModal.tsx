@@ -183,10 +183,21 @@ export function ShowDetailsModal({ isOpen, tvmazeId, showName, channelName, onCl
           // Clear existing auto-added episodes for this show to refresh with latest data
           await clearAutoAddedEpisodesForShow(tvmazeId);
 
+          // Batch resolve channels to avoid N+1 lookups
+          const channelIds = [...new Set(episodesToAdd.filter(ep => ep.channel_id).map(ep => ep.channel_id!))];
+          const channelMap = new Map<string, StoredChannel>();
+          if (channelIds.length > 0) {
+            const CHUNK_SIZE = 500;
+            for (let i = 0; i < channelIds.length; i += CHUNK_SIZE) {
+              const chunk = channelIds.slice(i, i + CHUNK_SIZE);
+              const channels = await db.channels.where('stream_id').anyOf(chunk).toArray();
+              for (const ch of channels) channelMap.set(ch.stream_id, ch);
+            }
+          }
           let addedCount = 0;
           for (const ep of episodesToAdd) {
             if (ep.channel_id) {
-              const channel = await db.channels.get(ep.channel_id);
+              const channel = channelMap.get(ep.channel_id);
               if (channel) {
                 const added = await addTvEpisodeToWatchlist(ep, channel, {
                   reminder_enabled: reminderEnabled,

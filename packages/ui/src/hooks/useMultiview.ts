@@ -302,17 +302,20 @@ export function useMultiview() {
 
         // Listen for window move events to keep MPVs positioned correctly after dragging
         let unlistenMove: (() => void) | null = null;
+        let disposed = false;
         import('@tauri-apps/api/window').then(({ getCurrentWindow }) => {
             const appWindow = getCurrentWindow();
             appWindow.onMoved(() => {
                 if (moveTimeout) clearTimeout(moveTimeout);
                 moveTimeout = setTimeout(handleSync, 150); // 150ms debounce for move
             }).then(unlisten => {
-                unlistenMove = unlisten;
+                if (disposed) unlisten();
+                else unlistenMove = unlisten;
             }).catch(() => { /* ignore if not available */ });
         }).catch(() => { /* ignore if Tauri API not available */ });
 
         return () => {
+            disposed = true;
             if (resizeTimeout) clearTimeout(resizeTimeout);
             if (moveTimeout) clearTimeout(moveTimeout);
             window.removeEventListener('resize', scheduleSync);
