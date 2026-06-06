@@ -195,6 +195,9 @@ function App() {
         if (Array.isArray(res.data?.badgeSources)) {
           setBadgeSources(res.data.badgeSources as BadgeSource[]);
         }
+        if (res.data?.popoutMode) {
+          setPopoutMode(res.data.popoutMode as 'off' | 'popout' | 'external');
+        }
       } catch {}
     };
     loadStremioMode();
@@ -389,6 +392,13 @@ function App() {
       return 'off';
     });
   }, []);
+
+  // Persist popoutMode to settings whenever it changes
+  useEffect(() => {
+    if (window.storage) {
+      window.storage.updateSettings({ popoutMode }).catch(console.error);
+    }
+  }, [popoutMode]);
 
   // ==========================================================================
   // Google Cast (Chromecast) Integration
