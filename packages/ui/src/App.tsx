@@ -71,6 +71,7 @@ import { MultiviewLayout } from './components/MultiviewLayout/MultiviewLayout';
 import { LayoutPicker } from './components/LayoutPicker/LayoutPicker';
 import './themes.css';
 import './components/ModernTheme.css'; // Modern UI enhancements
+import './light-theme-overrides.css'; // Overrides to fix light theme readability
 import { useTimeshift } from './hooks/useTimeshift';
 import { useDvrEvents } from './hooks/useDvrEvents';
 import { useDvrUrlResolver } from './hooks/useDvrUrlResolver';
@@ -199,6 +200,9 @@ function App() {
           setPopoutMode(res.data.popoutMode as 'off' | 'popout' | 'external');
         }
       } catch {}
+      finally {
+        isPopoutModeLoadedRef.current = true;
+      }
     };
     loadStremioMode();
   }, [layoutSettingsLoaded]);
@@ -385,6 +389,8 @@ function App() {
 
   // Popout mode state: 'off' | 'popout' | 'external'
   const [popoutMode, setPopoutMode] = useState<'off' | 'popout' | 'external'>('off');
+  const isPopoutModeLoadedRef = useRef(false);
+
   const cyclePopoutMode = useCallback(() => {
     setPopoutMode(prev => {
       if (prev === 'off') return 'popout';
@@ -395,6 +401,7 @@ function App() {
 
   // Persist popoutMode to settings whenever it changes
   useEffect(() => {
+    if (!isPopoutModeLoadedRef.current) return;
     if (window.storage) {
       window.storage.updateSettings({ popoutMode }).catch(console.error);
     }

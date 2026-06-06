@@ -182,12 +182,12 @@ export const SearchResultRow = memo(function SearchResultRow({
             <span className="guide-channel-number">Ch. {channel.channel_num}</span>
           )}
           {hasSourceInfo && (
-            <span className="guide-channel-source" style={{
-              fontSize: '0.75rem',
-              color: 'rgba(255, 255, 255, 0.5)',
-              marginTop: '2px',
-              display: 'block'
-            }}>
+<span className="guide-channel-source" style={{
+  fontSize: '0.75rem',
+  color: 'var(--text-muted, rgba(255, 255, 255, 0.5))',
+  marginTop: '2px',
+  display: 'block'
+}}>
               {channel.source_category_display || channel.source_name}
             </span>
           )}

@@ -197,7 +197,7 @@
 .media-card__title {
   font-size: 0.8125rem;
   font-weight: 500;
-  color: #fff;
+  color: var(--text-primary, #fff);
   margin: 0;
   line-height: 1.2;
   white-space: nowrap;
@@ -245,11 +245,11 @@
   align-items: center;
   justify-content: space-between;
   font-size: 0.6875rem;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--text-secondary, rgba(255, 255, 255, 0.5));
 }
 
 .media-card__year {
-  color: rgba(255, 255, 255, 0.55);
+  color: var(--text-muted, rgba(255, 255, 255, 0.55));
   font-weight: 400;
 }
 

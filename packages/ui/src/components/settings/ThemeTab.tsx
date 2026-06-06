@@ -7,6 +7,7 @@ interface ThemeTabProps {
 
 const THEMES: { id: ThemeId; name: string; description: string; preview: string; gradient?: string }[] = [
   { id: 'dark', name: 'Dark', description: 'Classic dark theme', preview: '#1a1a1a' },
+  { id: 'light', name: 'Light', description: 'Clean light theme', preview: '#f5f5f5' },
   { id: 'dark-crimson', name: 'Dark Crimson', description: 'Crimson red on black', preview: '#ff0033' },
   { id: 'dark-cyan', name: 'Dark Cyan', description: 'Neon cyan on black', preview: '#00d4ff' },
   { id: 'dark-purple', name: 'Dark Purple', description: 'Violet on black', preview: '#b266ff' },
