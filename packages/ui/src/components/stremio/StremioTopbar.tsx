@@ -9,6 +9,8 @@ import {
   useSetStremioSelectedCatalogId,
   useStremioSelectedCatalogType,
   useSetStremioSelectedCatalogType,
+  useStremioSelectedCloudCatalogKey,
+  useSetStremioSelectedCloudCatalogKey,
   useStremioView,
   useSetStremioView,
 } from '../../stores/uiStore';
@@ -27,6 +29,8 @@ export function StremioTopbar({ addons, onOpenAddonManager }: StremioTopbarProps
   const setSelectedCatalogId = useSetStremioSelectedCatalogId();
   const selectedCatalogType = useStremioSelectedCatalogType();
   const setSelectedCatalogType = useSetStremioSelectedCatalogType();
+  const selectedCloudCatalogKey = useStremioSelectedCloudCatalogKey();
+  const setSelectedCloudCatalogKey = useSetStremioSelectedCloudCatalogKey();
   const setView = useSetStremioView();
   const view = useStremioView();
   const searchQuery = useStremioSearchQuery();
@@ -48,8 +52,8 @@ export function StremioTopbar({ addons, onOpenAddonManager }: StremioTopbarProps
     return () => document.removeEventListener('mousedown', handleClick);
   }, [showStremioHistory]);
 
-  const isHomeActive = view === 'home' && !selectedAddonId && !selectedCatalogId;
-  const isDiscoverActive = view === 'home' && !!selectedAddonId && !!selectedCatalogId;
+  const isHomeActive = view === 'home' && !selectedAddonId && !selectedCatalogId && !selectedCloudCatalogKey;
+  const isDiscoverActive = view === 'home' && (!!selectedCloudCatalogKey || (!!selectedAddonId && !!selectedCatalogId));
   const isLibraryActive = view === 'library';
   const isCalendarActive = view === 'calendar';
 
@@ -57,19 +61,25 @@ export function StremioTopbar({ addons, onOpenAddonManager }: StremioTopbarProps
     setSelectedAddonId(null);
     setSelectedCatalogId(null);
     setSelectedCatalogType(null);
+    setSelectedCloudCatalogKey(null);
     setView('home');
   };
 
   const handleDiscoverClick = () => {
     setView('home');
-    if (!selectedAddonId || !selectedCatalogId || !selectedCatalogType) {
+    const hasAddonSelection = selectedAddonId && selectedCatalogId && selectedCatalogType;
+    const hasCloudSelection = selectedCloudCatalogKey;
+    if (!hasAddonSelection && !hasCloudSelection) {
+      // Prefer addon catalog first
       const firstAddon = addons.find((a) => (a.manifest.catalogs?.length ?? 0) > 0);
       const firstCat = firstAddon?.manifest.catalogs?.[0];
       if (firstAddon && firstCat) {
         setSelectedAddonId(firstAddon.id);
         setSelectedCatalogId(firstCat.id);
         setSelectedCatalogType(firstCat.type);
+        setSelectedCloudCatalogKey(null);
       }
+      // If no addon catalogs, cloud catalogs are discoverable via CloudCatalogDetailView's dropdown
     }
   };
 

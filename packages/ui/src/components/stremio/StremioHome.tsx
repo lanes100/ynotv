@@ -15,9 +15,12 @@ import {
   useTraktCatalogRefreshToken,
   useSetStremioSelectedSeason,
   useSetStremioPreselectVideoId,
+  useStremioSelectedCloudCatalogKey,
+  useSetStremioSelectedCloudCatalogKey,
 } from '../../stores/uiStore';
 import { StremioCatalogRow } from './StremioCatalogRow';
 import { CatalogDetailView } from './CatalogDetailView';
+import { CloudCatalogDetailView } from './CloudCatalogDetailView';
 import { StremioRecentlyWatched } from './StremioRecentlyWatched';
 import { StremioHeroBanner } from './StremioHeroBanner';
 import { useStremioHover } from '../../contexts/StremioHoverContext';
@@ -65,6 +68,8 @@ export function StremioHome({ addons, onItemClick }: StremioHomeProps) {
   const refreshToken = useTraktCatalogRefreshToken();
   const setSelectedSeason = useSetStremioSelectedSeason();
   const setPreselectVideoId = useSetStremioPreselectVideoId();
+  const selectedCloudCatalogKey = useStremioSelectedCloudCatalogKey();
+  const setSelectedCloudCatalogKey = useSetStremioSelectedCloudCatalogKey();
 
   interface CloudCatalogRow {
     key: string;
@@ -363,6 +368,19 @@ export function StremioHome({ addons, onItemClick }: StremioHomeProps) {
     );
   }
 
+  if (selectedCloudCatalogKey) {
+    return (
+      <div className="stremio-home">
+        <CloudCatalogDetailView
+          key={selectedCloudCatalogKey}
+          cloudCatalogKey={selectedCloudCatalogKey}
+          onItemClick={handleItemClickWrapper}
+          onBack={() => setSelectedCloudCatalogKey(null)}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="stremio-home">
       <div className="stremio-catalog-filter">
@@ -402,6 +420,12 @@ export function StremioHome({ addons, onItemClick }: StremioHomeProps) {
             title={row.title}
             items={row.items}
             onItemClick={handleItemClickWrapper}
+            onSeeAll={() => {
+              setSelectedAddonId(null);
+              setSelectedCatalogId(null);
+              setSelectedCatalogType(null);
+              setSelectedCloudCatalogKey(row.key);
+            }}
           />
         ))}
 
@@ -433,6 +457,12 @@ export function StremioHome({ addons, onItemClick }: StremioHomeProps) {
             title={row.title}
             items={row.items}
             onItemClick={handleItemClickWrapper}
+            onSeeAll={() => {
+              setSelectedAddonId(null);
+              setSelectedCatalogId(null);
+              setSelectedCatalogType(null);
+              setSelectedCloudCatalogKey(row.key);
+            }}
           />
         ))}
 

@@ -88,6 +88,10 @@ interface UIState {
   // Trakt catalog hot-reload token
   traktCatalogRefreshToken: number;
   setTraktCatalogRefreshToken: (value: number) => void;
+
+  // Cloud catalog selection (Trakt/Simkl) for detail view
+  stremioSelectedCloudCatalogKey: string | null;
+  setStremioSelectedCloudCatalogKey: (key: string | null) => void;
 }
 
 export const useUIStore = create<UIState>((set) => ({
@@ -173,6 +177,9 @@ export const useUIStore = create<UIState>((set) => ({
 
   traktCatalogRefreshToken: 0,
   setTraktCatalogRefreshToken: (value) => set({ traktCatalogRefreshToken: value }),
+
+  stremioSelectedCloudCatalogKey: null,
+  setStremioSelectedCloudCatalogKey: (key) => set({ stremioSelectedCloudCatalogKey: key }),
 }));
 
 // Selectors for cleaner component code
@@ -244,3 +251,6 @@ export const useSetStremioCatalogScrollPosition = () => useUIStore((s) => s.setS
 
 export const useTraktCatalogRefreshToken = () => useUIStore((s) => s.traktCatalogRefreshToken);
 export const useSetTraktCatalogRefreshToken = () => useUIStore((s) => s.setTraktCatalogRefreshToken);
+
+export const useStremioSelectedCloudCatalogKey = () => useUIStore((s) => s.stremioSelectedCloudCatalogKey);
+export const useSetStremioSelectedCloudCatalogKey = () => useUIStore((s) => s.setStremioSelectedCloudCatalogKey);
