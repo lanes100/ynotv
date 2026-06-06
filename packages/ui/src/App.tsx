@@ -416,55 +416,87 @@ function App() {
   const [castDeviceName, setCastDeviceName] = useState('');
   const [castMetadataState, setCastMetadataState] = useState({ title: '', subtitle: '' });
 
+  // Stable refs so the cast-status listener never needs to re-register when channel/playing change.
+  // Without this, the listener effect re-runs on every channel switch, re-creating the listener with
+  // previouslyCasting=false which incorrectly re-triggers castCurrentMedia.
+  const _castCurrentChannelRef = useRef(currentChannel);
+  const _castPlayingRef = useRef(playing);
+  const _castVodInfoRef = useRef(vodInfo);
+  const _castCatchupInfoRef = useRef(catchupInfo);
+  useEffect(() => { _castCurrentChannelRef.current = currentChannel; }, [currentChannel]);
+  useEffect(() => { _castPlayingRef.current = playing; }, [playing]);
+  useEffect(() => { _castVodInfoRef.current = vodInfo; }, [vodInfo]);
+  useEffect(() => { _castCatchupInfoRef.current = catchupInfo; }, [catchupInfo]);
+
+  // Guard: prevents two concurrent cast_load_media invocations
+  const _castLoadingRef = useRef(false);
+
   const castCurrentMedia = useCallback(async () => {
-    if (!currentChannel) return;
-    const isRecording = currentChannel.stream_id?.startsWith('recording_');
-    const isLocalFile = currentChannel.direct_url?.startsWith('file://') || (!currentChannel.direct_url?.startsWith('http://') && !currentChannel.direct_url?.startsWith('https://'));
-    
+    // Read all live values from refs — callback is intentionally stable (empty deps).
+    const channel = _castCurrentChannelRef.current;
+    const catchup = _castCatchupInfoRef.current;
+    const vod = _castVodInfoRef.current;
+
+    if (!channel) return;
+
+    // Fast-fail if already in progress (secondary guard; the primary is in Bridge.loadVideo).
+    if (_castLoadingRef.current) {
+      console.log('[Cast] castCurrentMedia already in progress, skipping duplicate call');
+      return;
+    }
+
+    const isRecording = channel.stream_id?.startsWith('recording_');
+    const isLocalFile = channel.direct_url?.startsWith('file://') || (!channel.direct_url?.startsWith('http://') && !channel.direct_url?.startsWith('https://'));
+
     if (isRecording || isLocalFile) {
       alert('Local files and DVR recordings cannot be cast to Chromecast. Only remote streams are supported.');
       return;
     }
 
-    // Resolve the actual play URL before casting (crucial for Stalker channels)
-    let url = '';
+    _castLoadingRef.current = true;
     try {
-      if (catchupInfo) {
-        const rawStreamId = currentChannel.stream_id.replace(`${currentChannel.source_id}_`, '');
-        const resolved = await resolvePlayUrl(currentChannel.source_id, currentChannel.direct_url, {
-          rawStreamId,
-          startTimeMs: catchupInfo.startTime,
-          durationMinutes: catchupInfo.duration,
-        });
-        url = resolved.url;
-      } else {
-        const resolved = await resolvePlayUrl(currentChannel.source_id, currentChannel.direct_url);
-        url = resolved.url;
+      // Resolve the actual play URL before casting (crucial for Stalker channels)
+      let url = '';
+      try {
+        if (catchup) {
+          const rawStreamId = channel.stream_id.replace(`${channel.source_id}_`, '');
+          const resolved = await resolvePlayUrl(channel.source_id, channel.direct_url, {
+            rawStreamId,
+            startTimeMs: catchup.startTime,
+            durationMinutes: catchup.duration,
+          });
+          url = resolved.url;
+        } else {
+          const resolved = await resolvePlayUrl(channel.source_id, channel.direct_url);
+          url = resolved.url;
+        }
+      } catch (e) {
+        console.error('[Cast] Failed to resolve play URL:', e);
+        url = channel.direct_url || '';
       }
-    } catch (e) {
-      console.error('[Cast] Failed to resolve play URL:', e);
-      url = currentChannel.direct_url || '';
-    }
 
-    if (castRewriteTs) {
-      url = rewriteTsToM3u8(url);
-    }
+      const title = channel.stream_id === 'vod' && vod ? vod.title : channel.name;
+      const subtitle = channel.stream_id === 'vod' && vod ? 'VOD' : 'Live TV';
 
-    const title = currentChannel.stream_id === 'vod' && vodInfo ? vodInfo.title : currentChannel.name;
-    const subtitle = currentChannel.stream_id === 'vod' && vodInfo ? 'VOD' : 'Live TV';
-
-    try {
       console.log('[Cast] Casting URL:', url, 'Title:', title);
-      const isHls = url.toLowerCase().includes('.m3u8') || url.toLowerCase().includes('/m3u8') || url.toLowerCase().includes('/hls');
-      const isMpegTs = url.toLowerCase().includes('.ts') || url.toLowerCase().includes('/ts');
-      const mimeType = isHls ? 'application/x-mpegURL' : (isMpegTs ? 'video/mp2t' : 'video/mp4');
 
-      await invoke('cast_load_media', { url, title, subtitle, mimeType });
-      Bridge.stopLocalVideo().catch(() => {}); // Stop local video to release network connection
+      // Set metadata BEFORE calling Bridge.loadVideo so Bridge picks up the correct title/subtitle.
+      Bridge.setCastMetadata(title, subtitle);
+
+      // Route through Bridge.loadVideo so the castLoadInFlight serialization guard
+      // in tauri-bridge.ts coordinates with any concurrent handleLoadStream call,
+      // preventing two simultaneous cast_load_media calls that cause INVALID_MEDIA_SESSION_ID.
+      const result = await Bridge.loadVideo(url);
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to cast media');
+      }
+      Bridge.stopLocalVideo().catch(() => {}); // Stop local video after load succeeds
     } catch (e: any) {
       alert('Failed to cast media: ' + (e?.message || e));
+    } finally {
+      _castLoadingRef.current = false;
     }
-  }, [currentChannel, vodInfo, catchupInfo, castRewriteTs]);
+  }, []); // intentionally stable — reads all live values through refs
 
   // Dynamically start/stop discovery based on setting
   useEffect(() => {
@@ -489,7 +521,11 @@ function App() {
     };
   }, [castEnabled]);
 
-  // Listen for cast status changes
+  // Listen for cast status changes.
+  // IMPORTANT: empty dep array so this effect never re-registers mid-session.
+  // Re-registering would reset previouslyCasting=false and double-trigger castCurrentMedia,
+  // which causes INVALID_MEDIA_SESSION_ID on the second cast_play call.
+  // All live values are read via stable refs inside the callback.
   useEffect(() => {
     let unlisten: (() => void) | undefined;
 
@@ -497,9 +533,9 @@ function App() {
       listen<any>('cast-status', (event) => {
         const status = event.payload;
         console.log('[Cast] Status event:', status);
-        
+
         const previouslyCasting = Bridge.getIsCasting ? Bridge.getIsCasting() : false;
-        
+
         setIsCasting(status.connected);
         setCastDeviceName(status.deviceName);
         if (Bridge.setIsCasting) {
@@ -508,12 +544,15 @@ function App() {
 
         if (status.connected && !previouslyCasting) {
           console.log('[Cast] Casting started, loading media on Chromecast');
-          if (playing && currentChannel) {
+          // Read playing/channel from refs — avoids stale closure.
+          // Do NOT call Bridge.stop() here: cast_load_media hasn't returned yet so
+          // there is no valid media_session_id yet; cast_pause → INVALID_MEDIA_SESSION_ID.
+          // stopLocalVideo() is called inside castCurrentMedia() after load succeeds.
+          if (_castPlayingRef.current && _castCurrentChannelRef.current) {
             castCurrentMedia();
-            Bridge.stop().catch(() => {}); // Stop local video to release network connection
           }
         }
-        
+
         // Update local metadata states
         if (Bridge.getCastMetadata) {
           setCastMetadataState(Bridge.getCastMetadata());
@@ -526,7 +565,7 @@ function App() {
     return () => {
       if (unlisten) unlisten();
     };
-  }, [playing, currentChannel, castCurrentMedia]);
+  }, []); // intentionally empty — uses refs for all live values
 
   const handleDisconnectCast = useCallback(async () => {
     try {

@@ -675,7 +675,12 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
       // Explicitly force MPV to unpause after loading.
       // If a previous stream ended/was interrupted, MPV may hold pause=true,
       // causing the new stream to load but not start playing.
-      Bridge.play().catch(e => console.warn('[usePlayback] play() after load failed:', e));
+      // Skip when casting: cast_load_media auto-starts playback on the Chromecast,
+      // and calling cast_play here races against the concurrent castCurrentMedia()
+      // call (triggered by the cast-status listener), causing INVALID_MEDIA_SESSION_ID.
+      if (!Bridge.getIsCasting?.()) {
+        Bridge.play().catch(e => console.warn('[usePlayback] play() after load failed:', e));
+      }
       applySubtitleSettings();
       notifyMainLoaded?.(channel.name, result.url, resolved.sourceName ?? null);
 

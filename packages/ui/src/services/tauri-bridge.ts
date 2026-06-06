@@ -163,6 +163,9 @@ export function stopWindowSync() {
 
 let isCasting = false;
 let castMetadata = { title: "YNotV Stream", subtitle: "" };
+// Prevents concurrent cast_load_media calls from racing each other (INVALID_MEDIA_SESSION_ID)
+let castLoadInFlight = false;
+let castLoadSeq = 0;
 
 // Set this to true if you want core player controls (play, pause, seek, volume, loadVideo)
 // to control Chromecast instead of the local player. Kept here in case we want to re-enable.
@@ -291,7 +294,34 @@ export const Bridge = {
                 console.warn('[Bridge] Failed to load castRewriteTs setting:', e);
             }
 
-            const castUrl = castRewriteTs ? rewriteTsToM3u8(url) : url;
+            // Apply TS->M3U8 rewrite before resolving redirects
+            const preRewriteUrl = castRewriteTs ? rewriteTsToM3u8(url) : url;
+
+            // Serialise concurrent cast_load_media calls
+            castLoadSeq += 1;
+            const mySeq = castLoadSeq;
+            while (castLoadInFlight) {
+                await new Promise(r => setTimeout(r, 50));
+                if (castLoadSeq !== mySeq) {
+                    console.log('[Bridge.loadVideo] Superseded by newer cast load, bailing');
+                    return { success: true };
+                }
+            }
+            if (castLoadSeq !== mySeq) return { success: true };
+
+            // Resolve HTTP redirects server-side so Chromecast gets the final CDN URL.
+            // Xtreamcode servers redirect: hostname/.../ch.m3u8 -> CDN_IP/.../ch.m3u8?token=...
+            // Token is IP-bound; resolving from app (same LAN) creates a token the Chromecast can use.
+            let castUrl = preRewriteUrl;
+            try {
+                const resolved: string = await invoke('cast_resolve_url', { url: preRewriteUrl });
+                castUrl = castRewriteTs ? rewriteTsToM3u8(resolved) : resolved;
+                console.log('[Bridge.loadVideo] Resolved cast URL:', castUrl);
+            } catch (e) {
+                console.warn('[Bridge.loadVideo] Redirect resolve failed, using URL as-is:', e);
+            }
+
+            castLoadInFlight = true;
             try {
                 await invoke('cast_load_media', {
                     url: castUrl,
@@ -302,6 +332,8 @@ export const Bridge = {
                 return { success: true };
             } catch (e: any) {
                 return { success: false, error: typeof e === 'string' ? e : e.message || 'Failed to cast media' };
+            } finally {
+                castLoadInFlight = false;
             }
         }
         try {

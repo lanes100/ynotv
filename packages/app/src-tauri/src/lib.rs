@@ -47,6 +47,7 @@ mod cast;
 use cast::{
     cast_start_discovery, cast_stop_discovery, cast_connect, cast_disconnect,
     cast_load_media, cast_play, cast_pause, cast_seek, cast_set_volume, cast_toggle_mute,
+    cast_resolve_url,
 };
 
 
@@ -2727,7 +2728,8 @@ pub fn run() {
             cast_pause,
             cast_seek,
             cast_set_volume,
-            cast_toggle_mute
+            cast_toggle_mute,
+            cast_resolve_url
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

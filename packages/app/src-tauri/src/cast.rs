@@ -301,6 +301,12 @@ pub fn cast_load_media(
     let mut session_guard = state.session.lock();
     let session = session_guard.as_mut().ok_or_else(|| "No active cast session".to_string())?;
 
+    // Clear stale IDs so the polling thread skips media queries during channel transitions.
+    // Without this, the poller can race with launch_app() using an old media_session_id,
+    // causing INVALID_MEDIA_SESSION_ID errors when switching channels while casting.
+    session.transport_id = None;
+    session.media_session_id = None;
+
     let app = session.device.receiver.launch_app(&CastDeviceApp::DefaultMediaReceiver)
         .map_err(|e| format!("Failed to launch media receiver: {:?}", e))?;
 
@@ -402,4 +408,41 @@ pub fn cast_toggle_mute(state: State<'_, Arc<CastManager>>) -> Result<(), String
     session.device.receiver.set_volume(!muted)
         .map_err(|e| format!("Failed to toggle mute: {:?}", e))?;
     Ok(())
+}
+
+/// Resolves a stream URL by following HTTP redirects server-side.
+/// Xtreamcode / IPTV servers often serve a redirect (302/301) from the
+/// hostname-based URL to the actual CDN IP with a time-limited token:
+///   http://kstv.us:8080/live/.../15966.m3u8
+///   → http://206.212.244.183:25461/live/.../15966.m3u8?token=...
+/// The Chromecast cannot follow these redirects reliably (the token may be
+/// bound to the requesting IP). By following the redirect from the app
+/// (same LAN IP as the Chromecast is on), the final URL can be sent
+/// directly to the Chromecast without it needing to resolve anything.
+#[tauri::command]
+pub async fn cast_resolve_url(url: String) -> Result<String, String> {
+    // Build a reqwest client that follows redirects automatically (default)
+    // but with a short timeout so we don't block the UI.
+    let client = reqwest::Client::builder()
+        .timeout(Duration::from_secs(8))
+        .redirect(reqwest::redirect::Policy::limited(10))
+        .danger_accept_invalid_certs(true) // some IPTV servers use self-signed certs
+        .build()
+        .map_err(|e| format!("Failed to build HTTP client: {}", e))?;
+
+    // Use a GET with a Range header to get just the first byte — avoids
+    // downloading the actual stream content while still forcing the server
+    // to issue the redirect chain that ends at the real CDN URL.
+    let response = client
+        .get(&url)
+        .header("Range", "bytes=0-0")
+        .header("User-Agent", "Mozilla/5.0 (compatible; Chromecast)")
+        .send()
+        .await
+        .map_err(|e| format!("Failed to resolve URL: {}", e))?;
+
+    // reqwest exposes the final URL after following all redirects
+    let final_url = response.url().to_string();
+    log::info!("[Cast] Resolved URL: {} -> {}", url, final_url);
+    Ok(final_url)
 }
