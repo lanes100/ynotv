@@ -151,6 +151,8 @@ function App() {
     startupView,
     castEnabled,
     setCastEnabled,
+    castRewriteTs,
+    setCastRewriteTs,
   } = useAppSettings();
   const navHiddenTabs = useUIStore((s) => s.navHiddenTabs);
   const setNavHiddenStore = useUIStore((s) => s.setNavHiddenTabs);
@@ -424,8 +426,29 @@ function App() {
       return;
     }
 
-    let url = currentChannel.direct_url || '';
-    url = rewriteTsToM3u8(url);
+    // Resolve the actual play URL before casting (crucial for Stalker channels)
+    let url = '';
+    try {
+      if (catchupInfo) {
+        const rawStreamId = currentChannel.stream_id.replace(`${currentChannel.source_id}_`, '');
+        const resolved = await resolvePlayUrl(currentChannel.source_id, currentChannel.direct_url, {
+          rawStreamId,
+          startTimeMs: catchupInfo.startTime,
+          durationMinutes: catchupInfo.duration,
+        });
+        url = resolved.url;
+      } else {
+        const resolved = await resolvePlayUrl(currentChannel.source_id, currentChannel.direct_url);
+        url = resolved.url;
+      }
+    } catch (e) {
+      console.error('[Cast] Failed to resolve play URL:', e);
+      url = currentChannel.direct_url || '';
+    }
+
+    if (castRewriteTs) {
+      url = rewriteTsToM3u8(url);
+    }
 
     const title = currentChannel.stream_id === 'vod' && vodInfo ? vodInfo.title : currentChannel.name;
     const subtitle = currentChannel.stream_id === 'vod' && vodInfo ? 'VOD' : 'Live TV';
@@ -433,14 +456,15 @@ function App() {
     try {
       console.log('[Cast] Casting URL:', url, 'Title:', title);
       const isHls = url.toLowerCase().includes('.m3u8') || url.toLowerCase().includes('/m3u8') || url.toLowerCase().includes('/hls');
-      const mimeType = isHls ? 'application/x-mpegURL' : 'video/mp4';
+      const isMpegTs = url.toLowerCase().includes('.ts') || url.toLowerCase().includes('/ts');
+      const mimeType = isHls ? 'application/x-mpegURL' : (isMpegTs ? 'video/mp2t' : 'video/mp4');
 
       await invoke('cast_load_media', { url, title, subtitle, mimeType });
-      Bridge.stop().catch(() => {}); // Stop local video to release network connection
+      Bridge.stopLocalVideo().catch(() => {}); // Stop local video to release network connection
     } catch (e: any) {
       alert('Failed to cast media: ' + (e?.message || e));
     }
-  }, [currentChannel, vodInfo]);
+  }, [currentChannel, vodInfo, catchupInfo, castRewriteTs]);
 
   // Dynamically start/stop discovery based on setting
   useEffect(() => {
@@ -2741,6 +2765,8 @@ function App() {
         <Settings
           castEnabled={castEnabled}
           onCastEnabledChange={setCastEnabled}
+          castRewriteTs={castRewriteTs}
+          onCastRewriteTsChange={setCastRewriteTs}
           stremioStreamPickerMode={stremioStreamPickerMode}
           onStremioStreamPickerModeChange={handleStremioStreamPickerModeChange}
           showStremioStreamBadges={showStremioStreamBadges}

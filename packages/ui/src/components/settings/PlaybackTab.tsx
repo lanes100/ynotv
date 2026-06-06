@@ -17,6 +17,8 @@ interface PlaybackTabProps {
   onStreamMaxRetriesChange: (retries: number) => Promise<void>;
   castEnabled?: boolean;
   onCastEnabledChange?: (enabled: boolean) => Promise<void>;
+  castRewriteTs?: boolean;
+  onCastRewriteTsChange?: (enabled: boolean) => Promise<void>;
   useEventBasedReconnect: boolean;
   onUseEventBasedReconnectChange: (enabled: boolean) => Promise<void>;
   stallDetectionEnabled: boolean;
@@ -64,6 +66,8 @@ export function PlaybackTab({
   onStreamMaxRetriesChange,
   castEnabled,
   onCastEnabledChange,
+  castRewriteTs,
+  onCastRewriteTsChange,
   useEventBasedReconnect,
   onUseEventBasedReconnectChange,
   stallDetectionEnabled,
@@ -447,7 +451,7 @@ export function PlaybackTab({
         {activeSubTab === 'cast' && (
           <div className="settings-section">
             <div className="playback-section" style={{ marginTop: 0 }}>
-              <div className="timeshift-toggle-row" style={{ borderBottom: 'none' }}>
+              <div className="timeshift-toggle-row">
                 <div className="timeshift-toggle-info">
                   <span className="timeshift-toggle-label">Enable Google Cast Support</span>
                   <span className="timeshift-toggle-sub">
@@ -464,8 +468,25 @@ export function PlaybackTab({
                 </label>
               </div>
 
+              <div className="timeshift-toggle-row" style={{ borderBottom: 'none', marginTop: '12px' }}>
+                <div className="timeshift-toggle-info">
+                  <span className="timeshift-toggle-label">Rewrite TS to M3U8 for Cast</span>
+                  <span className="timeshift-toggle-sub">
+                    Automatically rewrite `.ts` stream URLs to HLS `.m3u8` when casting. Turn this on only if your IPTV provider supports HLS at the rewritten URL. Disabling this casts the raw stream as MPEG-TS (`video/mp2t`).
+                  </span>
+                </div>
+                <label className="toggle-switch">
+                  <input
+                    type="checkbox"
+                    checked={castRewriteTs || false}
+                    onChange={(e) => onCastRewriteTsChange?.(e.target.checked)}
+                  />
+                  <span className="toggle-slider" />
+                </label>
+              </div>
+
               {castEnabled && (
-                <div className="retry-warning" style={{ marginTop: '12px' }}>
+                <div className="retry-warning" style={{ marginTop: '20px' }}>
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
                     <line x1="12" y1="9" x2="12" y2="13" />

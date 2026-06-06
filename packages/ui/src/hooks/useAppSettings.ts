@@ -96,6 +96,8 @@ export interface AppSettings {
     setStartupView: (view: 'none' | 'guide' | 'movies' | 'series' | 'dvr' | 'sports' | 'calendar') => void;
     castEnabled: boolean;
     setCastEnabled: (enabled: boolean) => void;
+    castRewriteTs: boolean;
+    setCastRewriteTs: (enabled: boolean) => void;
     externalPlayerPath: string;
     setExternalPlayerPath: (path: string) => void;
     externalPlayerArgs: string;
@@ -180,6 +182,7 @@ export function useAppSettings(): AppSettings {
 
   // Google Cast setting
   const [castEnabled, setCastEnabledState] = useState(false);
+  const [castRewriteTs, setCastRewriteTsState] = useState(true);
 
   // Apply theme effect
   useEffect(() => {
@@ -269,6 +272,7 @@ export function useAppSettings(): AppSettings {
 
           // Load Google Cast setting
           setCastEnabledState(result.data.castEnabled ?? false);
+          setCastRewriteTsState(result.data.castRewriteTs ?? true);
 
           // Apply EPG darken current setting on load
           if (result.data.epgDarkenCurrent) {
@@ -587,6 +591,17 @@ export function useAppSettings(): AppSettings {
     }
   }, []);
 
+  const setCastRewriteTs = useCallback(async (enabled: boolean) => {
+    setCastRewriteTsState(enabled);
+    if (window.storage) {
+      try {
+        await window.storage.updateSettings({ castRewriteTs: enabled });
+      } catch (e) {
+        console.error('[useAppSettings] Failed to save castRewriteTs:', e);
+      }
+    }
+  }, []);
+
   return {
     rememberLastChannels,
     reopenLastOnStartup,
@@ -651,6 +666,8 @@ export function useAppSettings(): AppSettings {
     setStartupView,
     castEnabled,
     setCastEnabled,
+    castRewriteTs,
+    setCastRewriteTs,
     externalPlayerPath,
     setExternalPlayerPath,
     externalPlayerArgs,

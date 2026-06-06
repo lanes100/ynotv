@@ -45,6 +45,8 @@ interface SettingsProps {
   onOverlayAutohideTimerChange?: (seconds: number) => void;
   castEnabled?: boolean;
   onCastEnabledChange?: (enabled: boolean) => void;
+  castRewriteTs?: boolean;
+  onCastRewriteTsChange?: (enabled: boolean) => void;
   stremioStreamPickerMode?: StremioStreamPickerMode;
   onStremioStreamPickerModeChange?: (mode: StremioStreamPickerMode) => void;
   showStremioStreamBadges?: boolean;
@@ -76,6 +78,8 @@ export function Settings({
   onOverlayAutohideTimerChange,
   castEnabled: castEnabledProp,
   onCastEnabledChange,
+  castRewriteTs: castRewriteTsProp,
+  onCastRewriteTsChange,
   stremioStreamPickerMode: stremioStreamPickerModeProp,
   onStremioStreamPickerModeChange,
   showStremioStreamBadges: showStremioStreamBadgesProp,
@@ -205,6 +209,7 @@ export function Settings({
   const [skipIntroTimerSeconds, setSkipIntroTimerSeconds] = useState(10);
   const [skipIntroAutoSkip, setSkipIntroAutoSkip] = useState(false);
   const [castEnabled, setCastEnabled] = useState(false);
+  const [castRewriteTs, setCastRewriteTs] = useState(false);
 
   // Widget scale state
   const [widgetScale, setWidgetScaleState] = useState(1);
@@ -222,6 +227,7 @@ export function Settings({
   useEffect(() => { setChannelInfoOverlayOpacity(channelInfoOverlayOpacityProp ?? 55); }, [channelInfoOverlayOpacityProp]);
   useEffect(() => { setChannelInfoOverlayHideDescription(channelInfoOverlayHideDescriptionProp ?? false); }, [channelInfoOverlayHideDescriptionProp]);
   useEffect(() => { setCastEnabled(castEnabledProp ?? false); }, [castEnabledProp]);
+  useEffect(() => { setCastRewriteTs(castRewriteTsProp ?? false); }, [castRewriteTsProp]);
   
   // Sync overlay autohide timer prop to uiSettings if needed, though uiSettings has it
   useEffect(() => { 
@@ -357,10 +363,14 @@ export function Settings({
         stremioBadgeSize?: number;
         navHiddenTabs?: string[];
         castEnabled?: boolean;
+        castRewriteTs?: boolean;
       };
 
       if (settings.castEnabled !== undefined) {
         setCastEnabled(settings.castEnabled);
+      }
+      if (settings.castRewriteTs !== undefined) {
+        setCastRewriteTs(settings.castRewriteTs);
       }
 
       // Load TMDB API key
@@ -558,6 +568,16 @@ export function Settings({
     }
     if (window.storage) {
       await window.storage.updateSettings({ castEnabled: enabled });
+    }
+  };
+
+  const handleCastRewriteTsChange = async (enabled: boolean) => {
+    setCastRewriteTs(enabled);
+    if (onCastRewriteTsChange) {
+      onCastRewriteTsChange(enabled);
+    }
+    if (window.storage) {
+      await window.storage.updateSettings({ castRewriteTs: enabled });
     }
   };
 
@@ -1115,6 +1135,8 @@ export function Settings({
             onStreamMaxRetriesChange={handleStreamMaxRetriesChange}
             castEnabled={castEnabled}
             onCastEnabledChange={handleCastEnabledChange}
+            castRewriteTs={castRewriteTs}
+            onCastRewriteTsChange={handleCastRewriteTsChange}
             useEventBasedReconnect={useEventBasedReconnect}
             onUseEventBasedReconnectChange={handleUseEventBasedReconnectChange}
             stallDetectionEnabled={stallDetectionEnabled}

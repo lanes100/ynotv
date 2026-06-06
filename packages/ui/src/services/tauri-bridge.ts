@@ -166,7 +166,7 @@ let castMetadata = { title: "YNotV Stream", subtitle: "" };
 
 // Set this to true if you want core player controls (play, pause, seek, volume, loadVideo)
 // to control Chromecast instead of the local player. Kept here in case we want to re-enable.
-export const REDIRECT_CONTROLS_TO_CAST = false;
+export const REDIRECT_CONTROLS_TO_CAST = true;
 
 export function rewriteTsToM3u8(url: string): string {
     if (!url) return url;
@@ -176,19 +176,40 @@ export function rewriteTsToM3u8(url: string): string {
             parsed.pathname = parsed.pathname.slice(0, -3) + '.m3u8';
             return parsed.toString();
         }
+
+        if (parsed.searchParams.get('output')?.toLowerCase() === 'ts') {
+            parsed.searchParams.set('output', 'm3u8');
+            return parsed.toString();
+        }
+
+        if (parsed.searchParams.get('extension')?.toLowerCase() === 'ts') {
+            parsed.searchParams.set('extension', 'm3u8');
+            return parsed.toString();
+        }
+
+        const segments = parsed.pathname.split('/').filter(Boolean);
+        const liveIndex = segments.findIndex(segment => segment.toLowerCase() === 'live');
+        const lastSegment = segments[segments.length - 1] || '';
+        if (liveIndex >= 0 && segments.length >= liveIndex + 4 && !lastSegment.includes('.')) {
+            parsed.pathname = `${parsed.pathname.replace(/\/$/, '')}.m3u8`;
+            return parsed.toString();
+        }
     } catch (e) {
         // Fallback for simple string replacement if URL parsing fails
-        if (url.toLowerCase().endsWith('.ts')) {
-            return url.slice(0, -3) + '.m3u8';
-        }
+        return url
+            .replace(/\.ts(?=([?#]|$))/i, '.m3u8')
+            .replace(/([?&](?:output|extension)=)ts(?=(&|$))/i, '$1m3u8');
     }
     return url;
 }
 
 function guessMimeType(url: string): string {
     const u = url.toLowerCase();
-    if (u.includes('.m3u8') || u.includes('/m3u8') || u.includes('.ts') || u.includes('/hls')) {
+    if (u.includes('.m3u8') || u.includes('/m3u8') || u.includes('/hls') || u.includes('output=m3u8') || u.includes('extension=m3u8')) {
         return 'application/x-mpegURL';
+    }
+    if (u.includes('.ts') || u.includes('/ts')) {
+        return 'video/mp2t';
     }
     if (u.includes('.mp4') || u.includes('/mp4')) {
         return 'video/mp4';
@@ -259,7 +280,18 @@ export const Bridge = {
             if (isLocal) {
                 return { success: false, error: 'Local files cannot be cast. Only remote streams are supported.' };
             }
-            const castUrl = rewriteTsToM3u8(url);
+
+            // Check settings to see if we should rewrite TS to M3U8
+            let castRewriteTs = false;
+            try {
+                const s = await getStore();
+                const settings: any = await s.get('settings') ?? {};
+                castRewriteTs = settings.castRewriteTs ?? true;
+            } catch (e) {
+                console.warn('[Bridge] Failed to load castRewriteTs setting:', e);
+            }
+
+            const castUrl = castRewriteTs ? rewriteTsToM3u8(url) : url;
             try {
                 await invoke('cast_load_media', {
                     url: castUrl,
@@ -282,42 +314,70 @@ export const Bridge = {
 
     async play() {
         if (REDIRECT_CONTROLS_TO_CAST && isCasting) {
-            return invoke('cast_play');
+            try {
+                return await invoke('cast_play');
+            } catch (e) {
+                console.warn('[Bridge.play] Cast play failed, falling back to MPV:', e);
+            }
         }
         return invoke('mpv_play');
     },
 
     async pause() {
         if (REDIRECT_CONTROLS_TO_CAST && isCasting) {
-            return invoke('cast_pause');
+            try {
+                return await invoke('cast_pause');
+            } catch (e) {
+                console.warn('[Bridge.pause] Cast pause failed, falling back to MPV:', e);
+            }
         }
         return invoke('mpv_pause');
     },
 
     async resume() {
         if (REDIRECT_CONTROLS_TO_CAST && isCasting) {
-            return invoke('cast_play');
+            try {
+                return await invoke('cast_play');
+            } catch (e) {
+                console.warn('[Bridge.resume] Cast resume failed, falling back to MPV:', e);
+            }
         }
         return invoke('mpv_resume');
     },
 
     async stop() {
         if (REDIRECT_CONTROLS_TO_CAST && isCasting) {
-            return invoke('cast_pause');
+            try {
+                return await invoke('cast_pause');
+            } catch (e) {
+                console.warn('[Bridge.stop] Cast stop (pause) failed, falling back to MPV:', e);
+            }
         }
+        return invoke('mpv_stop');
+    },
+
+    async stopLocalVideo() {
         return invoke('mpv_stop');
     },
 
     async setVolume(volume: number) {
         if (REDIRECT_CONTROLS_TO_CAST && isCasting) {
-            return invoke('cast_set_volume', { level: parseFloat(String(volume)) / 100.0 });
+            try {
+                return await invoke('cast_set_volume', { level: parseFloat(String(volume)) / 100.0 });
+            } catch (e) {
+                console.warn('[Bridge.setVolume] Cast set volume failed, falling back to MPV:', e);
+            }
         }
         return invoke('mpv_set_volume', { volume: parseFloat(String(volume)) });
     },
 
     async seek(seconds: number) {
         if (REDIRECT_CONTROLS_TO_CAST && isCasting) {
-            return invoke('cast_seek', { seconds: parseFloat(String(seconds)) });
+            try {
+                return await invoke('cast_seek', { seconds: parseFloat(String(seconds)) });
+            } catch (e) {
+                console.warn('[Bridge.seek] Cast seek failed, falling back to MPV:', e);
+            }
         }
         return invoke('mpv_seek', { seconds: parseFloat(String(seconds)) });
     },
@@ -332,7 +392,11 @@ export const Bridge = {
 
     async toggleMute() {
         if (REDIRECT_CONTROLS_TO_CAST && isCasting) {
-            return invoke('cast_toggle_mute');
+            try {
+                return await invoke('cast_toggle_mute');
+            } catch (e) {
+                console.warn('[Bridge.toggleMute] Cast toggle mute failed, falling back to MPV:', e);
+            }
         }
         return invoke('mpv_toggle_mute');
     },

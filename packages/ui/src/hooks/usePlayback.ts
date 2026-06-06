@@ -665,7 +665,7 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
       setError(errMsg);
       return false;
     } else {
-      const resolvedChannel = result.url !== resolved.url
+      const resolvedChannel = result.url !== channel.direct_url
         ? { ...channel, direct_url: result.url }
         : channel;
       currentChannelRef.current = resolvedChannel;

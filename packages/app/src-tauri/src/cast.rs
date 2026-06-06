@@ -307,9 +307,15 @@ pub fn cast_load_media(
     session.device.connection.connect(app.transport_id.as_str())
         .map_err(|e| format!("Failed to connect to media receiver: {:?}", e))?;
 
+    let stream_type = if subtitle.to_lowercase().contains("live") {
+        StreamType::Live
+    } else {
+        StreamType::Buffered
+    };
+
     let media = Media {
         content_id: url,
-        stream_type: StreamType::Buffered,
+        stream_type,
         content_type: mime_type,
         duration: None,
         metadata: Some(Metadata::Generic(GenericMediaMetadata {
