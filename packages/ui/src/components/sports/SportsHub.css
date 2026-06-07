@@ -4525,6 +4525,7 @@
   font-size: 13px;
   cursor: pointer;
   transition: all 0.15s ease;
+  flex-shrink: 0;
 }
 
 .sports-settings-reset:hover {
@@ -4532,128 +4533,147 @@
   color: var(--text-primary, #fff);
 }
 
-.sports-settings-sections {
-  display: flex;
-  flex-direction: column;
-  gap: 32px;
+/* Settings Table */
+.sports-settings-table-wrapper {
+  overflow-x: auto;
+  padding: 0 16px;
 }
 
-.sports-settings-section {
+.sports-settings-table {
+  width: 100%;
+  border-collapse: collapse;
   background: var(--bg-secondary, #1a1a1a);
   border-radius: 12px;
   overflow: hidden;
 }
 
-.sports-settings-section-header {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 16px 20px;
-  background: var(--bg-primary, #0f0f0f);
-  border-bottom: 1px solid var(--border-color, #222);
-}
-
-.sports-settings-section-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.sports-settings-section-icon.live {
-  background: rgba(239, 68, 68, 0.15);
-  color: #ef4444;
-}
-
-.sports-settings-section-icon.upcoming {
-  background: rgba(59, 130, 246, 0.15);
-  color: #3b82f6;
-}
-
-.sports-settings-section-icon.news {
-  background: rgba(168, 85, 247, 0.15);
-  color: #a855f7;
-}
-
-.sports-settings-section-info h3 {
-  margin: 0;
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--text-primary, #fff);
-}
-
-.sports-settings-section-info p {
-  margin: 4px 0 0;
-  font-size: 13px;
-  color: var(--text-secondary, #888);
-}
-
-.sports-settings-leagues {
-  padding: 16px 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.sports-settings-category {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.sports-settings-category-title {
-  margin: 0;
-  font-size: 11px;
+.sports-settings-table thead th {
+  padding: 14px 16px;
+  font-size: 12px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  color: var(--text-secondary, #666);
+  color: var(--text-secondary, #888);
+  background: var(--bg-primary, #0f0f0f);
+  border-bottom: 1px solid var(--border-color, #222);
+  text-align: left;
 }
 
-.sports-settings-league-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+.sports-settings-table thead th.col-league {
+  text-align: left;
 }
 
-.sports-settings-league-btn {
+.sports-settings-table thead th.col-select-all,
+.sports-settings-table thead th.col-live,
+.sports-settings-table thead th.col-upcoming,
+.sports-settings-table thead th.col-news {
+  text-align: center;
+  width: 100px;
+}
+
+/* Category rows */
+.sports-settings-table .category-row td {
+  padding: 0;
+  border-bottom: 1px solid var(--border-color, #222);
+}
+
+.category-header {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 8px 12px;
+  justify-content: space-between;
+  padding: 10px 16px;
   background: var(--bg-primary, #0f0f0f);
-  border: 1px solid var(--border-color, #222);
-  border-radius: 6px;
-  color: var(--text-secondary, #888);
+}
+
+.category-label {
   font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--accent-primary, #e50914);
+}
+
+.category-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.cat-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-secondary, #888);
   cursor: pointer;
-  transition: all 0.15s ease;
+  user-select: none;
 }
 
-.sports-settings-league-btn:hover {
-  border-color: var(--border-hover, #333);
+.cat-checkbox:hover {
   color: var(--text-primary, #fff);
 }
 
-.sports-settings-league-btn.selected {
-  background: rgba(59, 130, 246, 0.15);
-  border-color: #3b82f6;
+.cat-checkbox input[type="checkbox"] {
+  width: 13px;
+  height: 13px;
+  cursor: pointer;
+  accent-color: var(--accent-primary, #e50914);
+}
+
+.cat-checkbox.live input[type="checkbox"] { accent-color: #ef4444; }
+.cat-checkbox.upcoming input[type="checkbox"] { accent-color: #3b82f6; }
+.cat-checkbox.news input[type="checkbox"] { accent-color: #a855f7; }
+
+/* League rows */
+.sports-settings-table .league-row td {
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--border-color, #1a1a1a);
+  vertical-align: middle;
+}
+
+.sports-settings-table .league-row:hover td {
+  background: var(--bg-hover, #2a2a2a);
+}
+
+.sports-settings-table .league-row:last-child td {
+  border-bottom: none;
+}
+
+.sports-settings-table .league-row .col-league {
+  font-size: 13px;
+  font-weight: 500;
   color: var(--text-primary, #fff);
 }
 
-.sports-settings-league-check {
+.sports-settings-table .league-row .col-select-all,
+.sports-settings-table .league-row .col-live,
+.sports-settings-table .league-row .col-upcoming,
+.sports-settings-table .league-row .col-news {
+  text-align: center;
+}
+
+.settings-checkbox {
   width: 16px;
   height: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #3b82f6;
+  cursor: pointer;
+  accent-color: var(--accent-primary, #e50914);
 }
 
-.sports-settings-league-name {
-  white-space: nowrap;
+.sports-settings-table .league-row .col-select-all .settings-checkbox {
+  accent-color: #a855f7;
+}
+
+.sports-settings-table .league-row .col-live .settings-checkbox {
+  accent-color: #ef4444;
+}
+
+.sports-settings-table .league-row .col-upcoming .settings-checkbox {
+  accent-color: #3b82f6;
+}
+
+.sports-settings-table .league-row .col-news .settings-checkbox {
+  accent-color: #a855f7;
 }
 
 /* =============================================================================

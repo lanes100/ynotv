@@ -73,6 +73,9 @@ interface SportsSettingsState {
   setUpcomingLeagues: (leagues: string[]) => Promise<void>;
   setNewsLeagues: (leagues: string[]) => Promise<void>;
   toggleLeague: (section: 'live' | 'upcoming' | 'news', leagueId: string) => Promise<void>;
+  toggleLeagueAll: (leagueId: string) => Promise<void>;
+  setCategorySection: (section: 'live' | 'upcoming' | 'news', category: string, checked: boolean) => Promise<void>;
+  setCategoryAll: (category: string, checked: boolean) => Promise<void>;
   resetToDefaults: () => Promise<void>;
 }
 
@@ -129,6 +132,60 @@ export const useSportsSettingsStore = create<SportsSettingsState>()((set, get) =
     
     set({ [key]: updated });
     await db.prefs.put({ key: prefKey, value: JSON.stringify(updated) });
+  },
+
+  toggleLeagueAll: async (leagueId: string) => {
+    const state = get();
+    const inAll = state.liveLeagues.includes(leagueId) &&
+                  state.upcomingLeagues.includes(leagueId) &&
+                  state.newsLeagues.includes(leagueId);
+
+    if (inAll) {
+      const newLive = state.liveLeagues.filter(id => id !== leagueId);
+      const newUpcoming = state.upcomingLeagues.filter(id => id !== leagueId);
+      const newNews = state.newsLeagues.filter(id => id !== leagueId);
+      set({ liveLeagues: newLive, upcomingLeagues: newUpcoming, newsLeagues: newNews });
+      await Promise.all([
+        db.prefs.put({ key: 'sports_live_leagues', value: JSON.stringify(newLive) }),
+        db.prefs.put({ key: 'sports_upcoming_leagues', value: JSON.stringify(newUpcoming) }),
+        db.prefs.put({ key: 'sports_news_leagues', value: JSON.stringify(newNews) }),
+      ]);
+    } else {
+      const newLive = state.liveLeagues.includes(leagueId) ? state.liveLeagues : [...state.liveLeagues, leagueId];
+      const newUpcoming = state.upcomingLeagues.includes(leagueId) ? state.upcomingLeagues : [...state.upcomingLeagues, leagueId];
+      const newNews = state.newsLeagues.includes(leagueId) ? state.newsLeagues : [...state.newsLeagues, leagueId];
+      set({ liveLeagues: newLive, upcomingLeagues: newUpcoming, newsLeagues: newNews });
+      await Promise.all([
+        db.prefs.put({ key: 'sports_live_leagues', value: JSON.stringify(newLive) }),
+        db.prefs.put({ key: 'sports_upcoming_leagues', value: JSON.stringify(newUpcoming) }),
+        db.prefs.put({ key: 'sports_news_leagues', value: JSON.stringify(newNews) }),
+      ]);
+    }
+  },
+
+  setCategorySection: async (section: 'live' | 'upcoming' | 'news', category: string, checked: boolean) => {
+    const state = get();
+    const leagues = getLeaguesByCategory()[category] || [];
+    const leagueIds = leagues.map(l => l.id);
+    const key = section === 'live' ? 'liveLeagues' : section === 'upcoming' ? 'upcomingLeagues' : 'newsLeagues';
+    const prefKey = section === 'live' ? 'sports_live_leagues' : section === 'upcoming' ? 'sports_upcoming_leagues' : 'sports_news_leagues';
+
+    const current = state[key];
+    const updated = checked
+      ? [...new Set([...current, ...leagueIds])]
+      : current.filter(id => !leagueIds.includes(id));
+
+    set({ [key]: updated });
+    await db.prefs.put({ key: prefKey, value: JSON.stringify(updated) });
+  },
+
+  setCategoryAll: async (category: string, checked: boolean) => {
+    const { setCategorySection } = get();
+    await Promise.all([
+      setCategorySection('live', category, checked),
+      setCategorySection('upcoming', category, checked),
+      setCategorySection('news', category, checked),
+    ]);
   },
 
   resetToDefaults: async () => {
