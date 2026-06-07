@@ -8,7 +8,9 @@ import {
   useSetStremioSelectedAddonId,
   useSetStremioSelectedCatalogId,
   useSetStremioSelectedCatalogType,
+  useSetStremioSelectedCloudCatalogKey,
 } from '../../stores/uiStore';
+import { TRAKT_CATALOG_DEFINITIONS } from '../../services/scrobbler';
 import { useStremioHover } from '../../contexts/StremioHoverContext';
 import './StremioHome.css';
 
@@ -27,10 +29,24 @@ export function CatalogDetailView({ addon, catalog, onItemClick }: CatalogDetail
   const setSelectedAddonId = useSetStremioSelectedAddonId();
   const setSelectedCatalogId = useSetStremioSelectedCatalogId();
   const setSelectedCatalogType = useSetStremioSelectedCatalogType();
+  const setSelectedCloudCatalogKey = useSetStremioSelectedCloudCatalogKey();
 
   const addons = useStremioAddonStore((s) => s.enabledAddons);
 
   const [items, setItems] = useState<StremioMetaPreview[]>([]);
+  const [traktEnabled, setTraktEnabled] = useState(false);
+  const [simklEnabled, setSimklEnabled] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    window.storage?.getSettings().then((res) => {
+      if (!active) return;
+      const s = res.data || {};
+      setTraktEnabled(!!(s.traktEnabled && s.traktAccessToken));
+      setSimklEnabled(!!(s.simklEnabled && s.simklAccessToken));
+    });
+    return () => { active = false; };
+  }, []);
   const [loadingInitial, setLoadingInitial] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
@@ -64,6 +80,20 @@ export function CatalogDetailView({ addon, catalog, onItemClick }: CatalogDetail
     return Array.from(set);
   }, [addons]);
 
+  const typeOptions = useMemo(() => {
+    const list = types.map((t) => ({
+      value: t,
+      label: t === 'series' ? 'Series' : t.charAt(0).toUpperCase() + t.slice(1) + 's',
+    }));
+    if (traktEnabled) {
+      list.push({ value: 'trakt', label: 'Trakt' });
+    }
+    if (simklEnabled) {
+      list.push({ value: 'simkl', label: 'Simkl' });
+    }
+    return list;
+  }, [types, traktEnabled, simklEnabled]);
+
   const availableCatalogs = useMemo(() => {
     const list: { addon: InstalledAddon; catalog: StremioManifestCatalog }[] = [];
     for (const a of addons) {
@@ -85,6 +115,39 @@ export function CatalogDetailView({ addon, catalog, onItemClick }: CatalogDetail
   }, [genreExtra]);
 
   const handleTypeChange = (newType: string) => {
+    if (newType === 'trakt' || newType === 'simkl') {
+      window.storage?.getSettings().then((res) => {
+        const s = res.data || {};
+        let defaultKey = '';
+        if (newType === 'trakt') {
+          if (s.traktEnabled && s.traktAccessToken) {
+            const enabledCatalogs: Record<string, boolean> = s.traktCatalogsEnabled || {};
+            const firstDef = TRAKT_CATALOG_DEFINITIONS.find((def) => enabledCatalogs[def.type] === true);
+            if (firstDef) {
+              defaultKey = `trakt-${firstDef.type}`;
+            } else {
+              const enabledLists = s.traktEnabledLists || [];
+              if (enabledLists.length > 0) {
+                defaultKey = `trakt-list-${enabledLists[0].id}`;
+              }
+            }
+          }
+        } else if (newType === 'simkl') {
+          if (s.simklEnabled && s.simklAccessToken) {
+            defaultKey = 'simkl-watchlist';
+          }
+        }
+
+        if (defaultKey) {
+          setSelectedAddonId(null);
+          setSelectedCatalogId(null);
+          setSelectedCatalogType(null);
+          setSelectedCloudCatalogKey(defaultKey);
+        }
+      });
+      return;
+    }
+
     const match = addons
       .flatMap((a) => (a.manifest.catalogs || []).map((c) => ({ addon: a, catalog: c })))
       .find((x) => x.catalog.type === newType);
@@ -92,6 +155,7 @@ export function CatalogDetailView({ addon, catalog, onItemClick }: CatalogDetail
       setSelectedAddonId(match.addon.id);
       setSelectedCatalogId(match.catalog.id);
       setSelectedCatalogType(match.catalog.type);
+      setSelectedCloudCatalogKey(null);
       setSelectedGenre('');
     }
   };
@@ -253,9 +317,9 @@ export function CatalogDetailView({ addon, catalog, onItemClick }: CatalogDetail
               value={catalog.type}
               onChange={(e) => handleTypeChange(e.target.value)}
             >
-              {types.map((t) => (
-                <option key={t} value={t}>
-                  {t === 'series' ? 'Series' : t.charAt(0).toUpperCase() + t.slice(1) + 's'}
+              {typeOptions.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
                 </option>
               ))}
             </select>

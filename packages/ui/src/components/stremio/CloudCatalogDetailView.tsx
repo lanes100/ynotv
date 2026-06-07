@@ -1,8 +1,27 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import type { StremioMetaPreview } from '../../types/stremio';
 import { scrobbler, TRAKT_CATALOG_DEFINITIONS, type TraktCatalogType } from '../../services/scrobbler';
 import { useStremioHover } from '../../contexts/StremioHoverContext';
+import { useStremioAddonStore } from '../../stores/stremioAddonStore';
+import {
+  useSetStremioSelectedAddonId,
+  useSetStremioSelectedCatalogId,
+  useSetStremioSelectedCatalogType,
+  useSetStremioSelectedCloudCatalogKey,
+} from '../../stores/uiStore';
 import './StremioHome.css';
+
+const HIDDEN_CATALOG_IDS = new Set(['last-videos', 'calendar-videos']);
+
+const cleanTitle = (title: string, type: 'trakt' | 'simkl') => {
+  if (type === 'trakt') {
+    return title.replace(/^Trakt\s*—\s*/, '').replace(/^Trakt\s*/, '');
+  }
+  if (type === 'simkl') {
+    return title.replace(/^Simkl\s*—\s*/, '').replace(/^Simkl\s*/, '');
+  }
+  return title;
+};
 
 interface CloudCatalogEntry {
   key: string;
@@ -51,6 +70,48 @@ export function CloudCatalogDetailView({ cloudCatalogKey, onItemClick, onBack }:
   const [availableCatalogs, setAvailableCatalogs] = useState<CloudCatalogEntry[]>([]);
   const [selectedKey, setSelectedKey] = useState(cloudCatalogKey);
   const { onCardMouseEnter, onCardMouseLeave, onCardClick } = useStremioHover();
+
+  const addons = useStremioAddonStore((s) => s.enabledAddons);
+  const setSelectedAddonId = useSetStremioSelectedAddonId();
+  const setSelectedCatalogId = useSetStremioSelectedCatalogId();
+  const setSelectedCatalogType = useSetStremioSelectedCatalogType();
+  const setSelectedCloudCatalogKey = useSetStremioSelectedCloudCatalogKey();
+
+  // Compute navigation filters (addon types)
+  const types = useMemo(() => {
+    const set = new Set<string>();
+    for (const a of addons) {
+      for (const c of a.manifest.catalogs || []) {
+        if (!HIDDEN_CATALOG_IDS.has(c.id)) {
+          set.add(c.type);
+        }
+      }
+    }
+    return Array.from(set);
+  }, [addons]);
+
+  const hasTrakt = useMemo(() => availableCatalogs.some((c) => c.key.startsWith('trakt')), [availableCatalogs]);
+  const hasSimkl = useMemo(() => availableCatalogs.some((c) => c.key.startsWith('simkl')), [availableCatalogs]);
+
+  const typeOptions = useMemo(() => {
+    const list = types.map((t) => ({
+      value: t,
+      label: t === 'series' ? 'Series' : t.charAt(0).toUpperCase() + t.slice(1) + 's',
+    }));
+    if (hasTrakt) {
+      list.push({ value: 'trakt', label: 'Trakt' });
+    }
+    if (hasSimkl) {
+      list.push({ value: 'simkl', label: 'Simkl' });
+    }
+    return list;
+  }, [types, hasTrakt, hasSimkl]);
+
+  const currentType = selectedKey.startsWith('simkl') ? 'simkl' : 'trakt';
+
+  const filteredCatalogs = useMemo(() => {
+    return availableCatalogs.filter((c) => c.key.startsWith(currentType));
+  }, [availableCatalogs, currentType]);
 
   // Load available cloud catalogs from settings
   useEffect(() => {
@@ -108,9 +169,32 @@ export function CloudCatalogDetailView({ cloudCatalogKey, onItemClick, onBack }:
   }, [selectedKey, page]);
 
   const handleCatalogChange = useCallback((newKey: string) => {
+    setSelectedCloudCatalogKey(newKey);
     setSelectedKey(newKey);
     setPage(1);
-  }, []);
+  }, [setSelectedCloudCatalogKey]);
+
+  const handleTypeChange = (newType: string) => {
+    if (newType === 'trakt' || newType === 'simkl') {
+      const firstOfNewType = availableCatalogs.find((c) => c.key.startsWith(newType));
+      if (firstOfNewType) {
+        setSelectedCloudCatalogKey(firstOfNewType.key);
+        setSelectedKey(firstOfNewType.key);
+        setPage(1);
+      }
+      return;
+    }
+
+    const match = addons
+      .flatMap((a) => (a.manifest.catalogs || []).map((c) => ({ addon: a, catalog: c })))
+      .find((x) => x.catalog.type === newType);
+    if (match) {
+      setSelectedAddonId(match.addon.id);
+      setSelectedCatalogId(match.catalog.id);
+      setSelectedCatalogType(match.catalog.type);
+      setSelectedCloudCatalogKey(null);
+    }
+  };
 
   const handlePrevPage = useCallback(() => {
     setPage((p) => Math.max(1, p - 1));
@@ -142,13 +226,29 @@ export function CloudCatalogDetailView({ cloudCatalogKey, onItemClick, onBack }:
           </div>
 
           <div className="stremio-discover-filters">
+            {/* First dropdown: Type/Provider selector */}
+            <select
+              className="stremio-discover-select"
+              value={currentType}
+              onChange={(e) => handleTypeChange(e.target.value)}
+            >
+              {typeOptions.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+
+            {/* Second dropdown: Catalog selector */}
             <select
               className="stremio-discover-select"
               value={selectedKey}
               onChange={(e) => handleCatalogChange(e.target.value)}
             >
-              {availableCatalogs.map((entry) => (
-                <option key={entry.key} value={entry.key}>{entry.title}</option>
+              {filteredCatalogs.map((entry) => (
+                <option key={entry.key} value={entry.key}>
+                  {cleanTitle(entry.title, currentType)}
+                </option>
               ))}
             </select>
 
