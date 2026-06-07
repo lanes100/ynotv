@@ -140,7 +140,7 @@ export function VerticalSidebar({
         }));
     };
 
-    // Process categories: strip prefixes and sort alphabetically
+    // Process categories: strip prefixes and preserve database / custom order
     const processedCategories = useMemo(() => {
         return categories
             .map((cat) => ({
@@ -148,8 +148,7 @@ export function VerticalSidebar({
                 displayName: cat.name
                     ? cat.name.replace(/^(Series|Movies|Movie)-/i, '').trim()
                     : '', // Handle null/undefined names
-            }))
-            .sort((a, b) => a.displayName.localeCompare(b.displayName));
+            }));
     }, [categories]);
 
     // Group categories by source
