@@ -66,8 +66,16 @@ export function CastButton({ castEnabled, onCastCurrentStream }: CastButtonProps
     let unlistenDevice: (() => void) | undefined;
     let unlistenStatus: (() => void) | undefined;
 
-    // Listen to discovered devices
-    listen<DiscoveredDevice[]>('cast-device-found', (event) => {
+    // Seed with any devices already discovered (from mDNS cache)
+    invoke<DiscoveredDevice[]>('cast_get_devices').then((devs) => {
+      if (devs && devs.length > 0) {
+        console.log('[Cast] Initial devices from cache:', devs);
+        setDevices(devs);
+      }
+    }).catch(() => {});
+
+    // Listen to discovered devices (event name must match backend: 'cast-devices')
+    listen<DiscoveredDevice[]>('cast-devices', (event) => {
       console.log('[Cast] Devices found event:', event.payload);
       setDevices(event.payload);
     }).then((unsub) => {

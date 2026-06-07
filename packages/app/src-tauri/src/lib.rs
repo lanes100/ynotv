@@ -45,9 +45,9 @@ use tmdb_cache::{TmdbCache, MatchResult, CacheStats};
 
 mod cast;
 use cast::{
-    cast_start_discovery, cast_stop_discovery, cast_connect, cast_disconnect,
+    cast_start_discovery, cast_stop_discovery, cast_get_devices, cast_connect, cast_disconnect,
     cast_load_media, cast_play, cast_pause, cast_seek, cast_set_volume, cast_toggle_mute,
-    cast_resolve_url,
+    cast_resolve_url, cast_stop,
 };
 
 
@@ -2721,6 +2721,7 @@ pub fn run() {
             // Google Cast commands
             cast_start_discovery,
             cast_stop_discovery,
+            cast_get_devices,
             cast_connect,
             cast_disconnect,
             cast_load_media,
@@ -2729,7 +2730,8 @@ pub fn run() {
             cast_seek,
             cast_set_volume,
             cast_toggle_mute,
-            cast_resolve_url
+            cast_resolve_url,
+            cast_stop
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

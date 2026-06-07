@@ -206,21 +206,23 @@ export function rewriteTsToM3u8(url: string): string {
     return url;
 }
 
-function guessMimeType(url: string): string {
-    const u = url.toLowerCase();
-    if (u.includes('.m3u8') || u.includes('/m3u8') || u.includes('/hls') || u.includes('output=m3u8') || u.includes('extension=m3u8')) {
+function guessMimeType(url: string, fallbackUrl?: string): string {
+    const candidates = [url, fallbackUrl].filter(Boolean).map((candidate) => candidate!.toLowerCase());
+    const hasMatch = (predicate: (candidate: string) => boolean) => candidates.some(predicate);
+
+    if (hasMatch((u) => u.includes('.m3u8') || u.includes('/m3u8') || u.includes('/hls') || u.includes('output=m3u8') || u.includes('extension=m3u8'))) {
         return 'application/x-mpegURL';
     }
-    if (u.includes('.ts') || u.includes('/ts')) {
+    if (hasMatch((u) => u.includes('.ts') || u.includes('/ts'))) {
         return 'video/mp2t';
     }
-    if (u.includes('.mp4') || u.includes('/mp4')) {
+    if (hasMatch((u) => u.includes('.mp4') || u.includes('/mp4'))) {
         return 'video/mp4';
     }
-    if (u.includes('.mkv')) {
+    if (hasMatch((u) => u.includes('.mkv'))) {
         return 'video/x-matroska';
     }
-    if (u.includes('.webm')) {
+    if (hasMatch((u) => u.includes('.webm'))) {
         return 'video/webm';
     }
     return 'application/x-mpegURL';
@@ -277,7 +279,7 @@ export const Bridge = {
         }
     },
 
-    async loadVideo(url: string) {
+    async loadVideo(url: string, userAgent?: string) {
         if (REDIRECT_CONTROLS_TO_CAST && isCasting) {
             const isLocal = url.startsWith('file://') || (!url.startsWith('http://') && !url.startsWith('https://'));
             if (isLocal) {
@@ -294,8 +296,17 @@ export const Bridge = {
                 console.warn('[Bridge] Failed to load castRewriteTs setting:', e);
             }
 
+            // Chromecast's Default Media Receiver (CC1AD845) does not support raw MPEG-TS (.ts) streams.
+            // Therefore, if the URL is a .ts stream, we should rewrite it to HLS (.m3u8) when casting.
+            // We force this rewrite if castRewriteTs is true, OR if the URL is a standard IPTV .ts stream
+            // (meaning it contains .ts, output=ts, or extension=ts).
+            const isStandardTs = url.toLowerCase().includes('.ts') || 
+                                 url.toLowerCase().includes('output=ts') || 
+                                 url.toLowerCase().includes('extension=ts');
+            const shouldRewrite = castRewriteTs || isStandardTs;
+
             // Apply TS->M3U8 rewrite before resolving redirects
-            const preRewriteUrl = castRewriteTs ? rewriteTsToM3u8(url) : url;
+            const preRewriteUrl = shouldRewrite ? rewriteTsToM3u8(url) : url;
 
             // Serialise concurrent cast_load_media calls
             castLoadSeq += 1;
@@ -309,25 +320,38 @@ export const Bridge = {
             }
             if (castLoadSeq !== mySeq) return { success: true };
 
+            // Lock early to prevent concurrent URL resolutions/loads
+            castLoadInFlight = true;
+
+            // Stop/pause previous cast stream to free up connection slot
+            try {
+                await invoke('cast_stop');
+            } catch (stopErr) {
+                try {
+                    await invoke('cast_pause');
+                } catch (pauseErr) {
+                    console.warn('[Bridge.loadVideo] Failed to stop/pause previous cast stream:', pauseErr);
+                }
+            }
+
             // Resolve HTTP redirects server-side so Chromecast gets the final CDN URL.
             // Xtreamcode servers redirect: hostname/.../ch.m3u8 -> CDN_IP/.../ch.m3u8?token=...
             // Token is IP-bound; resolving from app (same LAN) creates a token the Chromecast can use.
             let castUrl = preRewriteUrl;
             try {
-                const resolved: string = await invoke('cast_resolve_url', { url: preRewriteUrl });
-                castUrl = castRewriteTs ? rewriteTsToM3u8(resolved) : resolved;
+                const resolved: string = await invoke('cast_resolve_url', { url: preRewriteUrl, userAgent });
+                castUrl = shouldRewrite ? rewriteTsToM3u8(resolved) : resolved;
                 console.log('[Bridge.loadVideo] Resolved cast URL:', castUrl);
             } catch (e) {
                 console.warn('[Bridge.loadVideo] Redirect resolve failed, using URL as-is:', e);
             }
 
-            castLoadInFlight = true;
             try {
                 await invoke('cast_load_media', {
                     url: castUrl,
                     title: castMetadata.title,
                     subtitle: castMetadata.subtitle,
-                    mimeType: guessMimeType(castUrl),
+                    mimeType: guessMimeType(castUrl, preRewriteUrl),
                 });
                 return { success: true };
             } catch (e: any) {

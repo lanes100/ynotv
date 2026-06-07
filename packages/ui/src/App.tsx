@@ -457,6 +457,7 @@ function App() {
     try {
       // Resolve the actual play URL before casting (crucial for Stalker channels)
       let url = '';
+      let userAgent: string | undefined;
       try {
         if (catchup) {
           const rawStreamId = channel.stream_id.replace(`${channel.source_id}_`, '');
@@ -466,9 +467,11 @@ function App() {
             durationMinutes: catchup.duration,
           });
           url = resolved.url;
+          userAgent = resolved.userAgent;
         } else {
           const resolved = await resolvePlayUrl(channel.source_id, channel.direct_url);
           url = resolved.url;
+          userAgent = resolved.userAgent;
         }
       } catch (e) {
         console.error('[Cast] Failed to resolve play URL:', e);
@@ -483,14 +486,16 @@ function App() {
       // Set metadata BEFORE calling Bridge.loadVideo so Bridge picks up the correct title/subtitle.
       Bridge.setCastMetadata(title, subtitle);
 
+      // Stop local video BEFORE loading to avoid multiple active streams on the provider side
+      await Bridge.stopLocalVideo().catch(() => {});
+
       // Route through Bridge.loadVideo so the castLoadInFlight serialization guard
       // in tauri-bridge.ts coordinates with any concurrent handleLoadStream call,
       // preventing two simultaneous cast_load_media calls that cause INVALID_MEDIA_SESSION_ID.
-      const result = await Bridge.loadVideo(url);
+      const result = await Bridge.loadVideo(url, userAgent);
       if (!result.success) {
         throw new Error(result.error || 'Failed to cast media');
       }
-      Bridge.stopLocalVideo().catch(() => {}); // Stop local video after load succeeds
     } catch (e: any) {
       alert('Failed to cast media: ' + (e?.message || e));
     } finally {
@@ -521,15 +526,12 @@ function App() {
     };
   }, [castEnabled]);
 
-  // Listen for cast status changes.
-  // IMPORTANT: empty dep array so this effect never re-registers mid-session.
-  // Re-registering would reset previouslyCasting=false and double-trigger castCurrentMedia,
-  // which causes INVALID_MEDIA_SESSION_ID on the second cast_play call.
-  // All live values are read via stable refs inside the callback.
   useEffect(() => {
     let unlisten: (() => void) | undefined;
+    let disposed = false;
 
     import('@tauri-apps/api/event').then(({ listen }) => {
+      if (disposed) return;
       listen<any>('cast-status', (event) => {
         const status = event.payload;
         console.log('[Cast] Status event:', status);
@@ -558,11 +560,16 @@ function App() {
           setCastMetadataState(Bridge.getCastMetadata());
         }
       }).then((unsub) => {
-        unlisten = unsub;
+        if (disposed) {
+          unsub();
+        } else {
+          unlisten = unsub;
+        }
       });
     });
 
     return () => {
+      disposed = true;
       if (unlisten) unlisten();
     };
   }, []); // intentionally empty — uses refs for all live values

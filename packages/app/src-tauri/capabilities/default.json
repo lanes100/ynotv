@@ -3,7 +3,8 @@
   "identifier": "default",
   "description": "Capability for the main window",
   "windows": [
-    "main"
+    "main",
+    "local:*"
   ],
   "permissions": [
     "core:default",
@@ -62,7 +63,20 @@
       "spawn_external_player",
       "spawn_external_player_reuse",
       "kill_external_player",
-      "spawn_external_player_with_args"
+      "spawn_external_player_with_args",
+      "cast_start_discovery",
+      "cast_stop_discovery",
+      "cast_get_devices",
+      "cast_connect",
+      "cast_disconnect",
+      "cast_load_media",
+      "cast_play",
+      "cast_pause",
+      "cast_seek",
+      "cast_set_volume",
+      "cast_toggle_mute",
+      "cast_resolve_url",
+      "cast_stop"
     ]
   }
 }

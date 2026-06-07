@@ -1,0 +1,29 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "dev",
+  "description": "Additional capability for the dev server (localhost:5173) — eliminates IPC CORS errors in development",
+  "windows": [
+    "main",
+    "local:*"
+  ],
+  "permissions": [
+    "core:default"
+  ],
+  "commands": {
+    "allow": [
+      "cast_start_discovery",
+      "cast_stop_discovery",
+      "cast_get_devices",
+      "cast_connect",
+      "cast_disconnect",
+      "cast_load_media",
+      "cast_play",
+      "cast_pause",
+      "cast_seek",
+      "cast_set_volume",
+      "cast_toggle_mute",
+      "cast_resolve_url",
+      "cast_stop"
+    ]
+  }
+}

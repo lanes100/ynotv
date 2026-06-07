@@ -158,7 +158,7 @@ async function tryLoadWithFallbacks(
   }
 
   logInfo('[Playback] Loading URL:', primaryUrl);
-  const result = await Bridge.loadVideo(primaryUrl);
+  const result = await Bridge.loadVideo(primaryUrl, userAgent);
 
   if (result.success) {
     logInfo('[Playback] Successfully loaded:', primaryUrl);
@@ -175,7 +175,7 @@ async function tryLoadWithFallbacks(
 
   for (const fallbackUrl of fallbacks) {
     logInfo('[Playback] Trying fallback:', fallbackUrl);
-    const fallbackResult = await Bridge.loadVideo(fallbackUrl);
+    const fallbackResult = await Bridge.loadVideo(fallbackUrl, userAgent);
     if (fallbackResult.success) {
       logInfo('[Playback] Fallback succeeded:', fallbackUrl);
       return { success: true, url: fallbackUrl };
@@ -874,6 +874,10 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
   const handleStreamDied = useCallback(async () => {
     // Only retry for Live TV (not VOD, not catchup)
     if (!currentChannelRef.current || vodInfoRef2.current || catchupInfoRef.current) return;
+    if (Bridge.getIsCasting?.()) {
+      logInfo('[Retry] Ignoring stream failure — casting is active');
+      return;
+    }
     if (intentionallyStoppedRef.current) {
       logInfo('[Retry] Ignoring stream failure — main player was intentionally stopped');
       intentionallyStoppedRef.current = false;
@@ -1076,7 +1080,8 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
         isRetryingRef.current ||
         failoverSwitchingRef.current ||
         userPausedRef.current ||
-        now < healthLoadGraceUntilRef.current
+        now < healthLoadGraceUntilRef.current ||
+        Bridge.getIsCasting?.()
       ) {
         return;
       }

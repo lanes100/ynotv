@@ -214,7 +214,7 @@ export function Settings({
   const [skipIntroTimerSeconds, setSkipIntroTimerSeconds] = useState(10);
   const [skipIntroAutoSkip, setSkipIntroAutoSkip] = useState(false);
   const [castEnabled, setCastEnabled] = useState(false);
-  const [castRewriteTs, setCastRewriteTs] = useState(false);
+  const [castRewriteTs, setCastRewriteTs] = useState(true);
 
   // Widget scale state
   const [widgetScale, setWidgetScaleState] = useState(1);
@@ -232,7 +232,7 @@ export function Settings({
   useEffect(() => { setChannelInfoOverlayOpacity(channelInfoOverlayOpacityProp ?? 55); }, [channelInfoOverlayOpacityProp]);
   useEffect(() => { setChannelInfoOverlayHideDescription(channelInfoOverlayHideDescriptionProp ?? false); }, [channelInfoOverlayHideDescriptionProp]);
   useEffect(() => { setCastEnabled(castEnabledProp ?? false); }, [castEnabledProp]);
-  useEffect(() => { setCastRewriteTs(castRewriteTsProp ?? false); }, [castRewriteTsProp]);
+  useEffect(() => { setCastRewriteTs(castRewriteTsProp ?? true); }, [castRewriteTsProp]);
   
   // Sync overlay autohide timer prop to uiSettings if needed, though uiSettings has it
   useEffect(() => { 
