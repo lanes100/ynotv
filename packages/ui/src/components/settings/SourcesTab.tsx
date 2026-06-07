@@ -13,6 +13,7 @@ import {
   useSyncStatusMessage,
   useSetSyncStatusMessage
 } from '../../stores/uiStore';
+import { useToastStore } from '../../stores/toastStore';
 import { parseM3U, XtreamClient, StalkerClient } from '@ynotv/local-adapter';
 import { CategoryManager } from './CategoryManager';
 import { DataRefreshTab } from './DataRefreshTab';
@@ -797,8 +798,10 @@ export function SourcesTab({
       // Trigger category refresh after sync completes
       incrementVersion();
     } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Channel sync failed';
       console.error('Sync error:', err);
-      setSyncError(err instanceof Error ? err.message : 'Channel sync failed');
+      setSyncError(msg);
+      useToastStore.getState().addToast(msg, 'error');
     } finally {
       setSyncing(false);
       setSyncStatusMsg(null);
@@ -816,8 +819,10 @@ export function SourcesTab({
       const results = await syncAllVod();
       setVodSyncResults(results);
     } catch (err) {
+      const msg = err instanceof Error ? err.message : 'VOD sync failed';
       console.error('VOD sync error:', err);
-      setSyncError(err instanceof Error ? err.message : 'VOD sync failed');
+      setSyncError(msg);
+      useToastStore.getState().addToast(msg, 'error');
     } finally {
       setVodSyncing(false);
     }
@@ -843,6 +848,7 @@ export function SourcesTab({
         console.log(`Source ${source.name}: ${result.channelCount} channels synced`);
       } else {
         console.error(`Source ${source.name} sync failed:`, result.error);
+        useToastStore.getState().addToast(`Sync failed: ${source.name} - ${result.error}`, 'error');
       }
 
       // Post-sync: apply global EPG links (primary EPG just cleared everything)
@@ -880,6 +886,7 @@ export function SourcesTab({
         console.log(`Source ${source.name}: ${result.movieCount} movies, ${result.seriesCount} series synced`);
       } else {
         console.error(`Source ${source.name} VOD sync failed:`, result.error);
+        useToastStore.getState().addToast(`VOD sync failed: ${source.name} - ${result.error}`, 'error');
       }
       onSourcesChange(); // Refresh to show updated counts
     } catch (err) {
@@ -1024,7 +1031,9 @@ export function SourcesTab({
       }
       console.log(`[Global EPG] Synced ${epg.name}: ${count} programs inserted`);
     } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
       console.error(`[Global EPG] Failed to sync ${epg.name}:`, err);
+      useToastStore.getState().addToast(`EPG sync failed: ${epg.name} - ${msg}`, 'error');
     } finally {
       setSyncingEpgId(null);
     }

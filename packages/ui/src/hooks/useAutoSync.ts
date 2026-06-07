@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { syncSource, syncVodForSource, isEpgStale, isVodStale, syncAllStaleGlobalEpgLinks } from '../db/sync';
 import { bulkOps } from '../services/bulk-ops';
+import { useToastStore } from '../stores/toastStore';
 import {
     useSetChannelSyncing,
     useSetVodSyncing,
@@ -120,6 +121,8 @@ export function useAutoSync(callbacks: AutoSyncSettings = {}) {
                                     const syncResult = await syncSource(source, (msg) => settersRef.current.setSyncStatusMessage(`${prefix}: ${msg}`));
                                     if (syncResult.success) {
                                         syncedSourceIds.push(source.id);
+                                    } else {
+                                        useToastStore.getState().addToast(`Auto-sync failed: ${source.name} - ${syncResult.error}`, 'error');
                                     }
                                 })
                             );
@@ -167,9 +170,11 @@ export function useAutoSync(callbacks: AutoSyncSettings = {}) {
                 if (hasSynced) {
                     console.log('[AutoSync] Periodic sync completed');
                 }
-            } catch (err) {
-                console.error('[AutoSync] Periodic check failed:', err);
-            } finally {
+                } catch (err) {
+                    const msg = err instanceof Error ? err.message : 'Auto-sync periodic check failed';
+                    console.error('[AutoSync] Periodic check failed:', err);
+                    useToastStore.getState().addToast(msg, 'error');
+                } finally {
                 setSyncingState(false);
                 settersRef.current.setVodSyncing(false);
             }
@@ -243,6 +248,8 @@ export function useAutoSync(callbacks: AutoSyncSettings = {}) {
                                 const syncResult = await syncSource(source, (msg) => settersRef.current.setSyncStatusMessage(`${prefix}: ${msg}`));
                                 if (syncResult.success) {
                                     syncedSourceIds.push(source.id);
+                                } else {
+                                    useToastStore.getState().addToast(`Auto-sync failed: ${source.name} - ${syncResult.error}`, 'error');
                                 }
                             })
                         );
@@ -291,7 +298,9 @@ export function useAutoSync(callbacks: AutoSyncSettings = {}) {
                     }, CHECK_INTERVAL_MS);
                 }
             } catch (err) {
+                const msg = err instanceof Error ? err.message : 'Auto-sync initial sync failed';
                 console.error('[AutoSync] Initial sync failed:', err);
+                useToastStore.getState().addToast(msg, 'error');
             } finally {
                 setSyncingState(false);
                 settersRef.current.setVodSyncing(false);

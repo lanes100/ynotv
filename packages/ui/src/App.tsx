@@ -67,6 +67,8 @@ import { resolvePlayUrl } from './services/stream-resolver';
 import { getCurrentWindow, LogicalSize } from '@tauri-apps/api/window';
 import { addToRecentChannels } from './utils/recentChannels';
 import { WatchlistNotificationContainer } from './components/WatchlistNotification';
+import { ToastContainer } from './components/Toast';
+import { useToastStore } from './stores/toastStore';
 import { MultiviewLayout } from './components/MultiviewLayout/MultiviewLayout';
 import { LayoutPicker } from './components/LayoutPicker/LayoutPicker';
 import './themes.css';
@@ -1943,6 +1945,8 @@ function App() {
                   const result = await syncSource(source, (msg) => setSyncStatusMessage(`${prefix}: ${msg}`));
                   if (result.success) {
                     syncedSourceIds.push(source.id);
+                  } else {
+                    useToastStore.getState().addToast(`Auto-sync failed: ${source.name} - ${result.error}`, 'error');
                   }
                 })
               );
@@ -1987,7 +1991,9 @@ function App() {
           console.log('[AutoSync] Periodic sync completed');
         }
       } catch (err) {
+        const msg = err instanceof Error ? err.message : 'Auto-sync failed';
         console.error('[AutoSync] Sync failed:', err);
+        useToastStore.getState().addToast(msg, 'error');
       } finally {
         isAutoSyncingRef.current = false;
         setChannelSyncing(false);
@@ -2954,6 +2960,9 @@ function App() {
         onSwitch={handleWatchlistSwitchWrapper}
         onDismiss={handleWatchlistDismiss}
       />
+
+      {/* Sync Toast Notifications */}
+      <ToastContainer />
 
       {/* Popout Player Control Bar */}
       {popoutIsOpen && (
