@@ -250,6 +250,7 @@ function App() {
     setPosition,
     setVolume,
     setDuration,
+    setMuted,
   } = mpv;
 
   const positionRef = useRef(position);
@@ -544,14 +545,33 @@ function App() {
           Bridge.setIsCasting(status.connected);
         }
 
-        if (status.connected && !previouslyCasting) {
-          console.log('[Cast] Casting started, loading media on Chromecast');
-          // Read playing/channel from refs — avoids stale closure.
-          // Do NOT call Bridge.stop() here: cast_load_media hasn't returned yet so
-          // there is no valid media_session_id yet; cast_pause → INVALID_MEDIA_SESSION_ID.
-          // stopLocalVideo() is called inside castCurrentMedia() after load succeeds.
-          if (_castPlayingRef.current && _castCurrentChannelRef.current) {
-            castCurrentMedia();
+        if (status.connected) {
+          if (!previouslyCasting) {
+            console.log('[Cast] Casting started, loading media on Chromecast');
+            // Read playing/channel from refs — avoids stale closure.
+            // Do NOT call Bridge.stop() here: cast_load_media hasn't returned yet so
+            // there is no valid media_session_id yet; cast_pause → INVALID_MEDIA_SESSION_ID.
+            // stopLocalVideo() is called inside castCurrentMedia() after load succeeds.
+            if (_castPlayingRef.current && _castCurrentChannelRef.current) {
+              castCurrentMedia();
+            }
+          }
+
+          // Feed Cast playback status back into the UI states to enable the seekbar & controls
+          if (status.playerState) {
+            setPlaying(status.playerState === 'PLAYING' || status.playerState === 'BUFFERING');
+          }
+          if (status.currentTime !== undefined && !seekingRef.current) {
+            setPosition(status.currentTime);
+          }
+          if (status.duration !== undefined) {
+            setDuration(status.duration);
+          }
+          if (status.volume !== undefined && !volumeDraggingRef.current) {
+            setVolume(Math.round(status.volume * 100));
+          }
+          if (status.muted !== undefined) {
+            setMuted(status.muted);
           }
         }
 
