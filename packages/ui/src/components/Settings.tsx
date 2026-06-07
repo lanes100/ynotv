@@ -1302,23 +1302,8 @@ export function Settings({
       <div className="settings-panel settings-panel--sidebar">
         <div className="settings-header">
           <h2>Settings</h2>
-          <button className="close-btn" onClick={onClose}>✕</button>
-        </div>
-
-        {/* Encryption Warning */}
-        {!isEncryptionAvailable && (
-          <div className="encryption-warning">
-            <span className="warning-icon">Warning:</span>
-            <span>
-              Secure storage unavailable. Credentials will be stored without encryption.
-              <br />
-              <small>Install a keyring (gnome-keyring, kwallet) for secure storage.</small>
-            </span>
-          </div>
-        )}
-
-        <div className="settings-search" ref={searchRef}>
-          <div className="settings-search-input-wrapper">
+          <div className="settings-search" ref={searchRef}>
+            <div className="settings-search-input-wrapper">
             <svg className="settings-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <circle cx="11" cy="11" r="8" />
               <path d="m21 21-4.35-4.35" />
@@ -1360,7 +1345,21 @@ export function Settings({
               ))}
             </div>
           )}
+          </div>
+          <button className="close-btn" onClick={onClose}>✕</button>
         </div>
+
+        {/* Encryption Warning */}
+        {!isEncryptionAvailable && (
+          <div className="encryption-warning">
+            <span className="warning-icon">Warning:</span>
+            <span>
+              Secure storage unavailable. Credentials will be stored without encryption.
+              <br />
+              <small>Install a keyring (gnome-keyring, kwallet) for secure storage.</small>
+            </span>
+          </div>
+        )}
 
         <div className="settings-body">
           {/* Sidebar Navigation */}
