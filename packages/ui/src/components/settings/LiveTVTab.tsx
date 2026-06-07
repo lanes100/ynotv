@@ -1,10 +1,13 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ChannelsTab } from './ChannelsTab';
 import { LiveViewTab } from './LiveViewTab';
 import { WidgetsTab } from './WidgetsTab';
 import './PlaybackTab.css'; // Reuse existing tab styles
 
+export type LiveTVSubTabId = 'epg' | 'font-size' | 'sort-order' | 'search' | 'live-view' | 'widgets';
+
 interface LiveTVTabProps {
+  initialSubTab?: LiveTVSubTabId;
   // EPG props
   epgDarkenCurrent: boolean;
   onEpgDarkenCurrentChange: (enabled: boolean) => void;
@@ -55,6 +58,7 @@ interface LiveTVTabProps {
 }
 
 export function LiveTVTab({
+  initialSubTab,
   epgDarkenCurrent,
   onEpgDarkenCurrentChange,
   epgView,
@@ -99,6 +103,12 @@ export function LiveTVTab({
   onSportsBgOpacityChange,
 }: LiveTVTabProps) {
   const [activeSubTab, setActiveSubTab] = useState<'epg' | 'font-size' | 'sort-order' | 'search' | 'live-view' | 'widgets'>('epg');
+
+  useEffect(() => {
+    if (initialSubTab) {
+      setActiveSubTab(initialSubTab);
+    }
+  }, [initialSubTab]);
 
   return (
     <div className="playback-tab-content" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>

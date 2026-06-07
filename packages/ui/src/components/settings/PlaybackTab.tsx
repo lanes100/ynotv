@@ -6,7 +6,10 @@ import './PlaybackTab.css';
 import { PopoutTab } from './PopoutTab';
 import { SkipIntroTab } from './SkipIntroTab';
 
+export type PlaybackSubTabId = 'mpv' | 'reconnect' | 'cast' | 'popout' | 'skipintro';
+
 interface PlaybackTabProps {
+  initialSubTab?: PlaybackSubTabId;
   mpvParams: string;
   mpvDisableWhitelist: boolean;
   onMpvParamsChange: (params: string) => Promise<void>;
@@ -56,6 +59,7 @@ const DEFAULT_MPV_PARAMS = `--hwdec=auto
 --stream-lavf-o=reconnect_delay_max=5`;
 
 export function PlaybackTab({
+  initialSubTab,
   mpvParams,
   mpvDisableWhitelist,
   onMpvParamsChange,
@@ -90,6 +94,13 @@ export function PlaybackTab({
   onSkipIntroAutoSkipChange,
 }: PlaybackTabProps) {
   const [activeSubTab, setActiveSubTab] = useState<'mpv' | 'reconnect' | 'cast' | 'popout' | 'skipintro'>('mpv');
+
+  useEffect(() => {
+    if (initialSubTab) {
+      setActiveSubTab(initialSubTab);
+    }
+  }, [initialSubTab]);
+
   const [localParams, setLocalParams] = useState(mpvParams);
   const [hasChanges, setHasChanges] = useState(false);
   const [debugInfo, setDebugInfo] = useState<string | null>(null);

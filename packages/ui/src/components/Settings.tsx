@@ -1,7 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { Source } from '@ynotv/core';
 import { useEpgView, useSetEpgView, useUIStore } from '../stores/uiStore';
 import { SettingsSidebar, type SettingsTabId } from './settings/SettingsSidebar';
+import { searchSettings, type SettingsSearchResult } from './settings/SettingsSearchIndex';
 import { SourcesTab } from './settings/SourcesTab';
 import { SecurityTab } from './settings/SecurityTab';
 import { DebugTab } from './settings/DebugTab';
@@ -88,6 +89,10 @@ export function Settings({
   onBadgeSourcesChange,
 }: SettingsProps) {
   const [activeTab, setActiveTab] = useState<SettingsTabId>(initialTab);
+  const [pendingSubTab, setPendingSubTab] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<SettingsSearchResult[]>([]);
+  const searchRef = useRef<HTMLDivElement>(null);
   const [sources, setSources] = useState<Source[]>([]);
   const [isEncryptionAvailable, setIsEncryptionAvailable] = useState(true);
 
@@ -542,6 +547,70 @@ export function Settings({
       document.documentElement.style.setProperty('--sports-bg-opacity', String(loadedSportsBgOpacity));
     }
     setSettingsLoaded(true);
+  }
+
+  // Search functionality
+  useEffect(() => {
+    setSearchResults(searchSettings(searchQuery));
+  }, [searchQuery]);
+
+  useEffect(() => {
+    setPendingSubTab(null);
+  }, [activeTab]);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
+        setSearchResults([]);
+        setSearchQuery('');
+      }
+    }
+    function handleEscape(e: KeyboardEvent) {
+      if (e.key === 'Escape' && searchQuery) {
+        setSearchResults([]);
+        setSearchQuery('');
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleEscape);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [searchQuery]);
+
+  function handleSearchResultClick(result: SettingsSearchResult) {
+    setActiveTab(result.tabId);
+    if (result.subTabId) {
+      setPendingSubTab(result.subTabId);
+    }
+    setSearchQuery('');
+    setSearchResults([]);
+  }
+
+  function groupByTab(results: SettingsSearchResult[]) {
+    const map = new Map<string, { tabId: string; tabLabel: string; items: SettingsSearchResult[] }>();
+    for (const r of results) {
+      if (!map.has(r.tabId)) {
+        map.set(r.tabId, { tabId: r.tabId, tabLabel: r.tabLabel, items: [] });
+      }
+      map.get(r.tabId)!.items.push(r);
+    }
+    return Array.from(map.values());
+  }
+
+  function highlightMatch(text: string, query: string) {
+    if (!query.trim()) return text;
+    const q = query.toLowerCase();
+    const idx = text.toLowerCase().indexOf(q);
+    if (idx === -1) return text;
+    return (
+      <>
+        {text.slice(0, idx)}
+        <mark className="settings-search-highlight">{text.slice(idx, idx + q.length)}</mark>
+        {text.slice(idx + q.length)}
+      </>
+    );
   }
 
   // Check if any VOD source exists (Xtream or Stalker) for showing tabs
@@ -1019,6 +1088,7 @@ export function Settings({
       case 'sources':
         return (
           <SourcesTab
+            initialSubTab={pendingSubTab as 'source' | 'epg' | 'refresh' | 'tmdb' | undefined}
             sources={sources}
             isEncryptionAvailable={isEncryptionAvailable}
             onSourcesChange={loadSources}
@@ -1044,6 +1114,7 @@ export function Settings({
       case 'subtitles':
         return (
           <SubtitlesTab
+            initialSubTab={pendingSubTab as 'subtitles' | 'audio' | undefined}
             settings={subtitleSettings}
             onSettingsChange={handleSubtitleSettingsChange}
           />
@@ -1125,6 +1196,7 @@ export function Settings({
       case 'playback':
         return (
           <PlaybackTab
+            initialSubTab={pendingSubTab as 'mpv' | 'reconnect' | 'cast' | 'popout' | 'skipintro' | undefined}
             mpvParams={mpvParams}
             mpvDisableWhitelist={mpvDisableWhitelist}
             onMpvParamsChange={handleMpvParamsChange}
@@ -1171,6 +1243,7 @@ export function Settings({
       case 'livetv':
         return (
           <LiveTVTab
+            initialSubTab={pendingSubTab as 'epg' | 'font-size' | 'sort-order' | 'search' | 'live-view' | 'widgets' | undefined}
             epgDarkenCurrent={epgDarkenCurrent}
             onEpgDarkenCurrentChange={handleEpgDarkenCurrentChange}
             epgView={epgView}
@@ -1243,6 +1316,51 @@ export function Settings({
             </span>
           </div>
         )}
+
+        <div className="settings-search" ref={searchRef}>
+          <div className="settings-search-input-wrapper">
+            <svg className="settings-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="11" cy="11" r="8" />
+              <path d="m21 21-4.35-4.35" />
+            </svg>
+            <input
+              type="text"
+              className="settings-search-input"
+              placeholder="Search settings..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+            {searchQuery && (
+              <button className="settings-search-clear" onClick={() => { setSearchQuery(''); setSearchResults([]); }}>
+                ✕
+              </button>
+            )}
+          </div>
+          {searchResults.length > 0 && (
+            <div className="settings-search-results">
+              {groupByTab(searchResults).map((group) => (
+                <div key={group.tabId} className="settings-search-group">
+                  <div className="settings-search-group-label">{group.tabLabel}</div>
+                  {group.items.map((item) => (
+                    <button
+                      key={item.id}
+                      className="settings-search-item"
+                      onClick={() => handleSearchResultClick(item)}
+                    >
+                      <div className="settings-search-item-label">{highlightMatch(item.label, searchQuery)}</div>
+                      {item.section && (
+                        <div className="settings-search-item-section">{item.section}</div>
+                      )}
+                      {item.description && (
+                        <div className="settings-search-item-desc">{item.description}</div>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
 
         <div className="settings-body">
           {/* Sidebar Navigation */}

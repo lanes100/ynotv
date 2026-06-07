@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { validateSubSourceApiKey } from '../../services/subsource';
 import './PlaybackTab.css'; // Reuse existing tab styles
 
+export type SubtitlesSubTabId = 'subtitles' | 'audio';
+
 export interface SubtitleSettings {
   subsourceApiKey: string;
   defaultLanguage: string;
@@ -60,11 +62,12 @@ const LANGUAGE_OPTIONS = [
 ];
 
 interface SubtitlesTabProps {
+  initialSubTab?: SubtitlesSubTabId;
   settings: SubtitleSettings;
   onSettingsChange: (settings: Partial<SubtitleSettings>) => void;
 }
 
-export function SubtitlesTab({ settings, onSettingsChange }: SubtitlesTabProps) {
+export function SubtitlesTab({ initialSubTab, settings, onSettingsChange }: SubtitlesTabProps) {
   const merged = { ...DEFAULT_SETTINGS, ...settings };
   const [localKey, setLocalKey] = useState(merged.subsourceApiKey);
   const [keyValid, setKeyValid] = useState<boolean | null>(null);
@@ -113,6 +116,12 @@ export function SubtitlesTab({ settings, onSettingsChange }: SubtitlesTabProps) 
   );
 
   const [activeSubTab, setActiveSubTab] = useState<'subtitles' | 'audio'>('subtitles');
+
+  useEffect(() => {
+    if (initialSubTab) {
+      setActiveSubTab(initialSubTab);
+    }
+  }, [initialSubTab]);
 
   return (
     <div className="playback-tab-content" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>

@@ -21,7 +21,10 @@ import './SourcesTab.css';
 import { useSourceVersion } from '../../contexts/SourceVersionContext';
 import type { GlobalEpgLink } from '../../types/app';
 
+export type SourcesSubTabId = 'source' | 'epg' | 'refresh' | 'tmdb';
+
 interface SourcesTabProps {
+  initialSubTab?: SourcesSubTabId;
   sources: Source[];
   isEncryptionAvailable: boolean;
   onSourcesChange: () => void;
@@ -135,6 +138,7 @@ function formatTimeAgo(date: Date | null | undefined): string {
 }
 
 export function SourcesTab({
+  initialSubTab,
   sources,
   isEncryptionAvailable,
   onSourcesChange,
@@ -210,6 +214,12 @@ export function SourcesTab({
 
   // Sub-tab state: 'source' | 'epg' | 'refresh' | 'tmdb'
   const [activeSubTab, setActiveSubTab] = useState<'source' | 'epg' | 'refresh' | 'tmdb'>('source');
+
+  useEffect(() => {
+    if (initialSubTab) {
+      setActiveSubTab(initialSubTab);
+    }
+  }, [initialSubTab]);
 
   // Global EPG links state
   const [globalEpgLinks, setGlobalEpgLinks] = useState<GlobalEpgLink[]>([]);
