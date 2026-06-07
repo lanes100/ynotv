@@ -1571,6 +1571,22 @@
   transform: scaleY(0.9);
 }
 
+/* EPG On-Demand Sync Status Indicator */
+.guide-epg-sync-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 12px;
+  font-size: 13px;
+  color: var(--accent, #3b82f6);
+  font-weight: 500;
+}
+
+.guide-epg-sync-status .sync-spinner {
+  display: inline-block;
+  animation: spin 1s linear infinite;
+}
+
 /* ==========================================================================
    RESPONSIVE SCALING FOR HIGH-DPI / SMALL VIEWPORTS
    ========================================================================== */

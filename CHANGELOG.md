@@ -1,5 +1,22 @@
 # Changelog
 
+## v2.0.2
+
+### Added
+
+- **Metadata badges in search** - Metadata badges are now displayed in search results and populates when a channel is played from results
+- **User agent forwarded during EPG fetch** - The source user agent is now passed when retrieving EPG data, ensuring compatibility with providers that require a user agent for EPG requests.
+- **Trakt catalogs in Discover** - Catalogs imported from Trakt are now accessible from the Discover page.
+- **Popout/External mode persistence** - The selected playback mode (Popout or External) will now be retained across restarts.
+- **Settings search bar** - A search bar has been added to the Settings page for quickly locating individual settings.
+- **Sync error notification** - If a source fails to sync, a red notification will appear in the bottom-right corner displaying the associated error message.
+
+### Fixed
+
+- **Casting reliability for Live TV channels** - Casting to TV from Live TV has been improved for a more consistent experience.
+- **VOD custom sort order not being applied** - VOD libraries were incorrectly displaying in alphabetical order regardless of any custom sort order configured by the user.
+- **Stalker EPG incomplete program data** - EPG data for Stalker sources now utilises both `get_epg_info` and `get_short_epg` endpoints, ensuring full program guide coverage.
+
 ## v2.0.1
 
 ### Added

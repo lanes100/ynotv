@@ -24,6 +24,7 @@ export interface Source {
   live_tv_only?: boolean;  // Only sync LiveTV, skip VOD/Series (default: false)
   user_agent?: string;    // Custom User-Agent for requests
   epg_timeshift_hours?: number; // EPG time offset in hours (e.g., -1, 0, +1)
+  disable_short_epg?: boolean;  // Disable Stalker short EPG fetching
   backup_macs?: string[];  // Stalker backup MAC addresses
   backup_credentials?: Array<{  // Xtream backup credentials
     username: string;

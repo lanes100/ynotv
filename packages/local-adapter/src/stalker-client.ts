@@ -1286,6 +1286,24 @@ export class StalkerClient {
     }
 
     /**
+     * Get short EPG for a specific channel
+     */
+    async getShortEpg(channelId: string, size: number = 10): Promise<any[]> {
+        await this.ensureToken();
+        try {
+            const response = await this.fetchStalker<any>('get_short_epg', 'itv', {
+                ch_id: channelId,
+                size: size.toString()
+            });
+
+            return this.safeJsonList<any>(response);
+        } catch (err) {
+            console.error(`[Stalker] Failed to fetch short EPG for channel ${channelId}:`, err);
+            return [];
+        }
+    }
+
+    /**
      * Get account information including expiry date
      */
     async getAccountInfo(): Promise<{ mac: string; expiry?: string }> {

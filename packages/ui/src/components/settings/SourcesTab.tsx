@@ -72,6 +72,7 @@ interface SourceFormData {
   pendingSwap: boolean;
   display_order?: number;
   advancedEpgMatching: boolean;
+  disableShortEpg: boolean;
 }
 
 const emptyForm: SourceFormData = {
@@ -94,6 +95,7 @@ const emptyForm: SourceFormData = {
   pendingSwap: false,
   display_order: undefined,
   advancedEpgMatching: false,
+  disableShortEpg: false,
 };
 
 // Normalize vendor Expiration Strings to concise MM/DD/YY
@@ -354,6 +356,7 @@ export function SourcesTab({
       pendingSwap: false,
       display_order: source.display_order,
       advancedEpgMatching: source.advanced_epg_matching ?? false,
+      disableShortEpg: source.disable_short_epg ?? false,
     });
     console.log('[SourcesTab] Editing source, existing UA:', source.user_agent);
     setEditingId(source.id);
@@ -488,6 +491,7 @@ export function SourcesTab({
       backup_urls: formData.backupUrls.length > 0 ? formData.backupUrls : undefined,
       display_order: formData.display_order,
       advanced_epg_matching: formData.advancedEpgMatching || undefined,
+      disable_short_epg: formData.type === 'stalker' ? formData.disableShortEpg : undefined,
     };
 
     console.log('[SourcesTab] Saving source with UA:', source.user_agent);
@@ -1749,10 +1753,28 @@ export function SourcesTab({
               </label>
               <span className="hint">
                 {formData.type === 'xtream'
-                  ? 'Uses provider\'s XMLTV endpoint'
-                  : 'Uses url-tvg from M3U header if available'}
+                  ? "Uses provider's XMLTV endpoint"
+                  : formData.type === 'stalker'
+                    ? "Uses provider's built-in get_epg_info API"
+                    : 'Uses url-tvg from M3U header if available'}
               </span>
             </div>
+
+            {formData.type === 'stalker' && (
+              <div className="form-group epg-settings">
+                <label className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={formData.disableShortEpg}
+                    onChange={(e) => setFormData({ ...formData, disableShortEpg: e.target.checked })}
+                  />
+                  Disable on-demand EPG updates (Short EPG)
+                </label>
+                <span className="hint">
+                  Prevents querying get_short_epg endpoints when scrolling or playing channels to reduce server requests.
+                </span>
+              </div>
+            )}
 
             {!formData.autoLoadEpg && (
               <div className="form-group">

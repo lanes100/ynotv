@@ -375,6 +375,12 @@ export function ChannelPanel({
   const [managingCategory, setManagingCategory] = useState<{ id: string; name: string; sourceId: string } | null>(null);
   const [managingFavorites, setManagingFavorites] = useState(false);
 
+  // Ref to track the current categoryId without triggering the on-demand EPG sync
+  const categoryIdRef = useRef(categoryId);
+  useEffect(() => {
+    categoryIdRef.current = categoryId;
+  }, [categoryId]);
+
   // State for custom group manager
   const [managingCustomGroup, setManagingCustomGroup] = useState<{ id: string; name: string } | null>(null);
 
@@ -796,6 +802,10 @@ export function ChannelPanel({
   // Selected channel for preview/info - stores the full channel object
   const [selectedChannel, setSelectedChannel] = useState<StoredChannel | null>(null);
 
+  // States for Stalker EPG lazy loading and progress tracking
+  const [visibleIndices, setVisibleIndices] = useState({ startIndex: 0, endIndex: 35 });
+  const [epgSyncStatus, setEpgSyncStatus] = useState<{ completed: number; total: number } | null>(null);
+
   // Get stream IDs for programs lookup
   // Include selectedChannel (from currentChannel prop) in case it's from a different category/source
   const streamIds = useMemo(() => {
@@ -808,6 +818,74 @@ export function ChannelPanel({
 
   // Fetch ALL programs at once (no lazy loading by time window)
   const programs = useAllPrograms(streamIds);
+
+  // Trigger on-demand short EPG fetch for visible Stalker channels
+  useEffect(() => {
+    if (!visible || !channels || channels.length === 0 || !window.storage) {
+      setEpgSyncStatus(null);
+      return;
+    }
+
+    let active = true;
+
+    // We debounce the fetch to wait until the user stops scrolling for 300ms
+    const timer = setTimeout(async () => {
+      // Get the range of channels currently visible + buffer of 5 channels
+      const start = Math.max(0, visibleIndices.startIndex - 5);
+      const end = Math.min(channels.length, visibleIndices.endIndex + 5);
+      const visibleChannels = channels.slice(start, end);
+
+      if (visibleChannels.length === 0) return;
+
+      // Group visible channels by source_id
+      const channelsBySource = new Map<string, typeof channels>();
+      for (const ch of visibleChannels) {
+        const list = channelsBySource.get(ch.source_id) || [];
+        list.push(ch);
+        channelsBySource.set(ch.source_id, list);
+      }
+
+      try {
+        const result = await window.storage.getSources();
+        if (!result.data || !active) return;
+
+        for (const [sourceId, sourceChannels] of channelsBySource.entries()) {
+          const source = result.data.find(s => s.id === sourceId);
+          if (source && source.type === 'stalker' && source.mac && !source.disable_short_epg) {
+            const { syncStalkerShortEpg } = await import('../db/sync');
+            
+            await syncStalkerShortEpg(
+              source,
+              sourceChannels,
+              categoryIdRef.current,
+              (completed, total) => {
+                if (active) {
+                  setEpgSyncStatus({ completed, total });
+                }
+              }
+            );
+          }
+        }
+      } catch (err) {
+        console.error('[ChannelPanel] Failed to fetch on-demand short EPG:', err);
+      } finally {
+        if (active) {
+          // Keep the progress text visible for a short duration after completion
+          setTimeout(() => {
+            if (active) {
+              setEpgSyncStatus(null);
+            }
+          }, 1000);
+        }
+      }
+    }, 300);
+
+    return () => {
+      active = false;
+      clearTimeout(timer);
+      setEpgSyncStatus(null);
+    };
+  }, [channels, visible, visibleIndices, categoryId]);
 
   // Sync selectedChannel with currentChannel when it changes externally
   // (watchlist notification, autoswitch, calendar, multiview swap)
@@ -1723,6 +1801,12 @@ export function ChannelPanel({
                           </svg>
                           Failover Group
                         </button>
+                        {epgSyncStatus && epgSyncStatus.total > 0 && (
+                          <span className="guide-epg-sync-status">
+                            <span className="sync-spinner">⟳</span>
+                            <span>{epgSyncStatus.completed}/{epgSyncStatus.total} completed for EPG</span>
+                          </span>
+                        )}
                       </>
                     )}
                   </>
@@ -2068,6 +2152,7 @@ export function ChannelPanel({
               className="guide-channels"
               rangeChanged={(range) => {
                 visibleRangeRef.current = range;
+                setVisibleIndices(range);
               }}
               itemContent={(index, channel, context) => (
                 <ChannelRowVirtuoso
