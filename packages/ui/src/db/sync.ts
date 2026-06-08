@@ -500,7 +500,7 @@ async function syncEpgForStalker(source: Source, channels: Channel[]): Promise<n
     debugLog(`Stalker EPG sync complete: ${storedPrograms.length} programs stored`, 'epg');
 
     // Clear on-demand channel sync cache so the next visit triggers a fresh get_short_epg fetch
-    clearChannelSyncCache(source.id);
+    await clearChannelSyncCache(source.id);
 
     if (result.inserted > 0) {
       dbEvents.notify('programs', 'add');
@@ -547,17 +547,65 @@ async function pool<T, R>(
 // Global in-memory cache to prevent frequent Stalker short EPG calls
 const channelSyncCache = new Map<string, number>();
 const THREE_HOURS_MS = 3 * 60 * 60 * 1000;
+let cacheInitialized = false;
+
+/**
+ * Ensures that the channelSyncCache is loaded from db.prefs table.
+ */
+async function ensureCacheInitialized() {
+  if (cacheInitialized) return;
+  try {
+    const cachedData = await db.prefs.get('stalker_channel_sync_cache');
+    if (cachedData && cachedData.value) {
+      const parsed = JSON.parse(cachedData.value);
+      for (const [key, val] of Object.entries(parsed)) {
+        if (typeof val === 'number') {
+          channelSyncCache.set(key, val);
+        }
+      }
+      console.log(`[EPG] Loaded ${channelSyncCache.size} channels from persistent Stalker short EPG cache`);
+    }
+  } catch (err) {
+    console.error('[EPG] Failed to load stalker channel sync cache:', err);
+  }
+  cacheInitialized = true;
+}
+
+/**
+ * Saves the channelSyncCache to the db.prefs table.
+ */
+async function saveCacheToDb() {
+  try {
+    const obj: Record<string, number> = {};
+    const now = Date.now();
+    for (const [key, val] of channelSyncCache.entries()) {
+      // Cleanup expired entries while saving to keep DB entry clean and small
+      if (now - val < THREE_HOURS_MS) {
+        obj[key] = val;
+      }
+    }
+    await db.prefs.put({ key: 'stalker_channel_sync_cache', value: JSON.stringify(obj) });
+  } catch (err) {
+    console.error('[EPG] Failed to save stalker channel sync cache:', err);
+  }
+}
 
 /**
  * Clears the channel sync cache entries for a specific Stalker source.
  * Called when a full EPG sync/autosync replaces the EPG database.
  */
-export function clearChannelSyncCache(sourceId: string) {
+export async function clearChannelSyncCache(sourceId: string) {
   console.log(`[EPG] Clearing channel sync cache for Stalker source ${sourceId}`);
+  await ensureCacheInitialized();
+  let changed = false;
   for (const key of channelSyncCache.keys()) {
     if (key.startsWith(`${sourceId}_`)) {
       channelSyncCache.delete(key);
+      changed = true;
     }
+  }
+  if (changed) {
+    await saveCacheToDb();
   }
 }
 
@@ -572,6 +620,8 @@ export async function syncStalkerShortEpg(
   force: boolean = false
 ): Promise<number> {
   if (!source || !source.mac || channels.length === 0) return 0;
+
+  await ensureCacheInitialized();
 
   const now = Date.now();
 
@@ -592,6 +642,7 @@ export async function syncStalkerShortEpg(
   for (const ch of channelsToFetch) {
     channelSyncCache.set(ch.stream_id, now);
   }
+  await saveCacheToDb();
 
   console.log(`[EPG] Starting on-demand Stalker short EPG sync for ${channelsToFetch.length} channels (out of ${channels.length} requested) on source: ${source.name || source.id}`);
 
@@ -613,51 +664,93 @@ export async function syncStalkerShortEpg(
     const storedPrograms: StoredProgram[] = [];
     let completed = 0;
 
-    const fetchChannelEpg = async (ch: any) => {
-      const rawChId = ch.stream_id.replace(`${source.id}_`, '');
-      try {
-        const programList = await client.getShortEpg(rawChId, 10);
-        if (!Array.isArray(programList)) return;
+    interface EpgFetchTask {
+      channel: any;
+      attempts: number;
+    }
 
-        for (const prog of programList) {
-          let startDate: Date;
-          let stopDate: Date;
-          let startTs = prog.start_timestamp;
+    const queue: EpgFetchTask[] = channelsToFetch.map(ch => ({
+      channel: ch,
+      attempts: 0
+    }));
 
-          // Try timezone-adjusted string times first
-          const parsedStart = parseStalkerDate(prog.time);
-          const parsedStop = parseStalkerDate(prog.time_to);
+    const worker = async () => {
+      while (queue.length > 0) {
+        const task = queue.shift();
+        if (!task) break;
 
-          if (parsedStart && parsedStop) {
-            startDate = parsedStart;
-            stopDate = parsedStop;
-            startTs = Math.floor(parsedStart.getTime() / 1000);
-          } else {
-            // Fallback to Unix timestamps if string times are not available/parsable
-            startDate = new Date(prog.start_timestamp * 1000);
-            stopDate = new Date(prog.stop_timestamp * 1000);
+        // Playback Priority Pause check before starting each task:
+        // Wait/sleep if playback resolution is in progress or was initiated in the last 5 seconds.
+        while (
+          (window as any).isPlaybackResolving || 
+          (Date.now() - ((window as any).lastPlaybackTime || 0)) < 5000
+        ) {
+          await new Promise(resolve => setTimeout(resolve, 200));
+        }
+
+        const { channel } = task;
+        const rawChId = channel.stream_id.replace(`${source.id}_`, '');
+        task.attempts++;
+
+        try {
+          // getShortEpg will now throw exceptions on network/token failures
+          const programList = await client.getShortEpg(rawChId, 10);
+          
+          if (Array.isArray(programList)) {
+            for (const prog of programList) {
+              let startDate: Date;
+              let stopDate: Date;
+              let startTs = prog.start_timestamp;
+
+              // Try timezone-adjusted string times first
+              const parsedStart = parseStalkerDate(prog.time);
+              const parsedStop = parseStalkerDate(prog.time_to);
+
+              if (parsedStart && parsedStop) {
+                startDate = parsedStart;
+                stopDate = parsedStop;
+                startTs = Math.floor(parsedStart.getTime() / 1000);
+              } else {
+                // Fallback to Unix timestamps if string times are not available/parsable
+                startDate = new Date(prog.start_timestamp * 1000);
+                stopDate = new Date(prog.stop_timestamp * 1000);
+              }
+
+              storedPrograms.push({
+                id: `${channel.stream_id}_${startTs}`,
+                stream_id: channel.stream_id,
+                title: prog.name || '',
+                description: prog.descr || '',
+                start: startDate,
+                end: stopDate,
+                source_id: source.id,
+              });
+            }
           }
 
-          storedPrograms.push({
-            id: `${ch.stream_id}_${startTs}`,
-            stream_id: ch.stream_id,
-            title: prog.name || '',
-            description: prog.descr || '',
-            start: startDate,
-            end: stopDate,
-            source_id: source.id,
-          });
+          // Successfully completed (even if programList was empty)
+          completed++;
+          onProgress?.(completed, channelsToFetch.length);
+        } catch (e) {
+          console.warn(`[EPG] Failed to fetch short EPG for channel ${rawChId} (attempt ${task.attempts}/3):`, e);
+          
+          if (task.attempts < 3) {
+            // Requeue at the end of the batch
+            queue.push(task);
+          } else {
+            // Fails completely after 3 attempts. Remove from cache so it can be retried in subsequent visits.
+            channelSyncCache.delete(channel.stream_id);
+            await saveCacheToDb();
+            completed++;
+            onProgress?.(completed, channelsToFetch.length);
+          }
         }
-      } catch (e) {
-        console.warn(`[EPG] Failed to fetch short EPG for channel ${rawChId}:`, e);
-      } finally {
-        completed++;
-        onProgress?.(completed, channelsToFetch.length);
       }
     };
 
     // Run fetches in parallel with concurrency limit of 15
-    await pool(channelsToFetch, 15, fetchChannelEpg);
+    const poolWorkers = Array.from({ length: Math.min(15, queue.length) }, () => worker());
+    await Promise.all(poolWorkers);
 
     if (storedPrograms.length > 0) {
       const bulkPrograms = storedPrograms.map(p => ({
@@ -677,14 +770,16 @@ export async function syncStalkerShortEpg(
 
     return storedPrograms.length;
   } catch (err) {
-    // On failure, remove the cache timestamp for channels we tried to fetch so they can be retried
+    // On failure of the entire sync operation, clean up cache entries for channels we tried to fetch
     for (const ch of channelsToFetch) {
       channelSyncCache.delete(ch.stream_id);
     }
+    await saveCacheToDb();
     console.error('[EPG] Stalker short EPG sync failed, clearing channel cache entries:', err);
     throw err;
   }
 }
+
 
 
 /**

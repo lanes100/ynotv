@@ -34,6 +34,10 @@ interface StalkerGenre {
 }
 
 export class StalkerClient {
+    // Shared tokens and refresh promises across all client instances of a source
+    private static globalTokens = new Map<string, { token: string; timestamp: number }>();
+    private static globalRefreshPromises = new Map<string, Promise<void>>();
+
     private config: StalkerConfig;
     private sourceId: string;
     private token: string | null = null;
@@ -288,38 +292,63 @@ export class StalkerClient {
 
     /**
      * Ensure we have a valid token (renew if expired)
-     * Uses promise-based locking to prevent concurrent token refresh operations
+     * Uses static promise-based locking to prevent concurrent token refresh operations across instances
      */
     async ensureToken(): Promise<void> {
-        // If a refresh is already in progress, wait for it to complete
-        if (this.tokenRefreshPromise) {
-            console.log('[Stalker] Token refresh already in progress, waiting...');
-            await this.tokenRefreshPromise;
-            console.log('[Stalker] Token refresh completed by another call');
+        const sourceId = this.sourceId;
+
+        // 1. If a refresh is already in progress for this source, wait for it to complete
+        const activePromise = StalkerClient.globalRefreshPromises.get(sourceId);
+        if (activePromise) {
+            console.log(`[Stalker] Token refresh already in progress for source ${sourceId}, waiting...`);
+            await activePromise;
+            // Sync current instance's local fields
+            const shared = StalkerClient.globalTokens.get(sourceId);
+            if (shared) {
+                this.token = shared.token;
+                this.tokenTimestamp = shared.timestamp;
+            }
+            console.log('[Stalker] Token refresh completed by another instance');
             return;
+        }
+
+        // 2. Sync local instance fields with global shared cache if available
+        const shared = StalkerClient.globalTokens.get(sourceId);
+        if (shared) {
+            this.token = shared.token;
+            this.tokenTimestamp = shared.timestamp;
         }
 
         const currentTimestamp = Date.now() / 1000;
 
         if (!this.token || (currentTimestamp - this.tokenTimestamp) > STALKER_TOKEN_VALIDITY_SECONDS) {
-            console.log('[Stalker] Token expired or missing. Starting refresh...');
+            console.log(`[Stalker] Token expired or missing for source ${sourceId}. Starting refresh...`);
 
-            // Create and store the refresh promise to block concurrent calls
-            this.tokenRefreshPromise = (async () => {
+            // Create and store the refresh promise to block concurrent calls globally for this source
+            const refreshPromise = (async () => {
                 try {
                     await this.handshake();
                     await this.getProfile();
-                    console.log('[Stalker] Token refresh completed successfully');
+                    
+                    // Store the newly obtained token in the global map
+                    if (this.token) {
+                        StalkerClient.globalTokens.set(sourceId, {
+                            token: this.token,
+                            timestamp: this.tokenTimestamp
+                        });
+                    }
+                    console.log(`[Stalker] Token refresh completed successfully for source ${sourceId}`);
                 } catch (error) {
-                    console.error('[Stalker] Token refresh failed:', error);
+                    console.error(`[Stalker] Token refresh failed for source ${sourceId}:`, error);
                     throw error;
                 } finally {
                     // Always clear the lock when done
-                    this.tokenRefreshPromise = null;
+                    StalkerClient.globalRefreshPromises.delete(sourceId);
                 }
             })();
 
-            await this.tokenRefreshPromise;
+            StalkerClient.globalRefreshPromises.set(sourceId, refreshPromise);
+            await refreshPromise;
         }
     }
 
@@ -387,6 +416,12 @@ export class StalkerClient {
                 });
 
                 if (!response.ok) {
+                    if (response.status === 401 || response.status === 403) {
+                        console.warn(`[Stalker] Auth/Token error (${response.status}). Clearing cached token for source ${this.sourceId}.`);
+                        StalkerClient.globalTokens.delete(this.sourceId);
+                        this.token = null;
+                        this.tokenTimestamp = 0;
+                    }
                     if (response.status === 404) {
                         throw new Error('404 Not Found');
                     }
@@ -405,6 +440,10 @@ export class StalkerClient {
                     parsed = JSON.parse(response.text);
                 } catch (e) {
                     console.error('[Stalker] Failed to parse JSON:', response.text.substring(0, 500));
+                    console.warn(`[Stalker] Invalid JSON. Clearing cached token for source ${this.sourceId} as a precaution.`);
+                    StalkerClient.globalTokens.delete(this.sourceId);
+                    this.token = null;
+                    this.tokenTimestamp = 0;
                     throw new Error('Invalid JSON response from Stalker portal');
                 }
 
@@ -1290,17 +1329,12 @@ export class StalkerClient {
      */
     async getShortEpg(channelId: string, size: number = 10): Promise<any[]> {
         await this.ensureToken();
-        try {
-            const response = await this.fetchStalker<any>('get_short_epg', 'itv', {
-                ch_id: channelId,
-                size: size.toString()
-            });
+        const response = await this.fetchStalker<any>('get_short_epg', 'itv', {
+            ch_id: channelId,
+            size: size.toString()
+        });
 
-            return this.safeJsonList<any>(response);
-        } catch (err) {
-            console.error(`[Stalker] Failed to fetch short EPG for channel ${channelId}:`, err);
-            return [];
-        }
+        return this.safeJsonList<any>(response);
     }
 
     /**
