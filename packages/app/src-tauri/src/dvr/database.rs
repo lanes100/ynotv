@@ -920,13 +920,18 @@ impl DvrDatabase {
         let conn = self.get_conn()?;
 
         // Get max_connections for this source
-        let max_connections: Option<i32> = conn
+        let raw: Option<String> = conn
             .query_row(
                 "SELECT max_connections FROM sourcesMeta WHERE source_id = ?1",
                 [source_id],
                 |row| row.get(0),
             )
             .optional()?;
+
+        let max_connections = match raw {
+            Some(s) if !s.is_empty() => s.parse::<i32>().ok(),
+            _ => None,
+        };
 
         // Find overlapping schedules
         let mut stmt = conn.prepare(
@@ -969,7 +974,8 @@ impl DvrDatabase {
     pub fn get_max_connections(&self, source_id: &str) -> Result<Option<i32>> {
         let conn = self.get_conn()?;
 
-        let max_connections: Option<i32> = conn
+        // max_connections is stored as TEXT in SQLite, so read as String first
+        let raw: Option<String> = conn
             .query_row(
                 "SELECT max_connections FROM sourcesMeta WHERE source_id = ?1",
                 [source_id],
@@ -977,7 +983,14 @@ impl DvrDatabase {
             )
             .optional()?;
 
-        Ok(max_connections)
+        match raw {
+            Some(s) if !s.is_empty() => {
+                s.parse::<i32>()
+                    .map(Some)
+                    .map_err(|e| anyhow::anyhow!("Failed to parse max_connections '{}': {}", s, e))
+            }
+            _ => Ok(None),
+        }
     }
 
     // TVMaze / TV Calendar methods

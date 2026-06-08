@@ -11,8 +11,10 @@ interface ModalProps {
     type?: ModalType;
     confirmText?: string;
     cancelText?: string;
+    neutralText?: string;
     onConfirm?: (value?: string) => void;
     onCancel?: () => void;
+    onNeutral?: () => void;
     onClose?: () => void;
     showInput?: boolean;
     inputPlaceholder?: string;
@@ -27,8 +29,10 @@ export function Modal({
     type = 'info',
     confirmText = 'OK',
     cancelText = 'Cancel',
+    neutralText,
     onConfirm,
     onCancel,
+    onNeutral,
     onClose,
     showInput = false,
     inputPlaceholder = '',
@@ -37,7 +41,6 @@ export function Modal({
 }: ModalProps) {
     const [inputValue, setInputValue] = useState(initialValue);
 
-    // Reset input value when modal opens/closes or initialValue changes
     useEffect(() => {
         setInputValue(initialValue);
     }, [isOpen, initialValue]);
@@ -52,7 +55,11 @@ export function Modal({
         onClose?.();
     }, [onConfirm, onClose, showInput, inputValue]);
 
-    // Handle escape key
+    const handleNeutral = useCallback(() => {
+        onNeutral?.();
+        onClose?.();
+    }, [onNeutral, onClose]);
+
     useEffect(() => {
         if (!isOpen) return;
 
@@ -66,7 +73,6 @@ export function Modal({
         return () => document.removeEventListener('keydown', handleEscape);
     }, [isOpen, handleClose]);
 
-    // Handle enter key for confirm
     useEffect(() => {
         if (!isOpen || type !== 'confirm') return;
 
@@ -109,7 +115,6 @@ export function Modal({
                             placeholder={inputPlaceholder}
                             value={inputValue}
                             onChange={(e) => setInputValue(e.target.value)}
-                            // Auto-focus logic handles 'confirm' enter, let's keep it simple
                             autoFocus
                         />
                     )}
@@ -124,6 +129,14 @@ export function Modal({
                             >
                                 {cancelText}
                             </button>
+                            {neutralText && (
+                                <button
+                                    className="modal-btn modal-btn-neutral"
+                                    onClick={handleNeutral}
+                                >
+                                    {neutralText}
+                                </button>
+                            )}
                             <button
                                 className="modal-btn modal-btn-primary"
                                 onClick={handleConfirm}
@@ -190,14 +203,16 @@ interface ModalState {
     title: string;
     message: string;
     type: ModalType;
-    confirmText: string;
-    cancelText: string;
+    confirmText?: string;
+    cancelText?: string;
+    neutralText?: string;
     showInput?: boolean;
     inputPlaceholder?: string;
     initialValue?: string;
     closeOnOverlayClick?: boolean;
     onConfirm?: (value?: string) => void;
     onCancel?: () => void;
+    onNeutral?: () => void;
 }
 
 const initialState: ModalState = {
@@ -270,6 +285,31 @@ export function useModal() {
         });
     }, []);
 
+    const showConfirmThree = useCallback((
+        title: string,
+        message: string,
+        onConfirm: () => void,
+        onNeutral: () => void,
+        onCancel?: () => void,
+        confirmText = 'Confirm',
+        neutralText = 'Ignore',
+        cancelText = 'Cancel'
+    ) => {
+        setState({
+            ...initialState,
+            isOpen: true,
+            title,
+            message,
+            type: 'confirm',
+            confirmText,
+            cancelText,
+            neutralText,
+            onConfirm,
+            onNeutral,
+            onCancel,
+        });
+    }, []);
+
     const showPrompt = useCallback((
         title: string,
         message: string,
@@ -310,12 +350,14 @@ export function useModal() {
             type={state.type}
             confirmText={state.confirmText}
             cancelText={state.cancelText}
+            neutralText={state.neutralText}
             showInput={state.showInput}
             inputPlaceholder={state.inputPlaceholder}
             initialValue={state.initialValue}
             closeOnOverlayClick={state.closeOnOverlayClick}
             onConfirm={state.onConfirm}
             onCancel={state.onCancel}
+            onNeutral={state.onNeutral}
             onClose={closeModal}
         />
     ), [state, closeModal]);
@@ -325,6 +367,7 @@ export function useModal() {
         showInfo,
         showSuccess,
         showError,
+        showConfirmThree,
         showConfirm,
         showPrompt,
         closeModal,

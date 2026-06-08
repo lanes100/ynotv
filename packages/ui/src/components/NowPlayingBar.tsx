@@ -5,7 +5,7 @@ import type { StoredChannel } from '../db';
 import type { VodPlayInfo } from '../types/media';
 import { useCurrentProgram } from '../hooks/useChannels';
 import { MetadataBadge } from './MetadataBadge';
-import { scheduleRecording, getDvrSettings, updatePlayingStream, db, type DvrSchedule } from '../db';
+import { scheduleRecording, getDvrSettings, updatePlayingStream, detectScheduleConflicts, db, type DvrSchedule } from '../db';
 import { StalkerClient } from '@ynotv/local-adapter';
 import { useModal } from './Modal';
 import { type AspectRatioMode, getAspectRatioLabel } from '../services/tauri-bridge';
@@ -61,6 +61,7 @@ interface NowPlayingBarProps {
   aspectRatio?: AspectRatioMode;
   onSetAspectRatio?: (mode: AspectRatioMode) => void;
   overlay?: React.ReactNode;
+  onNavigateDvr?: () => void;
 }
 
 // Format seconds to "H:MM:SS" or "M:SS"
@@ -114,6 +115,7 @@ export function NowPlayingBar({
   aspectRatio = 'fit',
   onSetAspectRatio,
   overlay,
+  onNavigateDvr,
 }: NowPlayingBarProps) {
   // scrubMode: 'timeshift' | 'epgcatchup' — local toggle when channel supports both
   const [scrubMode, setScrubMode] = useState<'timeshift' | 'epgcatchup'>('timeshift');
@@ -123,7 +125,7 @@ export function NowPlayingBar({
   const [recordDuration, setRecordDuration] = useState(5);
   const canControl = mpvReady && channel !== null;
   const currentProgram = useCurrentProgram(channel?.stream_id ?? null);
-  const { showSuccess, showError, ModalComponent } = useModal();
+  const { showSuccess, showError, showConfirmThree, showPrompt, ModalComponent } = useModal();
 
   // Aspect ratio menu state
   const [showAspectMenu, setShowAspectMenu] = useState(false);
@@ -163,27 +165,101 @@ export function NowPlayingBar({
   // Note: DVR URL resolution is handled by App.tsx to ensure it's always active
   // This avoids duplicate listeners and ensures resolution works on all pages
 
-  // Quick record - show modal to enter duration
-  const handleQuickRecord = useCallback(() => {
+  // Quick record - check conflicts first, then show modal
+  const handleQuickRecord = useCallback(async () => {
     if (!channel) return;
-    setShowRecordModal(true);
-    setRecordDuration(5); // Default to 5 minutes
-  }, [channel]);
 
-  // Start recording with selected duration
+    const now = Math.floor(Date.now() / 1000);
+    const tempSchedule: Omit<DvrSchedule, 'id' | 'created_at' | 'status'> = {
+      source_id: channel.source_id,
+      channel_id: channel.stream_id,
+      channel_name: channel.name,
+      program_title: `Quick Record - ${channel.name}`,
+      scheduled_start: now,
+      scheduled_end: now + (5 * 60),
+      start_padding_sec: 0,
+      end_padding_sec: 0,
+      stream_url: undefined,
+    };
+
+    const conflictResult = await detectScheduleConflicts(tempSchedule);
+    if (conflictResult.hasConflict) {
+      showConfirmThree(
+        'Scheduling Conflict',
+        `This source has a 1 connection limit. Use Stop & Record to stop the playback and watch in DVR tab while recording.`,
+        () => {
+          // Stop & Record - ask for duration, then stop and record
+          // Defer to let the current modal fully close first
+          setTimeout(() => {
+            showPrompt(
+              'Recording Duration',
+              'Enter recording duration in minutes:',
+              async (value) => {
+                const duration = Math.max(1, Math.min(180, parseInt(value) || 5));
+                setRecording(true);
+                try {
+                  onStop();
+                  const settings = await getDvrSettings();
+                  const startTime = Math.floor(Date.now() / 1000);
+                  const schedule: Omit<DvrSchedule, 'id' | 'created_at' | 'status'> = {
+                    source_id: channel!.source_id,
+                    channel_id: channel!.stream_id,
+                    channel_name: channel!.name,
+                    program_title: `Quick Record - ${channel!.name}`,
+                    scheduled_start: startTime,
+                    scheduled_end: startTime + (duration * 60),
+                    start_padding_sec: 0,
+                    end_padding_sec: settings.default_end_padding_sec || 0,
+                    stream_url: undefined,
+                  };
+                  await scheduleRecording(schedule);
+                  onNavigateDvr?.();
+                  // Small delay to let DVR view render before showing success
+                  await new Promise(r => setTimeout(r, 100));
+                  showSuccess('Recording Scheduled', `Recording scheduled for ${duration} minutes`);
+                } catch (error: any) {
+                  showError('Recording Failed', error?.message || 'Failed to start recording');
+                } finally {
+                  setRecording(false);
+                }
+              },
+              undefined,
+              'Minutes (1-180)',
+              '5',
+              'Start Recording',
+              'Cancel'
+            );
+          }, 0);
+        },
+        () => {
+          // Ignore - show duration modal, record without stopping
+          // Defer to let the current modal fully close first
+          setTimeout(() => {
+            setShowRecordModal(true);
+            setRecordDuration(5);
+          }, 0);
+        },
+        undefined,
+        'Stop & Record',
+        'Ignore',
+        'Cancel'
+      );
+      return;
+    }
+
+    setShowRecordModal(true);
+    setRecordDuration(5);
+  }, [channel, onStop, showConfirmThree, showSuccess, showError, onNavigateDvr]);
+
+  // Start recording with selected duration (no-conflict or Ignore flow)
   const handleStartRecording = useCallback(async () => {
     if (!channel) return;
 
     setShowRecordModal(false);
     setRecording(true);
     try {
-      // Get DVR settings for padding defaults
       const settings = await getDvrSettings();
-
       const now = Math.floor(Date.now() / 1000);
-
-      // For Stalker sources, don't pre-resolve URL - tokens expire too quickly
-      // The backend will emit dvr:resolve_url_now event right before FFmpeg starts
       const isStalker = channel.direct_url?.startsWith('stalker_');
 
       const schedule: Omit<DvrSchedule, 'id' | 'created_at' | 'status'> = {
@@ -193,12 +269,10 @@ export function NowPlayingBar({
         program_title: currentProgram?.title || `Quick Record - ${channel.name}`,
         scheduled_start: now,
         scheduled_end: now + (recordDuration * 60),
-        start_padding_sec: 0, // No start padding for instant recording
+        start_padding_sec: 0,
         end_padding_sec: settings.default_end_padding_sec || 0,
         series_match_title: undefined,
         recurrence: undefined,
-        // For Stalker, don't include stream_url - it will be resolved at recording time
-        // For other sources, use the direct_url
         stream_url: isStalker ? undefined : channel.direct_url,
       };
 
@@ -868,8 +942,6 @@ export function NowPlayingBar({
             document.body
           )}
 
-          {/* Themed Modal */}
-          <ModalComponent />
         </>
       ) : (
         /* Empty state - show minimal controls (volume, fullscreen) */
@@ -910,6 +982,9 @@ export function NowPlayingBar({
           </button>
         </div>
       )}
+
+      {/* Themed Modal */}
+      <ModalComponent />
     </div>
   );
 }

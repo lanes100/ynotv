@@ -51,7 +51,8 @@ export function ChannelContextMenu({
     const [adjustedPosition, setAdjustedPosition] = useState(position);
     const [showTVMazeModal, setShowTVMazeModal] = useState(false);
     const [showEpgEditor, setShowEpgEditor] = useState(false);
-    const { showSuccess, showError, showPrompt, ModalComponent } = useModal();
+    const [menuHidden, setMenuHidden] = useState(false);
+    const { showSuccess, showError, showPrompt, showConfirm, showModal, ModalComponent } = useModal();
 
     // Group state
     const [customGroups, setCustomGroups] = useState<{ group_id: string; name: string }[]>([]);
@@ -126,6 +127,13 @@ export function ChannelContextMenu({
         }
     }, [position, currentView]);
 
+    const getMenuStyle = (extra: React.CSSProperties = {}): React.CSSProperties => ({
+        left: `${adjustedPosition.x}px`,
+        top: `${adjustedPosition.y}px`,
+        display: menuHidden ? 'none' : undefined,
+        ...extra,
+    });
+
     // Close on click outside (ignore clicks inside modals since they are rendered in portals)
     useEffect(() => {
         function isInsideModal(target: Node): boolean {
@@ -164,17 +172,38 @@ export function ChannelContextMenu({
                 }
             }
 
+            setMenuHidden(true);
             if (streamUrl) {
                 await navigator.clipboard.writeText(streamUrl);
-                showSuccess('Copied', 'Stream URL copied to clipboard');
+                showModal({
+                    title: 'Copied',
+                    message: 'Stream URL copied to clipboard',
+                    type: 'success',
+                    confirmText: 'OK',
+                    onConfirm: () => onClose(),
+                    onCancel: () => onClose(),
+                });
             } else {
-                showError('Error', 'Could not resolve stream URL');
+                showModal({
+                    title: 'Error',
+                    message: 'Could not resolve stream URL',
+                    type: 'error',
+                    confirmText: 'OK',
+                    onConfirm: () => onClose(),
+                    onCancel: () => onClose(),
+                });
             }
         } catch (e: any) {
             console.error('Failed to copy stream URL:', e);
-            showError('Error', e?.message || 'Failed to copy stream URL');
-        } finally {
-            onClose();
+            setMenuHidden(true);
+            showModal({
+                title: 'Error',
+                message: e?.message || 'Failed to copy stream URL',
+                type: 'error',
+                confirmText: 'OK',
+                onConfirm: () => onClose(),
+                onCancel: () => onClose(),
+            });
         }
     }
 
@@ -210,14 +239,69 @@ export function ChannelContextMenu({
 
         const conflictResult = await detectScheduleConflicts(schedule);
         if (conflictResult.hasConflict) {
-            showError('Scheduling Conflict', conflictResult.message || 'This program conflicts with an existing recording.');
+            const sourceMeta = await db.sourcesMeta.get(channel.source_id);
+            const maxConnections = parseInt(sourceMeta?.max_connections || '1');
+            const isViewingConflict = conflictResult.message?.toLowerCase().includes('watching this source');
+
+            setMenuHidden(true);
+            if (maxConnections === 1 && isViewingConflict) {
+                showConfirm(
+                    '1 Connection Limit',
+                    "Your provider has a maximum of 1 connection and you're already viewing this source.",
+                    async () => {
+                        try {
+                            setScheduling(true);
+                            await scheduleRecording(schedule);
+                            const durationMins = Math.round((endTimestamp - startTimestamp) / 60);
+                            showModal({
+                                title: 'Recording Scheduled',
+                                message: `${channel.name} scheduled for ${durationMins} minutes`,
+                                type: 'success',
+                                confirmText: 'OK',
+                                onConfirm: () => onClose(),
+                                onCancel: () => onClose(),
+                            });
+                        } catch (err: any) {
+                            showModal({
+                                title: 'Scheduling Failed',
+                                message: err?.message || 'Failed to schedule recording',
+                                type: 'error',
+                                confirmText: 'OK',
+                                onConfirm: () => onClose(),
+                                onCancel: () => onClose(),
+                            });
+                        } finally {
+                            setScheduling(false);
+                        }
+                    },
+                    () => onClose(),
+                    'Ignore & Record',
+                    'OK'
+                );
+            } else {
+                showModal({
+                    title: 'Scheduling Conflict',
+                    message: conflictResult.message || 'This program conflicts with an existing recording.',
+                    type: 'error',
+                    confirmText: 'OK',
+                    onConfirm: () => onClose(),
+                    onCancel: () => onClose(),
+                });
+            }
             return;
         }
 
         await scheduleRecording(schedule);
         const durationMins = Math.round((endTimestamp - startTimestamp) / 60);
-        showSuccess('Recording Scheduled', `${channel.name} scheduled for ${durationMins} minutes`);
-        onClose();
+        setMenuHidden(true);
+        showModal({
+            title: 'Recording Scheduled',
+            message: `${channel.name} scheduled for ${durationMins} minutes`,
+            type: 'success',
+            confirmText: 'OK',
+            onConfirm: () => onClose(),
+            onCancel: () => onClose(),
+        });
     }
 
     async function handleConfirmQuickRecord() {
@@ -229,7 +313,15 @@ export function ChannelContextMenu({
             await createRecording(startTimestamp, endTimestamp, `${channel.name} - Quick Record`);
         } catch (error: any) {
             console.error('Failed to schedule recording:', error);
-            showError('Scheduling Failed', error?.message || 'Failed to schedule recording');
+            setMenuHidden(true);
+            showModal({
+                title: 'Scheduling Failed',
+                message: error?.message || 'Failed to schedule recording',
+                type: 'error',
+                confirmText: 'OK',
+                onConfirm: () => onClose(),
+                onCancel: () => onClose(),
+            });
         } finally {
             setScheduling(false);
         }
@@ -242,11 +334,27 @@ export function ChannelContextMenu({
             const endDateTime = new Date(`${endDate}T${endTime}`);
 
             if (isNaN(startDateTime.getTime()) || isNaN(endDateTime.getTime())) {
-                showError('Invalid Input', 'Invalid date/time selected');
+                setMenuHidden(true);
+                showModal({
+                    title: 'Invalid Input',
+                    message: 'Invalid date/time selected',
+                    type: 'error',
+                    confirmText: 'OK',
+                    onConfirm: () => onClose(),
+                    onCancel: () => onClose(),
+                });
                 return;
             }
             if (endDateTime <= startDateTime) {
-                showError('Invalid Input', 'End time must be after start time');
+                setMenuHidden(true);
+                showModal({
+                    title: 'Invalid Input',
+                    message: 'End time must be after start time',
+                    type: 'error',
+                    confirmText: 'OK',
+                    onConfirm: () => onClose(),
+                    onCancel: () => onClose(),
+                });
                 return;
             }
 
@@ -255,7 +363,15 @@ export function ChannelContextMenu({
             await createRecording(startTimestamp, endTimestamp, `${channel.name} - Scheduled`);
         } catch (error: any) {
             console.error('Failed to schedule recording:', error);
-            showError('Scheduling Failed', error?.message || 'Failed to schedule recording');
+            setMenuHidden(true);
+            showModal({
+                title: 'Scheduling Failed',
+                message: error?.message || 'Failed to schedule recording',
+                type: 'error',
+                confirmText: 'OK',
+                onConfirm: () => onClose(),
+                onCancel: () => onClose(),
+            });
         } finally {
             setScheduling(false);
         }
@@ -266,11 +382,26 @@ export function ChannelContextMenu({
         setAddingToGroup(groupId);
         try {
             await addChannelsToGroup(groupId, [channel.stream_id]);
-            showSuccess('Added to Group', `${channel.name} added to "${groupName}"`);
-            onClose();
+            setMenuHidden(true);
+            showModal({
+                title: 'Added to Group',
+                message: `${channel.name} added to "${groupName}"`,
+                type: 'success',
+                confirmText: 'OK',
+                onConfirm: () => onClose(),
+                onCancel: () => onClose(),
+            });
         } catch (e: any) {
             console.error('Failed to add channel to group:', e);
-            showError('Failed', e?.message || 'Could not add channel to group');
+            setMenuHidden(true);
+            showModal({
+                title: 'Failed',
+                message: e?.message || 'Could not add channel to group',
+                type: 'error',
+                confirmText: 'OK',
+                onConfirm: () => onClose(),
+                onCancel: () => onClose(),
+            });
             setAddingToGroup(null);
         }
     }
@@ -280,11 +411,26 @@ export function ChannelContextMenu({
         setAddingToFailoverGroup(groupId);
         try {
             await addChannelToFailoverGroup(groupId, channel.stream_id);
-            showSuccess('Added to Failover Group', `${channel.name} added to "${groupName}"`);
-            onClose();
+            setMenuHidden(true);
+            showModal({
+                title: 'Added to Failover Group',
+                message: `${channel.name} added to "${groupName}"`,
+                type: 'success',
+                confirmText: 'OK',
+                onConfirm: () => onClose(),
+                onCancel: () => onClose(),
+            });
         } catch (e: any) {
             console.error('Failed to add channel to failover group:', e);
-            showError('Failed', e?.message || 'Could not add channel to failover group');
+            setMenuHidden(true);
+            showModal({
+                title: 'Failed',
+                message: e?.message || 'Could not add channel to failover group',
+                type: 'error',
+                confirmText: 'OK',
+                onConfirm: () => onClose(),
+                onCancel: () => onClose(),
+            });
             setAddingToFailoverGroup(null);
         }
     }
@@ -295,23 +441,52 @@ export function ChannelContextMenu({
         try {
             const newGroupId = await createFailoverGroup(trimmed);
             await addChannelToFailoverGroup(newGroupId, channel.stream_id);
-            showSuccess('Created & Added', `Failover group "${trimmed}" created and ${channel.name} added`);
-            onClose();
+            setMenuHidden(true);
+            showModal({
+                title: 'Created & Added',
+                message: `Failover group "${trimmed}" created and ${channel.name} added`,
+                type: 'success',
+                confirmText: 'OK',
+                onConfirm: () => onClose(),
+                onCancel: () => onClose(),
+            });
         } catch (e: any) {
             console.error('Failed to create failover group:', e);
-            showError('Failed', e?.message || 'Could not create failover group');
+            setMenuHidden(true);
+            showModal({
+                title: 'Failed',
+                message: e?.message || 'Could not create failover group',
+                type: 'error',
+                confirmText: 'OK',
+                onConfirm: () => onClose(),
+                onCancel: () => onClose(),
+            });
         }
     }
 
     async function handleHideChannel() {
         try {
             await db.channels.update(channel.stream_id, { enabled: false });
-            showSuccess('Channel Hidden', `${channel.name} has been hidden`);
+            setMenuHidden(true);
+            showModal({
+                title: 'Channel Hidden',
+                message: `${channel.name} has been hidden`,
+                type: 'success',
+                confirmText: 'OK',
+                onConfirm: () => onClose(),
+                onCancel: () => onClose(),
+            });
         } catch (e: any) {
             console.error('Failed to hide channel:', e);
-            showError('Failed', e?.message || 'Could not hide channel');
-        } finally {
-            onClose();
+            setMenuHidden(true);
+            showModal({
+                title: 'Failed',
+                message: e?.message || 'Could not hide channel',
+                type: 'error',
+                confirmText: 'OK',
+                onConfirm: () => onClose(),
+                onCancel: () => onClose(),
+            });
         }
     }
 
@@ -324,10 +499,28 @@ export function ChannelContextMenu({
                 if (trimmed && trimmed !== (channel.alias || channel.name)) {
                     try {
                         await updateChannelAlias(channel.stream_id, trimmed);
-                        showSuccess('Channel Renamed', `${channel.name} is now displayed as "${trimmed}"`);
+                        setMenuHidden(true);
+                        showModal({
+                            title: 'Channel Renamed',
+                            message: `${channel.name} is now displayed as "${trimmed}"`,
+                            type: 'success',
+                            confirmText: 'OK',
+                            onConfirm: () => onClose(),
+                            onCancel: () => onClose(),
+                        });
+                        return;
                     } catch (e: any) {
                         console.error('Failed to rename channel:', e);
-                        showError('Failed', e?.message || 'Could not rename channel');
+                        setMenuHidden(true);
+                        showModal({
+                            title: 'Failed',
+                            message: e?.message || 'Could not rename channel',
+                            type: 'error',
+                            confirmText: 'OK',
+                            onConfirm: () => onClose(),
+                            onCancel: () => onClose(),
+                        });
+                        return;
                     }
                 }
                 onClose();
@@ -349,7 +542,7 @@ export function ChannelContextMenu({
             <div
                 ref={menuRef}
                 className="program-context-menu"
-                style={{ left: `${adjustedPosition.x}px`, top: `${adjustedPosition.y}px`, minWidth: '200px' }}
+                style={getMenuStyle({ minWidth: '200px' })}
             >
                 <div className="context-menu-header">
                     Add to Group
@@ -386,7 +579,7 @@ export function ChannelContextMenu({
             <div
                 ref={menuRef}
                 className="program-context-menu"
-                style={{ left: `${adjustedPosition.x}px`, top: `${adjustedPosition.y}px`, minWidth: '200px' }}
+                style={getMenuStyle({ minWidth: '200px' })}
             >
                 <div className="context-menu-header">
                     Add to Failover Group
@@ -494,7 +687,7 @@ export function ChannelContextMenu({
             <div
                 ref={menuRef}
                 className="program-context-menu"
-                style={{ left: `${adjustedPosition.x}px`, top: `${adjustedPosition.y}px`, minWidth: '200px' }}
+                style={getMenuStyle({ minWidth: '200px' })}
             >
                 <div className="context-menu-header">
                     Quick Record {channel.name}
@@ -536,7 +729,7 @@ export function ChannelContextMenu({
             <div
                 ref={menuRef}
                 className="program-context-menu"
-                style={{ left: `${adjustedPosition.x}px`, top: `${adjustedPosition.y}px`, minWidth: '260px' }}
+                style={getMenuStyle({ minWidth: '260px' })}
             >
                 <div className="context-menu-header">Schedule Recording</div>
                 <div className="context-menu-separator" />
@@ -628,7 +821,7 @@ export function ChannelContextMenu({
         <div
             ref={menuRef}
             className="program-context-menu"
-            style={{ left: `${adjustedPosition.x}px`, top: `${adjustedPosition.y}px` }}
+            style={getMenuStyle()}
         >
             {/* Send to Viewer - only shown when a multiview layout is active */}
             {viewerSlots.length > 0 && (

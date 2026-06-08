@@ -32,7 +32,8 @@ export function ProgramContextMenu({
     const [showTVMazeModal, setShowTVMazeModal] = useState(false);
     const [channelForWatchlist, setChannelForWatchlist] = useState<import('../db').StoredChannel | null>(null);
     const [adjustedPosition, setAdjustedPosition] = useState(position);
-    const { showSuccess, showError, showInfo, ModalComponent } = useModal();
+    const [menuHidden, setMenuHidden] = useState(false);
+    const { showSuccess, showError, showInfo, showConfirm, showModal, ModalComponent } = useModal();
 
     // Adjust position to keep menu within viewport
     useLayoutEffect(() => {
@@ -114,28 +115,57 @@ export function ProgramContextMenu({
 
         try {
             if (!channelForWatchlist) {
-                showError('Error', 'Channel not found');
-                onClose();
+                setMenuHidden(true);
+                showModal({
+                    title: 'Error',
+                    message: 'Channel not found',
+                    type: 'error',
+                    confirmText: 'OK',
+                    onConfirm: () => onClose(),
+                    onCancel: () => onClose(),
+                });
                 return;
             }
 
             const added = await addToWatchlist(program, channelForWatchlist, options);
+            setMenuHidden(true);
             if (added) {
                 const reminderText = options.reminder_enabled
                     ? options.reminder_minutes > 0
                         ? ` (Reminder: ${options.reminder_minutes} min before)`
                         : ' (Reminder at start time)'
                     : '';
-                showSuccess('Added to Watchlist', `${program.title}${reminderText}`);
+                showModal({
+                    title: 'Added to Watchlist',
+                    message: `${program.title}${reminderText}`,
+                    type: 'success',
+                    confirmText: 'OK',
+                    onConfirm: () => onClose(),
+                    onCancel: () => onClose(),
+                });
                 // Dispatch event to refresh watchlist UI
                 window.dispatchEvent(new CustomEvent('watchlist-updated'));
             } else {
-                showInfo('Already in Watchlist', `${program.title} is already in your watchlist`);
+                showModal({
+                    title: 'Already in Watchlist',
+                    message: `${program.title} is already in your watchlist`,
+                    type: 'info',
+                    confirmText: 'OK',
+                    onConfirm: () => onClose(),
+                    onCancel: () => onClose(),
+                });
             }
-            onClose();
         } catch (error: any) {
             console.error('Failed to add to watchlist:', error);
-            showError('Failed to Add', error?.message || 'Failed to add to watchlist');
+            setMenuHidden(true);
+            showModal({
+                title: 'Failed to Add',
+                message: error?.message || 'Failed to add to watchlist',
+                type: 'error',
+                confirmText: 'OK',
+                onConfirm: () => onClose(),
+                onCancel: () => onClose(),
+            });
         } finally {
             setAddingToWatchlist(false);
         }
@@ -188,18 +218,78 @@ export function ProgramContextMenu({
             // Check for conflicts
             const conflictResult = await detectScheduleConflicts(schedule);
             if (conflictResult.hasConflict) {
-                showError('Scheduling Conflict', conflictResult.message || 'This program conflicts with an existing recording.');
-                onClose();
+                const sourceMeta = await db.sourcesMeta.get(sourceId);
+                const maxConnections = parseInt(sourceMeta?.max_connections || '1');
+
+                setMenuHidden(true);
+                if (maxConnections === 1) {
+                    showConfirm(
+                        '1 Connection Limit',
+                        'This source only has a 1 connection limit. Are you sure you want to record?',
+                        async () => {
+                            try {
+                                setScheduling(true);
+                                await scheduleRecording(schedule);
+                                showModal({
+                                    title: 'Recording Scheduled',
+                                    message: `${program.title} has been scheduled`,
+                                    type: 'success',
+                                    confirmText: 'OK',
+                                    onConfirm: () => onClose(),
+                                    onCancel: () => onClose(),
+                                });
+                            } catch (err: any) {
+                                showModal({
+                                    title: 'Scheduling Failed',
+                                    message: err?.message || 'Failed to schedule recording',
+                                    type: 'error',
+                                    confirmText: 'OK',
+                                    onConfirm: () => onClose(),
+                                    onCancel: () => onClose(),
+                                });
+                            } finally {
+                                setScheduling(false);
+                            }
+                        },
+                        () => onClose(),
+                        'Record',
+                        'Cancel'
+                    );
+                } else {
+                    showModal({
+                        title: 'Scheduling Conflict',
+                        message: conflictResult.message || 'This program conflicts with an existing recording.',
+                        type: 'error',
+                        confirmText: 'OK',
+                        onConfirm: () => onClose(),
+                        onCancel: () => onClose(),
+                    });
+                }
                 return;
             }
 
             // Schedule the recording
             await scheduleRecording(schedule);
-            showSuccess('Recording Scheduled', `${program.title} has been scheduled`);
-            onClose();
+            setMenuHidden(true);
+            showModal({
+                title: 'Recording Scheduled',
+                message: `${program.title} has been scheduled`,
+                type: 'success',
+                confirmText: 'OK',
+                onConfirm: () => onClose(),
+                onCancel: () => onClose(),
+            });
         } catch (error: any) {
             console.error('Failed to schedule recording:', error);
-            showError('Scheduling Failed', error?.message || 'Failed to schedule recording');
+            setMenuHidden(true);
+            showModal({
+                title: 'Scheduling Failed',
+                message: error?.message || 'Failed to schedule recording',
+                type: 'error',
+                confirmText: 'OK',
+                onConfirm: () => onClose(),
+                onCancel: () => onClose(),
+            });
         } finally {
             setScheduling(false);
         }
@@ -213,6 +303,7 @@ export function ProgramContextMenu({
                 style={{
                     left: `${adjustedPosition.x}px`,
                     top: `${adjustedPosition.y}px`,
+                    display: menuHidden ? 'none' : undefined,
                 }}
             >
                 <div className="context-menu-item" onClick={handleScheduleRecording}>

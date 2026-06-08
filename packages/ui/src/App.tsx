@@ -2634,6 +2634,7 @@ function App() {
         onChannelDown={handleChannelDown}
         aspectRatio={heroAspectRatio}
         onSetAspectRatio={handleSetAspectRatio}
+        onNavigateDvr={() => setActiveView('dvr')}
         overlay={
           <FailoverGroupOverlay
             currentChannel={currentChannel}
