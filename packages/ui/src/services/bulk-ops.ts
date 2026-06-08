@@ -50,6 +50,7 @@ export interface BulkChannel {
   series_no?: number;
   live?: number;
   is_adult?: boolean;
+  xtream_stream_id?: string;
 }
 
 export interface BulkCategory {

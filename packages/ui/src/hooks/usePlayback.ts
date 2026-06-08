@@ -1552,7 +1552,24 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
     setError(null);
     setVodInfo(null);
 
-    const rawStreamId = channel.stream_id.replace(`${channel.source_id}_`, '');
+    // Use xtream_stream_id for M3U sources with Xtream catchup, otherwise strip prefix
+    // Fallback: try extracting from direct_url if xtream_stream_id is not set
+    let rawStreamId = (channel as any).xtream_stream_id;
+    if (!rawStreamId) {
+      const { extractXtreamStreamId } = await import('@ynotv/local-adapter');
+      rawStreamId = extractXtreamStreamId(channel.direct_url) || channel.stream_id.replace(`${channel.source_id}_`, '');
+    }
+
+    console.log(`[Catchup] Channel:`, {
+      name: channel.name,
+      source_id: channel.source_id,
+      stream_id: channel.stream_id,
+      xtream_stream_id: (channel as any).xtream_stream_id,
+      rawStreamId,
+      direct_url: channel.direct_url,
+      tv_archive: channel.tv_archive,
+    });
+    console.log(`[Catchup] Program:`, { programTitle, startTimeMs: new Date(startTimeMs).toISOString(), durationMinutes });
 
     let resolved;
     try {

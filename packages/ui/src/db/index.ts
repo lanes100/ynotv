@@ -29,6 +29,7 @@ export interface StoredChannel extends Omit<Channel, 'stream_icon' | 'epg_channe
   xmltv_id?: string;
   series_no?: number;
   live?: number;
+  xtream_stream_id?: string; // Xtream stream_id for building catchup URLs on M3U sources
 
   // Optional source name (populated during search for display purposes)
   source_name?: string;
@@ -440,7 +441,7 @@ class YnotvDatabase extends SqliteDatabase {
     // Each version block runs exactly ONCE. To add new columns in the future,
     // increment DB_VERSION and add a new case (do NOT modify existing cases).
     // ─────────────────────────────────────────────────────────────────────────
-    const DB_VERSION = 11;
+    const DB_VERSION = 12;
     const versionResult = await db.select('PRAGMA user_version') as Array<{ user_version: number }>;
     const currentVersion = versionResult[0]?.user_version ?? 0;
 
@@ -537,6 +538,15 @@ class YnotvDatabase extends SqliteDatabase {
           try { await db.execute(`ALTER TABLE ${table} ADD COLUMN ${col} ${type}`); } catch { /* already exists */ }
         };
         await addColumn('channels', 'is_adult', 'BOOLEAN');
+      }
+
+      if (currentVersion < 12) {
+        // v12: xtream_stream_id for M3U sources with Xtream catchup support
+        console.log('[DB] v12 migration: Adding xtream_stream_id column to channels');
+        const addColumn = async (table: string, col: string, type: string) => {
+          try { await db.execute(`ALTER TABLE ${table} ADD COLUMN ${col} ${type}`); } catch { /* already exists */ }
+        };
+        await addColumn('channels', 'xtream_stream_id', 'TEXT');
       }
 
       if (currentVersion < 2) {
@@ -1048,7 +1058,8 @@ class YnotvDatabase extends SqliteDatabase {
         c.tv_archive,
         c.direct_source,
         c.direct_url,
-        c.added
+        c.added,
+        c.xtream_stream_id
       FROM channels c
       LEFT JOIN epg_channel_overrides o ON o.stream_id = c.stream_id
     `);

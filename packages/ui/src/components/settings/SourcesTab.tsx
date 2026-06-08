@@ -73,6 +73,9 @@ interface SourceFormData {
   display_order?: number;
   advancedEpgMatching: boolean;
   disableShortEpg: boolean;
+  xtreamCatchupUrl: string;
+  xtreamCatchupUsername: string;
+  xtreamCatchupPassword: string;
 }
 
 const emptyForm: SourceFormData = {
@@ -96,6 +99,9 @@ const emptyForm: SourceFormData = {
   display_order: undefined,
   advancedEpgMatching: false,
   disableShortEpg: false,
+  xtreamCatchupUrl: '',
+  xtreamCatchupUsername: '',
+  xtreamCatchupPassword: '',
 };
 
 // Normalize vendor Expiration Strings to concise MM/DD/YY
@@ -335,6 +341,7 @@ export function SourcesTab({
   }
 
   function handleEdit(source: Source) {
+    const xtreamCatchup = (source as any).xtream_catchup;
     console.log('[SourcesTab] handleEdit - source.epg_url:', source.epg_url, 'length:', source.epg_url?.length);
     setFormData({
       name: source.name,
@@ -357,6 +364,9 @@ export function SourcesTab({
       display_order: source.display_order,
       advancedEpgMatching: source.advanced_epg_matching ?? false,
       disableShortEpg: source.disable_short_epg ?? false,
+      xtreamCatchupUrl: xtreamCatchup?.url || '',
+      xtreamCatchupUsername: xtreamCatchup?.username || '',
+      xtreamCatchupPassword: xtreamCatchup?.password || '',
     });
     console.log('[SourcesTab] Editing source, existing UA:', source.user_agent);
     setEditingId(source.id);
@@ -470,6 +480,14 @@ export function SourcesTab({
       return url;
     }
 
+    const xtreamCatchup = formData.type === 'm3u' && formData.xtreamCatchupUrl.trim()
+      ? {
+          url: formData.xtreamCatchupUrl.trim(),
+          username: formData.xtreamCatchupUsername.trim(),
+          password: formData.xtreamCatchupPassword.trim(),
+        }
+      : undefined;
+
     const source: Source = {
       id: sourceId,
       name: formData.name.trim(),
@@ -492,6 +510,7 @@ export function SourcesTab({
       display_order: formData.display_order,
       advanced_epg_matching: formData.advancedEpgMatching || undefined,
       disable_short_epg: formData.type === 'stalker' ? formData.disableShortEpg : undefined,
+      ...(xtreamCatchup ? { xtream_catchup: xtreamCatchup } : {}),
     };
 
     console.log('[SourcesTab] Saving source with UA:', source.user_agent);
@@ -509,6 +528,21 @@ export function SourcesTab({
     // For file imports, store channels directly in the database
     if (importedM3U) {
       const parsed = parseM3U(importedM3U.rawContent, sourceId);
+
+      // If Xtream catchup is configured, enrich channels with catchup data
+      if (xtreamCatchup) {
+        try {
+          const { enrichM3uWithXtreamCatchup } = await import('../../db/sync');
+          const enrichedChannels = await enrichM3uWithXtreamCatchup(
+            source as any,
+            parsed.channels,
+            () => {}
+          );
+          (parsed as any).channels = enrichedChannels;
+        } catch (err) {
+          console.warn('[SourcesTab] Failed to enrich imported M3U with Xtream catchup:', err);
+        }
+      }
 
       await db.transaction('rw', [db.channels, db.categories, db.sourcesMeta], async () => {
         if (parsed.channels.length > 0) {
@@ -1515,6 +1549,45 @@ export function SourcesTab({
                   Use URL instead
                 </button>
               </div>
+            )}
+
+            {/* Xtream Catchup (for M3U sources with Xtream catchup support) */}
+            {formData.type === 'm3u' && (
+              <details className="form-details">
+                <summary className="form-details-summary">Xtream Catchup (optional)</summary>
+                <div className="form-details-content">
+                  <span className="hint" style={{ marginBottom: '8px', display: 'block' }}>
+                    Enter Xtream Codes credentials to enable catchup on M3U channels.
+                  </span>
+                  <div className="form-group">
+                    <label>XC Server URL</label>
+                    <input
+                      type="text"
+                      value={formData.xtreamCatchupUrl}
+                      onChange={(e) => setFormData({ ...formData, xtreamCatchupUrl: e.target.value })}
+                      placeholder="http://provider.com:8080"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>XC Username</label>
+                    <input
+                      type="text"
+                      value={formData.xtreamCatchupUsername}
+                      onChange={(e) => setFormData({ ...formData, xtreamCatchupUsername: e.target.value })}
+                      placeholder="username"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>XC Password</label>
+                    <input
+                      type="password"
+                      value={formData.xtreamCatchupPassword}
+                      onChange={(e) => setFormData({ ...formData, xtreamCatchupPassword: e.target.value })}
+                      placeholder="password"
+                    />
+                  </div>
+                </div>
+              </details>
             )}
 
             {formData.type === 'stalker' && (

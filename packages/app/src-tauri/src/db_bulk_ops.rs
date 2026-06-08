@@ -79,6 +79,8 @@ pub struct BulkChannel {
     pub provider_order: Option<i32>,
     #[serde(default, deserialize_with = "deserialize_bool_to_i32")]
     pub is_adult: Option<i32>,
+    #[serde(default)]
+    pub xtream_stream_id: Option<String>,
 }
 
 /// A single category to be inserted/updated
@@ -300,8 +302,9 @@ fn bulk_upsert_channels_inner(db: &DvrDatabase, channels: Vec<BulkChannel>) -> R
         "INSERT INTO channels (
             stream_id, source_id, category_ids, name, channel_num, is_favorite,
             enabled, stream_type, stream_icon, epg_channel_id, added, custom_sid,
-            tv_archive, direct_source, direct_url, xmltv_id, series_no, live, provider_order, is_adult
-        ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20)
+            tv_archive, direct_source, direct_url, xmltv_id, series_no, live, provider_order, is_adult,
+            xtream_stream_id
+        ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21)
         ON CONFLICT(stream_id) DO UPDATE SET
             source_id = excluded.source_id,
             category_ids = excluded.category_ids,
@@ -321,7 +324,8 @@ fn bulk_upsert_channels_inner(db: &DvrDatabase, channels: Vec<BulkChannel>) -> R
             series_no = excluded.series_no,
             live = excluded.live,
             provider_order = excluded.provider_order,
-            is_adult = excluded.is_adult",
+            is_adult = excluded.is_adult,
+            xtream_stream_id = excluded.xtream_stream_id",
     )?;
 
     let mut inserted = 0;
@@ -349,6 +353,7 @@ fn bulk_upsert_channels_inner(db: &DvrDatabase, channels: Vec<BulkChannel>) -> R
             channel.live,
             channel.provider_order,
             channel.is_adult,
+            channel.xtream_stream_id,
         ])? {
             1 => inserted += 1,
             _ => updated += 1,

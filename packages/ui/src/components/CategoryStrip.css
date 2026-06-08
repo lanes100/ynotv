@@ -611,7 +611,7 @@
     padding: 6px 10px;
   }
   .category-name {
-    font-size: 12px !important;
+    font-size: var(--category-font-size, 12px);
   }
   .category-icon {
     width: 16px !important;

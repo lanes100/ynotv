@@ -1452,6 +1452,103 @@ export async function isVodStale(sourceId: string, refreshHours: number = DEFAUL
 }
 
 // Exported sync wrapper with backup URL failover support
+/**
+ * Enrich M3U channels with Xtream catchup data.
+ * For M3U sources with xtream_catchup config, fetches XC live streams
+ * and updates tv_archive / xtream_stream_id on channels.
+ * Matching priority: xtream_stream_id → channel name → epg_channel_id
+ */
+export async function enrichM3uWithXtreamCatchup(
+  source: Source,
+  channels: Channel[],
+  onProgress?: (msg: string) => void
+): Promise<Channel[]> {
+  const xtreamCatchup = (source as any).xtream_catchup as { url: string; username: string; password: string } | undefined;
+  if (!xtreamCatchup || !xtreamCatchup.url || !xtreamCatchup.username || !xtreamCatchup.password) {
+    return channels;
+  }
+
+  debugLog(`Enriching M3U channels with Xtream catchup data from ${xtreamCatchup.url}`, 'sync');
+  onProgress?.('Fetching Xtream catchup data...');
+
+  try {
+    const { extractXtreamStreamId } = await import('@ynotv/local-adapter');
+    const client = new XtreamClient({
+      baseUrl: xtreamCatchup.url,
+      username: xtreamCatchup.username,
+      password: xtreamCatchup.password,
+      userAgent: source.user_agent,
+    }, source.id);
+
+    const xcChannels = await client.getLiveStreams();
+    debugLog(`Got ${xcChannels.length} Xtream channels for catchup matching`, 'sync');
+
+    // Build lookup maps:
+    // 1. By xtream stream_id (numeric)
+    const xcById = new Map<string, { tv_archive: boolean; name: string }>();
+    // 2. By lowercased channel name (for name fallback matching)
+    const xcByName = new Map<string, { tv_archive: boolean; stream_id: string }>();
+
+    for (const xcCh of xcChannels) {
+      const rawId = xcCh.stream_id.replace(`${source.id}_`, '');
+      xcById.set(rawId, {
+        tv_archive: !!xcCh.tv_archive,
+        name: xcCh.name,
+      });
+      xcByName.set(xcCh.name.toLowerCase(), {
+        tv_archive: !!xcCh.tv_archive,
+        stream_id: rawId,
+      });
+    }
+
+    // Match M3U channels by priority: stream_id → name → epg_channel_id
+    let matchedCount = 0;
+    const enrichedChannels = channels.map(ch => {
+      // 1. Try xtream_stream_id (from URL extraction or previous sync)
+      let streamId = (ch as any).xtream_stream_id as string | undefined;
+      if (streamId && xcById.has(streamId)) {
+        const xcData = xcById.get(streamId)!;
+        matchedCount++;
+        return { ...ch, tv_archive: xcData.tv_archive ? 1 : 0, xtream_stream_id: streamId };
+      }
+
+      // 2. Try extracting stream_id from direct_url (handles channels stored before code update)
+      if (!streamId) {
+        streamId = extractXtreamStreamId(ch.direct_url) || undefined;
+        if (streamId && xcById.has(streamId)) {
+          const xcData = xcById.get(streamId)!;
+          matchedCount++;
+          return { ...ch, tv_archive: xcData.tv_archive ? 1 : 0, xtream_stream_id: streamId };
+        }
+      }
+
+      // 3. Try matching by channel name
+      const nameMatch = xcByName.get(ch.name.toLowerCase());
+      if (nameMatch) {
+        matchedCount++;
+        return { ...ch, tv_archive: nameMatch.tv_archive ? 1 : 0, xtream_stream_id: nameMatch.stream_id };
+      }
+
+      // 4. Try matching by epg_channel_id (might be the numeric stream_id as string)
+      if (ch.epg_channel_id && xcById.has(ch.epg_channel_id)) {
+        const xcData = xcById.get(ch.epg_channel_id)!;
+        matchedCount++;
+        return { ...ch, tv_archive: xcData.tv_archive ? 1 : 0, xtream_stream_id: ch.epg_channel_id };
+      }
+
+      return ch;
+    });
+
+    debugLog(`Matched ${matchedCount}/${channels.length} M3U channels to Xtream catchup data`, 'sync');
+    return enrichedChannels;
+  } catch (err) {
+    const errMsg = err instanceof Error ? err.message : String(err);
+    console.error(`[Sync] Xtream catchup enrichment failed: ${errMsg}`);
+    debugLog(`Xtream catchup enrichment failed: ${errMsg}`, 'sync');
+    return channels; // Proceed without catchup data
+  }
+}
+
 export async function syncSource(source: Source, onProgress?: (msg: string) => void): Promise<SyncResult> {
   // Try primary URL first
   const result = await _doSyncSourceImpl(source, onProgress);
@@ -1569,6 +1666,28 @@ async function _doSyncSourceImpl(source: Source, onProgress?: (msg: string) => v
           nativeCategoriesCount = result.parsed_category_ids?.length || 0;
           nativeSyncComplete = true;
 
+          // Enrich with Xtream catchup data if configured
+          const xtreamCatchup = (source as any).xtream_catchup;
+          if (xtreamCatchup && channels.length > 0) {
+            // Extract xtream_stream_id from URLs (Rust native sync doesn't do this)
+            const { extractXtreamStreamId } = await import('@ynotv/local-adapter');
+            channels = channels.map(ch => ({
+              ...ch,
+              xtream_stream_id: (ch as any).xtream_stream_id || extractXtreamStreamId(ch.direct_url) || undefined,
+            })) as Channel[];
+            channels = await enrichM3uWithXtreamCatchup(source, channels, onProgress);
+            // Write updated tv_archive / xtream_stream_id back to DB
+            const catchupUpdates = channels
+              .filter(ch => (ch as any).xtream_stream_id)
+              .map(ch => ({
+                ...ch,
+                tv_archive: (ch as any).tv_archive ? 1 : 0,
+              }));
+            if (catchupUpdates.length > 0) {
+              await bulkOps.upsertChannels(catchupUpdates as any);
+            }
+          }
+
         } else if (source.type === 'xtream' && source.username && source.password) {
           debugLog('Testing Xtream connection to get server_info...', 'sync');
           onProgress?.('Connecting to Xtream server...');
@@ -1657,6 +1776,10 @@ async function _doSyncSourceImpl(source: Source, onProgress?: (msg: string) => v
         epgUrl = result.epgUrl ?? undefined;
         debugLog(`M3U parsed: ${channels.length} channels, ${categories.length} categories`, 'sync');
       }
+
+      // Enrich M3U channels with Xtream catchup data (for both remote and imported M3U)
+      channels = await enrichM3uWithXtreamCatchup(source, channels, onProgress);
+
     } else if (source.type === 'xtream') {
       // Xtream source - use client
       if (!source.username || !source.password) {
@@ -1912,6 +2035,7 @@ async function _doSyncSourceImpl(source: Source, onProgress?: (msg: string) => v
       xmltv_id: ch.xmltv_id ?? null,
       series_no: ch.series_no ?? null,
       live: ch.live ?? 1,
+      xtream_stream_id: ch.xtream_stream_id ?? null,
     });
 
     // Convert to BulkCategory format

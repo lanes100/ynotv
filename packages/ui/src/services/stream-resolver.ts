@@ -124,9 +124,15 @@ export async function resolvePlayUrl(
         // ── Xtream catchup / timeshift ───────────────────────────────────────────
         // For catchup playback on Xtream sources, we must build a special timeshift
         // URL. This only applies when the caller provides `catchup` options.
-        if (sourceData.type === 'xtream' && catchup) {
+        if (catchup && (sourceData.type === 'xtream' || (sourceData.type === 'm3u' && (sourceData as any).xtream_catchup))) {
             const { XtreamClient } = await import('@ynotv/local-adapter');
             const { rawStreamId, startTimeMs, durationMinutes } = catchup;
+
+            // Determine XC credentials: from xtream_catchup (M3U) or source (Xtream)
+            const xtreamCatchup = (sourceData as any).xtream_catchup;
+            const xcUrl = xtreamCatchup?.url || sourceData.url;
+            const xcUsername = xtreamCatchup?.username || sourceData.username || '';
+            const xcPassword = xtreamCatchup?.password || sourceData.password || '';
 
             // Re-calculate the maximum allowed duration (EPG start → now, capped)
             const endMs = startTimeMs + durationMinutes * 60_000;
@@ -138,9 +144,9 @@ export async function resolvePlayUrl(
             let offsetMs = 0;
             try {
                 const client = new XtreamClient({
-                    baseUrl: sourceData.url,
-                    username: sourceData.username || '',
-                    password: sourceData.password || '',
+                    baseUrl: xcUrl,
+                    username: xcUsername,
+                    password: xcPassword,
                     userAgent: sourceData.user_agent,
                 }, sourceData.id);
 
@@ -164,12 +170,22 @@ export async function resolvePlayUrl(
 
             resolvedUrl = XtreamClient.buildTimeshiftUrl(
                 rawStreamId,
-                sourceData.url,
-                sourceData.username || '',
-                sourceData.password || '',
+                xcUrl,
+                xcUsername,
+                xcPassword,
                 actualDurationMinutes,
                 new Date(serverTimeMs),
             );
+            console.log(`[stream-resolver] Catchup URL: ${resolvedUrl}`);
+            console.log(`[stream-resolver] Catchup details:`, {
+                sourceType: sourceData.type,
+                xcUrl,
+                rawStreamId,
+                actualDurationMinutes,
+                serverTimeMs: new Date(serverTimeMs).toISOString(),
+                originalStartMs: new Date(startTimeMs).toISOString(),
+                offsetMs,
+            });
             return { url: resolvedUrl, userAgent, sourceName };
         }
 

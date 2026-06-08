@@ -5,6 +5,24 @@ use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use log::{error, info};
 
+/// Extract Xtream stream_id from a channel URL.
+/// Matches patterns like /live/{user}/{pass}/{stream_id}.ts
+fn extract_xtream_stream_id(url: &str) -> Option<String> {
+    let path: Vec<&str> = url.split('/').collect();
+    for (i, segment) in path.iter().enumerate() {
+        if *segment == "live" {
+            // stream_id is at index i+3 (live / user / pass / stream_id.ext)
+            if let Some(id_seg) = path.get(i + 3) {
+                let id: String = id_seg.chars().take_while(|c| c.is_ascii_digit()).collect();
+                if !id.is_empty() {
+                    return Some(id);
+                }
+            }
+        }
+    }
+    None
+}
+
 // ============================================================================
 // Xtream Types
 // ============================================================================
@@ -173,6 +191,7 @@ pub async fn sync_xtream_source(
             series_no: None,
             live: Some(1),
             is_adult: None,
+            xtream_stream_id: Some(stream_id_str.clone()),
         });
     }
 
@@ -460,6 +479,7 @@ pub async fn sync_m3u_source(
                     });
                 }
 
+                let xtream_stream_id = extract_xtream_stream_id(line);
                 bulk_channels.push(BulkChannel {
                     stream_id,
                     source_id: source_id.clone(),
@@ -481,6 +501,7 @@ pub async fn sync_m3u_source(
                     series_no: None,
                     live: Some(1),
                     is_adult: None,
+                    xtream_stream_id,
                 });
             }
         }

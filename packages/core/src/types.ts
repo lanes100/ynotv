@@ -42,8 +42,15 @@ export interface XtreamSource extends Source {
   password: string;
 }
 
+export interface M3uCatchupConfig {
+  url: string;        // Xtream server domain (e.g. http://provider.com:8080)
+  username: string;
+  password: string;
+}
+
 export interface M3USource extends Source {
   type: 'm3u';
+  xtream_catchup?: M3uCatchupConfig; // Optional Xtream credentials for catchup
 }
 
 export interface EPGSource extends Source {
@@ -75,6 +82,7 @@ export interface Channel {
   is_adult?: boolean;
   channel_num?: number;   // Channel order (Xtream num / M3U tvg-chno)
   provider_order?: number; // Position in provider response / M3U file (0-based)
+  xtream_stream_id?: string; // Xtream stream_id extracted from M3U URL (for catchup)
 }
 
 // =============================================================================

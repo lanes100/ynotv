@@ -1161,6 +1161,40 @@
   letter-spacing: normal;
 }
 
+/* Details/summary collapsible section (for Xtream Catchup settings) */
+.form-details {
+  margin-bottom: 16px;
+  border: var(--glass-border, 1px solid rgba(255, 255, 255, 0.1));
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.form-details-summary {
+  padding: 10px 12px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text-primary, white);
+  user-select: none;
+}
+
+.form-details-summary:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.form-details-content {
+  padding: 0 12px 12px;
+  border-top: var(--glass-border, 1px solid rgba(255, 255, 255, 0.05));
+}
+
+.form-details-content .form-group {
+  margin-bottom: 12px;
+}
+
+.form-details-content .form-group:first-child {
+  margin-top: 12px;
+}
+
 /* Or Divider */
 .or-divider {
   display: flex;

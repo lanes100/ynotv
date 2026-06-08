@@ -1618,7 +1618,7 @@
     padding: 16px 20px;
   }
   .guide-program-title {
-    font-size: 20px !important;
+    font-size: var(--epg-title-font-size, 20px);
     margin-bottom: 4px;
   }
   .guide-program-meta {
@@ -1627,7 +1627,7 @@
     gap: 10px;
   }
   .guide-program-description {
-    font-size: 13px !important;
+    font-size: var(--epg-body-font-size, 13px);
     line-height: 1.4;
   }
 
@@ -1663,7 +1663,7 @@
     line-height: 24px !important;
   }
   .guide-channel-name {
-    font-size: 0.8rem !important;
+    font-size: var(--channel-font-size, 0.8rem);
   }
   .guide-channel-number {
     font-size: 0.7rem !important;

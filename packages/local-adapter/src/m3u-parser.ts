@@ -13,6 +13,8 @@
 import { fetch as tauriFetch } from '@tauri-apps/plugin-http';
 import type { Channel, Category } from '@ynotv/core';
 
+const XTREAM_STREAM_ID_RE = /\/live\/[^/]+\/[^/]+\/(\d+)(?:\.(?:ts|m3u8|m3u))?/i;
+
 /**
  * Generate a stable hash from a string (DJB2 algorithm)
  * Returns a short alphanumeric hash for use in IDs
@@ -24,6 +26,15 @@ function stableHash(str: string): string {
   }
   // Convert to base36 (alphanumeric) and take first 8 chars
   return Math.abs(hash).toString(36).substring(0, 8);
+}
+
+/**
+ * Extract Xtream stream_id from a channel URL.
+ * Xtream URLs follow the pattern: /live/{username}/{password}/{stream_id}.ts
+ */
+export function extractXtreamStreamId(url: string): string | null {
+  const match = XTREAM_STREAM_ID_RE.exec(url);
+  return match ? match[1] : null;
 }
 
 /**
@@ -190,6 +201,7 @@ export function parseM3U(content: string, sourceId: string): M3UParseResult {
         tv_archive: currentMetadata.tvArchive ? 1 : 0,
         provider_order: channelCounter - 1, // 0-based position in M3U file
         ...(currentMetadata.tvgChno !== null && { channel_num: currentMetadata.tvgChno }),
+        xtream_stream_id: extractXtreamStreamId(line) || undefined,
       };
 
       channels.push(channel);
