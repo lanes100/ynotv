@@ -10,6 +10,7 @@
 - **Popout/External mode persistence** - The selected playback mode (Popout or External) will now be retained across restarts.
 - **Settings search bar** - A search bar has been added to the Settings page for quickly locating individual settings.
 - **Sync error notification** - If a source fails to sync, a red notification will appear in the bottom-right corner displaying the associated error message.
+- **Multiview Stalker support** - Stalker sources can now be used in multiview.
 
 ### Fixed
 
