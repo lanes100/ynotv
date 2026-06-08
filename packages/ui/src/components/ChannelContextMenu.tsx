@@ -586,8 +586,19 @@ export function ChannelContextMenu({
 
     const handleSendToSlot = async (slotId: 2 | 3 | 4) => {
         if (!onSendToSlot) return;
-        // Resolve the stream URL (same logic as main player)
-        const url = channel.direct_url ?? '';
+        let url = channel.direct_url ?? '';
+
+        // Resolve the stream URL (crucial for Stalker channels)
+        if (channel.source_id) {
+            try {
+                const { resolvePlayUrl } = await import('../services/stream-resolver');
+                const resolved = await resolvePlayUrl(channel.source_id, url);
+                url = resolved.url;
+            } catch (e) {
+                console.error('[ChannelContextMenu] Failed to resolve multiview URL:', e);
+            }
+        }
+
         // Look up source name
         let sourceName: string | null = null;
         if (channel.source_id && window.storage) {
