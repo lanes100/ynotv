@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import type { RetryState } from '../components/StreamRetryOverlay';
 import { invoke } from '@tauri-apps/api/core';
+import { listen } from '@tauri-apps/api/event';
 import type { StoredChannel } from '../db';
 import { getFailoverCandidatesAfter, getPrimaryChannelForGroup } from '../services/failover-groups';
 import type { VodPlayInfo } from '../types/media';
@@ -320,7 +321,7 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
   const {
     mpvReady, playing, volume, muted, position, duration, error,
     volumeDraggingRef, seekingRef,
-    setError, setPlaying, setPosition, setVolume,
+    setError, setPlaying, setPosition, setVolume, setDuration,
     setIgnoreHttpErrors, isIgnoringHttpErrors,
   } = mpvListeners;
 
@@ -458,6 +459,8 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
   useEffect(() => { currentChannelRef.current = currentChannel; }, [currentChannel]);
   useEffect(() => { vodInfoRef2.current = vodInfo; }, [vodInfo]);
   useEffect(() => { catchupInfoRef.current = catchupInfo; }, [catchupInfo]);
+
+
 
   // Refs to track current values for interval callbacks
   const vodInfoRef = useRef(vodInfo);
@@ -1061,6 +1064,91 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
     };
   }, [handleStreamDied, isIgnoringHttpErrors]);
 
+  // ── Live recording duration updater ────────────────────────────────────────
+  // When playing a recording that's still being recorded, dynamically update
+  // the duration state to reflect the elapsed recording time (seconds since actual start).
+  // This allows the timeline and seeker to grow smoothly as the file is recorded.
+  useEffect(() => {
+    if (
+      vodInfo?.type !== 'recording' ||
+      vodInfo?.recordingStatus !== 'recording' ||
+      !vodInfo?.recordingStart
+    ) {
+      return;
+    }
+
+    const startMs = vodInfo.recordingStart * 1000;
+
+    const interval = setInterval(() => {
+      const elapsedSecs = Math.max(0, Math.floor((Date.now() - startMs) / 1000));
+      setDuration(elapsedSecs);
+    }, 1000);
+
+    // Initial update
+    const elapsedSecs = Math.max(0, Math.floor((Date.now() - startMs) / 1000));
+    setDuration(elapsedSecs);
+
+    return () => clearInterval(interval);
+  }, [vodInfo?.type, vodInfo?.recordingStatus, vodInfo?.recordingStart, setDuration]);
+
+  // ── Live recording completed event listener ───────────────────────────────
+  // Listens to the dvr:event event from Tauri. If the currently playing active
+  // recording completes or fails, updates the recordingStatus to 'completed'
+  // so that we stop the dynamic duration updater and handle it as a static VOD.
+  useEffect(() => {
+    if (
+      vodInfo?.type !== 'recording' ||
+      vodInfo?.recordingStatus !== 'recording' ||
+      !currentChannel?.stream_id
+    ) {
+      return;
+    }
+
+    let unlistenFn: (() => void) | undefined;
+    let disposed = false;
+
+    const setupListener = async () => {
+      try {
+        const playingRecordingId = parseInt(currentChannel.stream_id.replace('recording_', '') || '0');
+        if (!playingRecordingId) return;
+
+        const unlisten = await listen<any>('dvr:event', (event) => {
+          const data = event.payload;
+          if (
+            data.recording_id === playingRecordingId &&
+            (data.event_type === 'completed' || data.event_type === 'failed')
+          ) {
+            logInfo('[Recording] Active recording ended (event:', data.event_type, '), transitioning to completed VOD');
+            setVodInfo((prev) => {
+              if (prev && prev.type === 'recording') {
+                return {
+                  ...prev,
+                  recordingStatus: 'completed',
+                };
+              }
+              return prev;
+            });
+          }
+        });
+
+        if (disposed) {
+          unlisten();
+        } else {
+          unlistenFn = unlisten;
+        }
+      } catch (err) {
+        logError('[Recording] Failed to setup dvr:event listener:', err);
+      }
+    };
+
+    setupListener();
+
+    return () => {
+      disposed = true;
+      if (unlistenFn) unlistenFn();
+    };
+  }, [vodInfo?.type, vodInfo?.recordingStatus, currentChannel?.stream_id]);
+
   // ── Watchdog interval ──────────────────────────────────────────────────────
   // Runs every 2 seconds while a Live TV channel is active. If position hasn't
   // advanced in STALL_THRESHOLD_MS, treats it as a stalled/dead stream.
@@ -1645,7 +1733,18 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
     setError(null);
 
     try {
-      const url = recording.file_path.startsWith('file://') ? recording.file_path : `file://${recording.file_path}`;
+      let url = recording.file_path;
+      if (recording.status === 'recording') {
+        // Use the native mpv appending:// protocol for active recordings.
+        // Convert backslashes to forward slashes.
+        const cleanPath = recording.file_path.replace(/\\/g, '/');
+        // Strip any existing file:// or file:/// prefix
+        const rawPath = cleanPath.replace(/^file:\/\/\/?/, '');
+        url = `appending://${rawPath}`;
+      } else {
+        url = recording.file_path.startsWith('file://') ? recording.file_path : `file://${recording.file_path}`;
+      }
+
       if (Bridge.getIsCasting?.()) {
         Bridge.setCastMetadata(recording.program_title, 'DVR Recording');
       }
@@ -1666,6 +1765,8 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
           url: url,
           type: 'recording',
           source_id: 'dvr',
+          recordingStart: recording.actual_start,
+          recordingStatus: recording.status,
         });
         setCatchupInfo(null);
         setPlaying(true);

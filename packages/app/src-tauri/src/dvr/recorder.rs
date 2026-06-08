@@ -37,6 +37,8 @@ struct RecordingHandle {
     start_time: Instant,
     /// Cancellation signal sender (cloned for external use)
     cancel_tx: watch::Sender<bool>,
+    /// Output file path for playback while recording
+    file_path: PathBuf,
 }
 
 /// Manages active recordings
@@ -255,6 +257,7 @@ impl RecordingManager {
             schedule: schedule.clone(),
             start_time: Instant::now(),
             cancel_tx,
+            file_path: output_path.clone(),
         };
 
         self.active_recordings.lock().insert(schedule.id, handle);
@@ -561,6 +564,7 @@ impl RecordingManager {
             .values()
             .map(|handle| {
                 let elapsed = handle.start_time.elapsed().as_secs() as i64;
+                let file_path = handle.file_path.to_string_lossy().to_string();
                 RecordingProgress {
                     schedule_id: handle.schedule.id,
                     recording_id: handle.recording_id,
@@ -568,6 +572,7 @@ impl RecordingManager {
                     program_title: handle.schedule.program_title.clone(),
                     elapsed_seconds: elapsed,
                     scheduled_duration: handle.schedule.scheduled_end - handle.schedule.scheduled_start,
+                    file_path,
                 }
             })
             .collect()
@@ -583,6 +588,7 @@ pub struct RecordingProgress {
     pub program_title: String,
     pub elapsed_seconds: i64,
     pub scheduled_duration: i64,
+    pub file_path: String,
 }
 
 /// Find FFmpeg binary

@@ -92,7 +92,17 @@ export function useMpvListeners(options: UseMpvListenersOptions = {}) {
                 if (status.volume !== undefined && !volumeDraggingRef.current) setVolume(status.volume);
                 if (status.muted !== undefined) setMuted(status.muted);
                 if (status.position !== undefined && !seekingRef.current) setPosition(status.position);
-                if (status.duration !== undefined) setDuration(status.duration);
+                if (status.duration !== undefined) {
+                    const dur = status.duration;
+                    setDuration(prev => {
+                        // If we are playing a growing file (appending://) and the duration is being updated
+                        // externally, don't let MPV's 0 duration override it.
+                        if (dur === 0 && prev > 0) {
+                            return prev;
+                        }
+                        return dur;
+                    });
+                }
 
                 // Clear stale playback errors once the stream is playing and making progress
                 if (status.playing && status.position !== undefined && status.position > 0) {

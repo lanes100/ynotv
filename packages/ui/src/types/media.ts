@@ -53,4 +53,6 @@ export interface VodPlayInfo {
   seasonNum?: number;     // Current season number
   episodeNum?: number;    // Current episode number
   episodeId?: string;     // Current episode ID
+  recordingStart?: number; // Unix timestamp in seconds of when recording actually started
+  recordingStatus?: string; // e.g. 'recording' or 'completed'
 }

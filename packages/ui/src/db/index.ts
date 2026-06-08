@@ -1591,11 +1591,11 @@ export async function getScheduledRecordings(): Promise<DvrSchedule[]> {
     .sort((a, b) => a.scheduled_start - b.scheduled_start);
 }
 
-/** Get completed recordings */
+/** Get completed and in-progress recordings */
 export async function getCompletedRecordings(): Promise<DvrRecording[]> {
   const all = await db.dvrRecordings.toArray();
   return all
-    .filter(r => r.status === 'completed' || r.status === 'partial')
+    .filter(r => r.status === 'completed' || r.status === 'partial' || r.status === 'recording')
     .sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
 }
 
@@ -1607,6 +1607,7 @@ export interface RecordingProgress {
   program_title: string;
   elapsed_seconds: number;
   scheduled_duration: number;
+  file_path: string;
 }
 
 export async function getActiveRecordings(): Promise<RecordingProgress[]> {

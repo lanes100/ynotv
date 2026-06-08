@@ -422,6 +422,12 @@
     color: #e74c3c;
 }
 
+.dvr-btn-icon.play:hover {
+    background: rgba(46, 204, 113, 0.2);
+    border-color: #2ecc71;
+    color: #2ecc71;
+}
+
 .dvr-card-body {
     display: flex;
     flex-direction: column;

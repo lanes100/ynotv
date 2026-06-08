@@ -334,6 +334,7 @@ export function DvrDashboard({ onPlay, onClose }: DvrDashboardProps) {
                             activeRecordings={activeRecordings}
                             onEdit={handleEditStart}
                             onCancel={handleCancel}
+                            onPlay={onPlay}
                             formatDateTime={formatDateTime}
                             formatDuration={formatDuration}
                             formatElapsed={formatElapsed}
@@ -379,6 +380,7 @@ interface ScheduledTabProps {
     activeRecordings: RecordingProgress[];
     onEdit: (item: DvrSchedule) => void;
     onCancel: (id: number) => void;
+    onPlay?: (recording: DvrRecording) => void;
     formatDateTime: (timestamp: number) => string;
     formatDuration: (start: number, end: number) => string;
     formatElapsed: (seconds: number) => string;
@@ -390,6 +392,7 @@ function ScheduledTab({
     activeRecordings,
     onEdit,
     onCancel,
+    onPlay,
     formatDateTime,
     formatDuration,
     formatElapsed,
@@ -424,18 +427,38 @@ function ScheduledTab({
                         Currently Recording
                     </h2>
                     <div className="dvr-card-grid">
-                        {active.map(item => (
-                            <RecordingCard
-                                key={item.id}
-                                item={item}
-                                progress={getRecordingProgress(item.id!)}
-                                onEdit={() => onEdit(item)}
-                                onCancel={() => onCancel(item.id!)}
-                                formatDateTime={formatDateTime}
-                                formatDuration={formatDuration}
-                                formatElapsed={formatElapsed}
-                            />
-                        ))}
+                        {active.map(item => {
+                            const progress = getRecordingProgress(item.id!);
+                            return (
+                                <RecordingCard
+                                    key={item.id}
+                                    item={item}
+                                    progress={progress}
+                                    onEdit={() => onEdit(item)}
+                                    onCancel={() => onCancel(item.id!)}
+                                    onPlay={onPlay ? () => {
+                                        if (progress?.file_path) {
+                                            onPlay({
+                                                id: progress.recording_id,
+                                                file_path: progress.file_path,
+                                                filename: '',
+                                                channel_name: item.channel_name,
+                                                program_title: item.program_title,
+                                                status: 'recording',
+                                                auto_delete_policy: 'space_needed',
+                                                created_at: item.created_at,
+                                                actual_start: item.scheduled_start,
+                                                scheduled_start: item.scheduled_start,
+                                                scheduled_end: item.scheduled_end,
+                                            });
+                                        }
+                                    } : undefined}
+                                    formatDateTime={formatDateTime}
+                                    formatDuration={formatDuration}
+                                    formatElapsed={formatElapsed}
+                                />
+                            );
+                        })}
                     </div>
                 </section>
             )}
@@ -533,7 +556,7 @@ function RecordedTab({ recorded, onPlay, onDelete, formatDateTime }: RecordedTab
                     </svg>
                 </div>
                 <h3>No Recordings Yet</h3>
-                <p>Your completed recordings will appear here</p>
+                <p>Your recordings will appear here once they start or complete</p>
             </div>
         );
     }
@@ -557,7 +580,7 @@ function RecordedTab({ recorded, onPlay, onDelete, formatDateTime }: RecordedTab
                             </div>
                         )}
                         <div className="dvr-media-overlay">
-                            {(item.status === 'completed' || item.status === 'partial') && item.file_path && onPlay && (
+                            {(item.status === 'completed' || item.status === 'partial' || item.status === 'recording') && item.file_path && onPlay && (
                                 <button
                                     className="dvr-play-btn"
                                     onClick={(e) => {
@@ -565,7 +588,7 @@ function RecordedTab({ recorded, onPlay, onDelete, formatDateTime }: RecordedTab
                                         console.log('[DVR] Play button clicked for:', item.file_path);
                                         onPlay(item);
                                     }}
-                                    title={item.status === 'partial' ? 'Play Partial Recording' : 'Play Recording'}
+                                    title={item.status === 'recording' ? 'Play While Recording' : item.status === 'partial' ? 'Play Partial Recording' : 'Play Recording'}
                                 >
                                     <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor">
                                         <polygon points="5 3 19 12 5 21 5 3" />
@@ -574,7 +597,7 @@ function RecordedTab({ recorded, onPlay, onDelete, formatDateTime }: RecordedTab
                             )}
                         </div>
                         <span className={`dvr-media-badge ${item.status}`}>
-                            {item.status}
+                            {item.status === 'completed' ? 'Completed' : item.status === 'recording' ? 'REC' : item.status === 'partial' ? 'Partial' : item.status === 'failed' ? 'Failed' : item.status}
                         </span>
                     </div>
                     <div className="dvr-media-info">
@@ -615,12 +638,13 @@ interface RecordingCardProps {
     progress?: RecordingProgress;
     onEdit: () => void;
     onCancel: () => void;
+    onPlay?: () => void;
     formatDateTime: (timestamp: number) => string;
     formatDuration: (start: number, end: number) => string;
     formatElapsed: (seconds: number) => string;
 }
 
-function RecordingCard({ item, progress, onEdit, onCancel, formatDateTime, formatDuration, formatElapsed }: RecordingCardProps) {
+function RecordingCard({ item, progress, onEdit, onCancel, onPlay, formatDateTime, formatDuration, formatElapsed }: RecordingCardProps) {
     const percent = progress
         ? Math.min(100, (progress.elapsed_seconds / progress.scheduled_duration) * 100)
         : 0;
@@ -630,6 +654,13 @@ function RecordingCard({ item, progress, onEdit, onCancel, formatDateTime, forma
             <div className="dvr-card-header">
                 <span className="dvr-card-status-badge recording">REC</span>
                 <div className="dvr-card-actions">
+                    {onPlay && progress?.file_path && (
+                        <button className="dvr-btn-icon play" onClick={onPlay} title="Play while recording">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                                <polygon points="5 3 19 12 5 21 5 3" />
+                            </svg>
+                        </button>
+                    )}
                     <button className="dvr-btn-icon" onClick={onEdit} title="Edit padding">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                             <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
