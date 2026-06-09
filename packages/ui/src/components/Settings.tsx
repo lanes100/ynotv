@@ -19,6 +19,7 @@ import { LiveTVTab } from './settings/LiveTVTab';
 import { SubtitlesTab, type SubtitleSettings } from './settings/SubtitlesTab';
 import { ScrobblingTab } from './settings/ScrobblingTab';
 import { StremTab } from './settings/StremTab';
+import { ProxyTab } from './settings/ProxyTab';
 import type { ShortcutsMap, ThemeId } from '../types/app';
 import type { StremioStreamPickerMode, BadgeSource } from '../types/stremio';
 import './Settings.css';
@@ -115,6 +116,12 @@ export function Settings({
 
   // Security state
   const [allowLanSources, setAllowLanSources] = useState(false);
+
+  // Proxy state
+  const [socks5ProxyEnabled, setSocks5ProxyEnabled] = useState(false);
+  const [socks5ProxyServer, setSocks5ProxyServer] = useState('');
+  const [socks5ProxyUsername, setSocks5ProxyUsername] = useState('');
+  const [socks5ProxyPassword, setSocks5ProxyPassword] = useState('');
 
   // Debug state
   const [debugLoggingEnabled, setDebugLoggingEnabled] = useState(false);
@@ -378,6 +385,10 @@ export function Settings({
         transparentGuideHeight?: number;
         transparentGuideHideHeader?: boolean;
         transparentGuideOnZap?: boolean;
+        socks5ProxyEnabled?: boolean;
+        socks5ProxyServer?: string;
+        socks5ProxyUsername?: string;
+        socks5ProxyPassword?: string;
       };
 
       if (settings.castEnabled !== undefined) {
@@ -415,6 +426,12 @@ export function Settings({
 
       // Load security settings
       setAllowLanSources(settings.allowLanSources ?? false);
+
+      // Load proxy settings
+      setSocks5ProxyEnabled(settings.socks5ProxyEnabled ?? false);
+      setSocks5ProxyServer(settings.socks5ProxyServer ?? '');
+      setSocks5ProxyUsername(settings.socks5ProxyUsername ?? '');
+      setSocks5ProxyPassword(settings.socks5ProxyPassword ?? '');
 
       // Load debug settings
       setDebugLoggingEnabled(settings.debugLoggingEnabled ?? false);
@@ -633,6 +650,22 @@ export function Settings({
 
   // Check if any VOD source exists (Xtream or Stalker) for showing tabs
   const hasVodSource = sources.some(s => s.type === 'xtream' || s.type === 'stalker');
+
+  const handleSocks5ProxyEnabledChange = (enabled: boolean) => {
+    setSocks5ProxyEnabled(enabled);
+  };
+
+  const handleSocks5ProxyServerChange = (server: string) => {
+    setSocks5ProxyServer(server);
+  };
+
+  const handleSocks5ProxyUsernameChange = (user: string) => {
+    setSocks5ProxyUsername(user);
+  };
+
+  const handleSocks5ProxyPasswordChange = (pass: string) => {
+    setSocks5ProxyPassword(pass);
+  };
 
   const handleMpvParamsChange = async (params: string) => {
     setMpvParams(params);
@@ -1172,6 +1205,19 @@ export function Settings({
           <SecurityTab
             allowLanSources={allowLanSources}
             onAllowLanSourcesChange={setAllowLanSources}
+          />
+        );
+      case 'proxy':
+        return (
+          <ProxyTab
+            socks5ProxyEnabled={socks5ProxyEnabled}
+            onSocks5ProxyEnabledChange={handleSocks5ProxyEnabledChange}
+            socks5ProxyServer={socks5ProxyServer}
+            onSocks5ProxyServerChange={handleSocks5ProxyServerChange}
+            socks5ProxyUsername={socks5ProxyUsername}
+            onSocks5ProxyUsernameChange={handleSocks5ProxyUsernameChange}
+            socks5ProxyPassword={socks5ProxyPassword}
+            onSocks5ProxyPasswordChange={handleSocks5ProxyPasswordChange}
           />
         );
       case 'debug':

@@ -294,6 +294,11 @@ pub async fn spawn_and_load<R: Runtime>(
         "--no-border".into(),
     ];
 
+    // If SOCKS5 proxy is configured, pass it to MPV
+    if let Ok(proxy) = std::env::var("ALL_PROXY") {
+        args.push(format!("--http-proxy={}", proxy));
+    }
+
     // On Windows, omit --wid to get a standalone window.
     // On macOS, MPV naturally creates its own window.
 

@@ -25,6 +25,7 @@ const TAB_LABELS: Record<SettingsTabId, string> = {
   scrobbling: 'Trakt',
   cache: 'Cache',
   security: 'Security',
+  proxy: 'Proxy',
   debug: 'Debug',
   shortcuts: 'Shortcuts',
   'export-import': 'Export / Import',
@@ -175,6 +176,12 @@ const SETTINGS_SEARCH_INDEX: SettingsSearchResult[] = [
   { id: 'security-tab', label: 'Security', tabId: 'security', tabLabel: 'Security', section: 'Security' },
   { id: 'allow-lan-sources', label: 'Allow LAN sources', description: 'Enable if your IPTV provider runs on your local network.', tabId: 'security', tabLabel: 'Security', section: 'Network Security' },
   { id: 'network-security', label: 'Network Security', tabId: 'security', tabLabel: 'Security', section: 'Network Security' },
+
+  // --- Proxy ---
+  { id: 'proxy-tab', label: 'Proxy Settings', tabId: 'proxy', tabLabel: 'Proxy', section: 'Proxy' },
+  { id: 'proxy-socks5-server', label: 'SOCKS5 Proxy Server', description: 'Configure a SOCKS5 proxy server to route network traffic through.', tabId: 'proxy', tabLabel: 'Proxy', section: 'SOCKS5 Proxy Settings' },
+  { id: 'proxy-socks5-username', label: 'Proxy Username', description: 'Optional username for SOCKS5 proxy authentication.', tabId: 'proxy', tabLabel: 'Proxy', section: 'SOCKS5 Proxy Settings' },
+  { id: 'proxy-socks5-password', label: 'Proxy Password', description: 'Optional password for SOCKS5 proxy authentication.', tabId: 'proxy', tabLabel: 'Proxy', section: 'SOCKS5 Proxy Settings' },
 
   // --- Debug ---
   { id: 'debug-tab', label: 'Debug', tabId: 'debug', tabLabel: 'Debug', section: 'Debug' },

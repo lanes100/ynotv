@@ -183,7 +183,7 @@ pub async fn spawn_slot<R: Runtime>(
     let socket_path = slot_socket_path(slot_id);
 
     // Secondary slots use default args only - custom params only apply to main MPV
-    let args = vec![
+    let mut args = vec![
         format!("--input-ipc-server={}", socket_path),
         format!("--wid={}", parent_hwnd_raw),
         format!("--title=YNOTV_MPV_SLOT_{}", slot_id),
@@ -200,6 +200,11 @@ pub async fn spawn_slot<R: Runtime>(
         "--volume=80".into(),
         "--mute=yes".into(),
     ];
+
+    // If SOCKS5 proxy is configured, pass it to MPV
+    if let Ok(proxy) = std::env::var("ALL_PROXY") {
+        args.push(format!("--http-proxy={}", proxy));
+    }
 
     let sidecar = app.shell().sidecar("mpv")
         .map_err(|e| format!("Sidecar error: {}", e))?;

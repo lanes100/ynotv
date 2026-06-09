@@ -5,6 +5,7 @@ export type SettingsTabId =
   | 'subtitles'
   | 'strem'
   | 'security'
+  | 'proxy'
   | 'debug'
   | 'shortcuts'
   | 'export-import'
@@ -38,6 +39,7 @@ const SETTINGS_TABS: SettingsTab[] = [
   { id: 'scrobbling', label: 'Trakt' },
   { id: 'cache', label: 'Cache' },
   { id: 'security', label: 'Security' },
+  { id: 'proxy', label: 'Proxy' },
   { id: 'debug', label: 'Debug' },
   { id: 'shortcuts', label: 'Shortcuts' },
   { id: 'export-import', label: 'Export / Import' },

@@ -254,6 +254,11 @@ async fn try_spawn_mpv<R: Runtime>(app: &AppHandle<R>, state: &tauri::State<'_, 
         "--cursor-autohide=no".into(),
     ];
 
+    // If SOCKS5 proxy is configured, pass it to MPV
+    if let Ok(proxy) = std::env::var("ALL_PROXY") {
+        args.push(format!("--http-proxy={}", proxy));
+    }
+
     // Add custom parameters from settings
     for param in &custom_params {
         args.push(param.clone());

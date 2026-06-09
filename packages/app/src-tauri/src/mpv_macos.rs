@@ -65,6 +65,11 @@ pub async fn launch_mpv<R: Runtime>(
         "--hwdec=no".to_string(),
     ];
 
+    // If SOCKS5 proxy is configured, pass it to MPV
+    if let Ok(proxy) = std::env::var("ALL_PROXY") {
+        args.push(format!("--http-proxy={}", proxy));
+    }
+
     // Add custom parameters from settings
     for param in custom_params {
         args.push(param);

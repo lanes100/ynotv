@@ -90,6 +90,135 @@ fn read_store_setting<R: Runtime>(app: &AppHandle<R>, key: &str) -> Option<serde
     store.get(key)
 }
 
+/// Reads SOCKS5 proxy configuration from settings store and applies them as environment variables.
+pub fn apply_proxy_settings<R: Runtime>(app: &AppHandle<R>) {
+    if let Some(settings_val) = read_store_setting(app, "settings") {
+        if let Some(settings) = settings_val.as_object() {
+            let enabled = settings.get("socks5ProxyEnabled").and_then(|v| v.as_bool()).unwrap_or(false);
+            if enabled {
+                if let Some(socks5_server) = settings.get("socks5ProxyServer").and_then(|v| v.as_str()) {
+                    let server = socks5_server.trim();
+                    if !server.is_empty() {
+                        let username = settings.get("socks5ProxyUsername").and_then(|v| v.as_str()).unwrap_or("");
+                        let password = settings.get("socks5ProxyPassword").and_then(|v| v.as_str()).unwrap_or("");
+                        
+                        let proxy_url = if server.starts_with("socks5://") || server.starts_with("socks5h://") {
+                            server.to_string()
+                        } else {
+                            format!("socks5h://{}", server)
+                        };
+
+                        let final_proxy = if !username.is_empty() {
+                            let mut parts = proxy_url.splitn(2, "://");
+                            let scheme = parts.next().unwrap_or("socks5h");
+                            let rest = parts.next().unwrap_or(&proxy_url);
+                            format!("{}://{}:{}@{}", scheme, username, password, rest)
+                        } else {
+                            proxy_url
+                        };
+
+                        info!("[Proxy] Applying SOCKS5 proxy environment variables (using user: {} on server: {})", username, server);
+                        std::env::set_var("ALL_PROXY", &final_proxy);
+                        std::env::set_var("http_proxy", &final_proxy);
+                        std::env::set_var("https_proxy", &final_proxy);
+                        std::env::set_var("NO_PROXY", "localhost,127.0.0.1,::1,github.com,githubusercontent.com");
+                        std::env::set_var("no_proxy", "localhost,127.0.0.1,::1,github.com,githubusercontent.com");
+                        return;
+                    }
+                }
+            }
+        }
+    }
+    
+    info!("[Proxy] SOCKS5 proxy disabled or empty. Clearing proxy environment variables.");
+    std::env::remove_var("ALL_PROXY");
+    std::env::remove_var("http_proxy");
+    std::env::remove_var("https_proxy");
+    std::env::remove_var("NO_PROXY");
+    std::env::remove_var("no_proxy");
+}
+
+pub fn get_configured_proxy<R: Runtime>(app: &AppHandle<R>) -> Option<reqwest::Proxy> {
+    if let Some(settings_val) = read_store_setting(app, "settings") {
+        if let Some(settings) = settings_val.as_object() {
+            let enabled = settings.get("socks5ProxyEnabled").and_then(|v| v.as_bool()).unwrap_or(false);
+            if enabled {
+                if let Some(socks5_server) = settings.get("socks5ProxyServer").and_then(|v| v.as_str()) {
+                    let server = socks5_server.trim();
+                    if !server.is_empty() {
+                        let username = settings.get("socks5ProxyUsername").and_then(|v| v.as_str()).unwrap_or("");
+                        let password = settings.get("socks5ProxyPassword").and_then(|v| v.as_str()).unwrap_or("");
+                        
+                        let proxy_url = if server.starts_with("socks5://") || server.starts_with("socks5h://") {
+                            server.to_string()
+                        } else {
+                            format!("socks5h://{}", server)
+                        };
+
+                        let final_proxy = if !username.is_empty() {
+                            let mut parts = proxy_url.splitn(2, "://");
+                            let scheme = parts.next().unwrap_or("socks5h");
+                            let rest = parts.next().unwrap_or(&proxy_url);
+                            format!("{}://{}:{}@{}", scheme, username, password, rest)
+                        } else {
+                            proxy_url
+                        };
+
+                        if let Ok(proxy) = reqwest::Proxy::all(&final_proxy) {
+                            return Some(proxy);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    None
+}
+
+#[tauri::command]
+async fn update_proxy_settings<R: Runtime>(app: AppHandle<R>) -> Result<(), String> {
+    info!("[Proxy] update_proxy_settings command received");
+    apply_proxy_settings(&app);
+    
+    // Terminate current MPV process so that any new playback starts with updated settings
+    mpv_kill(app).await;
+    
+    Ok(())
+}
+
+#[tauri::command]
+async fn test_proxy_connection<R: Runtime>(app: AppHandle<R>) -> Result<String, String> {
+    info!("[Proxy] test_proxy_connection command received");
+    
+    let mut client_builder = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(8))
+        .danger_accept_invalid_certs(true); // Accept self-signed certificates for testing
+
+    if let Some(proxy) = get_configured_proxy(&app) {
+        client_builder = client_builder.proxy(proxy);
+    } else {
+        return Err("Proxy is not enabled or proxy server field is empty".to_string());
+    }
+
+    let client = client_builder.build()
+        .map_err(|e| format!("Failed to build HTTP client: {}", e))?;
+
+    let resp = client.get("https://api.ipify.org?format=json")
+        .send()
+        .await
+        .map_err(|e| format!("Proxy connection test failed: {}", e))?;
+
+    let ip_info: serde_json::Value = resp.json()
+        .await
+        .map_err(|e| format!("Failed to parse response from test server: {}", e))?;
+
+    let ip = ip_info.get("ip")
+        .and_then(|v| v.as_str())
+        .ok_or_else(|| "IP address not found in test response".to_string())?;
+
+    Ok(ip.to_string())
+}
+
 /// Get custom MPV parameters from settings store.
 /// Supports both nested `settings` object (frontend format) and root-level keys (legacy).
 async fn get_mpv_params_from_store<R: Runtime>(app: &AppHandle<R>) -> Vec<String> {
@@ -183,7 +312,7 @@ const ALLOWED_MPV_KEYS: &[&str] = &[
     "scale", "cscale", "dscale", "dither-depth", "correct-downscaling", "linear-downscaling",
     "sigmoid-upscaling", "deband",
     "hr-seek-framedrop", "keep-open",
-    "network-timeout", "stream-buffer-size",
+    "network-timeout", "stream-buffer-size", "http-proxy",
     // TimeShift/Dumping parameters
     "stream-record", "capture", "dump-stream", "recorder-muxer", "record-file",
     // YouTube support (MPV 0.40+: configured via --script-opts=ytdl_hook-ytdl_path=...)
@@ -2484,6 +2613,9 @@ pub fn run() {
         .manage(MpvState::new())
         .manage(std::sync::Arc::new(cast::CastManager::new()))
         .setup(|app| {
+            // Apply SOCKS5 proxy settings if configured
+            apply_proxy_settings(app.handle());
+
             // Register secondary MPV state (Windows only)
             #[cfg(target_os = "windows")]
             app.manage(SecondaryMpvState::new());
@@ -2731,7 +2863,9 @@ pub fn run() {
             cast_set_volume,
             cast_toggle_mute,
             cast_resolve_url,
-            cast_stop
+            cast_stop,
+            update_proxy_settings,
+            test_proxy_connection
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
