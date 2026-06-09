@@ -1,5 +1,20 @@
 # Changelog
 
+## v2.0.3
+
+### Added
+
+- **Transparent EPG overlay** - A transparent EPG overlay can be toggled via hotkey (default: `Z`). Height, opacity, and display behaviour on channel zap are configurable under `Settings → Live TV → EPG`.
+- **VOD & Strem downloads** - Movies and series can now be downloaded directly from their detail page using the new download button. Active and completed downloads are accessible in the DVR section. The default download location can be changed under `DVR → Settings`.
+- **Play while recording** - Recordings currently in progress can now be played back simultaneously. Ideal for users with a single connection limit who want to record and watch the same channel at the same time.
+- **M3U catch-up support for custom playlists** - Users with a custom M3U playlist created from an XC source that supports catchup can now enable catch-up playback via `Settings → Source → Edit Source → Xtream Catchup`. Filling in the Xtream Catchup field will also retrieve connection count and expiration details from the XC provider, which are then displayed on the source card.
+- **SOCKS5 proxy support** - A SOCKS5 proxy can be configured to route all application traffic through it.
+- **Hideable top categories** - The `All Channels`, `Favorites`, `Watchlist`, and `Recently Viewed` categories can now be hidden from the sidebar by right-clicking and selecting `Hide Category`. They can be re-enabled under `Settings → Navigation → Category`.
+
+### Fixed
+
+- **Font size customisation not applied at small resolutions** - Custom font size settings were not being respected on lower-resolution displays. This has been resolved.
+
 ## v2.0.2
 
 ### Added
