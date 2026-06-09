@@ -1307,6 +1307,7 @@ export function ChannelPanel({
 
   // Handle auto-scrolling to keep the selected channel near the middle/visible
   useEffect(() => {
+    if (!visible) return;
     if (!selectedChannel || !channels.length || !virtuosoRef.current) return;
     if (isSearchMode || isWatchlistMode) return;
 
@@ -1341,7 +1342,7 @@ export function ChannelPanel({
         behavior: 'smooth',
       });
     }
-  }, [selectedChannel?.stream_id, channels.length, isSearchMode, isWatchlistMode]);
+  }, [selectedChannel?.stream_id, channels.length, isSearchMode, isWatchlistMode, visible]);
 
   // Update last channel ID when selected channel changes
   useEffect(() => {

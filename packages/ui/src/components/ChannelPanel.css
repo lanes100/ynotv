@@ -1693,7 +1693,6 @@
    including [data-theme]:not([data-theme*="glass-"]) rules.                  */
 [data-theme] .guide-panel.guide-transparent-mode {
   background: transparent !important;
-  /* Don't flex-fill — child uses absolute positioning */
 }
 
 [data-theme] .guide-panel.guide-transparent-mode .guide-grid-section {
@@ -1701,12 +1700,16 @@
   left: 0 !important;
   right: 0 !important;
   bottom: 0 !important;
-  height: var(--transparent-guide-height, 100%) !important;
+  height: var(--transparent-guide-height, 40%) !important;
   background: rgba(0, 0, 0, 0.55) !important;
   background-attachment: initial !important;
   backdrop-filter: blur(6px) !important;
   -webkit-backdrop-filter: blur(6px) !important;
   /* Inherits flex column layout from base rule */
+}
+
+[data-theme] .guide-panel.guide-transparent-mode.with-categories .guide-grid-section {
+  left: var(--category-strip-content-width, 240px) !important;
 }
 
 [data-theme] .guide-panel.guide-transparent-mode .guide-header {

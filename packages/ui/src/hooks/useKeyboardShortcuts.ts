@@ -46,6 +46,7 @@ export interface UseKeyboardShortcutsOptions {
     setShowControls: React.Dispatch<React.SetStateAction<boolean>>;
     guideTransparent: boolean;
     setGuideTransparent: React.Dispatch<React.SetStateAction<boolean>>;
+    isTransparentGuideZapActive: boolean;
 
     // --- Channel info overlay flash ---
     onChannelChangeFlash?: () => void;
@@ -104,6 +105,7 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions): void
                 setShowControls,
                 guideTransparent,
                 setGuideTransparent,
+                isTransparentGuideZapActive,
                 onChannelChangeFlash,
                 onTransparentGuideZapFlash,
             } = latestRefs.current;
@@ -164,9 +166,14 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions): void
                 e.preventDefault();
                 setShowControls(true);
                 if (activeView === 'guide') {
-                    // LiveTV is open, close it entirely
-                    setActiveView('none');
-                    setCategoriesOpen(false);
+                    if (guideTransparent) {
+                        setGuideTransparent(false);
+                        setCategoriesOpen(!categoriesHidden);
+                    } else {
+                        // LiveTV is open, close it entirely
+                        setActiveView('none');
+                        setCategoriesOpen(false);
+                    }
                 } else {
                     // Open LiveTV, respect user's category hidden preference
                     setActiveView('guide');
@@ -238,8 +245,11 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions): void
                         // Wrap to last channel
                         handlePlayChannel(currentChannels[currentChannels.length - 1]);
                     }
-                    // Flash channel info overlay when changing channels outside guide/sports
+                    // Flash channel info overlay when changing channels outside guide/sports (or during transparent guide overlay zap)
                     if (activeView !== 'guide' && activeView !== 'sports') {
+                        onChannelChangeFlash?.();
+                        onTransparentGuideZapFlash?.();
+                    } else if (activeView === 'guide' && guideTransparent && isTransparentGuideZapActive) {
                         onChannelChangeFlash?.();
                         onTransparentGuideZapFlash?.();
                     }
@@ -254,8 +264,11 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions): void
                         // Wrap to first channel
                         handlePlayChannel(currentChannels[0]);
                     }
-                    // Flash channel info overlay when changing channels outside guide/sports
+                    // Flash channel info overlay when changing channels outside guide/sports (or during transparent guide overlay zap)
                     if (activeView !== 'guide' && activeView !== 'sports') {
+                        onChannelChangeFlash?.();
+                        onTransparentGuideZapFlash?.();
+                    } else if (activeView === 'guide' && guideTransparent && isTransparentGuideZapActive) {
                         onChannelChangeFlash?.();
                         onTransparentGuideZapFlash?.();
                     }

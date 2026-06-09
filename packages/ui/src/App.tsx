@@ -759,6 +759,8 @@ function App() {
   const [channelChangeFlash, setChannelChangeFlash] = useState(false);
   const channelChangeFlashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const transparentGuideFlashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [guideTransparent, setGuideTransparent] = useState(false);
+  const [isTransparentGuideZapActive, setIsTransparentGuideZapActive] = useState(false);
 
   const triggerChannelChangeFlash = useCallback(() => {
     if (!channelInfoOverlayEnabled) return;
@@ -778,22 +780,24 @@ function App() {
     }
     setGuideTransparent(true);
     setActiveView('guide');
-    setCategoriesOpen((open: boolean) => !categoriesHidden);
+    setCategoriesOpen(false); // Categories sidebar doesn't show on zap
+    setIsTransparentGuideZapActive(true);
     transparentGuideFlashTimerRef.current = setTimeout(() => {
       setGuideTransparent(false);
       setActiveView('none');
       setCategoriesOpen(false);
+      setIsTransparentGuideZapActive(false);
     }, (overlayAutohideTimer + 1) * 1000);
-  }, [transparentGuideOnZap, categoriesHidden, overlayAutohideTimer]);
+  }, [transparentGuideOnZap, overlayAutohideTimer]);
 
   const isChannelInfoOverlayVisible = useMemo(() => {
     if (!channelInfoOverlayEnabled || !currentChannel) return false;
     const isVod = currentChannel.stream_id === 'vod' || currentChannel.stream_id?.startsWith('recording_');
     if (isVod) return false;
-    // Don't show when in LiveTV guide or Sports views
-    if (activeView === 'guide' || activeView === 'sports') return false;
+    // Don't show when in LiveTV guide (unless transparent guide is active and triggered by zapping) or Sports views
+    if ((activeView === 'guide' && (!guideTransparent || !isTransparentGuideZapActive)) || activeView === 'sports') return false;
     return showControls || channelChangeFlash;
-  }, [channelInfoOverlayEnabled, currentChannel, showControls, channelChangeFlash, activeView]);
+  }, [channelInfoOverlayEnabled, currentChannel, showControls, channelChangeFlash, activeView, guideTransparent, isTransparentGuideZapActive]);
 
   // Failover group overlay visibility: same conditions as NowPlayingBar
   const isFailoverGroupOverlayVisible = useMemo(() => {
@@ -864,17 +868,17 @@ function App() {
   // ==========================================================================
   // Transparent Guide Mode (Z key)
   // ==========================================================================
-  const [guideTransparent, setGuideTransparent] = useState(false);
 
   // Reset transparent mode when leaving guide view
   useEffect(() => {
     if (activeView !== 'guide') {
       setGuideTransparent(false);
-    }
-    // Clear any pending flash timer when view changes
-    if (transparentGuideFlashTimerRef.current) {
-      clearTimeout(transparentGuideFlashTimerRef.current);
-      transparentGuideFlashTimerRef.current = null;
+      setIsTransparentGuideZapActive(false);
+      // Clear any pending flash timer when leaving guide view
+      if (transparentGuideFlashTimerRef.current) {
+        clearTimeout(transparentGuideFlashTimerRef.current);
+        transparentGuideFlashTimerRef.current = null;
+      }
     }
   }, [activeView]);
 
@@ -1856,6 +1860,7 @@ function App() {
     setShowControls,
     guideTransparent,
     setGuideTransparent,
+    isTransparentGuideZapActive,
     onChannelChangeFlash: triggerChannelChangeFlash,
     onTransparentGuideZapFlash: triggerTransparentGuideZapFlash,
   });
@@ -1911,6 +1916,11 @@ function App() {
           if (settingsResult.data.epgBodyFontSize) {
             document.documentElement.style.setProperty('--epg-body-font-size', `${settingsResult.data.epgBodyFontSize}px`);
           }
+          // Load transparent guide overlay settings
+          const loadedGuideHeight = settingsResult.data.transparentGuideHeight ?? 40;
+          document.documentElement.style.setProperty('--transparent-guide-height', `${loadedGuideHeight}%`);
+          const loadedHideHeader = settingsResult.data.transparentGuideHideHeader ?? false;
+          document.documentElement.classList.toggle('transparent-guide-hide-header', loadedHideHeader);
           // Apply other settings
           if (settingsResult.data.channelSortOrder) {
             setChannelSortOrder(settingsResult.data.channelSortOrder as 'alphabetical' | 'number' | 'provider');
@@ -2129,9 +2139,14 @@ function App() {
                 className={`segmented-btn ${activeView === 'guide' || (activeView === 'none' && categoriesOpen) ? 'active' : ''}`}
                 onClick={() => {
                   if (activeView === 'guide') {
-                    // LiveTV is open, close it entirely
-                    setActiveView('none');
-                    setCategoriesOpen(false);
+                    if (guideTransparent) {
+                      setGuideTransparent(false);
+                      setCategoriesOpen(!categoriesHidden);
+                    } else {
+                      // LiveTV is open, close it entirely
+                      setActiveView('none');
+                      setCategoriesOpen(false);
+                    }
                   } else {
                     // Open LiveTV, respect user's category hidden preference
                     setActiveView('guide');

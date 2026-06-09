@@ -197,7 +197,7 @@ export function Settings({
   const [epgBodyFontSize, setEpgBodyFontSize] = useState(16);
   const epgView = useEpgView();
   const setEpgView = useSetEpgView();
-  const [transparentGuideHeight, setTransparentGuideHeight] = useState(100);
+  const [transparentGuideHeight, setTransparentGuideHeight] = useState(40);
   const [transparentGuideHideHeader, setTransparentGuideHideHeader] = useState(false);
 
   // Live View settings state
@@ -501,7 +501,7 @@ export function Settings({
       setEpgView(settings.epgView ?? 'traditional');
 
       // Load transparent guide overlay settings
-      const loadedGuideHeight = settings.transparentGuideHeight ?? 100;
+      const loadedGuideHeight = settings.transparentGuideHeight ?? 40;
       setTransparentGuideHeight(loadedGuideHeight);
       document.documentElement.style.setProperty('--transparent-guide-height', `${loadedGuideHeight}%`);
       const loadedHideHeader = settings.transparentGuideHideHeader ?? false;
