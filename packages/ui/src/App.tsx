@@ -1924,6 +1924,10 @@ function App() {
           document.documentElement.style.setProperty('--transparent-guide-height', `${loadedGuideHeight}%`);
           const loadedHideHeader = settingsResult.data.transparentGuideHideHeader ?? false;
           document.documentElement.classList.toggle('transparent-guide-hide-header', loadedHideHeader);
+          const loadedOverlayOpacity = settingsResult.data.transparentGuideOverlayOpacity ?? 55;
+          document.documentElement.style.setProperty('--transparent-guide-overlay-opacity', String(loadedOverlayOpacity / 100));
+          const loadedSidebarOpacity = settingsResult.data.transparentGuideSidebarOpacity ?? 0;
+          document.documentElement.style.setProperty('--transparent-guide-sidebar-opacity', String(loadedSidebarOpacity / 100));
           // Apply other settings
           if (settingsResult.data.channelSortOrder) {
             setChannelSortOrder(settingsResult.data.channelSortOrder as 'alphabetical' | 'number' | 'provider');

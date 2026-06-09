@@ -212,6 +212,8 @@ export function Settings({
   const setEpgView = useSetEpgView();
   const [transparentGuideHeight, setTransparentGuideHeight] = useState(40);
   const [transparentGuideHideHeader, setTransparentGuideHideHeader] = useState(false);
+  const [transparentGuideOverlayOpacity, setTransparentGuideOverlayOpacity] = useState(55);
+  const [transparentGuideSidebarOpacity, setTransparentGuideSidebarOpacity] = useState(0);
 
   // Live View settings state
   const [channelInfoOverlayEnabled, setChannelInfoOverlayEnabled] = useState(channelInfoOverlayEnabledProp ?? false);
@@ -416,6 +418,8 @@ export function Settings({
         transparentGuideHeight?: number;
         transparentGuideHideHeader?: boolean;
         transparentGuideOnZap?: boolean;
+        transparentGuideOverlayOpacity?: number;
+        transparentGuideSidebarOpacity?: number;
         socks5ProxyEnabled?: boolean;
         socks5ProxyServer?: string;
         socks5ProxyUsername?: string;
@@ -564,6 +568,12 @@ export function Settings({
       const loadedHideHeader = settings.transparentGuideHideHeader ?? false;
       setTransparentGuideHideHeader(loadedHideHeader);
       document.documentElement.classList.toggle('transparent-guide-hide-header', loadedHideHeader);
+      const loadedOverlayOpacity = settings.transparentGuideOverlayOpacity ?? 55;
+      setTransparentGuideOverlayOpacity(loadedOverlayOpacity);
+      document.documentElement.style.setProperty('--transparent-guide-overlay-opacity', String(loadedOverlayOpacity / 100));
+      const loadedSidebarOpacity = settings.transparentGuideSidebarOpacity ?? 0;
+      setTransparentGuideSidebarOpacity(loadedSidebarOpacity);
+      document.documentElement.style.setProperty('--transparent-guide-sidebar-opacity', String(loadedSidebarOpacity / 100));
 
 
       // Load EPG font size settings
@@ -927,6 +937,24 @@ export function Settings({
     document.documentElement.classList.toggle('transparent-guide-hide-header', hide);
     if (window.storage) {
       await window.storage.updateSettings({ transparentGuideHideHeader: hide });
+    }
+  };
+
+  const handleTransparentGuideOverlayOpacityChange = async (opacity: number) => {
+    const clamped = Math.max(0, Math.min(100, opacity));
+    setTransparentGuideOverlayOpacity(clamped);
+    document.documentElement.style.setProperty('--transparent-guide-overlay-opacity', String(clamped / 100));
+    if (window.storage) {
+      await window.storage.updateSettings({ transparentGuideOverlayOpacity: clamped });
+    }
+  };
+
+  const handleTransparentGuideSidebarOpacityChange = async (opacity: number) => {
+    const clamped = Math.max(0, Math.min(100, opacity));
+    setTransparentGuideSidebarOpacity(clamped);
+    document.documentElement.style.setProperty('--transparent-guide-sidebar-opacity', String(clamped / 100));
+    if (window.storage) {
+      await window.storage.updateSettings({ transparentGuideSidebarOpacity: clamped });
     }
   };
 
@@ -1427,6 +1455,10 @@ export function Settings({
             onTransparentGuideHideHeaderChange={handleTransparentGuideHideHeaderChange}
             transparentGuideOnZap={transparentGuideOnZapProp ?? false}
             onTransparentGuideOnZapChange={onTransparentGuideOnZapChange || (() => {})}
+            transparentGuideOverlayOpacity={transparentGuideOverlayOpacity}
+            onTransparentGuideOverlayOpacityChange={handleTransparentGuideOverlayOpacityChange}
+            transparentGuideSidebarOpacity={transparentGuideSidebarOpacity}
+            onTransparentGuideSidebarOpacityChange={handleTransparentGuideSidebarOpacityChange}
             channelFontSize={channelFontSize}
             onChannelFontSizeChange={handleChannelFontSizeChange}
             categoryFontSize={categoryFontSize}

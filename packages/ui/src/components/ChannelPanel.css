@@ -1691,17 +1691,13 @@
 /* Transparent Guide Mode (Z key) — hides preview, overlays EPG grid on video
    High-specificity selectors with !important to override all theme overrides
    including [data-theme]:not([data-theme*="glass-"]) rules.                  */
-[data-theme] .guide-panel.guide-transparent-mode {
-  background: transparent !important;
-}
-
 [data-theme] .guide-panel.guide-transparent-mode .guide-grid-section {
   position: absolute !important;
   left: 0 !important;
   right: 0 !important;
   bottom: 0 !important;
   height: var(--transparent-guide-height, 40%) !important;
-  background: rgba(0, 0, 0, 0.55) !important;
+  background: rgba(0, 0, 0, var(--transparent-guide-overlay-opacity, 0.55)) !important;
   background-attachment: initial !important;
   backdrop-filter: blur(6px) !important;
   -webkit-backdrop-filter: blur(6px) !important;
@@ -1749,14 +1745,14 @@
 
 /* Hide guide header row in transparent mode when setting is enabled */
 .transparent-guide-hide-header .guide-panel.guide-transparent-mode .guide-header,
-html.transparent-guide-hide-header .guide-panel.guide-transparent-mode .guide-header {
+.transparent-guide-hide-header .guide-panel.guide-transparent-mode .guide-header {
   display: none !important;
 }
 
 /* Categories sidebar — fully transparent in transparent guide mode
    Uses html + data-theme + :has() to beat [data-theme]:not(...) specificity */
 html[data-theme]:has(.guide-transparent-mode) .category-strip {
-  background: transparent !important;
+  background: rgba(0, 0, 0, var(--transparent-guide-sidebar-opacity, 0)) !important;
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
   border-right: 1px solid rgba(255, 255, 255, 0.08) !important;

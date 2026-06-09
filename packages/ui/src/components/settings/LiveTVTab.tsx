@@ -62,6 +62,10 @@ interface LiveTVTabProps {
   onTransparentGuideHideHeaderChange: (hide: boolean) => void;
   transparentGuideOnZap: boolean;
   onTransparentGuideOnZapChange: (enabled: boolean) => void;
+  transparentGuideOverlayOpacity: number;
+  onTransparentGuideOverlayOpacityChange: (opacity: number) => void;
+  transparentGuideSidebarOpacity: number;
+  onTransparentGuideSidebarOpacityChange: (opacity: number) => void;
 }
 
 export function LiveTVTab({
@@ -114,6 +118,10 @@ export function LiveTVTab({
   onTransparentGuideHideHeaderChange,
   transparentGuideOnZap,
   onTransparentGuideOnZapChange,
+  transparentGuideOverlayOpacity,
+  onTransparentGuideOverlayOpacityChange,
+  transparentGuideSidebarOpacity,
+  onTransparentGuideSidebarOpacityChange,
 }: LiveTVTabProps) {
   const [activeSubTab, setActiveSubTab] = useState<'epg' | 'font-size' | 'sort-order' | 'search' | 'live-view' | 'widgets'>('epg');
 
@@ -407,6 +415,64 @@ export function LiveTVTab({
                       }} />
                     </span>
                   </label>
+                </div>
+
+                <div className="timeshift-toggle-row" style={{ marginTop: '12px' }}>
+                  <div className="timeshift-toggle-info">
+                    <span className="timeshift-toggle-label">EPG Overlay Opacity</span>
+                    <span className="timeshift-toggle-sub">Opacity level of the transparent EPG overlay (0–100%).</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={transparentGuideOverlayOpacity}
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value);
+                        if (!isNaN(val)) onTransparentGuideOverlayOpacityChange(val);
+                      }}
+                      style={{ width: '70px', padding: '4px 8px', textAlign: 'center' }}
+                    />
+                    <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.85rem' }}>%</span>
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      value={transparentGuideOverlayOpacity}
+                      onChange={(e) => onTransparentGuideOverlayOpacityChange(parseInt(e.target.value))}
+                      style={{ width: '120px' }}
+                    />
+                  </div>
+                </div>
+
+                <div className="timeshift-toggle-row" style={{ marginTop: '12px' }}>
+                  <div className="timeshift-toggle-info">
+                    <span className="timeshift-toggle-label">Category Sidebar Opacity</span>
+                    <span className="timeshift-toggle-sub">Opacity level of the category sidebar in transparent guide mode (0–100%).</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={transparentGuideSidebarOpacity}
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value);
+                        if (!isNaN(val)) onTransparentGuideSidebarOpacityChange(val);
+                      }}
+                      style={{ width: '70px', padding: '4px 8px', textAlign: 'center' }}
+                    />
+                    <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.85rem' }}>%</span>
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      value={transparentGuideSidebarOpacity}
+                      onChange={(e) => onTransparentGuideSidebarOpacityChange(parseInt(e.target.value))}
+                      style={{ width: '120px' }}
+                    />
+                  </div>
                 </div>
               </div>
             </div>

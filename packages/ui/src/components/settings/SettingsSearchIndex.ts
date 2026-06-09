@@ -57,6 +57,8 @@ const SETTINGS_SEARCH_INDEX: SettingsSearchResult[] = [
   { id: 'epg-title-font-size', label: 'EPG Title Font Size', description: 'Adjust the font size for program titles in the EPG preview panel.', tabId: 'livetv', tabLabel: 'LiveTV', subTabId: 'epg', section: 'EPG' },
   { id: 'epg-body-font-size', label: 'EPG Body Text Font Size', description: 'Adjust the font size for program descriptions in the EPG preview panel.', tabId: 'livetv', tabLabel: 'LiveTV', subTabId: 'epg', section: 'EPG' },
   { id: 'preview-panel', label: 'Preview Panel', tabId: 'livetv', tabLabel: 'LiveTV', subTabId: 'epg', section: 'Preview Panel' },
+  { id: 'transparent-guide-overlay-opacity', label: 'EPG Overlay Opacity', description: 'Opacity level of the transparent EPG overlay.', tabId: 'livetv', tabLabel: 'LiveTV', subTabId: 'epg', section: 'Transparent EPG Overlay' },
+  { id: 'transparent-guide-sidebar-opacity', label: 'Category Sidebar Opacity', description: 'Opacity level of the category sidebar in transparent EPG overlay.', tabId: 'livetv', tabLabel: 'LiveTV', subTabId: 'epg', section: 'Transparent EPG Overlay' },
 
 
 
