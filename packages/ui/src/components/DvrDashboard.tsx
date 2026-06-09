@@ -937,11 +937,13 @@ function DownloadsTab({ onPlay }: DownloadsTabProps) {
     return (
         <div className="dvr-downloads">
             <div className="dvr-downloads-header" style={{ gap: '16px', flexWrap: 'wrap' }}>
-                <span className="dvr-downloads-stats">
-                    {activeDownloads.length} downloading · {inactiveDownloads.length} other
-                </span>
+                <div style={{ flex: '1 0 150px', display: 'flex', alignItems: 'center' }}>
+                    <span className="dvr-downloads-stats">
+                        {activeDownloads.length} downloading · {inactiveDownloads.length} other
+                    </span>
+                </div>
 
-                <div className="dvr-downloads-search-container" style={{ position: 'relative', flex: '1', minWidth: '200px', maxWidth: '300px' }}>
+                <div className="dvr-downloads-search-container" style={{ position: 'relative', flex: '0 1 300px', width: '100%', minWidth: '200px', margin: '0 auto' }}>
                     <input
                         type="text"
                         placeholder="Search downloads..."
@@ -999,11 +1001,13 @@ function DownloadsTab({ onPlay }: DownloadsTabProps) {
                     )}
                 </div>
 
-                {inactiveDownloads.length > 0 && (
-                    <button className="dvr-btn-clear" onClick={clearCompleted}>
-                        Clear Completed/Failed
-                    </button>
-                )}
+                <div style={{ flex: '1 0 150px', display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
+                    {inactiveDownloads.length > 0 && (
+                        <button className="dvr-btn-clear" onClick={clearCompleted}>
+                            Clear Completed/Failed
+                        </button>
+                    )}
+                </div>
             </div>
 
             {downloads.length === 0 ? (
