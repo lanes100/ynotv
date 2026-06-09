@@ -119,7 +119,7 @@ export function LiveTVTab({
 
   useEffect(() => {
     if (initialSubTab) {
-      setActiveSubTab(initialSubTab);
+      setActiveSubTab(initialSubTab as any);
     }
   }, [initialSubTab]);
 

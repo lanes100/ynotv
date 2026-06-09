@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo, useLayoutEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useLiveQuery } from '../hooks/useSqliteLiveQuery';
 import { useCategoriesBySource, type CategoryWithCount, type SourceWithCategories } from '../hooks/useChannels';
 import { db, getWatchlistCount, type CustomGroup, updateCategoryEnabled, updateCategoryAlias } from '../db';
@@ -124,7 +125,7 @@ function FavoritesButton({ selectedCategoryId, onSelectCategory, onContextMenu }
 }
 
 // Watchlist button component
-function WatchlistButton({ selectedCategoryId, onSelectCategory }: { selectedCategoryId: string | null; onSelectCategory: (categoryId: string | null) => void }) {
+function WatchlistButton({ selectedCategoryId, onSelectCategory, onContextMenu }: { selectedCategoryId: string | null; onSelectCategory: (categoryId: string | null) => void; onContextMenu?: (e: React.MouseEvent) => void }) {
   const watchlistCount = useLiveQuery(
     async () => {
       return await getWatchlistCount();
@@ -135,6 +136,7 @@ function WatchlistButton({ selectedCategoryId, onSelectCategory }: { selectedCat
     <button
       className={`category-item category-list-bar ${selectedCategoryId === '__watchlist__' ? 'selected' : ''}`}
       onClick={() => onSelectCategory('__watchlist__')}
+      onContextMenu={onContextMenu}
     >
       <div className="category-item-left">
         <span className="category-icon watchlist-icon">
@@ -240,6 +242,37 @@ export function CategoryStrip({ selectedCategoryId, onSelectCategory, visible, o
   const [expandedSources, setExpandedSources] = useState<Record<string, boolean>>({});
   const { version } = useSourceVersion(); // Listen for source changes
 
+  // Category visibility settings
+  const [showAllChannels, setShowAllChannels] = useState(true);
+  const [showFavorites, setShowFavorites] = useState(true);
+  const [showWatchlist, setShowWatchlist] = useState(true);
+  const [showRecentlyViewed, setShowRecentlyViewed] = useState(true);
+
+  // Listen for setting changes to immediately reflect them
+  useEffect(() => {
+    const handleCategorySettingsChange = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      if (customEvent.detail) {
+        if (customEvent.detail.showAllChannels !== undefined) {
+          setShowAllChannels(customEvent.detail.showAllChannels);
+        }
+        if (customEvent.detail.showFavorites !== undefined) {
+          setShowFavorites(customEvent.detail.showFavorites);
+        }
+        if (customEvent.detail.showWatchlist !== undefined) {
+          setShowWatchlist(customEvent.detail.showWatchlist);
+        }
+        if (customEvent.detail.showRecentlyViewed !== undefined) {
+          setShowRecentlyViewed(customEvent.detail.showRecentlyViewed);
+        }
+      }
+    };
+    window.addEventListener('ynotv:category-settings-changed', handleCategorySettingsChange);
+    return () => {
+      window.removeEventListener('ynotv:category-settings-changed', handleCategorySettingsChange);
+    };
+  }, []);
+
   // Resizable category sidebar width
   const [categoryWidth, setCategoryWidth] = useState(() => {
     const saved = localStorage.getItem('categoryStripContentWidth');
@@ -306,6 +339,33 @@ export function CategoryStrip({ selectedCategoryId, onSelectCategory, visible, o
 
   // Recently Viewed Context Menu additions
   const [recentContextMenu, setRecentContextMenu] = useState<{ x: number, y: number } | null>(null);
+
+  // Generic Sidebar Item Context Menu additions
+  const [genericSidebarContextMenu, setGenericSidebarContextMenu] = useState<{ x: number, y: number, type: 'all' | 'watchlist', title: string } | null>(null);
+
+  const handleSidebarItemHide = async (type: 'all' | 'watchlist' | 'favorites' | 'recent') => {
+    let settingKey: string;
+    if (type === 'all') {
+      settingKey = 'showAllChannels';
+      setShowAllChannels(false);
+    } else if (type === 'watchlist') {
+      settingKey = 'showWatchlist';
+      setShowWatchlist(false);
+    } else if (type === 'favorites') {
+      settingKey = 'showFavorites';
+      setShowFavorites(false);
+    } else {
+      settingKey = 'showRecentlyViewed';
+      setShowRecentlyViewed(false);
+    }
+
+    if (window.storage) {
+      await window.storage.updateSettings({ [settingKey]: false });
+    }
+    window.dispatchEvent(new CustomEvent('ynotv:category-settings-changed', {
+      detail: { [settingKey]: false }
+    }));
+  };
 
   // Category Context Menu additions
   const [categoryContextMenu, setCategoryContextMenu] = useState<{ x: number, y: number, categoryId: string, categoryName: string, sourceId: string, sourceName: string } | null>(null);
@@ -448,6 +508,10 @@ export function CategoryStrip({ selectedCategoryId, onSelectCategory, visible, o
         // Get settings to check if sources should be collapsed on startup
         const settingsResult = await window.storage.getSettings();
         const collapseOnStartup = settingsResult.data?.collapseSourceCategoriesOnStartup ?? false;
+        setShowAllChannels(settingsResult.data?.showAllChannels ?? true);
+        setShowFavorites(settingsResult.data?.showFavorites ?? true);
+        setShowWatchlist(settingsResult.data?.showWatchlist ?? true);
+        setShowRecentlyViewed(settingsResult.data?.showRecentlyViewed ?? true);
         
         const result = await window.storage.getSources();
         if (result.data) {
@@ -550,41 +614,57 @@ export function CategoryStrip({ selectedCategoryId, onSelectCategory, visible, o
 
       <div className="category-strip-top">
         {/* "All Channels" option */}
-        <button
-          className={`category-item category-list-bar ${selectedCategoryId === null ? 'selected' : ''}`}
-          onClick={() => onSelectCategory(null)}
-        >
-          <div className="category-item-left">
-            <span className="category-icon all-channels-icon">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="2" y="7" width="20" height="15" rx="2" ry="2" />
-                <polyline points="17 2 12 7 7 2" />
-              </svg>
-            </span>
-            <ScrollingText className="category-name">All Channels</ScrollingText>
-          </div>
-          <span className="category-count">{totalChannels}</span>
-        </button>
+        {showAllChannels && (
+          <button
+            className={`category-item category-list-bar ${selectedCategoryId === null ? 'selected' : ''}`}
+            onClick={() => onSelectCategory(null)}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              setGenericSidebarContextMenu({ x: e.clientX, y: e.clientY, type: 'all', title: 'All Channels' });
+            }}
+          >
+            <div className="category-item-left">
+              <span className="category-icon all-channels-icon">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="2" y="7" width="20" height="15" rx="2" ry="2" />
+                  <polyline points="17 2 12 7 7 2" />
+                </svg>
+              </span>
+              <ScrollingText className="category-name">All Channels</ScrollingText>
+            </div>
+            <span className="category-count">{totalChannels}</span>
+          </button>
+        )}
 
         {/* "Favorites" option */}
-        <FavoritesButton
-          selectedCategoryId={selectedCategoryId}
-          onSelectCategory={onSelectCategory}
-          onContextMenu={handleFavoritesContextMenu}
-        />
+        {showFavorites && (
+          <FavoritesButton
+            selectedCategoryId={selectedCategoryId}
+            onSelectCategory={onSelectCategory}
+            onContextMenu={handleFavoritesContextMenu}
+          />
+        )}
 
         {/* "Watchlist" option */}
-        <WatchlistButton
-          selectedCategoryId={selectedCategoryId}
-          onSelectCategory={onSelectCategory}
-        />
+        {showWatchlist && (
+          <WatchlistButton
+            selectedCategoryId={selectedCategoryId}
+            onSelectCategory={onSelectCategory}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              setGenericSidebarContextMenu({ x: e.clientX, y: e.clientY, type: 'watchlist', title: 'Watchlist' });
+            }}
+          />
+        )}
 
         {/* "Recently Viewed" option */}
-        <RecentlyViewedButton
-          selectedCategoryId={selectedCategoryId}
-          onSelectCategory={onSelectCategory}
-          onContextMenu={handleRecentContextMenu}
-        />
+        {showRecentlyViewed && (
+          <RecentlyViewedButton
+            selectedCategoryId={selectedCategoryId}
+            onSelectCategory={onSelectCategory}
+            onContextMenu={handleRecentContextMenu}
+          />
+        )}
 
         {/* Custom Groups Section */}
         {customGroups && customGroups.length > 0 && (
@@ -741,6 +821,7 @@ export function CategoryStrip({ selectedCategoryId, onSelectCategory, visible, o
           position={{ x: favoritesContextMenu.x, y: favoritesContextMenu.y }}
           onClose={() => setFavoritesContextMenu(null)}
           onManageFavorites={() => setManagingFavorites(true)}
+          onHide={() => handleSidebarItemHide('favorites')}
         />
       )}
 
@@ -761,6 +842,17 @@ export function CategoryStrip({ selectedCategoryId, onSelectCategory, visible, o
               }
             );
           }}
+          onHide={() => handleSidebarItemHide('recent')}
+        />
+      )}
+
+      {/* Generic Sidebar Context Menu */}
+      {genericSidebarContextMenu && (
+        <SidebarItemContextMenu
+          position={{ x: genericSidebarContextMenu.x, y: genericSidebarContextMenu.y }}
+          title={genericSidebarContextMenu.title}
+          onClose={() => setGenericSidebarContextMenu(null)}
+          onHide={() => handleSidebarItemHide(genericSidebarContextMenu.type)}
         />
       )}
 
@@ -834,5 +926,68 @@ export function CategoryStrip({ selectedCategoryId, onSelectCategory, visible, o
         </button>
       )}
     </>
+  );
+}
+
+interface SidebarItemContextMenuProps {
+  position: { x: number; y: number };
+  title: string;
+  onClose: () => void;
+  onHide: () => void;
+}
+
+function SidebarItemContextMenu({ position, title, onClose, onHide }: SidebarItemContextMenuProps) {
+  const menuRef = useRef<HTMLDivElement>(null);
+  const [adjustedPosition, setAdjustedPosition] = useState(position);
+
+  useLayoutEffect(() => {
+    if (menuRef.current) {
+      const menu = menuRef.current;
+      const rect = menu.getBoundingClientRect();
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+
+      let x = position.x;
+      let y = position.y;
+
+      const isBottomHalf = position.y > viewportHeight / 2;
+      if (isBottomHalf) {
+        y = position.y - rect.height;
+      }
+
+      if (x + rect.width > viewportWidth) x = viewportWidth - rect.width - 10;
+      if (x < 10) x = 10;
+
+      if (y + rect.height > viewportHeight) y = viewportHeight - rect.height - 10;
+      if (y < 10) y = 10;
+
+      setAdjustedPosition({ x, y });
+    }
+  }, [position]);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        onClose();
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [onClose]);
+
+  return createPortal(
+    <div
+      ref={menuRef}
+      className="program-context-menu"
+      style={{ left: `${adjustedPosition.x}px`, top: `${adjustedPosition.y}px` }}
+    >
+      <div className="context-menu-header" style={{ padding: '8px 12px 4px', fontSize: '11px', opacity: 0.6, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+        {title}
+      </div>
+      <div className="context-menu-item" onClick={() => { onHide(); onClose(); }}>
+        🚫 Hide Category
+      </div>
+    </div>,
+    document.body
   );
 }

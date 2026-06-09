@@ -6,12 +6,14 @@ interface RecentChannelsContextMenuProps {
     position: { x: number; y: number };
     onClose: () => void;
     onClearRecent: () => void;
+    onHide?: () => void;
 }
 
 export function RecentChannelsContextMenu({
     position,
     onClose,
     onClearRecent,
+    onHide,
 }: RecentChannelsContextMenuProps) {
     const menuRef = useRef<HTMLDivElement>(null);
     const [adjustedPosition, setAdjustedPosition] = useState(position);
@@ -83,6 +85,11 @@ export function RecentChannelsContextMenu({
             <div className="context-menu-item" onClick={() => { onClearRecent(); onClose(); }}>
                 🗑️ Clear Recent Channels
             </div>
+            {onHide && (
+                <div className="context-menu-item" onClick={() => { onHide(); onClose(); }}>
+                    🚫 Hide Category
+                </div>
+            )}
         </div>,
         document.body
     );

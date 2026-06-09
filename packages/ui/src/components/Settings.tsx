@@ -198,6 +198,12 @@ export function Settings({
     }
   }, [badgeSourcesProp]);
 
+  // Category settings state
+  const [showAllChannels, setShowAllChannels] = useState(true);
+  const [showFavorites, setShowFavorites] = useState(true);
+  const [showWatchlist, setShowWatchlist] = useState(true);
+  const [showRecentlyViewed, setShowRecentlyViewed] = useState(true);
+
   // LiveTV settings state
   const [epgDarkenCurrent, setEpgDarkenCurrent] = useState(false);
   const [epgTitleFontSize, setEpgTitleFontSize] = useState(32);
@@ -277,6 +283,31 @@ export function Settings({
     loadSources();
     checkEncryption();
     loadSettings();
+  }, []);
+
+  // Listen for category settings changes from context menu hide actions
+  useEffect(() => {
+    const handleCategorySettingsChange = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      if (customEvent.detail) {
+        if (customEvent.detail.showAllChannels !== undefined) {
+          setShowAllChannels(customEvent.detail.showAllChannels);
+        }
+        if (customEvent.detail.showFavorites !== undefined) {
+          setShowFavorites(customEvent.detail.showFavorites);
+        }
+        if (customEvent.detail.showWatchlist !== undefined) {
+          setShowWatchlist(customEvent.detail.showWatchlist);
+        }
+        if (customEvent.detail.showRecentlyViewed !== undefined) {
+          setShowRecentlyViewed(customEvent.detail.showRecentlyViewed);
+        }
+      }
+    };
+    window.addEventListener('ynotv:category-settings-changed', handleCategorySettingsChange);
+    return () => {
+      window.removeEventListener('ynotv:category-settings-changed', handleCategorySettingsChange);
+    };
   }, []);
 
   async function loadSources() {
@@ -389,7 +420,16 @@ export function Settings({
         socks5ProxyServer?: string;
         socks5ProxyUsername?: string;
         socks5ProxyPassword?: string;
+        showAllChannels?: boolean;
+        showFavorites?: boolean;
+        showWatchlist?: boolean;
+        showRecentlyViewed?: boolean;
       };
+
+      setShowAllChannels(settings.showAllChannels ?? true);
+      setShowFavorites(settings.showFavorites ?? true);
+      setShowWatchlist(settings.showWatchlist ?? true);
+      setShowRecentlyViewed(settings.showRecentlyViewed ?? true);
 
       if (settings.castEnabled !== undefined) {
         setCastEnabled(settings.castEnabled);
@@ -795,6 +835,46 @@ export function Settings({
       }
       await window.storage.updateSettings(settings);
     }
+  };
+
+  const handleShowAllChannelsChange = async (enabled: boolean) => {
+    setShowAllChannels(enabled);
+    if (window.storage) {
+      await window.storage.updateSettings({ showAllChannels: enabled });
+    }
+    window.dispatchEvent(new CustomEvent('ynotv:category-settings-changed', {
+      detail: { showAllChannels: enabled }
+    }));
+  };
+
+  const handleShowFavoritesChange = async (enabled: boolean) => {
+    setShowFavorites(enabled);
+    if (window.storage) {
+      await window.storage.updateSettings({ showFavorites: enabled });
+    }
+    window.dispatchEvent(new CustomEvent('ynotv:category-settings-changed', {
+      detail: { showFavorites: enabled }
+    }));
+  };
+
+  const handleShowWatchlistChange = async (enabled: boolean) => {
+    setShowWatchlist(enabled);
+    if (window.storage) {
+      await window.storage.updateSettings({ showWatchlist: enabled });
+    }
+    window.dispatchEvent(new CustomEvent('ynotv:category-settings-changed', {
+      detail: { showWatchlist: enabled }
+    }));
+  };
+
+  const handleShowRecentlyViewedChange = async (enabled: boolean) => {
+    setShowRecentlyViewed(enabled);
+    if (window.storage) {
+      await window.storage.updateSettings({ showRecentlyViewed: enabled });
+    }
+    window.dispatchEvent(new CustomEvent('ynotv:category-settings-changed', {
+      detail: { showRecentlyViewed: enabled }
+    }));
   };
 
   const handleEpgDarkenCurrentChange = async (enabled: boolean) => {
@@ -1253,6 +1333,14 @@ export function Settings({
           <NavigationTab
             navHiddenTabs={navHiddenTabs}
             onNavHiddenTabsChange={handleNavHiddenTabsChange}
+            showAllChannels={showAllChannels}
+            onShowAllChannelsChange={handleShowAllChannelsChange}
+            showFavorites={showFavorites}
+            onShowFavoritesChange={handleShowFavoritesChange}
+            showWatchlist={showWatchlist}
+            onShowWatchlistChange={handleShowWatchlistChange}
+            showRecentlyViewed={showRecentlyViewed}
+            onShowRecentlyViewedChange={handleShowRecentlyViewedChange}
           />
         );
       case 'theme':

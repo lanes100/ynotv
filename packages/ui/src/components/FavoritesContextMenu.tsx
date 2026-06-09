@@ -6,12 +6,14 @@ interface FavoritesContextMenuProps {
     position: { x: number; y: number };
     onClose: () => void;
     onManageFavorites: () => void;
+    onHide?: () => void;
 }
 
 export function FavoritesContextMenu({
     position,
     onClose,
     onManageFavorites,
+    onHide,
 }: FavoritesContextMenuProps) {
     const menuRef = useRef<HTMLDivElement>(null);
     const [adjustedPosition, setAdjustedPosition] = useState(position);
@@ -83,6 +85,11 @@ export function FavoritesContextMenu({
             <div className="context-menu-item" onClick={() => { onManageFavorites(); onClose(); }}>
                 ⭐ Manage Favorites
             </div>
+            {onHide && (
+                <div className="context-menu-item" onClick={() => { onHide(); onClose(); }}>
+                    🚫 Hide Category
+                </div>
+            )}
         </div>,
         document.body
     );

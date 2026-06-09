@@ -58,6 +58,8 @@ const SETTINGS_SEARCH_INDEX: SettingsSearchResult[] = [
   { id: 'epg-body-font-size', label: 'EPG Body Text Font Size', description: 'Adjust the font size for program descriptions in the EPG preview panel.', tabId: 'livetv', tabLabel: 'LiveTV', subTabId: 'epg', section: 'EPG' },
   { id: 'preview-panel', label: 'Preview Panel', tabId: 'livetv', tabLabel: 'LiveTV', subTabId: 'epg', section: 'Preview Panel' },
 
+
+
   // LiveTV > Font Size
   { id: 'channel-font-size', label: 'Channel Font Size', description: 'Adjust the font size for channel names.', tabId: 'livetv', tabLabel: 'LiveTV', subTabId: 'font-size', section: 'Font Size' },
   { id: 'category-font-size', label: 'Category Font Size', description: 'Adjust the font size for category labels.', tabId: 'livetv', tabLabel: 'LiveTV', subTabId: 'font-size', section: 'Font Size' },
@@ -147,12 +149,19 @@ const SETTINGS_SEARCH_INDEX: SettingsSearchResult[] = [
 
   // --- Navigation ---
   { id: 'navigation-tab', label: 'Navigation', tabId: 'navigation', tabLabel: 'Navigation', section: 'Navigation' },
-  { id: 'nav-movies', label: 'Show Movies in titlebar', tabId: 'navigation', tabLabel: 'Navigation', section: 'Titlebar Navigation' },
-  { id: 'nav-series', label: 'Show Series in titlebar', tabId: 'navigation', tabLabel: 'Navigation', section: 'Titlebar Navigation' },
-  { id: 'nav-dvr', label: 'Show DVR in titlebar', tabId: 'navigation', tabLabel: 'Navigation', section: 'Titlebar Navigation' },
-  { id: 'nav-sports', label: 'Show Sports in titlebar', tabId: 'navigation', tabLabel: 'Navigation', section: 'Titlebar Navigation' },
-  { id: 'nav-strem', label: 'Show Strem in titlebar', tabId: 'navigation', tabLabel: 'Navigation', section: 'Titlebar Navigation' },
-  { id: 'titlebar-navigation', label: 'Titlebar Navigation', description: 'Show or hide navigation buttons in the titlebar.', tabId: 'navigation', tabLabel: 'Navigation', section: 'Titlebar Navigation' },
+  { id: 'nav-movies', label: 'Show Movies in titlebar', tabId: 'navigation', tabLabel: 'Navigation', subTabId: 'titlebar', section: 'Titlebar Navigation' },
+  { id: 'nav-series', label: 'Show Series in titlebar', tabId: 'navigation', tabLabel: 'Navigation', subTabId: 'titlebar', section: 'Titlebar Navigation' },
+  { id: 'nav-dvr', label: 'Show DVR in titlebar', tabId: 'navigation', tabLabel: 'Navigation', subTabId: 'titlebar', section: 'Titlebar Navigation' },
+  { id: 'nav-sports', label: 'Show Sports in titlebar', tabId: 'navigation', tabLabel: 'Navigation', subTabId: 'titlebar', section: 'Titlebar Navigation' },
+  { id: 'nav-strem', label: 'Show Strem in titlebar', tabId: 'navigation', tabLabel: 'Navigation', subTabId: 'titlebar', section: 'Titlebar Navigation' },
+  { id: 'titlebar-navigation', label: 'Titlebar Navigation', description: 'Show or hide navigation buttons in the titlebar.', tabId: 'navigation', tabLabel: 'Navigation', subTabId: 'titlebar', section: 'Titlebar Navigation' },
+
+  // Navigation > Category
+  { id: 'navigation-category-settings', label: 'Category Sidebar Settings', description: 'Enable/disable showing All Channels, Favorites, Watchlist, and Recently Viewed in categories sidebar.', tabId: 'navigation', tabLabel: 'Navigation', subTabId: 'category', section: 'Category' },
+  { id: 'show-all-channels', label: 'Show All Channels', description: 'Show the "All Channels" group in the category sidebar.', tabId: 'navigation', tabLabel: 'Navigation', subTabId: 'category', section: 'Category' },
+  { id: 'show-favorites', label: 'Show Favorites', description: 'Show the "Favorites" group in the category sidebar.', tabId: 'navigation', tabLabel: 'Navigation', subTabId: 'category', section: 'Category' },
+  { id: 'show-watchlist', label: 'Show Watchlist', description: 'Show the "Watchlist" group in the category sidebar.', tabId: 'navigation', tabLabel: 'Navigation', subTabId: 'category', section: 'Category' },
+  { id: 'show-recently-viewed', label: 'Show Recently Viewed', description: 'Show the "Recently Viewed" group in the category sidebar.', tabId: 'navigation', tabLabel: 'Navigation', subTabId: 'category', section: 'Category' },
 
   // --- Startup ---
   { id: 'startup-tab', label: 'Startup', tabId: 'startup', tabLabel: 'Startup', section: 'Startup' },
