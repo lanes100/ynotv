@@ -13,6 +13,8 @@ import { useLazyMovieExtras } from '../../hooks/useLazyMovieExtras';
 import { useRpdbSettings } from '../../hooks/useRpdbSettings';
 import { getRpdbPosterUrl } from '../../services/rpdb';
 import type { StoredMovie } from '../../db';
+import { resolvePlayUrl } from '../../services/stream-resolver';
+import { useDownloadStore } from '../../stores/downloadStore';
 import './MovieDetail.css';
 
 export interface MovieDetailProps {
@@ -57,6 +59,28 @@ export function MovieDetail({ movie, onClose, onPlay, apiKey }: MovieDetailProps
 
   // Load RPDB settings for poster
   const { apiKey: rpdbApiKey } = useRpdbSettings();
+
+  const [downloading, setDownloading] = useState(false);
+  const startDownload = useDownloadStore((s) => s.startDownload);
+
+  const handleDownload = useCallback(async () => {
+    if (!movie.direct_url) return;
+    setDownloading(true);
+    try {
+      const resolved = await resolvePlayUrl(movie.source_id, movie.direct_url);
+      await startDownload(
+        movie.title || movie.name,
+        resolved.url,
+        resolved.userAgent,
+        movie.duration ? movie.duration * 60 : undefined
+      );
+    } catch (error) {
+      console.error('[MovieDetail] Download failed:', error);
+      alert('Failed to start download');
+    } finally {
+      setDownloading(false);
+    }
+  }, [movie, startDownload]);
   const rpdbPosterUrl = rpdbApiKey && movie.tmdb_id
     ? getRpdbPosterUrl(rpdbApiKey, movie.tmdb_id, 'movie')
     : null;
@@ -192,6 +216,20 @@ export function MovieDetail({ movie, onClose, onPlay, apiKey }: MovieDetailProps
                 </svg>
                 Play
               </button>
+
+              {movie.direct_url && (
+                <button
+                  className="movie-detail__btn movie-detail__btn--secondary"
+                  onClick={handleDownload}
+                  disabled={downloading}
+                  title="Download Movie"
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4m4-5 5 5 5-5m-5 5V3" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                  {downloading ? 'Resolving...' : 'Download'}
+                </button>
+              )}
 
               {movie.direct_url && (
                 <button

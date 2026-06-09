@@ -590,6 +590,7 @@
 }
 
 .stremio-detail-stream-card {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -630,7 +631,56 @@
   padding: 2px 6px;
   border-radius: 4px;
   white-space: nowrap;
+  transition: opacity 150ms ease;
 }
+
+.stremio-detail-stream-card:hover .stremio-detail-stream-addon {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.stremio-detail-stream-download-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  color: rgba(255, 255, 255, 0.6);
+  cursor: pointer;
+  opacity: 0;
+  transition: all 150ms ease;
+  backdrop-filter: blur(4px);
+  z-index: 2;
+}
+
+.stremio-detail-stream-card:hover .stremio-detail-stream-download-btn {
+  opacity: 1;
+}
+
+.stremio-detail-stream-download-btn:hover {
+  background: rgba(0, 0, 0, 0.7);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: #fff;
+  transform: scale(1.05);
+}
+
+.stremio-detail-stream-download-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+.stremio-detail-stream-download-btn.downloading {
+  opacity: 1;
+  color: #00d4ff;
+  border-color: rgba(0, 212, 255, 0.2);
+}
+
 
 .stremio-detail-stream-badges {
   display: flex;

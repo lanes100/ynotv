@@ -5,6 +5,7 @@ import '../Settings.css';
 
 export function DvrTab() {
     const [storagePath, setStoragePath] = useState('');
+    const [downloadsPath, setDownloadsPath] = useState('');
     const [startPadding, setStartPadding] = useState(60);
     const [endPadding, setEndPadding] = useState(300);
     const [loading, setLoading] = useState(true);
@@ -20,6 +21,13 @@ export function DvrTab() {
             setStoragePath(settings.storage_path || '');
             setStartPadding(settings.default_start_padding_sec || 60);
             setEndPadding(settings.default_end_padding_sec || 300);
+
+            if (window.storage) {
+                const settingsRes = await window.storage.getSettings();
+                if (settingsRes?.data?.downloadsPath) {
+                    setDownloadsPath(settingsRes.data.downloadsPath);
+                }
+            }
         } catch (error) {
             console.error('Failed to load DVR settings:', error);
         } finally {
@@ -42,6 +50,26 @@ export function DvrTab() {
         } catch (error) {
             console.error('Failed to select directory:', error);
             alert('Failed to select directory');
+        }
+    }
+
+    async function handleSelectDownloadsPath() {
+        try {
+            const selected = await open({
+                directory: true,
+                multiple: false,
+                title: 'Select Media Downloads Directory',
+            });
+
+            if (selected && typeof selected === 'string') {
+                setDownloadsPath(selected);
+                if (window.storage) {
+                    await window.storage.updateSettings({ downloadsPath: selected });
+                }
+            }
+        } catch (error) {
+            console.error('Failed to select downloads directory:', error);
+            alert('Failed to select downloads directory');
         }
     }
 
@@ -106,6 +134,41 @@ export function DvrTab() {
                     <button
                         className="sync-btn"
                         onClick={handleSelectPath}
+                        type="button"
+                        style={{ maxWidth: '120px', borderColor: 'rgba(255,255,255,0.2)' }}
+                    >
+                        Browse
+                    </button>
+                </div>
+            </div>
+
+            {/* Downloads Location */}
+            <div className="settings-section" style={{ paddingTop: '8px', paddingBottom: '8px' }}>
+                <div className="section-header">
+                    <h3>Downloads Location</h3>
+                </div>
+                <p className="section-description" style={{ marginBottom: '12px' }}>
+                    Where downloaded videos/VODs will be saved. If unset, you will be prompted for a location each time.
+                </p>
+                <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                    <input
+                        type="text"
+                        value={downloadsPath || 'Ask every time'}
+                        readOnly
+                        style={{
+                            flex: 1,
+                            padding: '10px 14px',
+                            background: 'rgba(255,255,255,0.05)',
+                            border: '1px solid rgba(255,255,255,0.1)',
+                            borderRadius: '6px',
+                            color: downloadsPath ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.4)',
+                            fontSize: '0.85rem',
+                            fontFamily: 'monospace'
+                        }}
+                    />
+                    <button
+                        className="sync-btn"
+                        onClick={handleSelectDownloadsPath}
                         type="button"
                         style={{ maxWidth: '120px', borderColor: 'rgba(255,255,255,0.2)' }}
                     >

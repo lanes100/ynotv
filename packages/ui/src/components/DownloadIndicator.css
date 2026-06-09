@@ -1,0 +1,67 @@
+.download-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    border-radius: 3px;
+    padding: 2px 6px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    pointer-events: none;
+    background: rgba(0, 180, 230, 0.9); /* Premium Cyan */
+}
+
+.download-indicator.small {
+    padding: 1px 4px;
+    gap: 2px;
+}
+
+.download-indicator.medium {
+    padding: 3px 8px;
+    gap: 5px;
+}
+
+.download-dot {
+    width: 8px;
+    height: 8px;
+    background: #fff;
+    border-radius: 50%;
+}
+
+.download-dot.pulse {
+    animation: downloadPulse 1.2s ease-in-out infinite;
+}
+
+.download-indicator.small .download-dot {
+    width: 6px;
+    height: 6px;
+}
+
+.download-indicator.medium .download-dot {
+    width: 10px;
+    height: 10px;
+}
+
+.download-text {
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
+.download-indicator.small .download-text {
+    font-size: 8px;
+}
+
+.download-indicator.medium .download-text {
+    font-size: 12px;
+}
+
+@keyframes downloadPulse {
+    0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.5;
+        transform: scale(0.8);
+    }
+}

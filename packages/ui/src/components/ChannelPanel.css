@@ -1757,3 +1757,33 @@ html[data-theme]:has(.guide-transparent-mode) .category-strip {
   -webkit-backdrop-filter: none !important;
   border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
 }
+
+/* EPG Transparent Overlay Resizer Handle */
+.guide-transparent-resizer {
+  position: absolute;
+  top: -4px;
+  left: 0;
+  right: 0;
+  height: 8px;
+  cursor: ns-resize;
+  z-index: 110;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+}
+
+.guide-transparent-resizer::after {
+  content: '';
+  width: 32px;
+  height: 3px;
+  background: var(--surface-border, rgba(255, 255, 255, 0.25));
+  border-radius: 2px;
+  transition: all 0.2s ease;
+}
+
+.guide-transparent-resizer:hover::after {
+  background: var(--accent-primary, #00d4ff);
+  box-shadow: 0 0 10px var(--accent-primary, #00d4ff);
+  width: 48px;
+}

@@ -18,6 +18,8 @@ import { getRpdbPosterUrl } from '../../services/rpdb';
 import type { StoredSeries, StoredEpisode } from '../../db';
 import { recordVodWatch, recordEpisodeWatch } from '../../db';
 import type { VodPlayInfo } from '../../types/media';
+import { resolvePlayUrl } from '../../services/stream-resolver';
+import { useDownloadStore } from '../../stores/downloadStore';
 import './SeriesDetail.css';
 
 export interface SeriesDetailProps {
@@ -33,6 +35,114 @@ export function SeriesDetail({ series, onClose, onPlayEpisode, apiKey, initialSe
 
   // Fetch episodes
   const { seasons, loading, error, refetch } = useSeriesDetails(series.series_id);
+
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const startDownload = useDownloadStore((s) => s.startDownload);
+
+  const handleDownloadEpisode = useCallback(
+    async (episode: StoredEpisode, e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (!episode.direct_url) return;
+      setDownloadingId(episode.id);
+      try {
+        const resolved = await resolvePlayUrl(series.source_id, episode.direct_url);
+        
+        let episodeDuration = episode.duration ?? 0;
+        if (!episodeDuration && episode.info?.duration) {
+          const parsedDuration = Number(episode.info.duration);
+          episodeDuration = isNaN(parsedDuration) ? 0 : parsedDuration;
+        }
+
+        const epTitle = `${series.title || series.name} - S${episode.season_num}E${episode.episode_num}`;
+
+        await startDownload(
+          epTitle,
+          resolved.url,
+          resolved.userAgent,
+          episodeDuration ? episodeDuration * 60 : undefined
+        );
+      } catch (error) {
+        console.error('[SeriesDetail] Episode download failed:', error);
+        alert('Failed to start download');
+      } finally {
+        setDownloadingId(null);
+      }
+    },
+    [series, startDownload]
+  );
+  const [downloadingSeason, setDownloadingSeason] = useState(false);
+
+  const handleDownloadSeason = useCallback(async () => {
+    const episodes = seasons[selectedSeason] || [];
+    if (episodes.length === 0) return;
+
+    setDownloadingSeason(true);
+    try {
+      // 1. Resolve downloads path
+      let downloadsPath = '';
+      if (window.storage) {
+        const settingsRes = await window.storage.getSettings();
+        if (settingsRes.data?.downloadsPath) {
+          downloadsPath = settingsRes.data.downloadsPath;
+        }
+      }
+
+      let targetDir = downloadsPath;
+      if (!targetDir) {
+        // Prompt user ONCE to pick a directory for the season downloads
+        const { open } = await import('@tauri-apps/plugin-dialog');
+        const selected = await open({
+          directory: true,
+          multiple: false,
+          title: `Select Directory to Save Season ${selectedSeason}`,
+        });
+        if (!selected || typeof selected !== 'string') {
+          // User canceled picker
+          setDownloadingSeason(false);
+          return;
+        }
+        targetDir = selected;
+      }
+
+      // 2. Queue all episodes
+      const separator = targetDir.includes('\\') ? '\\' : '/';
+      
+      for (const episode of episodes) {
+        if (!episode.direct_url) continue;
+
+        try {
+          const resolved = await resolvePlayUrl(series.source_id, episode.direct_url);
+          
+          let episodeDuration = episode.duration ?? 0;
+          if (!episodeDuration && episode.info?.duration) {
+            const parsedDuration = Number(episode.info.duration);
+            episodeDuration = isNaN(parsedDuration) ? 0 : parsedDuration;
+          }
+
+          const epTitle = `${series.title || series.name} - S${episode.season_num}E${episode.episode_num}`;
+          const isHls = resolved.url.includes('.m3u8') || resolved.url.includes('/mono.m3u8');
+          const ext = isHls ? 'ts' : 'mp4';
+          const sanitizedTitle = epTitle.replace(/[<>:"/\\|?*]/g, '_').substring(0, 50);
+          const episodeSavePath = `${targetDir}${targetDir.endsWith(separator) ? '' : separator}${sanitizedTitle}.${ext}`;
+
+          await startDownload(
+            epTitle,
+            resolved.url,
+            resolved.userAgent,
+            episodeDuration ? episodeDuration * 60 : undefined,
+            episodeSavePath
+          );
+        } catch (err) {
+          console.error(`[SeriesDetail] Failed to queue episode S${episode.season_num}E${episode.episode_num}:`, err);
+        }
+      }
+    } catch (error) {
+      console.error('[SeriesDetail] Season download failed:', error);
+      alert('Failed to start season download');
+    } finally {
+      setDownloadingSeason(false);
+    }
+  }, [series, selectedSeason, seasons, startDownload]);
 
   // Fetch episode progress
   const { episodeProgress, loading: progressLoading } = useSeriesEpisodeProgress(series.series_id);
@@ -271,17 +381,37 @@ export function SeriesDetail({ series, onClose, onPlayEpisode, apiKey, initialSe
 
         {/* Episodes section */}
         <div className="series-detail__episodes-section">
-          {/* Season selector - row of buttons */}
-          <div className="series-detail__season-selector">
-            {seasonNumbers.map((num) => (
+          <div className="series-detail__season-header-row">
+            {/* Season selector - row of buttons */}
+            <div className="series-detail__season-selector">
+              {seasonNumbers.map((num) => (
+                <button
+                  key={num}
+                  className={`series-detail__season-btn ${selectedSeason === num ? 'active' : ''}`}
+                  onClick={() => setSelectedSeason(num)}
+                >
+                  Season {num}
+                </button>
+              ))}
+            </div>
+
+            {currentEpisodes.length > 0 && (
               <button
-                key={num}
-                className={`series-detail__season-btn ${selectedSeason === num ? 'active' : ''}`}
-                onClick={() => setSelectedSeason(num)}
+                className={`series-detail__download-season-btn ${downloadingSeason ? 'downloading' : ''}`}
+                onClick={handleDownloadSeason}
+                disabled={downloadingSeason}
+                title={`Download all episodes of Season ${selectedSeason}`}
               >
-                Season {num}
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  {downloadingSeason ? (
+                    <circle cx="12" cy="12" r="10" strokeDasharray="31.4" strokeDashoffset="10" style={{ transformOrigin: 'center', animation: 'spin 1.5s linear infinite' }} />
+                  ) : (
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4m4-5 5 5 5-5m-5 5V3" strokeLinecap="round" strokeLinejoin="round" />
+                  )}
+                </svg>
+                {downloadingSeason ? 'Queueing Season...' : `Download Season ${selectedSeason}`}
               </button>
-            ))}
+            )}
           </div>
 
           {/* Episode list */}
@@ -398,6 +528,24 @@ export function SeriesDetail({ series, onClose, onPlayEpisode, apiKey, initialSe
                               <path d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" strokeLinecap="round" strokeLinejoin="round" />
                             </svg>
                           )}
+                        </button>
+                      )}
+
+                      {/* Download button */}
+                      {episode.direct_url && (
+                        <button
+                          className={`series-detail__episode-card-download ${downloadingId === episode.id ? 'downloading' : ''}`}
+                          onClick={(e) => handleDownloadEpisode(episode, e)}
+                          disabled={downloadingId === episode.id}
+                          title="Download Episode"
+                        >
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            {downloadingId === episode.id ? (
+                              <circle cx="12" cy="12" r="10" strokeDasharray="31.4" strokeDashoffset="10" style={{ transformOrigin: 'center', animation: 'spin 1.5s linear infinite' }} />
+                            ) : (
+                              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4m4-5 5 5 5-5m-5 5V3" strokeLinecap="round" strokeLinejoin="round" />
+                            )}
+                          </svg>
                         </button>
                       )}
                     </div>

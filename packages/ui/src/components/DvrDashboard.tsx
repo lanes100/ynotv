@@ -14,6 +14,7 @@ import {
 import { dbEvents } from '../db/sqlite-adapter';
 import { useModal } from './Modal';
 import { DvrTab } from './settings/DvrTab';
+import { useDownloadStore } from '../stores/downloadStore';
 import './DvrDashboard.css';
 
 interface DvrDashboardProps {
@@ -21,7 +22,7 @@ interface DvrDashboardProps {
     onClose: () => void;
 }
 
-type DvrDashboardTab = 'scheduled' | 'recorded' | 'settings';
+type DvrDashboardTab = 'scheduled' | 'recorded' | 'downloads' | 'settings';
 
 export function DvrDashboard({ onPlay, onClose }: DvrDashboardProps) {
     const [activeTab, setActiveTab] = useState<DvrDashboardTab>('scheduled');
@@ -243,6 +244,8 @@ export function DvrDashboard({ onPlay, onClose }: DvrDashboardProps) {
 
     const activeCount = scheduled.filter(s => s.status === 'recording').length;
     const upcomingCount = scheduled.filter(s => s.status === 'scheduled').length;
+    const downloads = useDownloadStore((s) => s.downloads) || [];
+    const activeDownloadsCount = downloads.filter((d) => d.status === 'downloading').length;
 
     return (
         <div className="dvr-dashboard">
@@ -285,6 +288,25 @@ export function DvrDashboard({ onPlay, onClose }: DvrDashboardProps) {
                     </button>
 
                     <button
+                        className={`dvr-nav-item ${activeTab === 'downloads' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('downloads')}
+                    >
+                        <span className="dvr-nav-icon">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                <polyline points="7 10 12 15 17 10" />
+                                <line x1="12" y1="15" x2="12" y2="3" />
+                            </svg>
+                        </span>
+                        <span className="dvr-nav-label">Downloads</span>
+                        {activeDownloadsCount > 0 ? (
+                            <span className="dvr-nav-badge">{activeDownloadsCount}</span>
+                        ) : downloads.length > 0 ? (
+                            <span className="dvr-nav-badge" style={{ background: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.7)' }}>{downloads.length}</span>
+                        ) : null}
+                    </button>
+
+                    <button
                         className={`dvr-nav-item ${activeTab === 'settings' ? 'active' : ''}`}
                         onClick={() => setActiveTab('settings')}
                     >
@@ -318,7 +340,7 @@ export function DvrDashboard({ onPlay, onClose }: DvrDashboardProps) {
             <main className="dvr-main">
                 <header className="dvr-main-header">
                     <h1 className="dvr-main-title">
-                        {activeTab === 'scheduled' ? 'Scheduled Recordings' : activeTab === 'recorded' ? 'Your Recordings' : 'DVR Settings'}
+                        {activeTab === 'scheduled' ? 'Scheduled Recordings' : activeTab === 'recorded' ? 'Your Recordings' : activeTab === 'downloads' ? 'Media Downloads' : 'DVR Settings'}
                     </h1>
                 </header>
 
@@ -346,6 +368,10 @@ export function DvrDashboard({ onPlay, onClose }: DvrDashboardProps) {
                             onPlay={onPlay}
                             onDelete={handleDelete}
                             formatDateTime={formatDateTime}
+                        />
+                    ) : activeTab === 'downloads' ? (
+                        <DownloadsTab
+                            onPlay={onPlay}
                         />
                     ) : (
                         <DvrTab />
@@ -866,6 +892,264 @@ function EditModal({
                     </button>
                 </div>
             </div>
+        </div>
+    );
+}
+
+// Downloads Tab Component
+interface DownloadsTabProps {
+    onPlay?: (recording: DvrRecording) => void;
+}
+
+function DownloadsTab({ onPlay }: DownloadsTabProps) {
+    const [searchQuery, setSearchQuery] = useState('');
+    const downloads = useDownloadStore((s) => s.downloads) || [];
+    const cancelDownload = useDownloadStore((s) => s.cancelDownload);
+    const removeDownload = useDownloadStore((s) => s.removeDownload);
+    const clearCompleted = useDownloadStore((s) => s.clearCompleted);
+
+    const formatBytes = (bytes: number): string => {
+        if (bytes === 0) return '0 B';
+        const k = 1024;
+        const sizes = ['B', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    };
+
+    const formatSpeed = (bytesPerSec: number): string => {
+        if (!bytesPerSec || bytesPerSec === 0) return '0 KB/s';
+        const kb = bytesPerSec / 1024;
+        if (kb < 1024) {
+            return `${kb.toFixed(1)} KB/s`;
+        }
+        const mb = kb / 1024;
+        return `${mb.toFixed(2)} MB/s`;
+    };
+
+    const activeDownloads = downloads.filter((d) => d.status === 'downloading');
+    const inactiveDownloads = downloads.filter((d) => d.status !== 'downloading');
+
+    const filteredDownloads = downloads.filter((item) =>
+        item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.savePath.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
+    return (
+        <div className="dvr-downloads">
+            <div className="dvr-downloads-header" style={{ gap: '16px', flexWrap: 'wrap' }}>
+                <span className="dvr-downloads-stats">
+                    {activeDownloads.length} downloading · {inactiveDownloads.length} other
+                </span>
+
+                <div className="dvr-downloads-search-container" style={{ position: 'relative', flex: '1', minWidth: '200px', maxWidth: '300px' }}>
+                    <input
+                        type="text"
+                        placeholder="Search downloads..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        style={{
+                            width: '100%',
+                            padding: '8px 12px 8px 34px',
+                            background: 'rgba(255,255,255,0.05)',
+                            border: '1px solid rgba(255,255,255,0.1)',
+                            borderRadius: '8px',
+                            color: '#fff',
+                            fontSize: '0.85rem',
+                            outline: 'none',
+                            transition: 'all 0.15s ease',
+                        }}
+                        className="dvr-downloads-search-input"
+                    />
+                    <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        style={{
+                            position: 'absolute',
+                            left: '10px',
+                            top: '50%',
+                            transform: 'translateY(-50%)',
+                            width: '16px',
+                            height: '16px',
+                            color: 'rgba(255,255,255,0.4)',
+                        }}
+                    >
+                        <circle cx="11" cy="11" r="8" />
+                        <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                    </svg>
+                    {searchQuery && (
+                        <button
+                            onClick={() => setSearchQuery('')}
+                            style={{
+                                position: 'absolute',
+                                right: '10px',
+                                top: '50%',
+                                transform: 'translateY(-50%)',
+                                background: 'none',
+                                border: 'none',
+                                color: 'rgba(255,255,255,0.4)',
+                                cursor: 'pointer',
+                                padding: '4px',
+                                fontSize: '0.8rem',
+                            }}
+                        >
+                            ✕
+                        </button>
+                    )}
+                </div>
+
+                {inactiveDownloads.length > 0 && (
+                    <button className="dvr-btn-clear" onClick={clearCompleted}>
+                        Clear Completed/Failed
+                    </button>
+                )}
+            </div>
+
+            {downloads.length === 0 ? (
+                <div className="dvr-empty-state">
+                    <div className="dvr-empty-icon">
+                        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4m4-5 5 5 5-5m-5 5V3" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                    </div>
+                    <h3>No Downloads</h3>
+                    <p>Start a download from Movie or Series details</p>
+                </div>
+            ) : filteredDownloads.length === 0 ? (
+                <div className="dvr-empty-state">
+                    <div className="dvr-empty-icon">
+                        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                            <circle cx="11" cy="11" r="8" />
+                            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                        </svg>
+                    </div>
+                    <h3>No matching downloads</h3>
+                    <p>Try searching for a different keyword</p>
+                </div>
+            ) : (
+                <div className="dvr-downloads-list">
+                    {filteredDownloads.map((item) => {
+                        const isDownloading = item.status === 'downloading';
+                        const isQueued = item.status === 'queued';
+                        const isCompleted = item.status === 'completed';
+                        const isFailed = item.status === 'failed';
+                        const isDownloadingOrQueued = isDownloading || isQueued;
+
+                        return (
+                            <div key={item.id} className={`dvr-download-card ${item.status}`}>
+                                <div className="dvr-download-card-header">
+                                    <span className={`dvr-download-status-badge ${item.status}`}>
+                                        {item.status === 'downloading'
+                                            ? 'DOWNLOADING'
+                                            : item.status === 'queued'
+                                            ? 'QUEUED'
+                                            : item.status === 'completed'
+                                            ? 'COMPLETED'
+                                            : item.status === 'failed'
+                                            ? 'FAILED'
+                                            : 'CANCELED'}
+                                    </span>
+                                    <div className="dvr-download-actions">
+                                        {isCompleted && onPlay && (
+                                            <button
+                                                className="dvr-btn-icon play"
+                                                onClick={() => {
+                                                    onPlay({
+                                                        file_path: item.savePath,
+                                                        program_title: item.title,
+                                                        channel_name: 'Media Download',
+                                                        status: 'completed',
+                                                        filename: '',
+                                                        auto_delete_policy: 'keep_forever',
+                                                        created_at: Math.floor(item.addedAt / 1000),
+                                                        actual_start: Math.floor(item.addedAt / 1000),
+                                                        scheduled_start: Math.floor(item.addedAt / 1000),
+                                                        scheduled_end: Math.floor(item.addedAt / 1000),
+                                                    });
+                                                }}
+                                                title="Play Downloaded File"
+                                            >
+                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                                                    <polygon points="5 3 19 12 5 21 5 3" />
+                                                </svg>
+                                            </button>
+                                        )}
+                                        {isDownloadingOrQueued && (
+                                            <button
+                                                className="dvr-btn-icon danger"
+                                                onClick={() => cancelDownload(item.id)}
+                                                title="Cancel Download"
+                                            >
+                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                    <line x1="18" y1="6" x2="6" y2="18" />
+                                                    <line x1="6" y1="6" x2="18" y2="18" />
+                                                </svg>
+                                            </button>
+                                        )}
+                                        {!isDownloadingOrQueued && (
+                                            <button
+                                                className="dvr-btn-icon danger"
+                                                onClick={() => removeDownload(item.id)}
+                                                title="Remove from list"
+                                            >
+                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                    <polyline points="3 6 5 6 21 6" />
+                                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                                                </svg>
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div className="dvr-download-card-body">
+                                    <h3 className="dvr-download-title" title={item.title}>
+                                        {item.title}
+                                    </h3>
+                                    <p className="dvr-download-path" title={item.savePath}>
+                                        {item.savePath}
+                                    </p>
+
+                                    {isDownloading && (
+                                        <div className="dvr-download-progress-section">
+                                            <div className="dvr-download-progress-header">
+                                                <span className="dvr-download-progress-bytes">
+                                                    {formatBytes(item.bytesWritten)}
+                                                    {item.totalBytes ? ` / ${formatBytes(item.totalBytes)}` : ''}
+                                                </span>
+                                                <span className="dvr-download-progress-speed">
+                                                    {formatSpeed(item.speedBytes)}
+                                                </span>
+                                                <span className="dvr-download-progress-percent">
+                                                    {Math.round(item.progress)}%
+                                                </span>
+                                            </div>
+                                            <div className="dvr-progress-bar">
+                                                <div
+                                                    className="dvr-progress-fill downloads"
+                                                    style={{ width: `${Math.min(100, Math.max(0, item.progress))}%` }}
+                                                />
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {isQueued && (
+                                        <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.5)', margin: '8px 0 0 0' }}>
+                                            Waiting in queue...
+                                        </p>
+                                    )}
+
+                                    {isFailed && item.error && (
+                                        <p className="dvr-download-error">
+                                            Error: {item.error}
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            )}
         </div>
     );
 }

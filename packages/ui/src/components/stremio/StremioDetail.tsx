@@ -19,6 +19,7 @@ import { useLazyStremioTrailer } from '../../hooks/useLazyStremioTrailer';
 import { useLazyStremioRecommendations, type RecommendationItem } from '../../hooks/useLazyStremioRecommendations';
 import { useTmdbAccessToken } from '../../hooks/useTmdbLists';
 import { getMovieDetails, getTvShowDetails, getTmdbImageUrl } from '../../services/tmdb';
+import { useDownloadStore } from '../../stores/downloadStore';
 import './StremioDetail.css';
 
 interface StremioDetailProps {
@@ -195,6 +196,32 @@ export function StremioDetail({ meta, onBack, onPlay, streamPickerMode, showStre
   const [loadingStreams, setLoadingStreams] = useState(false);
   const [videoSearch, setVideoSearch] = useState('');
   const [selectedAddonFilter, setSelectedAddonFilter] = useState<string>('All');
+
+  const [downloadingUrl, setDownloadingUrl] = useState<string | null>(null);
+  const startDownload = useDownloadStore((s) => s.startDownload);
+
+  const handleDownloadStream = useCallback(
+    async (stream: StremioStream, e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (!stream.url) return;
+      setDownloadingUrl(stream.url);
+      try {
+        let title = '';
+        if (meta.type === 'series' && selectedVideo) {
+          title = `${meta.name} - S${selectedVideo.season}E${selectedVideo.episode}${selectedVideo.title ? ` - ${selectedVideo.title}` : ''}`;
+        } else {
+          title = `${meta.name}${meta.year ? ` (${meta.year})` : ''}`;
+        }
+        await startDownload(title, stream.url);
+      } catch (error) {
+        console.error('[StremioDetail] Stream download failed:', error);
+        alert('Failed to start download');
+      } finally {
+        setDownloadingUrl(null);
+      }
+    },
+    [meta, selectedVideo, startDownload]
+  );
 
   // Group streams by addon
   const addonNames = useMemo(() => {
@@ -721,6 +748,22 @@ export function StremioDetail({ meta, onBack, onPlay, streamPickerMode, showStre
                         className="stremio-detail-stream-card"
                         onClick={() => onPlay(stream, meta, selectedVideo ?? undefined)}
                       >
+                        {stream.url && (
+                          <button
+                            className={`stremio-detail-stream-download-btn ${downloadingUrl === stream.url ? 'downloading' : ''}`}
+                            onClick={(e) => handleDownloadStream(stream, e)}
+                            disabled={downloadingUrl === stream.url}
+                            title="Download Stream"
+                          >
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              {downloadingUrl === stream.url ? (
+                                <circle cx="12" cy="12" r="10" strokeDasharray="31.4" strokeDashoffset="10" style={{ transformOrigin: 'center', animation: 'spin 1.5s linear infinite' }} />
+                              ) : (
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4m4-5 5 5 5-5m-5 5V3" strokeLinecap="round" strokeLinejoin="round" />
+                              )}
+                            </svg>
+                          </button>
+                        )}
                         <div className="stremio-detail-stream-header-row">
                           <div className="stremio-detail-stream-card-title">
                             {displayName || desc || `Stream #${idx + 1}`}

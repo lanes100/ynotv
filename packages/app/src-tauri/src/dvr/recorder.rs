@@ -592,7 +592,7 @@ pub struct RecordingProgress {
 }
 
 /// Find FFmpeg binary
-fn find_ffmpeg(app_handle: &tauri::AppHandle) -> Result<PathBuf> {
+pub fn find_ffmpeg(app_handle: &tauri::AppHandle) -> Result<PathBuf> {
     use tauri::Manager;
 
     // First try to resolve as a sidecar (bundled external binary)

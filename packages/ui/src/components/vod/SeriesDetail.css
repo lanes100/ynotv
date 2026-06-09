@@ -593,3 +593,91 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Download button */
+.series-detail__episode-card-download {
+  position: absolute;
+  top: 8px;
+  left: 48px; /* Offset to place it next to the Copy URL button */
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.5);
+  border: none;
+  border-radius: 6px;
+  color: rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+  opacity: 0;
+  transition: all 150ms ease;
+  backdrop-filter: blur(4px);
+  z-index: 2;
+}
+
+.series-detail__episode-card:hover .series-detail__episode-card-download {
+  opacity: 1;
+}
+
+.series-detail__episode-card-download:hover {
+  background: rgba(0, 0, 0, 0.7);
+  color: #fff;
+}
+
+.series-detail__episode-card-download svg {
+  width: 16px;
+  height: 16px;
+}
+
+.series-detail__episode-card-download.downloading {
+  opacity: 1;
+  color: #00d4ff;
+}
+
+.series-detail__season-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.series-detail__season-selector {
+  margin-bottom: 0 !important;
+}
+
+.series-detail__download-season-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 18px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #fff;
+  background: rgba(0, 212, 255, 0.15);
+  border: 1px solid rgba(0, 212, 255, 0.3);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 150ms ease;
+  backdrop-filter: blur(4px);
+}
+
+.series-detail__download-season-btn:hover:not(:disabled) {
+  background: rgba(0, 212, 255, 0.25);
+  border-color: rgba(0, 212, 255, 0.5);
+  box-shadow: 0 0 12px rgba(0, 212, 255, 0.2);
+  transform: translateY(-1px);
+}
+
+.series-detail__download-season-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.series-detail__download-season-btn.downloading {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.6);
+  cursor: not-allowed;
+}

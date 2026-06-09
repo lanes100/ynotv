@@ -312,6 +312,20 @@ export function Settings({
     };
   }, []);
 
+  // Listen for transparent guide height changes from dragging the EPG overlay
+  useEffect(() => {
+    const handleTransparentGuideHeightChangeCustom = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      if (customEvent.detail && typeof customEvent.detail.height === 'number') {
+        setTransparentGuideHeight(customEvent.detail.height);
+      }
+    };
+    window.addEventListener('ynotv:transparent-guide-height-changed', handleTransparentGuideHeightChangeCustom);
+    return () => {
+      window.removeEventListener('ynotv:transparent-guide-height-changed', handleTransparentGuideHeightChangeCustom);
+    };
+  }, []);
+
   async function loadSources() {
     // window.storage is the Tauri storage bridge - if missing, app is broken
     if (!window.storage) {

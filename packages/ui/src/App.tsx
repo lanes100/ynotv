@@ -32,6 +32,7 @@ import { GroupPickerModal } from './components/GroupPickerModal';
 import { useActiveRecordings } from './hooks/useActiveRecordings';
 import { useSearchHistory } from './hooks/useSearchHistory';
 import { RecordingIndicator } from './components/RecordingIndicator';
+import { DownloadIndicator } from './components/DownloadIndicator';
 import { Logo } from './components/Logo';
 import { useSelectedCategory, useChannelSearch, useProgramSearch, useChannels } from './hooks/useChannels';
 import { clearLiveQueryCache } from './hooks/useSqliteLiveQuery';
@@ -2382,12 +2383,13 @@ function App() {
           </div>
         </div>
 
-        <div className="title-bar-spacer" style={{ position: 'relative' }}>
+        <div className="title-bar-spacer" style={{ position: 'relative', display: 'flex', gap: '8px', alignItems: 'center', justifyContent: 'flex-end' }}>
           {hasActiveRecording && (
             <div className="title-bar-recording-indicator">
               <RecordingIndicator size="small" variant="recording" />
             </div>
           )}
+          <DownloadIndicator size="small" />
         </div>
 
         {/* Calendar Button */}

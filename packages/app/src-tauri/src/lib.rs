@@ -1,6 +1,8 @@
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Emitter, Runtime, Manager};
 use log::{debug, info, warn, error};
+use std::sync::Arc;
+use std::collections::HashMap;
 
 
 // macOS-specific imports for window configuration
@@ -2216,6 +2218,336 @@ async fn get_episode_details(tvmaze_episode_id: i64) -> Result<serde_json::Value
     resp.json::<serde_json::Value>().await.map_err(|e| e.to_string())
 }
 
+// ─── VOD and Stream Downloader ───────────────────────────────────────────────
+
+#[derive(serde::Deserialize, serde::Serialize, Clone)]
+struct DownloadRequest {
+    id: String,
+    title: String,
+    url: String,
+    save_path: String,
+    user_agent: Option<String>,
+    duration_secs: Option<u64>,
+}
+
+#[derive(Debug, Clone, serde::Serialize)]
+struct DownloadProgressEvent {
+    id: String,
+    title: String,
+    status: String, // "downloading" | "completed" | "failed" | "canceled"
+    progress: f64,
+    bytes_written: u64,
+    total_bytes: Option<u64>,
+    speed_bytes: u64,
+    file_path: String,
+    error: Option<String>,
+}
+
+static ACTIVE_DOWNLOADS: once_cell::sync::Lazy<Arc<parking_lot::Mutex<HashMap<String, tokio::sync::watch::Sender<bool>>>>> =
+    once_cell::sync::Lazy::new(|| Arc::new(parking_lot::Mutex::new(HashMap::new())));
+
+#[tauri::command]
+async fn cancel_download(id: String) -> Result<(), String> {
+    debug!("[Downloader] cancel_download called for id={}", id);
+    if let Some(cancel_tx) = ACTIVE_DOWNLOADS.lock().get(&id) {
+        let _ = cancel_tx.send(true);
+        Ok(())
+    } else {
+        Err("Download not found or already finished".to_string())
+    }
+}
+
+#[tauri::command]
+async fn download_media(
+    app_handle: tauri::AppHandle,
+    request: DownloadRequest,
+) -> Result<(), String> {
+    debug!("[Downloader] download_media called for title={} to={}", request.title, request.save_path);
+    let id = request.id.clone();
+    let title = request.title.clone();
+    let url = request.url.clone();
+    let save_path = request.save_path.clone();
+    let user_agent = request.user_agent.clone();
+    let duration_secs = request.duration_secs;
+
+    let (cancel_tx, mut cancel_rx) = tokio::sync::watch::channel(false);
+    ACTIVE_DOWNLOADS.lock().insert(id.clone(), cancel_tx);
+
+    let app_handle_clone = app_handle.clone();
+    
+    tokio::spawn(async move {
+        let res = do_download(
+            app_handle_clone.clone(),
+            id.clone(),
+            title.clone(),
+            url,
+            save_path.clone(),
+            user_agent,
+            duration_secs,
+            &mut cancel_rx,
+        ).await;
+
+        ACTIVE_DOWNLOADS.lock().remove(&id);
+
+        let final_event = match res {
+            Ok(()) => {
+                DownloadProgressEvent {
+                    id,
+                    title,
+                    status: "completed".to_string(),
+                    progress: 100.0,
+                    bytes_written: 0,
+                    total_bytes: None,
+                    speed_bytes: 0,
+                    file_path: save_path,
+                    error: None,
+                }
+            }
+            Err(e) => {
+                let status = if e == "Canceled" { "canceled" } else { "failed" };
+                if status == "canceled" || status == "failed" {
+                    // Try to clean up partial file
+                    let _ = tokio::fs::remove_file(&save_path).await;
+                }
+
+                DownloadProgressEvent {
+                    id,
+                    title,
+                    status: status.to_string(),
+                    progress: 0.0,
+                    bytes_written: 0,
+                    total_bytes: None,
+                    speed_bytes: 0,
+                    file_path: save_path,
+                    error: Some(e),
+                }
+            }
+        };
+
+        let _ = app_handle_clone.emit("download:event", final_event);
+    });
+
+    Ok(())
+}
+
+async fn do_download(
+    app_handle: tauri::AppHandle,
+    id: String,
+    title: String,
+    url: String,
+    save_path: String,
+    user_agent: Option<String>,
+    duration_secs: Option<u64>,
+    cancel_rx: &mut tokio::sync::watch::Receiver<bool>,
+) -> Result<(), String> {
+    use tokio::io::{AsyncBufReadExt, AsyncWriteExt};
+    use futures_util::StreamExt;
+
+    let is_hls = url.contains(".m3u8") || url.contains("/mono.m3u8");
+
+    if is_hls {
+        let ffmpeg_path = match crate::dvr::recorder::find_ffmpeg(&app_handle) {
+            Ok(p) => p,
+            Err(e) => return Err(format!("FFmpeg not found: {}", e)),
+        };
+
+        let mut cmd = tokio::process::Command::new(ffmpeg_path);
+        
+        if let Some(ref ua) = user_agent {
+            cmd.arg("-user_agent").arg(ua);
+        }
+
+        cmd.arg("-i").arg(&url)
+           .arg("-c").arg("copy")
+           .arg("-y")
+           .arg(&save_path)
+           .stdout(std::process::Stdio::piped())
+           .stderr(std::process::Stdio::piped());
+
+        #[cfg(windows)]
+        cmd.creation_flags(0x08000000);
+
+        let mut child = cmd.spawn().map_err(|e| format!("Failed to spawn FFmpeg: {}", e))?;
+        let stderr = child.stderr.take().ok_or("Failed to open FFmpeg stderr")?;
+        let mut reader = tokio::io::BufReader::new(stderr).lines();
+
+        let start_time = std::time::Instant::now();
+        let mut last_emit = std::time::Instant::now();
+
+        loop {
+            tokio::select! {
+                line_res = reader.next_line() => {
+                    match line_res {
+                        Ok(Some(line)) => {
+                            if last_emit.elapsed() >= std::time::Duration::from_millis(500) {
+                                let (secs, size_bytes) = parse_ffmpeg_line(&line);
+                                
+                                let progress = if let (Some(s), Some(dur)) = (secs, duration_secs) {
+                                    if dur > 0 {
+                                        ((s / dur as f64) * 100.0).min(100.0).max(0.0)
+                                    } else {
+                                        0.0
+                                    }
+                                } else {
+                                    0.0
+                                };
+
+                                let speed_bytes = if start_time.elapsed().as_secs_f64() > 0.0 {
+                                    (size_bytes.unwrap_or(0) as f64 / start_time.elapsed().as_secs_f64()) as u64
+                                } else {
+                                    0
+                                };
+
+                                let event = DownloadProgressEvent {
+                                    id: id.clone(),
+                                    title: title.clone(),
+                                    status: "downloading".to_string(),
+                                    progress,
+                                    bytes_written: size_bytes.unwrap_or(0),
+                                    total_bytes: duration_secs.map(|d| d * 1024 * 1024),
+                                    speed_bytes,
+                                    file_path: save_path.clone(),
+                                    error: None,
+                                };
+                                let _ = app_handle.emit("download:event", event);
+                                last_emit = std::time::Instant::now();
+                            }
+                        }
+                        Ok(None) => break,
+                        Err(_) => break,
+                    }
+                }
+                _ = cancel_rx.changed() => {
+                    if *cancel_rx.borrow() {
+                        let _ = child.kill().await;
+                        return Err("Canceled".to_string());
+                    }
+                }
+            }
+        }
+
+        let status = child.wait().await.map_err(|e| format!("FFmpeg wait error: {}", e))?;
+        if status.success() {
+            Ok(())
+        } else {
+            Err("FFmpeg process failed".to_string())
+        }
+    } else {
+        let ua = user_agent.unwrap_or_else(|| "ynoTV".to_string());
+        let client = reqwest::Client::builder()
+            .user_agent(ua)
+            .build()
+            .map_err(|e| format!("Failed to build client: {}", e))?;
+
+        let res = client.get(&url).send().await.map_err(|e| format!("HTTP request failed: {}", e))?;
+        if !res.status().is_success() {
+            return Err(format!("Server returned HTTP status {}", res.status()));
+        }
+
+        let total_bytes = res.content_length();
+        let mut stream = res.bytes_stream();
+
+        if let Some(parent) = std::path::Path::new(&save_path).parent() {
+            let _ = tokio::fs::create_dir_all(parent).await;
+        }
+
+        let mut file = tokio::fs::File::create(&save_path).await.map_err(|e| format!("Failed to create output file: {}", e))?;
+
+        let mut bytes_written = 0u64;
+        let start_time = std::time::Instant::now();
+        let mut last_emit = std::time::Instant::now();
+        let mut last_bytes = 0u64;
+
+        loop {
+            tokio::select! {
+                item_opt = stream.next() => {
+                    match item_opt {
+                        Some(item) => {
+                            let chunk = item.map_err(|e| format!("Network error: {}", e))?;
+                            file.write_all(&chunk).await.map_err(|e| format!("Write failed: {}", e))?;
+                            bytes_written += chunk.len() as u64;
+
+                            if last_emit.elapsed() >= std::time::Duration::from_millis(500) {
+                                let elapsed = last_emit.elapsed().as_secs_f64();
+                                let speed = if elapsed > 0.0 {
+                                    ((bytes_written - last_bytes) as f64 / elapsed) as u64
+                                } else {
+                                    0
+                                };
+                                last_emit = std::time::Instant::now();
+                                last_bytes = bytes_written;
+
+                                let progress = if let Some(total) = total_bytes {
+                                    if total > 0 {
+                                        ((bytes_written as f64 / total as f64) * 100.0).min(100.0).max(0.0)
+                                    } else {
+                                        0.0
+                                    }
+                                } else {
+                                    0.0
+                                };
+
+                                let event = DownloadProgressEvent {
+                                    id: id.clone(),
+                                    title: title.clone(),
+                                    status: "downloading".to_string(),
+                                    progress,
+                                    bytes_written,
+                                    total_bytes,
+                                    speed_bytes: speed,
+                                    file_path: save_path.clone(),
+                                    error: None,
+                                };
+                                let _ = app_handle.emit("download:event", event);
+                            }
+                        }
+                        None => break,
+                    }
+                }
+                _ = cancel_rx.changed() => {
+                    if *cancel_rx.borrow() {
+                        return Err("Canceled".to_string());
+                    }
+                }
+            }
+        }
+
+        file.flush().await.map_err(|e| e.to_string())?;
+        Ok(())
+    }
+}
+
+fn parse_ffmpeg_line(line: &str) -> (Option<f64>, Option<u64>) {
+    let mut secs = None;
+    let mut size_bytes = None;
+    
+    if let Some(pos) = line.find("time=") {
+        let time_part = &line[pos + 5..];
+        let val_str = time_part.split_whitespace().next().unwrap_or("");
+        let parts: Vec<&str> = val_str.split(':').collect();
+        if parts.len() == 3 {
+            if let (Ok(h), Ok(m), Ok(s)) = (
+                parts[0].parse::<f64>(),
+                parts[1].parse::<f64>(),
+                parts[2].parse::<f64>(),
+            ) {
+                secs = Some(h * 3600.0 + m * 60.0 + s);
+            }
+        }
+    }
+    
+    if let Some(pos) = line.find("size=") {
+        let size_part = &line[pos + 5..];
+        let val_str = size_part.split_whitespace().next().unwrap_or("");
+        let clean_val = val_str.replace("kB", "").trim().to_string();
+        if let Ok(kb) = clean_val.parse::<u64>() {
+            size_bytes = Some(kb * 1024);
+        }
+    }
+    
+    (secs, size_bytes)
+}
+
 #[tauri::command]
 async fn open_external_url(url: String) -> Result<(), String> {
     debug!("[Open URL] Opening external URL: {}", url);
@@ -2800,6 +3132,8 @@ pub fn run() {
             bulk_delete_categories,
             update_source_meta,
             health_check,
+            download_media,
+            cancel_download,
             // Streaming EPG commands
             stream_parse_epg,
             stream_parse_epg_multi,

@@ -1188,6 +1188,60 @@ export function ChannelPanel({
     }
   }, []);
 
+  // ── Drag-to-resize for EPG Transparent Overlay ──────────────────────────────
+  const isResizingTransparentGuide = useRef(false);
+
+  const handleTransparentGuideResizeMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    isResizingTransparentGuide.current = true;
+
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      if (!isResizingTransparentGuide.current) return;
+      const windowHeight = window.innerHeight;
+      const heightPx = windowHeight - moveEvent.clientY;
+      let newPct = Math.round((heightPx / windowHeight) * 100);
+      newPct = Math.max(25, Math.min(100, newPct));
+      
+      document.documentElement.style.setProperty('--transparent-guide-height', `${newPct}%`);
+      
+      window.dispatchEvent(new CustomEvent('ynotv:transparent-guide-height-changed', {
+        detail: { height: newPct }
+      }));
+    };
+
+    const handleMouseUp = async () => {
+      if (!isResizingTransparentGuide.current) return;
+      isResizingTransparentGuide.current = false;
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+
+      const finalPctStr = getComputedStyle(document.documentElement).getPropertyValue('--transparent-guide-height');
+      const finalPct = parseInt(finalPctStr) || 40;
+      
+      if (window.storage) {
+        await window.storage.updateSettings({ transparentGuideHeight: finalPct });
+      }
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  }, []);
+
+  const handleTransparentGuideResizeContextMenu = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    document.documentElement.style.setProperty('--transparent-guide-height', '40%');
+    window.dispatchEvent(new CustomEvent('ynotv:transparent-guide-height-changed', {
+      detail: { height: 40 }
+    }));
+    
+    if (window.storage) {
+      void window.storage.updateSettings({ transparentGuideHeight: 40 });
+    }
+  }, []);
+
   // Refresh search results when favorites change
   const refreshSearchResults = useCallback(async () => {
     if (!isSearchMode) return;
@@ -1744,6 +1798,15 @@ export function ChannelPanel({
 
       {/* Bottom Section: EPG Grid */}
       <div className="guide-grid-section">
+        {/* Transparent Guide Resizer Handle */}
+        {guideTransparent && (
+          <div
+            className="guide-transparent-resizer"
+            onMouseDown={handleTransparentGuideResizeMouseDown}
+            onContextMenu={handleTransparentGuideResizeContextMenu}
+            title="Drag to resize overlay height | Right-click to reset"
+          />
+        )}
         {/* Channel Column Resizer */}
         {!isSearchMode && !isWatchlistMode && (
           <div
