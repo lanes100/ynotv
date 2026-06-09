@@ -213,7 +213,7 @@ export function Settings({
   const [transparentGuideHeight, setTransparentGuideHeight] = useState(40);
   const [transparentGuideHideHeader, setTransparentGuideHideHeader] = useState(false);
   const [transparentGuideOverlayOpacity, setTransparentGuideOverlayOpacity] = useState(55);
-  const [transparentGuideSidebarOpacity, setTransparentGuideSidebarOpacity] = useState(0);
+  const [transparentGuideSidebarOpacity, setTransparentGuideSidebarOpacity] = useState(55);
 
   // Live View settings state
   const [channelInfoOverlayEnabled, setChannelInfoOverlayEnabled] = useState(channelInfoOverlayEnabledProp ?? false);
@@ -585,7 +585,7 @@ export function Settings({
       const loadedOverlayOpacity = settings.transparentGuideOverlayOpacity ?? 55;
       setTransparentGuideOverlayOpacity(loadedOverlayOpacity);
       document.documentElement.style.setProperty('--transparent-guide-overlay-opacity', String(loadedOverlayOpacity / 100));
-      const loadedSidebarOpacity = settings.transparentGuideSidebarOpacity ?? 0;
+      const loadedSidebarOpacity = settings.transparentGuideSidebarOpacity ?? 55;
       setTransparentGuideSidebarOpacity(loadedSidebarOpacity);
       document.documentElement.style.setProperty('--transparent-guide-sidebar-opacity', String(loadedSidebarOpacity / 100));
 
