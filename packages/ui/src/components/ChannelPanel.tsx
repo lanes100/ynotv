@@ -168,6 +168,8 @@ interface ChannelPanelProps {
   onPlayInPopout?: (channel: StoredChannel) => void;
   onPlayInExternal?: (channel: StoredChannel) => void;
   popoutIsOpen?: boolean;
+  // Transparent guide mode (Z key) — hides preview pane, shows EPG grid over full video
+  guideTransparent?: boolean;
 }
 
 export function ChannelPanel({
@@ -228,6 +230,7 @@ export function ChannelPanel({
   onPlayInPopout,
   onPlayInExternal,
   popoutIsOpen = false,
+  guideTransparent = false,
 }: ChannelPanelProps) {
   const epgView = useEpgView();
 
@@ -1482,9 +1485,10 @@ export function ChannelPanel({
   return (
     <div
       ref={gridContainerRef}
-      className={`guide-panel ${visible ? 'visible' : 'hidden'} ${categoryStripOpen ? 'with-categories' : ''}`}
+      className={`guide-panel ${visible ? 'visible' : 'hidden'} ${categoryStripOpen ? 'with-categories' : ''} ${guideTransparent ? 'guide-transparent-mode' : ''}`}
     >
-      {/* Top Section: Preview & Info */}
+      {/* Top Section: Preview & Info — hidden in transparent guide mode */}
+      {!guideTransparent && (
       <div 
         className={`guide-top-section ${epgView === 'alternate' ? 'alternate-view' : ''}`}
         style={epgView !== 'alternate' ? { '--preview-width': `${previewWidthPct}%` } as React.CSSProperties : undefined}
@@ -1735,6 +1739,7 @@ export function ChannelPanel({
           </div>
         )}
       </div>
+      )}
 
       {/* Bottom Section: EPG Grid */}
       <div className="guide-grid-section">

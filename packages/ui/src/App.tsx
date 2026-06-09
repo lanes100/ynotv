@@ -145,6 +145,8 @@ function App() {
     setChannelInfoOverlayOpacity,
     channelInfoOverlayHideDescription,
     setChannelInfoOverlayHideDescription,
+    transparentGuideOnZap,
+    setTransparentGuideOnZap,
     overlayAutohideTimer,
     setOverlayAutohideTimer,
     popoutStopMain,
@@ -756,6 +758,7 @@ function App() {
   // Exception: it flashes briefly on keyboard channel up/down outside guide/sports.
   const [channelChangeFlash, setChannelChangeFlash] = useState(false);
   const channelChangeFlashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const transparentGuideFlashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const triggerChannelChangeFlash = useCallback(() => {
     if (!channelInfoOverlayEnabled) return;
@@ -767,6 +770,21 @@ function App() {
       setChannelChangeFlash(false);
     }, 4000);
   }, [channelInfoOverlayEnabled]);
+
+  const triggerTransparentGuideZapFlash = useCallback(() => {
+    if (!transparentGuideOnZap) return;
+    if (transparentGuideFlashTimerRef.current) {
+      clearTimeout(transparentGuideFlashTimerRef.current);
+    }
+    setGuideTransparent(true);
+    setActiveView('guide');
+    setCategoriesOpen((open: boolean) => !categoriesHidden);
+    transparentGuideFlashTimerRef.current = setTimeout(() => {
+      setGuideTransparent(false);
+      setActiveView('none');
+      setCategoriesOpen(false);
+    }, (overlayAutohideTimer + 1) * 1000);
+  }, [transparentGuideOnZap, categoriesHidden, overlayAutohideTimer]);
 
   const isChannelInfoOverlayVisible = useMemo(() => {
     if (!channelInfoOverlayEnabled || !currentChannel) return false;
@@ -842,6 +860,23 @@ function App() {
   });
 
   const [bgContextMenu, setBgContextMenu] = useState<{ x: number; y: number } | null>(null);
+
+  // ==========================================================================
+  // Transparent Guide Mode (Z key)
+  // ==========================================================================
+  const [guideTransparent, setGuideTransparent] = useState(false);
+
+  // Reset transparent mode when leaving guide view
+  useEffect(() => {
+    if (activeView !== 'guide') {
+      setGuideTransparent(false);
+    }
+    // Clear any pending flash timer when view changes
+    if (transparentGuideFlashTimerRef.current) {
+      clearTimeout(transparentGuideFlashTimerRef.current);
+      transparentGuideFlashTimerRef.current = null;
+    }
+  }, [activeView]);
 
   const handleAddSportsOverlay = useCallback((mode: 'autohide' | 'persistent') => {
     setSportsOverlayWidget(mode);
@@ -1819,7 +1854,10 @@ function App() {
     setShowSettingsPopup,
     setCategoriesOpen,
     setShowControls,
+    guideTransparent,
+    setGuideTransparent,
     onChannelChangeFlash: triggerChannelChangeFlash,
+    onTransparentGuideZapFlash: triggerTransparentGuideZapFlash,
   });
 
   // ==========================================================================
@@ -2808,6 +2846,7 @@ function App() {
         isPlaying={playing}
         onChannelUp={handleChannelUp}
         onChannelDown={handleChannelDown}
+        guideTransparent={guideTransparent}
 
         // Playback state & controls for Alternate View NowPlayingBar overlay
         mpvReady={mpvReady}
@@ -2875,6 +2914,8 @@ function App() {
           onChannelInfoOverlayOpacityChange={setChannelInfoOverlayOpacity}
           channelInfoOverlayHideDescription={channelInfoOverlayHideDescription}
           onChannelInfoOverlayHideDescriptionChange={setChannelInfoOverlayHideDescription}
+          transparentGuideOnZap={transparentGuideOnZap}
+          onTransparentGuideOnZapChange={setTransparentGuideOnZap}
           overlayAutohideTimer={overlayAutohideTimer}
           onOverlayAutohideTimerChange={setOverlayAutohideTimer}
         />

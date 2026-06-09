@@ -37,6 +37,7 @@ export interface AppSettings {
   channelInfoOverlayBoxWidth: number;
   channelInfoOverlayOpacity: number;
   channelInfoOverlayHideDescription: boolean;
+  transparentGuideOnZap: boolean;
 
   // Popout
   popoutStopMain: boolean;
@@ -85,6 +86,7 @@ export interface AppSettings {
     setChannelInfoOverlayBoxWidth: (width: number) => void;
     setChannelInfoOverlayOpacity: (opacity: number) => void;
     setChannelInfoOverlayHideDescription: (hide: boolean) => void;
+    setTransparentGuideOnZap: (enabled: boolean) => void;
     setPopoutStopMain: (stop: boolean) => void;
     setPopoutAlwaysOnTop: (onTop: boolean) => void;
     setPopoutMpvParamsEnabled: (enabled: boolean) => void;
@@ -144,6 +146,7 @@ export function useAppSettings(): AppSettings {
   const [channelInfoOverlayBoxWidth, setChannelInfoOverlayBoxWidthState] = useState(380);
   const [channelInfoOverlayOpacity, setChannelInfoOverlayOpacityState] = useState(55);
   const [channelInfoOverlayHideDescription, setChannelInfoOverlayHideDescriptionState] = useState(false);
+  const [transparentGuideOnZap, setTransparentGuideOnZapState] = useState(false);
 
   // Popout settings
   const [popoutStopMain, setPopoutStopMainState] = useState(true);
@@ -237,6 +240,7 @@ export function useAppSettings(): AppSettings {
           setChannelInfoOverlayBoxWidthState(result.data.channelInfoOverlayBoxWidth ?? 380);
           setChannelInfoOverlayOpacityState(result.data.channelInfoOverlayOpacity ?? 55);
           setChannelInfoOverlayHideDescriptionState(result.data.channelInfoOverlayHideDescription ?? false);
+          setTransparentGuideOnZapState(result.data.transparentGuideOnZap ?? false);
           setCategoriesHiddenState(result.data.categoriesHidden ?? false);
           setOverlayAutohideTimerState(result.data.overlayAutohideTimer ?? 3);
           setPopoutStopMainState(result.data.popoutStopMain ?? true);
@@ -407,6 +411,17 @@ export function useAppSettings(): AppSettings {
         await window.storage.updateSettings({ channelInfoOverlayHideDescription: hide });
       } catch (e) {
         console.error('[useAppSettings] Failed to save channelInfoOverlayHideDescription:', e);
+      }
+    }
+  }, []);
+
+  const setTransparentGuideOnZap = useCallback(async (enabled: boolean) => {
+    setTransparentGuideOnZapState(enabled);
+    if (window.storage) {
+      try {
+        await window.storage.updateSettings({ transparentGuideOnZap: enabled });
+      } catch (e) {
+        console.error('[useAppSettings] Failed to save transparentGuideOnZap:', e);
       }
     }
   }, []);
@@ -625,6 +640,7 @@ export function useAppSettings(): AppSettings {
     channelInfoOverlayBoxWidth,
     channelInfoOverlayOpacity,
     channelInfoOverlayHideDescription,
+    transparentGuideOnZap,
     popoutStopMain,
     popoutAlwaysOnTop,
     popoutMpvParamsEnabled,
@@ -653,6 +669,7 @@ export function useAppSettings(): AppSettings {
     setChannelInfoOverlayBoxWidth,
     setChannelInfoOverlayOpacity,
     setChannelInfoOverlayHideDescription,
+    setTransparentGuideOnZap,
     setCategorySortOrder: setCategorySortOrderSetting,
     setPopoutStopMain,
     setPopoutAlwaysOnTop,

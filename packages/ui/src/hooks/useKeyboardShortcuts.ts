@@ -44,9 +44,13 @@ export interface UseKeyboardShortcutsOptions {
     setShowSettingsPopup: React.Dispatch<React.SetStateAction<boolean>>;
     setCategoriesOpen: React.Dispatch<React.SetStateAction<boolean>>;
     setShowControls: React.Dispatch<React.SetStateAction<boolean>>;
+    guideTransparent: boolean;
+    setGuideTransparent: React.Dispatch<React.SetStateAction<boolean>>;
 
     // --- Channel info overlay flash ---
     onChannelChangeFlash?: () => void;
+    // --- Transparent guide flash on channel zap ---
+    onTransparentGuideZapFlash?: () => void;
 }
 
 /**
@@ -98,7 +102,10 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions): void
                 setShowSettingsPopup,
                 setCategoriesOpen,
                 setShowControls,
+                guideTransparent,
+                setGuideTransparent,
                 onChannelChangeFlash,
+                onTransparentGuideZapFlash,
             } = latestRefs.current;
 
             // Helper to match keys case-insensitively for letters
@@ -136,6 +143,21 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions): void
                 handleShowAudioModal();
             } else if (matches('toggleGuide', e.key)) {
                 setActiveView((v) => (v === 'guide' ? 'none' : 'guide'));
+            } else if (matches('toggleTransparentGuide', e.key)) {
+                e.preventDefault();
+                setShowControls(true);
+                if (activeView === 'guide') {
+                    // If already in transparent mode, close; otherwise enter transparent mode
+                    if (guideTransparent) {
+                        setActiveView('none');
+                        setCategoriesOpen(false);
+                    }
+                } else {
+                    // Open guide in transparent mode
+                    setGuideTransparent(true);
+                    setActiveView('guide');
+                    setCategoriesOpen(!categoriesHidden);
+                }
             } else if (matches('toggleCategories', e.key)) {
                 setCategoriesOpen((open) => !open);
             } else if (matches('toggleLiveTV', e.key)) {
@@ -219,6 +241,7 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions): void
                     // Flash channel info overlay when changing channels outside guide/sports
                     if (activeView !== 'guide' && activeView !== 'sports') {
                         onChannelChangeFlash?.();
+                        onTransparentGuideZapFlash?.();
                     }
                 }
             } else if (matches('channelDown', e.key)) {
@@ -234,6 +257,7 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions): void
                     // Flash channel info overlay when changing channels outside guide/sports
                     if (activeView !== 'guide' && activeView !== 'sports') {
                         onChannelChangeFlash?.();
+                        onTransparentGuideZapFlash?.();
                     }
                 }
             } else if (matches('replayLastStream', e.key)) {

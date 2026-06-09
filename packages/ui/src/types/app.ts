@@ -31,7 +31,8 @@ export type ShortcutAction =
     | 'channelUp'
     | 'channelDown'
     | 'toggleEpgView'
-    | 'replayLastStream';
+    | 'replayLastStream'
+    | 'toggleTransparentGuide';
 
 export interface SavedChannelState {
     channelName: string | null;

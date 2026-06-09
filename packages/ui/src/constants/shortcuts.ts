@@ -35,4 +35,5 @@ export const DEFAULT_SHORTCUTS: Record<ShortcutAction, string> = {
     channelDown: 'ArrowDown',
     toggleEpgView: 'e',
     replayLastStream: 'q',
+    toggleTransparentGuide: 'z',
 };

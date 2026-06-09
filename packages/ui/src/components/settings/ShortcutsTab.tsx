@@ -36,13 +36,14 @@ const ACTION_LABELS: Record<ShortcutAction, string> = {
     channelUp: 'Channel Up',
     channelDown: 'Channel Down',
     toggleEpgView: 'Toggle EPG View Layout',
-    replayLastStream: 'Replay Last Stream'
+    replayLastStream: 'Replay Last Stream',
+    toggleTransparentGuide: 'Toggle Transparent Guide'
 };
 
 const GROUPS: Record<string, ShortcutAction[]> = {
     'Playback': ['togglePlay', 'seekForward', 'seekBackward', 'toggleMute', 'selectSubtitle', 'selectAudio', 'toggleFullscreen', 'replayLastStream'],
     'Navigation': ['channelUp', 'channelDown'],
-    'Interface': ['toggleLiveTV', 'toggleGuide', 'toggleCategories', 'toggleDvr', 'toggleSports', 'toggleCalendar', 'toggleSettings', 'toggleStats', 'focusSearch', 'toggleEpgView', 'close'],
+    'Interface': ['toggleLiveTV', 'toggleGuide', 'toggleTransparentGuide', 'toggleCategories', 'toggleDvr', 'toggleSports', 'toggleCalendar', 'toggleSettings', 'toggleStats', 'focusSearch', 'toggleEpgView', 'close'],
     'Layout': ['layoutMain', 'layoutPip', 'layoutBigBottom', 'layout2x2']
 };
 

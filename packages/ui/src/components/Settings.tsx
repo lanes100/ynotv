@@ -44,6 +44,8 @@ interface SettingsProps {
   onChannelInfoOverlayHideDescriptionChange?: (hide: boolean) => void;
   overlayAutohideTimer?: number;
   onOverlayAutohideTimerChange?: (seconds: number) => void;
+  transparentGuideOnZap?: boolean;
+  onTransparentGuideOnZapChange?: (enabled: boolean) => void;
   castEnabled?: boolean;
   onCastEnabledChange?: (enabled: boolean) => void;
   castRewriteTs?: boolean;
@@ -77,6 +79,8 @@ export function Settings({
   onChannelInfoOverlayHideDescriptionChange,
   overlayAutohideTimer: overlayAutohideTimerProp,
   onOverlayAutohideTimerChange,
+  transparentGuideOnZap: transparentGuideOnZapProp,
+  onTransparentGuideOnZapChange,
   castEnabled: castEnabledProp,
   onCastEnabledChange,
   castRewriteTs: castRewriteTsProp,
@@ -193,6 +197,8 @@ export function Settings({
   const [epgBodyFontSize, setEpgBodyFontSize] = useState(16);
   const epgView = useEpgView();
   const setEpgView = useSetEpgView();
+  const [transparentGuideHeight, setTransparentGuideHeight] = useState(100);
+  const [transparentGuideHideHeader, setTransparentGuideHideHeader] = useState(false);
 
   // Live View settings state
   const [channelInfoOverlayEnabled, setChannelInfoOverlayEnabled] = useState(channelInfoOverlayEnabledProp ?? false);
@@ -369,6 +375,9 @@ export function Settings({
         navHiddenTabs?: string[];
         castEnabled?: boolean;
         castRewriteTs?: boolean;
+        transparentGuideHeight?: number;
+        transparentGuideHideHeader?: boolean;
+        transparentGuideOnZap?: boolean;
       };
 
       if (settings.castEnabled !== undefined) {
@@ -490,6 +499,15 @@ export function Settings({
 
       // Load EPG view layout setting
       setEpgView(settings.epgView ?? 'traditional');
+
+      // Load transparent guide overlay settings
+      const loadedGuideHeight = settings.transparentGuideHeight ?? 100;
+      setTransparentGuideHeight(loadedGuideHeight);
+      document.documentElement.style.setProperty('--transparent-guide-height', `${loadedGuideHeight}%`);
+      const loadedHideHeader = settings.transparentGuideHideHeader ?? false;
+      setTransparentGuideHideHeader(loadedHideHeader);
+      document.documentElement.classList.toggle('transparent-guide-hide-header', loadedHideHeader);
+
 
       // Load EPG font size settings
       const loadedEpgTitleFontSize = settings.epgTitleFontSize ?? 32;
@@ -779,6 +797,23 @@ export function Settings({
     document.documentElement.style.setProperty('--epg-body-font-size', `${size}px`);
     if (window.storage) {
       window.storage.debouncedUpdateSettings({ epgBodyFontSize: size });
+    }
+  };
+
+  const handleTransparentGuideHeightChange = async (height: number) => {
+    const clamped = Math.max(25, Math.min(100, height));
+    setTransparentGuideHeight(clamped);
+    document.documentElement.style.setProperty('--transparent-guide-height', `${clamped}%`);
+    if (window.storage) {
+      await window.storage.updateSettings({ transparentGuideHeight: clamped });
+    }
+  };
+
+  const handleTransparentGuideHideHeaderChange = async (hide: boolean) => {
+    setTransparentGuideHideHeader(hide);
+    document.documentElement.classList.toggle('transparent-guide-hide-header', hide);
+    if (window.storage) {
+      await window.storage.updateSettings({ transparentGuideHideHeader: hide });
     }
   };
 
@@ -1252,6 +1287,12 @@ export function Settings({
             onEpgTitleFontSizeChange={handleEpgTitleFontSizeChange}
             epgBodyFontSize={epgBodyFontSize}
             onEpgBodyFontSizeChange={handleEpgBodyFontSizeChange}
+            transparentGuideHeight={transparentGuideHeight}
+            onTransparentGuideHeightChange={handleTransparentGuideHeightChange}
+            transparentGuideHideHeader={transparentGuideHideHeader}
+            onTransparentGuideHideHeaderChange={handleTransparentGuideHideHeaderChange}
+            transparentGuideOnZap={transparentGuideOnZapProp ?? false}
+            onTransparentGuideOnZapChange={onTransparentGuideOnZapChange || (() => {})}
             channelFontSize={channelFontSize}
             onChannelFontSizeChange={handleChannelFontSizeChange}
             categoryFontSize={categoryFontSize}

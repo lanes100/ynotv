@@ -55,6 +55,13 @@ interface LiveTVTabProps {
   onSportsScaleChange: (scale: number) => void;
   sportsBgOpacity: number;
   onSportsBgOpacityChange: (opacity: number) => void;
+  // Transparent guide overlay props
+  transparentGuideHeight: number;
+  onTransparentGuideHeightChange: (height: number) => void;
+  transparentGuideHideHeader: boolean;
+  onTransparentGuideHideHeaderChange: (hide: boolean) => void;
+  transparentGuideOnZap: boolean;
+  onTransparentGuideOnZapChange: (enabled: boolean) => void;
 }
 
 export function LiveTVTab({
@@ -101,6 +108,12 @@ export function LiveTVTab({
   onSportsScaleChange,
   sportsBgOpacity,
   onSportsBgOpacityChange,
+  transparentGuideHeight,
+  onTransparentGuideHeightChange,
+  transparentGuideHideHeader,
+  onTransparentGuideHideHeaderChange,
+  transparentGuideOnZap,
+  onTransparentGuideOnZapChange,
 }: LiveTVTabProps) {
   const [activeSubTab, setActiveSubTab] = useState<'epg' | 'font-size' | 'sort-order' | 'search' | 'live-view' | 'widgets'>('epg');
 
@@ -298,6 +311,103 @@ export function LiveTVTab({
                   </select>
                 </div>
 
+              </div>
+            </div>
+
+            {/* Transparent EPG Overlay Settings */}
+            <div className="settings-section">
+              <div className="section-header">
+                <h3>Transparent EPG Overlay</h3>
+              </div>
+              <p className="section-description">
+                When using Transparent Guide mode (press Z), controls how much of the screen the EPG/channel list covers, from the bottom up.
+              </p>
+
+              <div className="timeshift-settings">
+                <div className="timeshift-toggle-row">
+                  <div className="timeshift-toggle-info">
+                    <span className="timeshift-toggle-label">Overlay Height</span>
+                    <span className="timeshift-toggle-sub">Percentage of the app height the EPG overlay covers (25–100%).</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <input
+                      type="number"
+                      min="25"
+                      max="100"
+                      value={transparentGuideHeight}
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value);
+                        if (!isNaN(val)) onTransparentGuideHeightChange(val);
+                      }}
+                      style={{ width: '70px', padding: '4px 8px', textAlign: 'center' }}
+                    />
+                    <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.85rem' }}>%</span>
+                    <input
+                      type="range"
+                      min="25"
+                      max="100"
+                      value={transparentGuideHeight}
+                      onChange={(e) => onTransparentGuideHeightChange(parseInt(e.target.value))}
+                      style={{ width: '120px' }}
+                    />
+                  </div>
+                </div>
+
+                <div className="timeshift-toggle-row" style={{ marginTop: '12px' }}>
+                  <div className="timeshift-toggle-info">
+                    <span className="timeshift-toggle-label">Hide Top Row</span>
+                    <span className="timeshift-toggle-sub">Hide the time, manage, refresh, shift, and Now buttons. The channel list fills the extra space.</span>
+                  </div>
+                  <label className="toggle-switch" style={{ position: 'relative', display: 'inline-block', width: '44px', height: '24px', flexShrink: 0 }}>
+                    <input
+                      type="checkbox"
+                      checked={transparentGuideHideHeader}
+                      onChange={(e) => onTransparentGuideHideHeaderChange(e.target.checked)}
+                      style={{ opacity: 0, width: 0, height: 0 }}
+                    />
+                    <span style={{
+                      position: 'absolute', cursor: 'pointer', inset: 0,
+                      backgroundColor: transparentGuideHideHeader ? 'var(--accent-primary, #00d4ff)' : 'rgba(255,255,255,0.2)',
+                      borderRadius: '24px',
+                      transition: 'background-color 0.2s',
+                    }}>
+                      <span style={{
+                        position: 'absolute', top: '2px',
+                        left: transparentGuideHideHeader ? '22px' : '2px',
+                        width: '20px', height: '20px', borderRadius: '50%',
+                        backgroundColor: '#fff', transition: 'left 0.2s',
+                      }} />
+                    </span>
+                  </label>
+                </div>
+
+                <div className="timeshift-toggle-row" style={{ marginTop: '12px' }}>
+                  <div className="timeshift-toggle-info">
+                    <span className="timeshift-toggle-label">Display on Channel Zap</span>
+                    <span className="timeshift-toggle-sub">When zapping channels (channel up/down), the transparent EPG overlay appears briefly and auto-hides.</span>
+                  </div>
+                  <label className="toggle-switch" style={{ position: 'relative', display: 'inline-block', width: '44px', height: '24px', flexShrink: 0 }}>
+                    <input
+                      type="checkbox"
+                      checked={transparentGuideOnZap}
+                      onChange={(e) => onTransparentGuideOnZapChange(e.target.checked)}
+                      style={{ opacity: 0, width: 0, height: 0 }}
+                    />
+                    <span style={{
+                      position: 'absolute', cursor: 'pointer', inset: 0,
+                      backgroundColor: transparentGuideOnZap ? 'var(--accent-primary, #00d4ff)' : 'rgba(255,255,255,0.2)',
+                      borderRadius: '24px',
+                      transition: 'background-color 0.2s',
+                    }}>
+                      <span style={{
+                        position: 'absolute', top: '2px',
+                        left: transparentGuideOnZap ? '22px' : '2px',
+                        width: '20px', height: '20px', borderRadius: '50%',
+                        backgroundColor: '#fff', transition: 'left 0.2s',
+                      }} />
+                    </span>
+                  </label>
+                </div>
               </div>
             </div>
           </>
