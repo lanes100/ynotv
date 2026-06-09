@@ -564,6 +564,9 @@ export function SourcesTab({
             last_synced: new Date(),
             channel_count: parsed.channels.length,
             category_count: parsed.categories.length,
+            expiry_date: (source as any)._xtream_expiry,
+            active_cons: (source as any)._xtream_active_cons,
+            max_connections: (source as any)._xtream_max_connections,
           });
         });
       }
@@ -1368,8 +1371,8 @@ export function SourcesTab({
                         </>
                       )}
 
-                      {/* Connection stats for Xtream */}
-                      {source.type === 'xtream' && meta && meta.active_cons && meta.max_connections && (
+                      {/* Connection stats for Xtream or M3U with Xtream Catchup */}
+                      {(source.type === 'xtream' || (source as any).xtream_catchup) && meta && meta.active_cons && meta.max_connections && (
                         <div className="source-connections">
                           🔗 {meta.active_cons}/{meta.max_connections}
                         </div>

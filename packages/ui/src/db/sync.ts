@@ -1480,6 +1480,23 @@ export async function enrichM3uWithXtreamCatchup(
       userAgent: source.user_agent,
     }, source.id);
 
+    // Fetch and store user info (expiry date, connections) from the Xtream catchup provider
+    try {
+      debugLog('Fetching Xtream catchup user info...', 'sync');
+      const userInfo = await client.getUserInfo();
+      if (userInfo.expiry_date) {
+        (source as any)._xtream_expiry = userInfo.expiry_date;
+      }
+      if (userInfo.active_cons) {
+        (source as any)._xtream_active_cons = userInfo.active_cons;
+      }
+      if (userInfo.max_connections) {
+        (source as any)._xtream_max_connections = userInfo.max_connections;
+      }
+    } catch (infoErr) {
+      console.warn('[Sync] Failed to fetch user info for Xtream catchup:', infoErr);
+    }
+
     const xcChannels = await client.getLiveStreams();
     debugLog(`Got ${xcChannels.length} Xtream channels for catchup matching`, 'sync');
 
@@ -2105,7 +2122,12 @@ async function _doSyncSourceImpl(source: Source, onProgress?: (msg: string) => v
     }
 
     // Add Xtream-specific metadata
-    if (source.type === 'xtream') {
+    const hasXtreamCatchup = (source as any).xtream_catchup &&
+      (source as any).xtream_catchup.url &&
+      (source as any).xtream_catchup.username &&
+      (source as any).xtream_catchup.password;
+
+    if (source.type === 'xtream' || hasXtreamCatchup) {
       if ((source as any)._xtream_expiry) {
         meta.expiry_date = (source as any)._xtream_expiry;
       }
