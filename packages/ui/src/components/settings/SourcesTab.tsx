@@ -191,6 +191,7 @@ export function SourcesTab({
   const [syncingSourceId, setSyncingSourceId] = useState<string | null>(null);
   const [vodSyncingSourceId, setVodSyncingSourceId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   // State for inline backup inputs
   const [newBackupMac, setNewBackupMac] = useState('');
@@ -417,6 +418,7 @@ export function SourcesTab({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!window.storage) return;
+    if (isSaving) return;
 
     // Helper to detect LAN URLs (RFC 1918 private IPs, localhost, etc)
     function isLanUrl(urlString: string): boolean {
@@ -467,132 +469,142 @@ export function SourcesTab({
       }
     }
 
-    const sourceId = editingId || crypto.randomUUID();
+    setIsSaving(true);
+    setError(null);
 
-    // Helper to detect and fix duplicated URLs (e.g., "urlurl" -> "url")
-    function fixDuplicatedUrl(url: string): string {
-      if (!url || url.length < 2) return url;
-      const half = url.length / 2;
-      if (url.substring(0, half) === url.substring(half)) {
-        console.log('[SourcesTab] Detected duplicated URL, fixing:', url.substring(0, half));
-        return url.substring(0, half);
-      }
-      return url;
-    }
+    try {
+      const sourceId = editingId || crypto.randomUUID();
 
-    const xtreamCatchup = formData.type === 'm3u' && formData.xtreamCatchupUrl.trim()
-      ? {
-          url: formData.xtreamCatchupUrl.trim(),
-          username: formData.xtreamCatchupUsername.trim(),
-          password: formData.xtreamCatchupPassword.trim(),
+      // Helper to detect and fix duplicated URLs (e.g., "urlurl" -> "url")
+      function fixDuplicatedUrl(url: string): string {
+        if (!url || url.length < 2) return url;
+        const half = url.length / 2;
+        if (url.substring(0, half) === url.substring(half)) {
+          console.log('[SourcesTab] Detected duplicated URL, fixing:', url.substring(0, half));
+          return url.substring(0, half);
         }
-      : undefined;
-
-    const source: Source = {
-      id: sourceId,
-      name: formData.name.trim(),
-      type: formData.type,
-      url: importedM3U ? `imported:${formData.name.trim()}` : formData.url.trim(),
-      enabled: true,
-      username: formData.type === 'xtream' ? formData.username.trim() : undefined,
-      password: formData.type === 'xtream' ? formData.password.trim() : undefined,
-      mac: formData.type === 'stalker' ? formData.mac.trim() : undefined,
-      auto_load_epg: formData.autoLoadEpg,
-      live_tv_only: formData.liveTvOnly,
-      vod_only: formData.vodOnly,
-      epg_url: fixDuplicatedUrl(formData.epgUrl.trim()) || undefined,
-      additional_epg_urls: formData.additionalEpgUrls.length > 0 ? formData.additionalEpgUrls : undefined,
-      user_agent: formData.userAgent.trim() || undefined,
-      epg_timeshift_hours: formData.epgTimeshiftHours || undefined,
-      backup_macs: formData.type === 'stalker' && formData.backupMacs.length > 0 ? formData.backupMacs : undefined,
-      backup_credentials: formData.type === 'xtream' && formData.backupCredentials.length > 0 ? formData.backupCredentials : undefined,
-      backup_urls: formData.backupUrls.length > 0 ? formData.backupUrls : undefined,
-      display_order: formData.display_order,
-      advanced_epg_matching: formData.advancedEpgMatching || undefined,
-      disable_short_epg: formData.type === 'stalker' ? formData.disableShortEpg : undefined,
-      ...(xtreamCatchup ? { xtream_catchup: xtreamCatchup } : {}),
-    };
-
-    console.log('[SourcesTab] Saving source with UA:', source.user_agent);
-    console.log('[SourcesTab] Saving source epg_url:', source.epg_url, 'length:', source.epg_url?.length);
-
-    // If swap occurred, trigger resync after save
-    const needsResync = formData.pendingSwap;
-
-    const result = await window.storage.saveSource(source);
-    if (result.error) {
-      setError(result.error);
-      return;
-    }
-
-    // For file imports, store channels directly in the database
-    if (importedM3U) {
-      const parsed = parseM3U(importedM3U.rawContent, sourceId);
-
-      // If Xtream catchup is configured, enrich channels with catchup data
-      if (xtreamCatchup) {
-        try {
-          const { enrichM3uWithXtreamCatchup } = await import('../../db/sync');
-          const enrichedChannels = await enrichM3uWithXtreamCatchup(
-            source as any,
-            parsed.channels,
-            () => {}
-          );
-          (parsed as any).channels = enrichedChannels;
-        } catch (err) {
-          console.warn('[SourcesTab] Failed to enrich imported M3U with Xtream catchup:', err);
-        }
+        return url;
       }
 
-      await db.transaction('rw', [db.channels, db.categories, db.sourcesMeta], async () => {
-        if (parsed.channels.length > 0) {
-          // Cast to any to bypass Channel vs StoredChannel type mismatch
-          await db.channels.bulkPut(parsed.channels as any[]);
+      const xtreamCatchup = formData.type === 'm3u' && formData.xtreamCatchupUrl.trim()
+        ? {
+            url: formData.xtreamCatchupUrl.trim(),
+            username: formData.xtreamCatchupUsername.trim(),
+            password: formData.xtreamCatchupPassword.trim(),
+          }
+        : undefined;
+
+      const source: Source = {
+        id: sourceId,
+        name: formData.name.trim(),
+        type: formData.type,
+        url: importedM3U ? `imported:${formData.name.trim()}` : formData.url.trim(),
+        enabled: true,
+        username: formData.type === 'xtream' ? formData.username.trim() : undefined,
+        password: formData.type === 'xtream' ? formData.password.trim() : undefined,
+        mac: formData.type === 'stalker' ? formData.mac.trim() : undefined,
+        auto_load_epg: formData.autoLoadEpg,
+        live_tv_only: formData.liveTvOnly,
+        vod_only: formData.vodOnly,
+        epg_url: fixDuplicatedUrl(formData.epgUrl.trim()) || undefined,
+        additional_epg_urls: formData.additionalEpgUrls.length > 0 ? formData.additionalEpgUrls : undefined,
+        user_agent: formData.userAgent.trim() || undefined,
+        epg_timeshift_hours: formData.epgTimeshiftHours || undefined,
+        backup_macs: formData.type === 'stalker' && formData.backupMacs.length > 0 ? formData.backupMacs : undefined,
+        backup_credentials: formData.type === 'xtream' && formData.backupCredentials.length > 0 ? formData.backupCredentials : undefined,
+        backup_urls: formData.backupUrls.length > 0 ? formData.backupUrls : undefined,
+        display_order: formData.display_order,
+        advanced_epg_matching: formData.advancedEpgMatching || undefined,
+        disable_short_epg: formData.type === 'stalker' ? formData.disableShortEpg : undefined,
+        ...(xtreamCatchup ? { xtream_catchup: xtreamCatchup } : {}),
+      };
+
+      console.log('[SourcesTab] Saving source with UA:', source.user_agent);
+      console.log('[SourcesTab] Saving source epg_url:', source.epg_url, 'length:', source.epg_url?.length);
+
+      // If swap occurred, trigger resync after save
+      const needsResync = formData.pendingSwap;
+
+      const result = await window.storage.saveSource(source);
+      if (result.error) {
+        setError(result.error);
+        return;
+      }
+
+      // For file imports, store channels directly in the database
+      if (importedM3U) {
+        const parsed = parseM3U(importedM3U.rawContent, sourceId);
+
+        // If Xtream catchup is configured, enrich channels with catchup data
+        if (xtreamCatchup) {
+          try {
+            const { enrichM3uWithXtreamCatchup } = await import('../../db/sync');
+            const enrichedChannels = await enrichM3uWithXtreamCatchup(
+              source as any,
+              parsed.channels,
+              () => {}
+            );
+            (parsed as any).channels = enrichedChannels;
+          } catch (err) {
+            console.warn('[SourcesTab] Failed to enrich imported M3U with Xtream catchup:', err);
+          }
         }
-        if (parsed.categories.length > 0) {
-          await db.categories.bulkPut(parsed.categories);
-        }
-        await db.sourcesMeta.put({
-          source_id: sourceId,
-          epg_url: parsed.epgUrl ?? undefined,
-          last_synced: new Date(),
-          channel_count: parsed.channels.length,
-          category_count: parsed.categories.length,
+
+        await db.transaction('rw', [db.channels, db.categories, db.sourcesMeta], async () => {
+          if (parsed.channels.length > 0) {
+            // Cast to any to bypass Channel vs StoredChannel type mismatch
+            await db.channels.bulkPut(parsed.channels as any[]);
+          }
+          if (parsed.categories.length > 0) {
+            await db.categories.bulkPut(parsed.categories);
+          }
+          await db.sourcesMeta.put({
+            source_id: sourceId,
+            epg_url: parsed.epgUrl ?? undefined,
+            last_synced: new Date(),
+            channel_count: parsed.channels.length,
+            category_count: parsed.categories.length,
+          });
         });
-      });
-    }
-
-    setShowAddForm(false);
-    setFormData(emptyForm);
-    setEditingId(null);
-    setImportedM3U(null);
-    onSourcesChange();
-    incrementVersion(); // Notify listeners of new source
-
-    // Immediately apply the source-level EPG timeshift to sourcesMeta so the
-    // programs_effective view picks it up without requiring a full resync.
-    // The view JOINs sourcesMeta live on every query, so this is instant.
-    if (editingId) {
-      try {
-        const dbInstance = await (db as any).dbPromise;
-        await dbInstance.execute(
-          `UPDATE sourcesMeta SET epg_timeshift_hours = $1 WHERE source_id = $2`,
-          [source.epg_timeshift_hours ?? 0, sourceId]
-        );
-        // Notify all program hooks (useCurrentProgram, usePrograms, useProgramsInRange,
-        // useAllPrograms) to re-run so the shifted times appear immediately.
-        dbEvents.notify('programs', 'update');
-      } catch (e) {
-        // sourcesMeta row may not exist yet for new sources — harmless, sync will create it
-        console.warn('[SourcesTab] Could not update sourcesMeta epg_timeshift_hours:', e);
       }
-    }
 
-    // Trigger auto-resync if swap occurred
-    if (needsResync) {
-      console.log('[SourcesTab] Triggering auto-resync due to credential swap');
-      // Pass the updated source object directly to avoid race conditions
-      setTimeout(() => handleSourceSync(sourceId, source), 100);
+      setShowAddForm(false);
+      setFormData(emptyForm);
+      setEditingId(null);
+      setImportedM3U(null);
+      onSourcesChange();
+      incrementVersion(); // Notify listeners of new source
+
+      // Immediately apply the source-level EPG timeshift to sourcesMeta so the
+      // programs_effective view picks it up without requiring a full resync.
+      // The view JOINs sourcesMeta live on every query, so this is instant.
+      if (editingId) {
+        try {
+          const dbInstance = await (db as any).dbPromise;
+          await dbInstance.execute(
+            `UPDATE sourcesMeta SET epg_timeshift_hours = $1 WHERE source_id = $2`,
+            [source.epg_timeshift_hours ?? 0, sourceId]
+          );
+          // Notify all program hooks (useCurrentProgram, usePrograms, useProgramsInRange,
+          // useAllPrograms) to re-run so the shifted times appear immediately.
+          dbEvents.notify('programs', 'update');
+        } catch (e) {
+          // sourcesMeta row may not exist yet for new sources — harmless, sync will create it
+          console.warn('[SourcesTab] Could not update sourcesMeta epg_timeshift_hours:', e);
+        }
+      }
+
+      // Trigger auto-resync if swap occurred
+      if (needsResync) {
+        console.log('[SourcesTab] Triggering auto-resync due to credential swap');
+        // Pass the updated source object directly to avoid race conditions
+        setTimeout(() => handleSourceSync(sourceId, source), 100);
+      }
+    } catch (err: any) {
+      console.error('[SourcesTab] Error saving source:', err);
+      setError(err?.message || 'An error occurred while saving the source');
+    } finally {
+      setIsSaving(false);
     }
   }
 
@@ -2084,11 +2096,11 @@ export function SourcesTab({
             </div>
 
             <div className="form-actions">
-              <button type="button" className="cancel-btn" onClick={handleCancel}>
+              <button type="button" className="cancel-btn" onClick={handleCancel} disabled={isSaving}>
                 Cancel
               </button>
-              <button type="submit" className="save-btn">
-                {editingId ? 'Save Changes' : 'Add Source'}
+              <button type="submit" className="save-btn" disabled={isSaving}>
+                {isSaving ? 'Saving...' : (editingId ? 'Save Changes' : 'Add Source')}
               </button>
             </div>
           </form>
