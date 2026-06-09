@@ -2649,6 +2649,10 @@ function App() {
         channel={currentChannel}
         visible={isChannelInfoOverlayVisible}
         hideDescription={channelInfoOverlayHideDescription}
+        isCatchup={isCatchup}
+        catchupInfo={catchupInfo}
+        position={position}
+        duration={duration}
       />
 
       {/* Multiview Layout */}

@@ -8,6 +8,16 @@ interface ChannelInfoOverlayProps {
   channel: StoredChannel | null;
   visible: boolean;
   hideDescription?: boolean;
+  isCatchup?: boolean;
+  catchupInfo?: {
+    channelId: string;
+    programTitle: string;
+    startTime: number;
+    duration: number; // in minutes
+    programDesc?: string;
+  } | null;
+  position?: number;
+  duration?: number;
 }
 
 function formatTime(date: Date): string {
@@ -18,9 +28,21 @@ export function ChannelInfoOverlay({
   channel,
   visible,
   hideDescription,
+  isCatchup = false,
+  catchupInfo = null,
+  position = 0,
+  duration = 0,
 }: ChannelInfoOverlayProps) {
-  const currentProgram = useCurrentProgram(channel?.stream_id ?? null);
+  const currentProgram = useCurrentProgram(isCatchup ? null : (channel?.stream_id ?? null));
   const [showDescription, setShowDescription] = useState(false);
+
+  // Construct derived program details when playing catchup
+  const activeProgram = isCatchup && catchupInfo ? {
+    title: catchupInfo.programTitle,
+    start: new Date(catchupInfo.startTime),
+    end: new Date(catchupInfo.startTime + catchupInfo.duration * 60000),
+    description: catchupInfo.programDesc,
+  } : currentProgram;
 
   // Progress tracking for live TV - updates every second
   const [progress, setProgress] = useState(0);
@@ -37,6 +59,25 @@ export function ChannelInfoOverlay({
 
   // Track program progress and time remaining
   useEffect(() => {
+    if (isCatchup && catchupInfo) {
+      const updateCatchupProgress = () => {
+        const pct = duration > 0 ? Math.min(100, Math.max(0, (position / duration) * 100)) : 0;
+        setProgress(pct);
+
+        const remainingSecs = Math.max(0, duration - position);
+        const remainingMins = Math.ceil(remainingSecs / 60);
+        if (remainingMins >= 60) {
+          const hrs = Math.floor(remainingMins / 60);
+          const mins = remainingMins % 60;
+          setTimeRemaining(`${hrs}h ${mins}m left`);
+        } else {
+          setTimeRemaining(`${remainingMins}m left`);
+        }
+      };
+      updateCatchupProgress();
+      return;
+    }
+
     if (!currentProgram) {
       setProgress(0);
       setTimeRemaining('');
@@ -47,10 +88,10 @@ export function ChannelInfoOverlay({
       const now = new Date().getTime();
       const start = new Date(currentProgram.raw_start ?? currentProgram.start).getTime();
       const end = new Date(currentProgram.end).getTime();
-      const duration = end - start;
+      const durationMs = end - start;
       const elapsed = now - start;
 
-      const pct = Math.min(100, Math.max(0, (elapsed / duration) * 100));
+      const pct = Math.min(100, Math.max(0, (elapsed / durationMs) * 100));
       setProgress(pct);
 
       // Calculate time remaining
@@ -68,7 +109,7 @@ export function ChannelInfoOverlay({
     updateProgress();
     const interval = setInterval(updateProgress, 1000);
     return () => clearInterval(interval);
-  }, [currentProgram]);
+  }, [currentProgram, isCatchup, catchupInfo, position, duration]);
 
   if (!channel) return null;
 
@@ -101,17 +142,17 @@ export function ChannelInfoOverlay({
         </div>
 
         {/* Program info */}
-        {currentProgram && (
+        {activeProgram && (
           <div className={`cio-program ${showDescription ? 'show' : ''}`}>
             {/* Program title */}
-            <div className="cio-program-title" title={currentProgram.title}>
-              {currentProgram.title}
+            <div className="cio-program-title" title={activeProgram.title}>
+              {activeProgram.title}
             </div>
 
             {/* Time row: start - end | time remaining */}
             <div className="cio-time-row">
               <span className="cio-time-range">
-                {formatTime(new Date(currentProgram.start))} - {formatTime(new Date(currentProgram.end))}
+                {formatTime(new Date(activeProgram.start))} - {formatTime(new Date(activeProgram.end))}
               </span>
               {timeRemaining && (
                 <span className="cio-time-remaining">{timeRemaining}</span>
@@ -127,9 +168,9 @@ export function ChannelInfoOverlay({
             </div>
 
             {/* Description */}
-            {!hideDescription && currentProgram.description && (
-              <div className="cio-program-desc" title={currentProgram.description}>
-                {currentProgram.description}
+            {!hideDescription && activeProgram.description && (
+              <div className="cio-program-desc" title={activeProgram.description}>
+                {activeProgram.description}
               </div>
             )}
           </div>

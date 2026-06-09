@@ -10,7 +10,7 @@ interface ProgramBlockProps {
   windowEnd: Date;
   pixelsPerHour: number;
   onClick?: () => void;
-  onPlayCatchup?: (channel: StoredChannel, programTitle: string, startTimeMs: number, durationMinutes: number) => void;
+  onPlayCatchup?: (channel: StoredChannel, programTitle: string, startTimeMs: number, durationMinutes: number, programDesc?: string) => void;
   onContextMenu?: (e: React.MouseEvent) => void;
   isRecording?: boolean;
   isScheduled?: boolean;
@@ -100,7 +100,7 @@ export const ProgramBlock = memo(function ProgramBlock({
       const rawStartMs = program.raw_start 
         ? new Date(program.raw_start).getTime() 
         : progStartMs;
-      onPlayCatchup(channel, program.title, rawStartMs, durationMins);
+      onPlayCatchup(channel, program.title, rawStartMs, durationMins, program.description);
     } else if (onClick) {
       onClick(); // Default (plays live channel)
     }

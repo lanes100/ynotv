@@ -249,6 +249,7 @@ export interface PlaybackState {
     programTitle: string;
     startTime: number;
     duration: number;
+    programDesc?: string;
   } | null;
 
   // Refs
@@ -271,8 +272,8 @@ export interface PlaybackState {
   setVolume: (volume: number) => void;
   setCurrentChannel: (channel: StoredChannel | null) => void;
   handlePlayChannel: (channel: StoredChannel, autoSwitched?: boolean) => void;
-  handlePlayCatchup: (channel: StoredChannel, programTitle: string, startTimeMs: number, durationMinutes: number) => Promise<void>;
-  handleCatchupSeek: (channel: StoredChannel, programTitle: string, startTimeMs: number, durationMinutes: number, seekSeconds: number) => Promise<void>;
+  handlePlayCatchup: (channel: StoredChannel, programTitle: string, startTimeMs: number, durationMinutes: number, programDesc?: string) => Promise<void>;
+  handleCatchupSeek: (channel: StoredChannel, programTitle: string, startTimeMs: number, durationMinutes: number, seekSeconds: number, programDesc?: string) => Promise<void>;
   handlePlayVod: (info: VodPlayInfo, onCloseView?: () => void) => Promise<void>;
   handlePlayRecording: (recording: import('../db').DvrRecording, onCloseView?: () => void) => Promise<void>;
   handleStop: () => Promise<void>;
@@ -336,6 +337,7 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
     programTitle: string;
     startTime: number;
     duration: number;
+    programDesc?: string;
   } | null>(null);
 
   // Retry state for Live TV stream recovery
@@ -1504,7 +1506,7 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
     }
   }, [playing, duration, !!vodInfo, startAutoSelectPolling]);
 
-  const handlePlayCatchup = useCallback(async (channel: StoredChannel, programTitle: string, startTimeMs: number, durationMinutes: number) => {
+  const handlePlayCatchup = useCallback(async (channel: StoredChannel, programTitle: string, startTimeMs: number, durationMinutes: number, programDesc?: string) => {
     // Save VOD progress before switching to catchup
     if (vodInfo && position > 0 && duration > 0) {
       const mediaId = vodInfo.mediaId || (vodInfo.source_id && vodInfo.url
@@ -1595,15 +1597,15 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
       setError(result.error ?? 'Failed to load catchup stream');
     } else {
       setCurrentChannel(channel);
-      setCatchupInfo({ channelId: channel.stream_id, programTitle, startTime: startTimeMs, duration: durationMinutes });
+      setCatchupInfo({ channelId: channel.stream_id, programTitle, startTime: startTimeMs, duration: durationMinutes, programDesc });
       setPlaying(true);
     }
   }, [vodInfo, position, duration]);
 
-  const handleCatchupSeek = useCallback(async (channel: StoredChannel, programTitle: string, startTimeMs: number, durationMinutes: number, seekSeconds: number) => {
+  const handleCatchupSeek = useCallback(async (channel: StoredChannel, programTitle: string, startTimeMs: number, durationMinutes: number, seekSeconds: number, programDesc?: string) => {
     seekingRef.current = true;
     pendingCatchupSeekRef.current = seekSeconds;
-    await handlePlayCatchup(channel, programTitle, startTimeMs, durationMinutes);
+    await handlePlayCatchup(channel, programTitle, startTimeMs, durationMinutes, programDesc);
     setTimeout(() => { seekingRef.current = false; }, 200);
   }, [handlePlayCatchup]);
 

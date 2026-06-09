@@ -44,7 +44,7 @@ interface ChannelRowData {
   pixelsPerHour: number;
   visibleHours: number;
   handleChannelClick: (channel: StoredChannel) => void;
-  onPlayCatchup?: (channel: StoredChannel, programTitle: string, startTimeMs: number, durationMinutes: number) => void;
+  onPlayCatchup?: (channel: StoredChannel, programTitle: string, startTimeMs: number, durationMinutes: number, programDesc?: string) => void;
   handleFavoriteToggle: () => void;
   categoryId: string | null;
   activeRecordings: import('../hooks/useActiveRecordings').RecordingInfo[];
@@ -95,7 +95,7 @@ interface ChannelPanelProps {
   visible: boolean;
   categoryStripOpen: boolean;
   onPlayChannel: (channel: StoredChannel) => void;
-  onPlayCatchup?: (channel: StoredChannel, programTitle: string, startTimeMs: number, durationMinutes: number) => void;
+  onPlayCatchup?: (channel: StoredChannel, programTitle: string, startTimeMs: number, durationMinutes: number, programDesc?: string) => void;
   onClose: () => void;
   error?: string | null;
   isSearchMode?: boolean;
@@ -134,6 +134,7 @@ interface ChannelPanelProps {
     programTitle: string;
     startTime: number;
     duration: number;
+    programDesc?: string;
   } | null;
   onStop?: () => void;
   onToggleMute?: () => void;
@@ -145,7 +146,7 @@ interface ChannelPanelProps {
   onToggleFullscreen?: () => void;
   onShowSubtitleModal?: () => void;
   onShowAudioModal?: () => void;
-  onCatchupSeek?: (channel: StoredChannel, programTitle: string, startTimeMs: number, durationMinutes: number, seekSeconds: number) => void;
+  onCatchupSeek?: (channel: StoredChannel, programTitle: string, startTimeMs: number, durationMinutes: number, seekSeconds: number, programDesc?: string) => void;
   timeshiftEnabled?: boolean;
   timeshiftState?: {
     cacheStart: number;
@@ -1233,24 +1234,58 @@ export function ChannelPanel({
   const selectedProgram = useMemo(() => {
     if (!selectedChannel) return null;
     const channelPrograms = programs.get(selectedChannel.stream_id) || [];
+    
+    // Check if we are playing catchup on the selected channel
+    if (isCatchup && catchupInfo && catchupInfo.channelId === selectedChannel.stream_id) {
+      const targetStartMs = catchupInfo.startTime;
+      const found = channelPrograms.find((p: StoredProgram) => {
+        const pStartMs = p.raw_start
+          ? new Date(p.raw_start).getTime()
+          : (p.start instanceof Date ? p.start.getTime() : new Date(p.start).getTime());
+        return Math.abs(pStartMs - targetStartMs) < 60000;
+      });
+      if (found) return found;
+
+      // Fallback: construct a mock program matching catchupInfo
+      const start = new Date(catchupInfo.startTime);
+      const end = new Date(catchupInfo.startTime + catchupInfo.duration * 60000);
+      return {
+        id: 'mock_catchup',
+        channel_id: selectedChannel.stream_id,
+        stream_id: selectedChannel.stream_id,
+        source_id: selectedChannel.source_id,
+        title: catchupInfo.programTitle,
+        start,
+        end,
+        description: catchupInfo.programDesc || '',
+      } as unknown as StoredProgram;
+    }
+
     const now = currentTime.getTime();
     return channelPrograms.find((p: StoredProgram) => {
       const start = p.start instanceof Date ? p.start.getTime() : new Date(p.start).getTime();
       const end = p.end instanceof Date ? p.end.getTime() : new Date(p.end).getTime();
       return now >= start && now < end;
     });
-  }, [selectedChannel, programs, currentTime]);
+  }, [selectedChannel, programs, currentTime, isCatchup, catchupInfo]);
 
   // Calculate progress for the progress bar
   const progressPercent = useMemo(() => {
     if (!selectedProgram) return 0;
+    
+    // Check if we are playing catchup on the selected channel
+    if (isCatchup && catchupInfo && catchupInfo.channelId === selectedChannel?.stream_id) {
+      if (duration <= 0) return 0;
+      return Math.min(100, Math.max(0, (position / duration) * 100));
+    }
+
     const now = currentTime.getTime();
     const start = selectedProgram.start instanceof Date ? selectedProgram.start.getTime() : new Date(selectedProgram.start).getTime();
     const end = selectedProgram.end instanceof Date ? selectedProgram.end.getTime() : new Date(selectedProgram.end).getTime();
     const total = end - start;
     if (total <= 0) return 0;
     return Math.min(100, Math.max(0, ((now - start) / total) * 100));
-  }, [selectedProgram, currentTime]);
+  }, [selectedProgram, currentTime, isCatchup, catchupInfo, selectedChannel, position, duration]);
 
   // Ref for the video preview container (now points to video sub-container)
   const previewRef = useRef<HTMLDivElement>(null);

@@ -21,7 +21,7 @@ interface ChannelRowProps {
   pixelsPerHour: number;
   visibleHours: number;
   onPlay: () => void;
-  onPlayCatchup?: (channel: StoredChannel, programTitle: string, startTimeMs: number, durationMinutes: number) => void;
+  onPlayCatchup?: (channel: StoredChannel, programTitle: string, startTimeMs: number, durationMinutes: number, programDesc?: string) => void;
   onFavoriteToggle?: () => void;
   categoryId?: string | null;
   activeRecordings?: RecordingInfo[];

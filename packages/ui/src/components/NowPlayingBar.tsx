@@ -28,6 +28,7 @@ interface NowPlayingBarProps {
     programTitle: string;
     startTime: number;
     duration: number; // in minutes
+    programDesc?: string;
   } | null;
   channelInfoOverlayEnabled?: boolean;
   onTogglePlay: () => void;
@@ -45,7 +46,7 @@ interface NowPlayingBarProps {
   onToggleFullscreen: () => void;
   onShowSubtitleModal: () => void;
   onShowAudioModal: () => void;
-  onCatchupSeek?: (channel: StoredChannel, programTitle: string, startTimeMs: number, durationMinutes: number, seekSeconds: number) => void;
+  onCatchupSeek?: (channel: StoredChannel, programTitle: string, startTimeMs: number, durationMinutes: number, seekSeconds: number, programDesc?: string) => void;
   onGoToLive?: () => void;
   timeshiftEnabled?: boolean;
   timeshiftState?: {
@@ -361,7 +362,7 @@ export function NowPlayingBar({
       const elapsedMins = Math.max(1, Math.ceil((Date.now() - startMs) / 60000));
       const seekSeconds = ratio * (elapsedMins * 60);
 
-      onCatchupSeek(channel, currentProgram.title, startMs, elapsedMins, seekSeconds);
+      onCatchupSeek(channel, currentProgram.title, startMs, elapsedMins, seekSeconds, currentProgram.description);
     }
   }, [isVod, isCatchup, currentProgram, channel, onSeek, onCatchupSeek, getSeekPosition]);
 
@@ -460,7 +461,7 @@ export function NowPlayingBar({
           const elapsedMins = Math.max(1, Math.ceil((Date.now() - startMs) / 60000));
           const seekSeconds = ratio * (elapsedMins * 60);
 
-          onCatchupSeek(channel, currentProgram.title, startMs, elapsedMins, seekSeconds);
+          onCatchupSeek(channel, currentProgram.title, startMs, elapsedMins, seekSeconds, currentProgram.description);
         }
       } catch (err) { /* ignore */ }
     };
@@ -552,12 +553,12 @@ export function NowPlayingBar({
             </div>
 
               {/* Divider + Description (VOD plot or TV program description) */}
-              {(isVod ? vodInfo?.plot : currentProgram?.description) && (
+              {(isVod ? vodInfo?.plot : (isCatchup ? catchupInfo?.programDesc : currentProgram?.description)) && (
                 <>
                   <div className="npb-divider" />
                   <div className="npb-description-section">
-                    <span className="npb-program-desc" title={isVod ? vodInfo?.plot : currentProgram?.description}>
-                      {isVod ? vodInfo?.plot : currentProgram?.description}
+                    <span className="npb-program-desc" title={isVod ? vodInfo?.plot : (isCatchup ? catchupInfo?.programDesc : currentProgram?.description)}>
+                      {isVod ? vodInfo?.plot : (isCatchup ? catchupInfo?.programDesc : currentProgram?.description)}
                     </span>
                   </div>
                 </>
