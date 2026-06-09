@@ -131,9 +131,11 @@ function App() {
     theme,
     shortcuts,
     categoriesHidden,
+    categoriesHiddenTransparent,
     setTheme,
     setShortcuts,
     setCategoriesHidden,
+    setCategoriesHiddenTransparent,
     setAdvancedSearchScope,
     setAdvancedSearchSourceIds,
     setAdvancedSearchCategoryIds,
@@ -1839,6 +1841,7 @@ function App() {
     showSettingsPopup,
     categoriesOpen,
     categoriesHidden,
+    categoriesHiddenTransparent,
     position,
     currentChannels,
     currentChannel,
@@ -2816,11 +2819,19 @@ function App() {
         }}
         onClose={() => {
           setCategoriesOpen(false);
-          setCategoriesHidden(true);
+          if (guideTransparent) {
+            setCategoriesHiddenTransparent(true);
+          } else {
+            setCategoriesHidden(true);
+          }
         }}
         onShow={() => {
           setCategoriesOpen(true);
-          setCategoriesHidden(false);
+          if (guideTransparent) {
+            setCategoriesHiddenTransparent(false);
+          } else {
+            setCategoriesHidden(false);
+          }
         }}
         isLiveTV={activeView === 'guide'}
       />

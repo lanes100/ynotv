@@ -56,6 +56,7 @@ export interface AppSettings {
 
   // UI visibility
   categoriesHidden: boolean;
+  categoriesHiddenTransparent: boolean;
   overlayAutohideTimer: number;
 
   // Widget scale
@@ -74,6 +75,7 @@ export interface AppSettings {
   setTheme: (theme: ThemeId) => void;
   setShortcuts: (shortcuts: ShortcutsMap) => void;
   setCategoriesHidden: (hidden: boolean) => void;
+  setCategoriesHiddenTransparent: (hidden: boolean) => void;
   setOverlayAutohideTimer: (seconds: number) => void;
   setAdvancedSearchScope: (scope: 'channels' | 'epg' | 'both') => void;
   setAdvancedSearchSourceIds: (ids: string[]) => void;
@@ -170,6 +172,7 @@ export function useAppSettings(): AppSettings {
 
   // UI visibility
   const [categoriesHidden, setCategoriesHiddenState] = useState(false);
+  const [categoriesHiddenTransparent, setCategoriesHiddenTransparentState] = useState(false);
   const [overlayAutohideTimer, setOverlayAutohideTimerState] = useState(3);
 
   // Widget scale (1 = 100%)
@@ -242,6 +245,7 @@ export function useAppSettings(): AppSettings {
           setChannelInfoOverlayHideDescriptionState(result.data.channelInfoOverlayHideDescription ?? false);
           setTransparentGuideOnZapState(result.data.transparentGuideOnZap ?? false);
           setCategoriesHiddenState(result.data.categoriesHidden ?? false);
+          setCategoriesHiddenTransparentState(result.data.categoriesHiddenTransparent ?? false);
           setOverlayAutohideTimerState(result.data.overlayAutohideTimer ?? 3);
           setPopoutStopMainState(result.data.popoutStopMain ?? true);
           setPopoutAlwaysOnTopState(result.data.popoutAlwaysOnTop ?? false);
@@ -341,6 +345,17 @@ export function useAppSettings(): AppSettings {
         await window.storage.updateSettings({ categoriesHidden: hidden });
       } catch (e) {
         console.error('[useAppSettings] Failed to save categoriesHidden:', e);
+      }
+    }
+  }, []);
+
+  const setCategoriesHiddenTransparent = useCallback(async (hidden: boolean) => {
+    setCategoriesHiddenTransparentState(hidden);
+    if (window.storage) {
+      try {
+        await window.storage.updateSettings({ categoriesHiddenTransparent: hidden });
+      } catch (e) {
+        console.error('[useAppSettings] Failed to save categoriesHiddenTransparent:', e);
       }
     }
   }, []);
@@ -648,6 +663,7 @@ export function useAppSettings(): AppSettings {
     theme,
     shortcuts,
     categoriesHidden,
+    categoriesHiddenTransparent,
     navHiddenTabs,
     overlayAutohideTimer,
     widgetScale,
@@ -658,6 +674,7 @@ export function useAppSettings(): AppSettings {
     setTheme,
     setShortcuts,
     setCategoriesHidden,
+    setCategoriesHiddenTransparent,
     setOverlayAutohideTimer,
     setAdvancedSearchScope,
     setAdvancedSearchSourceIds,

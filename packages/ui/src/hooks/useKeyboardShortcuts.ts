@@ -23,6 +23,7 @@ export interface UseKeyboardShortcutsOptions {
     showSettingsPopup: boolean;
     categoriesOpen: boolean;
     categoriesHidden: boolean;
+    categoriesHiddenTransparent: boolean;
     position: number;
     currentChannels: StoredChannel[];
     currentChannel: StoredChannel | null;
@@ -84,6 +85,7 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions): void
                 showSettingsPopup,
                 categoriesOpen,
                 categoriesHidden,
+                categoriesHiddenTransparent,
                 position,
                 currentChannels,
                 currentChannel,
@@ -158,7 +160,7 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions): void
                     // Open guide in transparent mode
                     setGuideTransparent(true);
                     setActiveView('guide');
-                    setCategoriesOpen(!categoriesHidden);
+                    setCategoriesOpen(!categoriesHiddenTransparent);
                 }
             } else if (matches('toggleCategories', e.key)) {
                 setCategoriesOpen((open) => !open);
