@@ -1139,6 +1139,9 @@ export async function clearAllCachedData(): Promise<void> {
   // means BEGIN/COMMIT may run on different connections, causing "no transaction active" errors.
   // .clear() uses the writeLock mutex so each DELETE runs safely and notifies reactive queries.
 
+  // 0. Backup user customizations first (enabled/disabled states, favorites, aliases, display order, etc.)
+  await backupUserCustomizations();
+
   // IMPORTANT: Delete in order of foreign key dependencies (children first, parents last)
   // dvr_recordings -> dvr_schedules (FK on schedule_id)
   // dvr_schedules -> channels, sourcesMeta (FK on source_id, channel_id)
@@ -1170,6 +1173,169 @@ export async function clearAllCachedData(): Promise<void> {
   // 6. Vacuum the database to reclaim disk space
   // VACUUM rebuilds the database file, repacking it into a minimal amount of disk space
   await db.execute('VACUUM');
+}
+
+interface CustomizationBackup {
+  channels: Array<{
+    stream_id: string;
+    enabled?: boolean;
+    is_favorite?: boolean;
+    alias?: string;
+    fav_order?: number;
+    display_order?: number;
+  }>;
+  categories: Array<{
+    category_id: string;
+    enabled?: boolean;
+    alias?: string;
+    display_order?: number;
+    filter_words?: any;
+  }>;
+  vodCategories: Array<{
+    category_id: string;
+    enabled?: boolean;
+    display_order?: number;
+  }>;
+}
+
+/** Backup user customizations to prefs table */
+export async function backupUserCustomizations(): Promise<void> {
+  try {
+    // 1. Get customized channels: enabled=false, is_favorite=true, or customized alias/display_order/fav_order
+    const customizedChannels = await db.channels
+      .whereRaw("(enabled = 0 OR enabled = 'false' OR is_favorite = 1 OR is_favorite = 'true' OR alias IS NOT NULL OR display_order IS NOT NULL OR fav_order IS NOT NULL)")
+      .toArray();
+
+    // 2. Get customized categories: enabled=false, or customized alias/display_order/filter_words
+    const customizedCategories = await db.categories
+      .whereRaw("(enabled = 0 OR enabled = 'false' OR alias IS NOT NULL OR display_order IS NOT NULL OR filter_words IS NOT NULL)")
+      .toArray();
+
+    // 3. Get customized VOD categories: enabled=false, or customized display_order
+    const customizedVodCategories = await db.vodCategories
+      .whereRaw("(enabled = 0 OR enabled = 'false' OR display_order IS NOT NULL)")
+      .toArray();
+
+    const backup: CustomizationBackup = {
+      channels: customizedChannels.map(c => ({
+        stream_id: c.stream_id,
+        enabled: c.enabled,
+        is_favorite: c.is_favorite,
+        alias: c.alias,
+        fav_order: c.fav_order,
+        display_order: c.display_order
+      })),
+      categories: customizedCategories.map(c => ({
+        category_id: c.category_id,
+        enabled: c.enabled,
+        alias: c.alias,
+        display_order: c.display_order,
+        filter_words: c.filter_words
+      })),
+      vodCategories: customizedVodCategories.map(c => ({
+        category_id: c.category_id,
+        enabled: c.enabled,
+        display_order: c.display_order
+      }))
+    };
+
+    console.log(`[Backup] Backing up customizations: ${backup.channels.length} channels, ${backup.categories.length} categories, ${backup.vodCategories.length} VOD categories`);
+    await db.prefs.put({ key: 'clear_cache_user_customizations_backup', value: JSON.stringify(backup) });
+  } catch (err) {
+    console.error('[Backup] Failed to backup user customizations:', err);
+  }
+}
+
+/** Restore user customizations incrementally from prefs table */
+export async function restoreUserCustomizations(): Promise<void> {
+  try {
+    const backupPref = await db.prefs.get('clear_cache_user_customizations_backup');
+    if (!backupPref || !backupPref.value) return;
+
+    const backup: CustomizationBackup = JSON.parse(backupPref.value);
+    let changed = false;
+
+    // 1. Restore categories
+    if (backup.categories && backup.categories.length > 0) {
+      const remainingCategories: any[] = [];
+      for (const cat of backup.categories) {
+        const dbCat = await db.categories.get(cat.category_id);
+        if (dbCat) {
+          await db.categories.update(cat.category_id, {
+            enabled: cat.enabled,
+            alias: cat.alias,
+            display_order: cat.display_order,
+            filter_words: cat.filter_words
+          });
+          changed = true;
+        } else {
+          remainingCategories.push(cat);
+        }
+      }
+      backup.categories = remainingCategories;
+    }
+
+    // 2. Restore channels
+    if (backup.channels && backup.channels.length > 0) {
+      const remainingChannels: any[] = [];
+      const channelsToRestore = [];
+      for (const ch of backup.channels) {
+        const dbCh = await db.channels.get(ch.stream_id);
+        if (dbCh) {
+          channelsToRestore.push(ch);
+        } else {
+          remainingChannels.push(ch);
+        }
+      }
+
+      if (channelsToRestore.length > 0) {
+        console.log(`[Restore] Restoring customizations for ${channelsToRestore.length} channels`);
+        await Promise.all(channelsToRestore.map(ch => 
+          db.channels.update(ch.stream_id, {
+            enabled: ch.enabled,
+            is_favorite: ch.is_favorite,
+            alias: ch.alias,
+            fav_order: ch.fav_order,
+            display_order: ch.display_order
+          })
+        ));
+        changed = true;
+      }
+      backup.channels = remainingChannels;
+    }
+
+    // 3. Restore VOD categories
+    if (backup.vodCategories && backup.vodCategories.length > 0) {
+      const remainingVodCategories: any[] = [];
+      for (const cat of backup.vodCategories) {
+        const dbCat = await db.vodCategories.get(cat.category_id);
+        if (dbCat) {
+          await db.vodCategories.update(cat.category_id, {
+            enabled: cat.enabled,
+            display_order: cat.display_order
+          });
+          changed = true;
+        } else {
+          remainingVodCategories.push(cat);
+        }
+      }
+      backup.vodCategories = remainingVodCategories;
+    }
+
+    // 4. Save remaining backup or delete if empty
+    const totalRemaining = (backup.channels?.length || 0) + (backup.categories?.length || 0) + (backup.vodCategories?.length || 0);
+    if (totalRemaining > 0) {
+      if (changed) {
+        await db.prefs.put({ key: 'clear_cache_user_customizations_backup', value: JSON.stringify(backup) });
+        console.log(`[Restore] Restored some customizations. Remaining: ${totalRemaining} items in backup.`);
+      }
+    } else {
+      await db.prefs.delete('clear_cache_user_customizations_backup');
+      console.log(`[Restore] All customizations successfully restored and backup cleared!`);
+    }
+  } catch (err) {
+    console.error('[Restore] Failed to restore user customizations:', err);
+  }
 }
 
 

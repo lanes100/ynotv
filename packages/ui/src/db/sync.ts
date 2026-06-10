@@ -1,4 +1,4 @@
-import { db, clearSourceData, clearVodData, type SourceMeta, type StoredProgram, type StoredMovie, type StoredSeries, type StoredEpisode, type VodCategory } from './index';
+import { db, clearSourceData, clearVodData, restoreUserCustomizations, type SourceMeta, type StoredProgram, type StoredMovie, type StoredSeries, type StoredEpisode, type VodCategory } from './index';
 import { fetchAndParseM3U, XtreamClient, StalkerClient } from '@ynotv/local-adapter';
 import type { Source, Channel, Category, Movie, Series } from '@ynotv/core';
 import { useUIStore } from '../stores/uiStore';
@@ -2234,6 +2234,13 @@ async function _doSyncSourceImpl(source: Source, onProgress?: (msg: string) => v
       console.error(`[Sync] TRUNCATE checkpoint failed for ${source.name}:`, err);
     }
 
+    // Restore user customizations if we had a backup
+    try {
+      await restoreUserCustomizations();
+    } catch (err) {
+      console.error('[Sync] Failed to restore user customizations:', err);
+    }
+
     return {
       success: true,
       channelCount: channels.length,
@@ -2688,6 +2695,13 @@ export async function syncVodMovies(
     }
   }
 
+  // Restore user customizations if we had a backup
+  try {
+    await restoreUserCustomizations();
+  } catch (err) {
+    console.error('[Sync] Failed to restore VOD movie customizations:', err);
+  }
+
   return { count: storedMovies.length, categoryCount: vodCategories.length };
 }
 
@@ -2914,6 +2928,13 @@ export async function syncVodSeries(
       await db.vodSeries.bulkDelete(toRemove);
       console.log(`[VOD Series] Removed ${toRemove.length} series (and their episodes) no longer in source`);
     }
+  }
+
+  // Restore user customizations if we had a backup
+  try {
+    await restoreUserCustomizations();
+  } catch (err) {
+    console.error('[Sync] Failed to restore VOD series customizations:', err);
   }
 
   return { count: storedSeries.length, categoryCount: vodCategories.length };
