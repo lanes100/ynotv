@@ -434,7 +434,9 @@ class YnotvDatabase extends SqliteDatabase {
         xmltv_id TEXT,
         series_no INTEGER,
         live INTEGER,
-        is_adult BOOLEAN
+        is_adult BOOLEAN,
+        alias TEXT,
+        xtream_stream_id TEXT
       )`);
 
     // ─── Versioned migrations via PRAGMA user_version ─────────────────────────
@@ -600,7 +602,8 @@ class YnotvDatabase extends SqliteDatabase {
         enabled BOOLEAN,
         display_order INTEGER,
         channel_count INTEGER,
-        filter_words TEXT
+        filter_words TEXT,
+        alias TEXT
       )`);
     await db.execute(`CREATE INDEX IF NOT EXISTS idx_categories_source ON categories(source_id)`);
 
@@ -920,6 +923,11 @@ class YnotvDatabase extends SqliteDatabase {
     // Add enabled and display_order columns to vodCategories
     try { await db.execute(`ALTER TABLE vodCategories ADD COLUMN enabled INTEGER DEFAULT 1`); } catch (e) {}
     try { await db.execute(`ALTER TABLE vodCategories ADD COLUMN display_order INTEGER`); } catch (e) {}
+
+    // Self-healing migrations: Ensure critical columns from standard migrations exist
+    try { await db.execute(`ALTER TABLE categories ADD COLUMN alias TEXT`); } catch (e) {}
+    try { await db.execute(`ALTER TABLE channels ADD COLUMN alias TEXT`); } catch (e) {}
+    try { await db.execute(`ALTER TABLE channels ADD COLUMN xtream_stream_id TEXT`); } catch (e) {}
 
     // ── EPG Editor: Override Tables ───────────────────────────────────────────
 
