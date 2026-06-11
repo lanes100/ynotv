@@ -182,6 +182,7 @@ pub struct EpgParseResult {
     pub matched_programs: usize,
     pub inserted_programs: usize,
     pub unmatched_channels: usize,
+    pub matched_channels: usize,
     pub duration_ms: u64,
     pub bytes_processed: u64,
 }
@@ -202,6 +203,7 @@ pub struct SourceEpgConfig {
 struct SourceParseStats {
     matched_programs: usize,
     unmatched_channels: std::collections::HashSet<String>,
+    matched_channels: std::collections::HashSet<String>,
 }
 
 /// Normalize a channel name for fuzzy matching
@@ -477,6 +479,7 @@ pub async fn stream_parse_epg<R: tauri::Runtime>(
         matched_programs: parser_result.matched_programs,
         inserted_programs: inserter_result.inserted,
         unmatched_channels: parser_result.unmatched_channels,
+        matched_channels: parser_result.matched_channels,
         duration_ms,
         bytes_processed: parser_result.bytes_processed,
     })
@@ -706,10 +709,11 @@ pub async fn stream_parse_epg_multi<R: tauri::Runtime>(
 
         let matched = stats.map(|s| s.matched_programs).unwrap_or(0);
         let unmatched = stats.map(|s| s.unmatched_channels.len()).unwrap_or(0);
+        let matched_ch = stats.map(|s| s.matched_channels.len()).unwrap_or(0);
 
         info!(
-            "[EPG] Multi-source result for {}: {} matched, {} inserted, {} unmatched channels",
-            sid, matched, inserted, unmatched
+            "[EPG] Multi-source result for {}: {} matched, {} inserted, {} unmatched channels, {} matched channels",
+            sid, matched, inserted, unmatched, matched_ch
         );
 
         results.push(EpgParseResult {
@@ -718,6 +722,7 @@ pub async fn stream_parse_epg_multi<R: tauri::Runtime>(
             matched_programs: matched,
             inserted_programs: inserted,
             unmatched_channels: unmatched,
+            matched_channels: matched_ch,
             duration_ms,
             bytes_processed: parse_result.bytes_processed,
         });
@@ -741,6 +746,7 @@ struct StreamingParserResult {
     total_programs: usize,
     matched_programs: usize,
     unmatched_channels: usize,
+    matched_channels: usize,
     bytes_processed: u64,
 }
 
@@ -1195,6 +1201,7 @@ async fn parse_and_stream_batches<R: tauri::Runtime>(
     let mut total_programs = 0usize;
     let mut matched_programs = 0usize;
     let mut unmatched_channels: std::collections::HashSet<String> = std::collections::HashSet::new();
+    let mut matched_channels_set: std::collections::HashSet<String> = std::collections::HashSet::new();
     let mut batch = Vec::with_capacity(BATCH_SIZE);
     let mut last_progress_update = std::time::Instant::now();
 
@@ -1285,6 +1292,7 @@ async fn parse_and_stream_batches<R: tauri::Runtime>(
                                 // Add a copy of the program for each matching stream_id
                                 // This allows primary + backup streams to all get EPG data
                                 for stream_id in stream_ids {
+                                    matched_channels_set.insert(stream_id.clone());
                                     let mut program_copy = program.clone();
                                     program_copy.channel_id = stream_id.clone();
                                     // Normalize timestamps to UTC for storage
@@ -1369,16 +1377,18 @@ async fn parse_and_stream_batches<R: tauri::Runtime>(
     drop(batch_tx);
 
     info!(
-        "[EPG] Parser finished: {} programs, {} matched, {} unmatched channels",
+        "[EPG] Parser finished: {} programs, {} matched, {} unmatched channels, {} matched channels",
         total_programs,
         matched_programs,
-        unmatched_channels.len()
+        unmatched_channels.len(),
+        matched_channels_set.len()
     );
 
     Ok(StreamingParserResult {
         total_programs,
         matched_programs,
         unmatched_channels: unmatched_channels.len(),
+        matched_channels: matched_channels_set.len(),
         bytes_processed: bytes_downloaded,
     })
 }
@@ -1416,6 +1426,7 @@ async fn parse_and_stream_batches_multi<R: tauri::Runtime>(
         source_stats.insert(sid.clone(), SourceParseStats {
             matched_programs: 0,
             unmatched_channels: std::collections::HashSet::new(),
+            matched_channels: std::collections::HashSet::new(),
         });
     }
 
@@ -1489,6 +1500,7 @@ async fn parse_and_stream_batches_multi<R: tauri::Runtime>(
                                     // Update per-source stats
                                     if let Some(stats) = source_stats.get_mut(source_id) {
                                         stats.matched_programs += 1;
+                                        stats.matched_channels.insert(stream_id.clone());
                                     }
                                 }
                             } else {
@@ -1858,6 +1870,7 @@ pub async fn parse_epg_file<R: tauri::Runtime>(
         matched_programs: parser_result.matched_programs,
         inserted_programs: inserter_result.inserted,
         unmatched_channels: parser_result.unmatched_channels,
+        matched_channels: parser_result.matched_channels,
         duration_ms,
         bytes_processed: total_bytes,
     })

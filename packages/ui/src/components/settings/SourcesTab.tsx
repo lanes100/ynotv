@@ -2252,14 +2252,18 @@ export function SourcesTab({
                       {epg.lastSyncResult && (
                         <div className="epg-card-results">
                           <span className="epg-results-total">
+                            {epg.lastSyncResult.channelsMatched !== undefined 
+                              ? `${epg.lastSyncResult.channelsMatched.toLocaleString()} channels, ` 
+                              : ''}
                             {epg.lastSyncResult.totalInserted.toLocaleString()} programs
                           </span>
                           <div className="epg-results-breakdown">
                             {Object.entries(epg.lastSyncResult.perSource).map(([srcId, count]) => {
                               const srcName = sources.find(s => s.id === srcId)?.name || srcId;
+                              const channelCount = epg.lastSyncResult?.perSourceChannels?.[srcId];
                               return (
                                 <span key={srcId} className="epg-results-item">
-                                  {srcName}: {Number(count).toLocaleString()}
+                                  {srcName}: {channelCount !== undefined ? `${channelCount.toLocaleString()} channels, ` : ''}{Number(count).toLocaleString()} programs
                                 </span>
                               );
                             })}

@@ -1002,7 +1002,7 @@ export async function applyGlobalEpgToSource(
     const epgOverrideMap = await loadEpgChannelOverrideMap();
     let totalInserted = 0;
     // Track per-link insertion counts so we can update lastSyncResult in settings
-    const linkResultCounts = new Map<string, number>();
+    const linkResultCounts = new Map<string, { programs: number; channels: number }>();
 
     for (let i = 0; i < linksForSource.length; i++) {
       if (channelsNeedingEpg.length === 0) break;
@@ -1066,7 +1066,10 @@ export async function applyGlobalEpgToSource(
         }
 
         totalInserted += result.inserted_programs;
-        linkResultCounts.set(link.id, result.inserted_programs);
+        linkResultCounts.set(link.id, {
+          programs: result.inserted_programs,
+          channels: result.matched_channels ?? 0,
+        });
 
         // Re-query which channels now have programs
         channelsWithPrograms = await getStreamIdsWithPrograms(source.id);
@@ -1093,16 +1096,26 @@ export async function applyGlobalEpgToSource(
         const settingsResult = await window.storage.getSettings();
         const existingLinks = settingsResult.data?.globalEpgLinks || [];
         const updatedLinks = existingLinks.map((link: GlobalEpgLink) => {
-          const countForThisSource = linkResultCounts.get(link.id);
-          if (countForThisSource === undefined) return link;
+          const statsForThisSource = linkResultCounts.get(link.id);
+          if (statsForThisSource === undefined) return link;
 
           const existingResult = link.lastSyncResult;
           const existingPerSource = existingResult?.perSource || {};
           const updatedPerSource = {
             ...existingPerSource,
-            [source.id]: countForThisSource,
+            [source.id]: statsForThisSource.programs,
           };
           const newTotal = Object.values(updatedPerSource).reduce(
+            (sum, c) => sum + (typeof c === 'number' ? c : 0),
+            0
+          );
+
+          const existingPerSourceChannels = existingResult?.perSourceChannels || {};
+          const updatedPerSourceChannels = {
+            ...existingPerSourceChannels,
+            [source.id]: statsForThisSource.channels,
+          };
+          const newTotalChannels = Object.values(updatedPerSourceChannels).reduce(
             (sum, c) => sum + (typeof c === 'number' ? c : 0),
             0
           );
@@ -1113,6 +1126,8 @@ export async function applyGlobalEpgToSource(
               timestamp: Date.now(),
               totalInserted: newTotal,
               perSource: updatedPerSource,
+              channelsMatched: newTotalChannels,
+              perSourceChannels: updatedPerSourceChannels,
             },
           };
         });
@@ -1343,6 +1358,8 @@ async function syncGlobalEpgLinkStandaloneImpl(
 
   let totalInserted = 0;
   const perSourceCounts: Record<string, number> = {};
+  let totalChannelsMatched = 0;
+  const perSourceChannels: Record<string, number> = {};
   let syncSucceeded = false;
 
   try {
@@ -1352,7 +1369,10 @@ async function syncGlobalEpgLinkStandaloneImpl(
     for (const result of results) {
       totalInserted += result.inserted_programs;
       perSourceCounts[result.source_id] = result.inserted_programs;
-      console.log(`[Global EPG] Source ${result.source_id}: ${result.inserted_programs} programs inserted`);
+      const channelsMatched = result.matched_channels ?? 0;
+      perSourceChannels[result.source_id] = channelsMatched;
+      totalChannelsMatched += channelsMatched;
+      console.log(`[Global EPG] Source ${result.source_id}: ${result.inserted_programs} programs inserted, ${channelsMatched} channels matched`);
 
       if (result.inserted_programs > 0) {
         dbEvents.notify('programs', 'add');
@@ -1367,7 +1387,7 @@ async function syncGlobalEpgLinkStandaloneImpl(
 
   // Only mark as synced if the Rust call succeeded (even if 0 programmes inserted)
   if (syncSucceeded) {
-    await updateGlobalEpgLastSynced(epgLink.id, totalInserted, perSourceCounts);
+    await updateGlobalEpgLastSynced(epgLink.id, totalInserted, perSourceCounts, totalChannelsMatched, perSourceChannels);
   }
 
   console.log(`[Global EPG] Standalone sync complete for ${epgLink.name}: ${totalInserted} total programs inserted`);
@@ -1381,7 +1401,9 @@ async function syncGlobalEpgLinkStandaloneImpl(
 async function updateGlobalEpgLastSynced(
   epgLinkId: string,
   totalInserted: number,
-  perSourceCounts: Record<string, number>
+  perSourceCounts: Record<string, number>,
+  totalChannelsMatched?: number,
+  perSourceChannels?: Record<string, number>
 ): Promise<void> {
   if (!window.storage) return;
   try {
@@ -1396,6 +1418,8 @@ async function updateGlobalEpgLastSynced(
               timestamp: Date.now(),
               totalInserted,
               perSource: perSourceCounts,
+              channelsMatched: totalChannelsMatched,
+              perSourceChannels,
             },
           }
         : link

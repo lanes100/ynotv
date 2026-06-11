@@ -39,6 +39,7 @@ export interface EpgParseResult {
   matched_programs: number;
   inserted_programs: number;
   unmatched_channels: number;
+  matched_channels: number;
   duration_ms: number;
   bytes_processed: number;
 }

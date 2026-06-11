@@ -65,6 +65,8 @@ export interface GlobalEpgLink {
         timestamp: number;
         totalInserted: number;
         perSource: Record<string, number>; // sourceId -> count
+        channelsMatched?: number;
+        perSourceChannels?: Record<string, number>; // sourceId -> count
     };
 }
 
