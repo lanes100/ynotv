@@ -903,6 +903,13 @@ interface DownloadsTabProps {
 
 function DownloadsTab({ onPlay }: DownloadsTabProps) {
     const [searchQuery, setSearchQuery] = useState('');
+    const [showPosters, setShowPosters] = useState<boolean>(() => {
+        try {
+            return localStorage.getItem('ynotv-downloads-show-posters') !== 'false';
+        } catch {
+            return true;
+        }
+    });
     const downloads = useDownloadStore((s) => s.downloads) || [];
     const cancelDownload = useDownloadStore((s) => s.cancelDownload);
     const removeDownload = useDownloadStore((s) => s.removeDownload);
@@ -927,7 +934,9 @@ function DownloadsTab({ onPlay }: DownloadsTabProps) {
     };
 
     const activeDownloads = downloads.filter((d) => d.status === 'downloading');
-    const inactiveDownloads = downloads.filter((d) => d.status !== 'downloading');
+    const queuedDownloads = downloads.filter((d) => d.status === 'queued');
+    const completedDownloads = downloads.filter((d) => d.status === 'completed');
+    const otherDownloads = downloads.filter((d) => d.status !== 'downloading' && d.status !== 'queued' && d.status !== 'completed');
 
     const filteredDownloads = downloads.filter((item) =>
         item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -938,9 +947,37 @@ function DownloadsTab({ onPlay }: DownloadsTabProps) {
         <div className="dvr-downloads">
             <div className="dvr-downloads-header" style={{ gap: '16px', flexWrap: 'wrap' }}>
                 <div style={{ flex: '1 0 150px', display: 'flex', alignItems: 'center' }}>
-                    <span className="dvr-downloads-stats">
-                        {activeDownloads.length} downloading · {inactiveDownloads.length} other
-                    </span>
+                    <div className="dvr-downloads-stats-chips">
+                        {activeDownloads.length > 0 && (
+                            <span className="dvr-downloads-stats-chip downloading" title="Currently downloading">
+                                <span className="dvr-downloads-stats-dot downloading" />
+                                {activeDownloads.length} downloading
+                            </span>
+                        )}
+                        {queuedDownloads.length > 0 && (
+                            <span className="dvr-downloads-stats-chip queued" title="Queued waiting to download">
+                                <span className="dvr-downloads-stats-dot queued" />
+                                {queuedDownloads.length} queued
+                            </span>
+                        )}
+                        {completedDownloads.length > 0 && (
+                            <span className="dvr-downloads-stats-chip completed" title="Successfully downloaded">
+                                <span className="dvr-downloads-stats-dot completed" />
+                                {completedDownloads.length} downloaded
+                            </span>
+                        )}
+                        {otherDownloads.length > 0 && (
+                            <span className="dvr-downloads-stats-chip failed" title="Canceled or failed downloads">
+                                <span className="dvr-downloads-stats-dot failed" />
+                                {otherDownloads.length} canceled/failed
+                            </span>
+                        )}
+                        {downloads.length === 0 && (
+                            <span className="dvr-downloads-stats-chip empty">
+                                0 downloads
+                            </span>
+                        )}
+                    </div>
                 </div>
 
                 <div className="dvr-downloads-search-container" style={{ position: 'relative', flex: '0 1 300px', width: '100%', minWidth: '200px', margin: '0 auto' }}>
@@ -1001,8 +1038,24 @@ function DownloadsTab({ onPlay }: DownloadsTabProps) {
                     )}
                 </div>
 
-                <div style={{ flex: '1 0 150px', display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
-                    {inactiveDownloads.length > 0 && (
+                <div style={{ flex: '1 0 150px', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '12px' }}>
+                    <label className="dvr-downloads-toggle-posters" title="Toggle poster visibility">
+                        <input
+                            type="checkbox"
+                            checked={showPosters}
+                            onChange={(e) => {
+                                setShowPosters(e.target.checked);
+                                try {
+                                    localStorage.setItem('ynotv-downloads-show-posters', String(e.target.checked));
+                                } catch (err) {
+                                    console.error('[DownloadsTab] Failed to save poster preference:', err);
+                                }
+                            }}
+                        />
+                        Show Posters
+                    </label>
+
+                    {downloads.some((d) => d.status !== 'downloading' && d.status !== 'queued') && (
                         <button className="dvr-btn-clear" onClick={clearCompleted}>
                             Clear Completed/Failed
                         </button>
@@ -1040,8 +1093,12 @@ function DownloadsTab({ onPlay }: DownloadsTabProps) {
                         const isFailed = item.status === 'failed';
                         const isDownloadingOrQueued = isDownloading || isQueued;
 
+                        const seriesMatch = item.title.match(/^(.*?) - (S\d+E\d+)(?: - (.*))?$/);
+                        const displayTitle = seriesMatch ? seriesMatch[1] : item.title;
+                        const subtitle = seriesMatch ? seriesMatch[2] + (seriesMatch[3] ? ` · ${seriesMatch[3]}` : '') : '';
+
                         return (
-                            <div key={item.id} className={`dvr-download-card ${item.status}`}>
+                            <div key={item.id} className={`dvr-download-card ${item.status} ${showPosters && item.poster ? 'has-poster' : ''}`}>
                                 <div className="dvr-download-card-header">
                                     <span className={`dvr-download-status-badge ${item.status}`}>
                                         {item.status === 'downloading'
@@ -1106,48 +1163,67 @@ function DownloadsTab({ onPlay }: DownloadsTabProps) {
                                     </div>
                                 </div>
 
-                                <div className="dvr-download-card-body">
-                                    <h3 className="dvr-download-title" title={item.title}>
-                                        {item.title}
-                                    </h3>
-                                    <p className="dvr-download-path" title={item.savePath}>
-                                        {item.savePath}
-                                    </p>
-
-                                    {isDownloading && (
-                                        <div className="dvr-download-progress-section">
-                                            <div className="dvr-download-progress-header">
-                                                <span className="dvr-download-progress-bytes">
-                                                    {formatBytes(item.bytesWritten)}
-                                                    {item.totalBytes ? ` / ${formatBytes(item.totalBytes)}` : ''}
-                                                </span>
-                                                <span className="dvr-download-progress-speed">
-                                                    {formatSpeed(item.speedBytes)}
-                                                </span>
-                                                <span className="dvr-download-progress-percent">
-                                                    {Math.round(item.progress)}%
-                                                </span>
-                                            </div>
-                                            <div className="dvr-progress-bar">
-                                                <div
-                                                    className="dvr-progress-fill downloads"
-                                                    style={{ width: `${Math.min(100, Math.max(0, item.progress))}%` }}
-                                                />
-                                            </div>
+                                <div className="dvr-download-card-content">
+                                    {showPosters && item.poster && (
+                                        <div className="dvr-download-poster">
+                                            <img
+                                                src={item.poster}
+                                                alt={item.title}
+                                                className="dvr-download-poster-img"
+                                                onError={(e) => {
+                                                    e.currentTarget.style.display = 'none';
+                                                }}
+                                            />
                                         </div>
                                     )}
-
-                                    {isQueued && (
-                                        <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.5)', margin: '8px 0 0 0' }}>
-                                            Waiting in queue...
+                                    <div className="dvr-download-card-body">
+                                        <h3 className="dvr-download-title" title={item.title}>
+                                            {displayTitle}
+                                        </h3>
+                                        {subtitle && (
+                                            <p className="dvr-download-subtitle" title={subtitle}>
+                                                {subtitle}
+                                            </p>
+                                        )}
+                                        <p className="dvr-download-path" title={item.savePath}>
+                                            {item.savePath}
                                         </p>
-                                    )}
 
-                                    {isFailed && item.error && (
-                                        <p className="dvr-download-error">
-                                            Error: {item.error}
-                                        </p>
-                                    )}
+                                        {isDownloading && (
+                                            <div className="dvr-download-progress-section">
+                                                <div className="dvr-download-progress-header">
+                                                    <span className="dvr-download-progress-bytes">
+                                                        {formatBytes(item.bytesWritten)}
+                                                        {item.totalBytes ? ` / ${formatBytes(item.totalBytes)}` : ''}
+                                                    </span>
+                                                    <span className="dvr-download-progress-speed">
+                                                        {formatSpeed(item.speedBytes)}
+                                                    </span>
+                                                    <span className="dvr-download-progress-percent">
+                                                        {Math.round(item.progress)}%
+                                                    </span>
+                                                </div>
+                                                <div className="dvr-progress-bar">
+                                                    <div
+                                                        className="dvr-progress-fill downloads"
+                                                        style={{ width: `${Math.min(100, Math.max(0, item.progress))}%` }}
+                                                    />
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {isQueued && (
+                                            <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.5)', margin: '8px 0 0 0' }}>
+                                                Waiting in queue...
+                                            </p>
+                                        )}
+
+                                        {isFailed && item.error && (
+                                            <p className="dvr-download-error">
+                                                Error: {item.error}
+                                            </p>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                         );

@@ -39,6 +39,20 @@ export function SeriesDetail({ series, onClose, onPlayEpisode, apiKey, initialSe
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const startDownload = useDownloadStore((s) => s.startDownload);
 
+  // Load RPDB settings for poster
+  const { apiKey: rpdbApiKey } = useRpdbSettings();
+  const rpdbPosterUrl = rpdbApiKey && series.tmdb_id
+    ? getRpdbPosterUrl(rpdbApiKey, series.tmdb_id, 'series')
+    : null;
+
+  // Priority: RPDB poster > local cover > TMDB/TVMaze fallback
+  const posterUrl = rpdbPosterUrl || series.cover ||
+    (series.backdrop_path
+      ? series.backdrop_path.startsWith('http')
+        ? series.backdrop_path  // TVMaze full URL
+        : getTmdbImageUrl(series.backdrop_path, TMDB_POSTER_SIZES.medium)  // TMDB path
+      : null);
+
   const handleDownloadEpisode = useCallback(
     async (episode: StoredEpisode, e: React.MouseEvent) => {
       e.stopPropagation();
@@ -59,7 +73,9 @@ export function SeriesDetail({ series, onClose, onPlayEpisode, apiKey, initialSe
           epTitle,
           resolved.url,
           resolved.userAgent,
-          episodeDuration ? episodeDuration * 60 : undefined
+          episodeDuration ? episodeDuration * 60 : undefined,
+          undefined,
+          posterUrl || undefined
         );
       } catch (error) {
         console.error('[SeriesDetail] Episode download failed:', error);
@@ -68,7 +84,7 @@ export function SeriesDetail({ series, onClose, onPlayEpisode, apiKey, initialSe
         setDownloadingId(null);
       }
     },
-    [series, startDownload]
+    [series, startDownload, posterUrl]
   );
   const [downloadingSeason, setDownloadingSeason] = useState(false);
 
@@ -130,7 +146,8 @@ export function SeriesDetail({ series, onClose, onPlayEpisode, apiKey, initialSe
             resolved.url,
             resolved.userAgent,
             episodeDuration ? episodeDuration * 60 : undefined,
-            episodeSavePath
+            episodeSavePath,
+            posterUrl || undefined
           );
         } catch (err) {
           console.error(`[SeriesDetail] Failed to queue episode S${episode.season_num}E${episode.episode_num}:`, err);
@@ -142,7 +159,7 @@ export function SeriesDetail({ series, onClose, onPlayEpisode, apiKey, initialSe
     } finally {
       setDownloadingSeason(false);
     }
-  }, [series, selectedSeason, seasons, startDownload]);
+  }, [series, selectedSeason, seasons, startDownload, posterUrl]);
 
   // Fetch episode progress
   const { episodeProgress, loading: progressLoading } = useSeriesEpisodeProgress(series.series_id);
@@ -252,22 +269,8 @@ export function SeriesDetail({ series, onClose, onPlayEpisode, apiKey, initialSe
     }
   }, []);
 
-  // Load RPDB settings for poster
-  const { apiKey: rpdbApiKey } = useRpdbSettings();
-  const rpdbPosterUrl = rpdbApiKey && series.tmdb_id
-    ? getRpdbPosterUrl(rpdbApiKey, series.tmdb_id, 'series')
-    : null;
-
   // Get images - use TMDB backdrop if available, fallback to cover
   const backdropUrl = tmdbBackdropUrl || series.cover;
-
-  // Priority: RPDB poster > local cover > TMDB/TVMaze fallback
-  const posterUrl = rpdbPosterUrl || series.cover ||
-    (series.backdrop_path
-      ? series.backdrop_path.startsWith('http')
-        ? series.backdrop_path  // TVMaze full URL
-        : getTmdbImageUrl(series.backdrop_path, TMDB_POSTER_SIZES.medium)  // TMDB path
-      : null);
 
   // Use clean title if available, otherwise fall back to name
   const displayTitle = series.title || series.name;

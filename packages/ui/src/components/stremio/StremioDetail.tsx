@@ -212,7 +212,14 @@ export function StremioDetail({ meta, onBack, onPlay, streamPickerMode, showStre
         } else {
           title = `${meta.name}${meta.year ? ` (${meta.year})` : ''}`;
         }
-        await startDownload(title, stream.url);
+        await startDownload(
+          title,
+          stream.url,
+          undefined,
+          undefined,
+          undefined,
+          meta?.poster || undefined
+        );
       } catch (error) {
         console.error('[StremioDetail] Stream download failed:', error);
         alert('Failed to start download');

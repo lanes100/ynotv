@@ -59,6 +59,15 @@ export function MovieDetail({ movie, onClose, onPlay, apiKey }: MovieDetailProps
 
   // Load RPDB settings for poster
   const { apiKey: rpdbApiKey } = useRpdbSettings();
+  const rpdbPosterUrl = rpdbApiKey && movie.tmdb_id
+    ? getRpdbPosterUrl(rpdbApiKey, movie.tmdb_id, 'movie')
+    : null;
+
+  // Priority: RPDB poster > local poster > TMDB fallback
+  const posterUrl = rpdbPosterUrl || movie.stream_icon ||
+    (movie.backdrop_path
+      ? getTmdbImageUrl(movie.backdrop_path, TMDB_POSTER_SIZES.medium)
+      : null);
 
   const [downloading, setDownloading] = useState(false);
   const startDownload = useDownloadStore((s) => s.startDownload);
@@ -72,7 +81,9 @@ export function MovieDetail({ movie, onClose, onPlay, apiKey }: MovieDetailProps
         movie.title || movie.name,
         resolved.url,
         resolved.userAgent,
-        movie.duration ? movie.duration * 60 : undefined
+        movie.duration ? movie.duration * 60 : undefined,
+        undefined,
+        posterUrl || undefined
       );
     } catch (error) {
       console.error('[MovieDetail] Download failed:', error);
@@ -80,19 +91,10 @@ export function MovieDetail({ movie, onClose, onPlay, apiKey }: MovieDetailProps
     } finally {
       setDownloading(false);
     }
-  }, [movie, startDownload]);
-  const rpdbPosterUrl = rpdbApiKey && movie.tmdb_id
-    ? getRpdbPosterUrl(rpdbApiKey, movie.tmdb_id, 'movie')
-    : null;
+  }, [movie, startDownload, posterUrl]);
 
   // Get images - use TMDB backdrop if available, fallback to stream_icon
   const backdropUrl = tmdbBackdropUrl || movie.stream_icon;
-
-  // Priority: RPDB poster > local poster > TMDB fallback
-  const posterUrl = rpdbPosterUrl || movie.stream_icon ||
-    (movie.backdrop_path
-      ? getTmdbImageUrl(movie.backdrop_path, TMDB_POSTER_SIZES.medium)
-      : null);
 
   // Use clean title if available, otherwise fall back to name
   const displayTitle = movie.title || movie.name;

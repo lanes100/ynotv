@@ -18,6 +18,7 @@ export interface DownloadItem {
   addedAt: number;
   userAgent?: string;
   durationSecs?: number;
+  poster?: string;
 }
 
 interface DownloadState {
@@ -27,7 +28,8 @@ interface DownloadState {
     url: string,
     userAgent?: string,
     durationSecs?: number,
-    preResolvedSavePath?: string
+    preResolvedSavePath?: string,
+    poster?: string
   ) => Promise<void>;
   cancelDownload: (id: string) => Promise<void>;
   removeDownload: (id: string) => void;
@@ -51,7 +53,7 @@ export const useDownloadStore = create<DownloadState>()(
     (set, get) => ({
       downloads: [],
 
-      startDownload: async (title, url, userAgent, durationSecs, preResolvedSavePath) => {
+      startDownload: async (title, url, userAgent, durationSecs, preResolvedSavePath, poster) => {
         try {
           // 1. Resolve save path
           let savePath = '';
@@ -104,6 +106,7 @@ export const useDownloadStore = create<DownloadState>()(
             addedAt: Date.now(),
             userAgent,
             durationSecs,
+            poster,
           };
 
           set((state) => ({ downloads: [newItem, ...(state.downloads || [])] }));

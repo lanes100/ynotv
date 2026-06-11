@@ -1176,3 +1176,201 @@
     box-shadow: 0 0 8px var(--accent-glow, rgba(0, 212, 255, 0.2));
     background: rgba(255, 255, 255, 0.08) !important;
 }
+
+/* New Downloads Poster Layout */
+.dvr-download-card-content {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+}
+
+.dvr-download-poster {
+    width: 66px;
+    height: 99px;
+    border-radius: 8px;
+    overflow: hidden;
+    flex-shrink: 0;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(0, 0, 0, 0.25);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.dvr-download-card:hover .dvr-download-poster {
+    transform: scale(1.02);
+    border-color: var(--accent-primary, rgba(0, 212, 255, 0.4));
+}
+
+.dvr-download-poster-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.dvr-download-card-body {
+    flex: 1;
+    min-width: 0;
+}
+
+/* Premium Glassmorphic Switch */
+.dvr-downloads-toggle-posters {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--text-secondary, rgba(255, 255, 255, 0.7));
+    cursor: pointer;
+    user-select: none;
+    padding: 6px 12px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    transition: all 0.2s ease;
+}
+
+.dvr-downloads-toggle-posters:hover {
+    background: rgba(255, 255, 255, 0.07);
+    border-color: rgba(255, 255, 255, 0.12);
+    color: var(--text-primary, #fff);
+}
+
+.dvr-downloads-toggle-posters input[type="checkbox"] {
+    position: relative;
+    width: 32px;
+    height: 18px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: rgba(255, 255, 255, 0.15);
+    outline: none;
+    border-radius: 9px;
+    cursor: pointer;
+    transition: background 0.25s ease;
+    margin: 0;
+}
+
+.dvr-downloads-toggle-posters input[type="checkbox"]:checked {
+    background: var(--accent-primary, #00d4ff);
+    box-shadow: 0 0 8px var(--accent-glow, rgba(0, 212, 255, 0.4));
+}
+
+.dvr-downloads-toggle-posters input[type="checkbox"]::before {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #fff;
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+.dvr-downloads-toggle-posters input[type="checkbox"]:checked::before {
+    transform: translateX(14px);
+}
+
+/* Modern Stats Chips */
+.dvr-downloads-stats-chips {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.dvr-downloads-stats-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 500;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    color: var(--text-secondary, rgba(255, 255, 255, 0.6));
+    transition: all 0.2s ease;
+    user-select: none;
+}
+
+.dvr-downloads-stats-chip:hover {
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--text-primary, #fff);
+}
+
+.dvr-downloads-stats-chip.downloading {
+    background: rgba(0, 212, 255, 0.08);
+    border-color: rgba(0, 212, 255, 0.15);
+    color: var(--accent-primary, #00d4ff);
+}
+
+.dvr-downloads-stats-chip.queued {
+    background: rgba(241, 196, 15, 0.06);
+    border-color: rgba(241, 196, 15, 0.15);
+    color: #f1c40f;
+}
+
+.dvr-downloads-stats-chip.completed {
+    background: rgba(46, 204, 113, 0.06);
+    border-color: rgba(46, 204, 113, 0.15);
+    color: #2ecc71;
+}
+
+.dvr-downloads-stats-chip.failed {
+    background: rgba(231, 76, 60, 0.06);
+    border-color: rgba(231, 76, 60, 0.15);
+    color: #e74c3c;
+}
+
+.dvr-downloads-stats-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.dvr-downloads-stats-dot.downloading {
+    background: var(--accent-primary, #00d4ff);
+    box-shadow: 0 0 6px var(--accent-primary, #00d4ff);
+    animation: pulse-dot 1.5s infinite ease-in-out;
+}
+
+.dvr-downloads-stats-dot.queued {
+    background: #f1c40f;
+}
+
+.dvr-downloads-stats-dot.completed {
+    background: #2ecc71;
+    box-shadow: 0 0 6px #2ecc71;
+}
+
+.dvr-downloads-stats-dot.failed {
+    background: #e74c3c;
+    box-shadow: 0 0 6px #e74c3c;
+}
+
+@keyframes pulse-dot {
+    0% {
+        transform: scale(0.9);
+        opacity: 0.6;
+    }
+    50% {
+        transform: scale(1.15);
+        opacity: 1;
+        box-shadow: 0 0 10px var(--accent-primary, #00d4ff);
+    }
+    100% {
+        transform: scale(0.9);
+        opacity: 0.6;
+    }
+}
+
+.dvr-download-subtitle {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-secondary, rgba(255, 255, 255, 0.7));
+    margin: 2px 0 0 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}

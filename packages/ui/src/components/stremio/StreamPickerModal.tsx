@@ -34,7 +34,14 @@ export function StreamPickerModal({ streams, onSelect, onClose, meta, selectedVi
         } else {
           title = stream.title || stream.name || 'Stremio Stream';
         }
-        await startDownload(title, stream.url);
+        await startDownload(
+          title,
+          stream.url,
+          undefined,
+          undefined,
+          undefined,
+          meta?.poster || undefined
+        );
       } catch (error) {
         console.error('[StreamPickerModal] Stream download failed:', error);
         alert('Failed to start download');
