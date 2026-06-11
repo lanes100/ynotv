@@ -1494,6 +1494,22 @@ async fn save_dvr_setting(
     Ok(())
 }
 
+/// Manual convert recording
+#[tauri::command]
+async fn convert_recording(
+    app: AppHandle,
+    state: tauri::State<'_, DvrState>,
+    recording_id: i64,
+    target_format: String,
+) -> Result<(), String> {
+    info!("[DVR Command] convert_recording called: id={}, format={}", recording_id, target_format);
+    crate::dvr::recorder::convert_recording_to_format(&app, &state.db, recording_id, &target_format)
+        .await
+        .map_err(|e| format!("Failed to convert recording: {}", e))?;
+    info!("[DVR Command] convert_recording completed: id={}", recording_id);
+    Ok(())
+}
+
 /// Open log folder in system file explorer
 #[tauri::command]
 async fn open_log_folder() -> Result<(), String> {
@@ -3153,6 +3169,7 @@ pub fn run() {
             update_dvr_stream_url,
             get_dvr_settings,
             save_dvr_setting,
+            convert_recording,
             open_file_location,
             open_log_folder,
             run_cleanup_now,

@@ -524,6 +524,22 @@ interface RecordedTabProps {
 function RecordedTab({ recorded, onPlay, onDelete, formatDateTime }: RecordedTabProps) {
     // Store thumbnail URLs by recording ID
     const [thumbnails, setThumbnails] = useState<Record<number, string>>({});
+    const [convertingIds, setConvertingIds] = useState<Record<number, boolean>>({});
+    const [activeMenuId, setActiveMenuId] = useState<number | null>(null);
+
+    const handleConvert = async (id: number, format: string) => {
+        setActiveMenuId(null);
+        setConvertingIds(prev => ({ ...prev, [id]: true }));
+        try {
+            const { convertRecording } = await import('../db');
+            await convertRecording(id, format);
+        } catch (error) {
+            console.error('Manual conversion failed:', error);
+            alert('Manual conversion failed: ' + (error instanceof Error ? error.message : String(error)));
+        } finally {
+            setConvertingIds(prev => ({ ...prev, [id]: false }));
+        }
+    };
 
     // Fetch thumbnails when recordings change
     useEffect(() => {
@@ -642,6 +658,61 @@ function RecordedTab({ recorded, onPlay, onDelete, formatDateTime }: RecordedTab
                             </p>
                         )}
                     </div>
+                    {(() => {
+                        const isTs = item.file_path?.toLowerCase().endsWith('.ts');
+                        const canConvert = isTs && (item.status === 'completed' || item.status === 'partial');
+                        return (
+                            <>
+                                {canConvert && !convertingIds[item.id!] && (
+                                    <button
+                                        className="dvr-media-convert"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setActiveMenuId(item.id!);
+                                        }}
+                                        title="Convert Recording"
+                                    >
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                            <polyline points="23 4 23 10 17 10" />
+                                            <polyline points="1 20 1 14 7 14" />
+                                            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+                                        </svg>
+                                    </button>
+                                )}
+
+                                {activeMenuId === item.id && (
+                                    <>
+                                        <div 
+                                            style={{
+                                                position: 'fixed',
+                                                top: 0,
+                                                left: 0,
+                                                right: 0,
+                                                bottom: 0,
+                                                zIndex: 14,
+                                                cursor: 'default'
+                                            }}
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setActiveMenuId(null);
+                                            }}
+                                        />
+                                        <div className="dvr-convert-dropdown" onClick={(e) => e.stopPropagation()}>
+                                            <button onClick={(e) => { e.stopPropagation(); handleConvert(item.id!, 'mp4'); }}>Convert to MP4</button>
+                                            <button onClick={(e) => { e.stopPropagation(); handleConvert(item.id!, 'mkv'); }}>Convert to MKV</button>
+                                        </div>
+                                    </>
+                                )}
+
+                                {convertingIds[item.id!] && (
+                                    <div className="dvr-media-converting-overlay" onClick={(e) => e.stopPropagation()}>
+                                        <div className="dvr-converting-spinner" />
+                                        <span className="dvr-converting-text">Converting...</span>
+                                    </div>
+                                )}
+                            </>
+                        );
+                    })()}
                     <button
                         className="dvr-media-delete"
                         onClick={() => onDelete(item.id!, item.file_path)}

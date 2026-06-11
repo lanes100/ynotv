@@ -738,6 +738,24 @@ impl DvrDatabase {
         Ok(())
     }
 
+    /// Update recording file path, name, and size
+    pub fn update_recording_file_info(
+        &self,
+        id: i64,
+        file_path: &str,
+        filename: &str,
+        size_bytes: i64,
+    ) -> Result<()> {
+        let conn = self.get_conn()?;
+
+        conn.execute(
+            "UPDATE dvr_recordings SET file_path = ?1, filename = ?2, size_bytes = ?3 WHERE id = ?4",
+            params![file_path, filename, size_bytes, id],
+        )?;
+
+        Ok(())
+    }
+
     /// Update recording thumbnail path
     pub fn update_recording_thumbnail(&self, id: i64, thumbnail_path: &str) -> Result<()> {
         let conn = self.get_conn()?;
@@ -886,6 +904,9 @@ impl DvrDatabase {
                     if let Ok(v) = value.parse() {
                         settings.keep_recordings_days = Some(v);
                     }
+                }
+                "auto_convert_format" => {
+                    settings.auto_convert_format = value;
                 }
                 _ => {}
             }

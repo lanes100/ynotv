@@ -292,13 +292,16 @@ impl RecordingManager {
                 // Get storage path for thumbnail generation
                 let storage_path = self.get_storage_path().await?;
 
-                // Generate thumbnail asynchronously
+                // Generate thumbnail & optional auto-conversion sequentially in background
                 let video_path = output_path.to_string_lossy().to_string();
                 let db = self.db.clone();
+                let app_handle_clone = self.app_handle.clone();
                 let recording_id_for_thumb = recording_id;
                 let storage_path_for_thumb = storage_path.to_string_lossy().to_string();
+                let schedule_clone = schedule.clone();
 
                 tokio::spawn(async move {
+                    // 1. Generate thumbnail
                     match generate_thumbnail(&video_path, recording_id_for_thumb, &storage_path_for_thumb).await {
                         Ok(Some(thumb_path)) => {
                             if let Err(e) = db.update_recording_thumbnail(
@@ -313,6 +316,19 @@ impl RecordingManager {
                         }
                         Err(e) => {
                             error!("Thumbnail generation failed for recording {}: {}", recording_id_for_thumb, e);
+                        }
+                    }
+
+                    // 2. Auto-conversion
+                    let settings = db.get_settings().unwrap_or_default();
+                    let auto_convert = settings.auto_convert_format.to_lowercase();
+                    if auto_convert == "mp4" || auto_convert == "mkv" {
+                        info!("[DVR Recorder] Auto converting completed recording #{} to {}", recording_id_for_thumb, auto_convert);
+                        if let Err(e) = convert_recording_to_format(&app_handle_clone, &db, recording_id_for_thumb, &auto_convert).await {
+                            error!("[DVR Recorder] Auto conversion failed for recording #{}: {}", recording_id_for_thumb, e);
+                        } else {
+                            // Emit completed event again to notify frontend about the format change
+                            let _ = app_handle_clone.emit("dvr:event", RecordingEvent::completed(&schedule_clone, recording_id_for_thumb));
                         }
                     }
                 });
@@ -701,4 +717,103 @@ fn generate_filename(schedule: &Schedule) -> String {
         .collect();
 
     format!("{}_{}_{}.ts", timestamp, sanitized_channel, sanitized_title)
+}
+
+/// Convert a recording from .ts to mp4 or mkv using FFmpeg copy (lossless remuxing)
+pub async fn convert_recording_to_format(
+    app_handle: &tauri::AppHandle,
+    db: &DvrDatabase,
+    recording_id: i64,
+    format: &str,
+) -> Result<()> {
+    let format = format.to_lowercase();
+    if format != "mp4" && format != "mkv" {
+        return Err(anyhow::anyhow!("Unsupported conversion format: {}", format));
+    }
+
+    // 1. Get recording from database
+    let recording = db.get_recording(recording_id)?
+        .ok_or_else(|| anyhow::anyhow!("Recording not found"))?;
+
+    let input_path = PathBuf::from(&recording.file_path);
+    if !input_path.exists() {
+        return Err(anyhow::anyhow!("Recording file does not exist on disk: {:?}", input_path));
+    }
+
+    // 2. Generate output path
+    let output_path = input_path.with_extension(&format);
+    if input_path == output_path {
+        return Err(anyhow::anyhow!("Input and output formats are the same: {}", format));
+    }
+
+    // Find FFmpeg binary path
+    let ffmpeg_path = find_ffmpeg(app_handle)?;
+
+    // 3. Build and execute FFmpeg command
+    info!(
+        "[DVR Converter] Converting recording #{} from .ts to .{} ({:?})",
+        recording_id, format, output_path
+    );
+
+    let mut cmd = Command::new(&ffmpeg_path);
+    cmd.arg("-i").arg(&input_path)
+       .arg("-c").arg("copy")
+       .arg("-map").arg("0")
+       .arg("-y")
+       .arg(&output_path)
+       .stdout(Stdio::piped())
+       .stderr(Stdio::piped());
+
+    #[cfg(windows)]
+    cmd.creation_flags(0x08000000); // Hide console window
+
+    let mut child = cmd.spawn().context("Failed to spawn FFmpeg for conversion")?;
+    
+    // Capture stderr output for logging on failure
+    let stderr = child.stderr.take().context("Failed to capture FFmpeg stderr")?;
+    let stderr_task = tokio::spawn(async move {
+        let reader = BufReader::new(stderr);
+        let mut lines = reader.lines();
+        let mut last_error_line = String::new();
+        while let Ok(Some(line)) = lines.next_line().await {
+            last_error_line = line;
+        }
+        last_error_line
+    });
+
+    let status = child.wait().await.context("FFmpeg conversion process failed")?;
+    
+    let last_err = stderr_task.await.unwrap_or_default();
+
+    if !status.success() {
+        // If it failed, delete output_path if it was partially created
+        if output_path.exists() {
+            let _ = std::fs::remove_file(&output_path);
+        }
+        return Err(anyhow::anyhow!(
+            "FFmpeg conversion exited with error: {}",
+            if last_err.is_empty() { "unknown error".to_string() } else { last_err }
+        ));
+    }
+
+    // 4. Update database with new file info
+    let file_size = std::fs::metadata(&output_path)
+        .context("Failed to read converted file metadata")?
+        .len() as i64;
+    let new_filename = output_path.file_name()
+        .ok_or_else(|| anyhow::anyhow!("Invalid filename"))?
+        .to_string_lossy().to_string();
+    let new_filepath_str = output_path.to_string_lossy().to_string();
+
+    db.update_recording_file_info(recording_id, &new_filepath_str, &new_filename, file_size)?;
+
+    // 5. Delete original .ts file
+    if let Err(e) = std::fs::remove_file(&input_path) {
+        warn!("[DVR Converter] Failed to delete original file {:?}: {}", input_path, e);
+    } else {
+        info!("[DVR Converter] Deleted original .ts file: {:?}", input_path);
+    }
+
+    info!("[DVR Converter] Recording #{} successfully converted to .{}", recording_id, format);
+    Ok(())
 }

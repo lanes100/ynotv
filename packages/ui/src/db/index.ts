@@ -1768,6 +1768,20 @@ export async function deleteRecording(recordingId: number): Promise<void> {
   dbEvents.notify('dvr_recordings', 'delete');
 }
 
+/** Manually convert a TS recording to MP4 or MKV */
+export async function convertRecording(recordingId: number, targetFormat: string): Promise<void> {
+  console.log('[DVR] Converting recording:', recordingId, 'to', targetFormat);
+  try {
+    await invoke('convert_recording', { recordingId, targetFormat });
+    dbEvents.notify('dvr_recordings', 'update');
+    console.log('[DVR] Conversion complete for recording:', recordingId);
+  } catch (error) {
+    console.error('[DVR] Failed to convert recording:', error);
+    throw error;
+  }
+}
+
+
 /** Get upcoming scheduled recordings */
 export async function getScheduledRecordings(): Promise<DvrSchedule[]> {
   const all = await db.dvrSchedules.toArray();

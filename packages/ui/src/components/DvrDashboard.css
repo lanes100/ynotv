@@ -1374,3 +1374,110 @@
     overflow: hidden;
     text-overflow: ellipsis;
 }
+
+/* DVR Media Convert Styling */
+.dvr-media-convert {
+    position: absolute;
+    top: 12px;
+    left: 48px;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.6);
+    border: none;
+    border-radius: 8px;
+    color: var(--text-secondary, rgba(255, 255, 255, 0.7));
+    cursor: pointer;
+    opacity: 0;
+    transition: all 0.2s ease;
+    z-index: 12;
+}
+
+.dvr-media-card:hover .dvr-media-convert {
+    opacity: 1;
+}
+
+.dvr-media-convert:hover {
+    background: rgba(0, 212, 255, 0.8);
+    color: #fff;
+}
+
+/* Glassmorphic Convert Dropdown */
+.dvr-convert-dropdown {
+    position: absolute;
+    top: 48px;
+    left: 48px;
+    background: rgba(20, 20, 20, 0.95);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    z-index: 15;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+.dvr-convert-dropdown button {
+    background: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0.9);
+    padding: 8px 14px;
+    font-size: 12px;
+    font-weight: 500;
+    text-align: left;
+    cursor: pointer;
+    border-radius: 6px;
+    white-space: nowrap;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+}
+
+.dvr-convert-dropdown button:hover {
+    background: rgba(0, 212, 255, 0.15);
+    color: #00d4ff;
+}
+
+/* Converting Glassmorphic Overlay */
+.dvr-media-converting-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(10, 10, 10, 0.85);
+    backdrop-filter: blur(6px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 13;
+    gap: 12px;
+    color: #fff;
+    border-radius: 16px;
+}
+
+.dvr-converting-spinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid rgba(255, 255, 255, 0.1);
+    border-top: 3px solid #00d4ff;
+    border-radius: 50%;
+    animation: dvr-spin 1s linear infinite;
+}
+
+.dvr-converting-text {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    color: rgba(255, 255, 255, 0.95);
+}
+
+@keyframes dvr-spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}

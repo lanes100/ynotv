@@ -8,6 +8,7 @@ export function DvrTab() {
     const [downloadsPath, setDownloadsPath] = useState('');
     const [startPadding, setStartPadding] = useState(60);
     const [endPadding, setEndPadding] = useState(300);
+    const [autoConvertFormat, setAutoConvertFormat] = useState('none');
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -21,6 +22,7 @@ export function DvrTab() {
             setStoragePath(settings.storage_path || '');
             setStartPadding(settings.default_start_padding_sec || 60);
             setEndPadding(settings.default_end_padding_sec || 300);
+            setAutoConvertFormat(settings.auto_convert_format || 'none');
 
             if (window.storage) {
                 const settingsRes = await window.storage.getSettings();
@@ -81,6 +83,11 @@ export function DvrTab() {
     async function handleEndPaddingChange(value: number) {
         setEndPadding(value);
         await saveDvrSetting('default_end_padding_sec', value);
+    }
+
+    async function handleAutoConvertChange(value: string) {
+        setAutoConvertFormat(value);
+        await saveDvrSetting('auto_convert_format', value);
     }
 
     const formatDuration = (seconds: number): string => {
@@ -254,6 +261,37 @@ export function DvrTab() {
                         <span>None</span>
                         <span>15 min</span>
                     </div>
+                </div>
+            </div>
+
+            {/* Auto-Convert Settings */}
+            <div className="settings-section" style={{ paddingTop: '8px', paddingBottom: '8px' }}>
+                <div className="section-header">
+                    <h3>Auto-Convert Recordings</h3>
+                </div>
+                <p className="section-description" style={{ marginBottom: '12px' }}>
+                    Automatically convert completed recordings to MP4 or MKV format using FFmpeg (lossless stream copy).
+                </p>
+                <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                    <select
+                        value={autoConvertFormat}
+                        onChange={(e) => handleAutoConvertChange(e.target.value)}
+                        style={{
+                            flex: 1,
+                            padding: '10px 14px',
+                            background: 'rgba(255,255,255,0.05)',
+                            border: '1px solid rgba(255,255,255,0.1)',
+                            borderRadius: '6px',
+                            color: 'rgba(255,255,255,0.9)',
+                            fontSize: '0.85rem',
+                            cursor: 'pointer',
+                            outline: 'none',
+                        }}
+                    >
+                        <option value="none" style={{ background: '#1c1c1e', color: 'rgba(255,255,255,0.9)' }}>None (Keep original .ts)</option>
+                        <option value="mp4" style={{ background: '#1c1c1e', color: 'rgba(255,255,255,0.9)' }}>MP4 (.mp4)</option>
+                        <option value="mkv" style={{ background: '#1c1c1e', color: 'rgba(255,255,255,0.9)' }}>MKV (.mkv)</option>
+                    </select>
                 </div>
             </div>
         </div>
