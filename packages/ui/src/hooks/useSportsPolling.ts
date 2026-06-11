@@ -39,6 +39,26 @@ const getSportsCache = (): SportsCache => {
   return w.__sportsCache;
 };
 
+// Global listeners to sync active hook instances
+const getListeners = (): Set<(cache: SportsCache) => void> => {
+  const w = window as unknown as { __sportsCacheListeners?: Set<(cache: SportsCache) => void> };
+  if (!w.__sportsCacheListeners) {
+    w.__sportsCacheListeners = new Set();
+  }
+  return w.__sportsCacheListeners;
+};
+
+const notifySportsCacheUpdate = (cache: SportsCache) => {
+  const listeners = getListeners();
+  listeners.forEach(listener => {
+    try {
+      listener(cache);
+    } catch (err) {
+      console.error('[SportsPolling] Listener error:', err);
+    }
+  });
+};
+
 // Global flag to prevent multiple hook instances from fetching simultaneously
 const isGlobalFetching = (): boolean => {
   return !!(window as unknown as { __sportsFetching?: boolean }).__sportsFetching;
@@ -198,6 +218,18 @@ export function useSportsPolling(options: UseSportsPollingOptions = {}): UseSpor
     }
   }, []);
 
+  // Listen to updates from other instances updating the cache
+  useEffect(() => {
+    const listener = (newCache: SportsCache) => {
+      setEvents(newCache.events);
+      setLastUpdated(newCache.lastUpdated);
+    };
+    getListeners().add(listener);
+    return () => {
+      getListeners().delete(listener);
+    };
+  }, []);
+
   const fetchData = useCallback(async (isManualRefresh = false, isPolling = false) => {
     if (isRefreshingRef.current && !isManualRefresh) return;
     if (!isManualRefresh && isGlobalFetching()) {
@@ -252,6 +284,7 @@ export function useSportsPolling(options: UseSportsPollingOptions = {}): UseSpor
           cache.leagues = leagues;
           console.log(`[SportsPolling] Batch ${batchIndex + 1}/${totalBatches}: Updated cache with`,
             batchEvents.length, 'events,', batchEvents.filter(e => e.status === 'live').length, 'live');
+          notifySportsCacheUpdate(cache);
         }
       };
 
@@ -289,6 +322,7 @@ export function useSportsPolling(options: UseSportsPollingOptions = {}): UseSpor
         cache.lastUpdated = new Date();
         cache.leagues = leagues;
         console.log('[SportsPolling] Final: Updated cache with', data.length, 'events,', data.filter(e => e.status === 'live').length, 'live');
+        notifySportsCacheUpdate(cache);
       } else {
         console.log('[SportsPolling] NOT updating cache - empty data and existing cache has', currentCacheEvents.length, 'events');
       }
