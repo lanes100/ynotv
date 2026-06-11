@@ -2031,14 +2031,20 @@ async function _doSyncSourceImpl(source: Source, onProgress?: (msg: string) => v
       if (!existing) {
         // New category
         categoriesToAdd.push(cat);
-      } else if (existing.category_name !== cat.category_name) {
-        // Existing category with different name - update while preserving user settings
-        categoriesToUpdate.push({
-          ...cat,
-          enabled: existing.enabled,
-          display_order: existing.display_order,
-          filter_words: existing.filter_words,
-        });
+      } else {
+        const nameChanged = existing.category_name !== cat.category_name;
+        const needsDisplayOrder = existing.display_order === null || existing.display_order === undefined;
+
+        if (nameChanged || needsDisplayOrder) {
+          // Existing category with different name or missing display_order - update while preserving user settings
+          categoriesToUpdate.push({
+            ...cat,
+            enabled: existing.enabled,
+            // Preserve user's manual order if defined, otherwise backfill from the parser
+            display_order: existing.display_order ?? cat.display_order,
+            filter_words: existing.filter_words,
+          });
+        }
       }
     }
 
@@ -2625,7 +2631,7 @@ export async function syncVodMovies(
       name: cat.category_name,
       type: 'movie' as const,
       enabled: settings?.enabled ?? true,
-      display_order: settings?.display_order,
+      display_order: settings?.display_order ?? cat.display_order,
     };
   });
 
@@ -2851,7 +2857,7 @@ export async function syncVodSeries(
       name: cat.category_name,
       type: 'series' as const,
       enabled: settings?.enabled ?? true,
-      display_order: settings?.display_order,
+      display_order: settings?.display_order ?? cat.display_order,
     };
   });
 

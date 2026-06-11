@@ -98,14 +98,14 @@ pub async fn sync_xtream_source(
 
     // Map to BulkCategory
     let mut bulk_categories = Vec::with_capacity(xtream_categories.len());
-    for cat in xtream_categories {
+    for (index, cat) in xtream_categories.into_iter().enumerate() {
         bulk_categories.push(BulkCategory {
             category_id: format!("{}_{}", source_id, cat.category_id),
             source_id: source_id.clone(),
             category_name: cat.category_name,
             parent_id: cat.parent_id,
             enabled: None,
-            display_order: None,
+            display_order: Some(index as i32),
             channel_count: None,
             filter_words: None,
         });
@@ -466,6 +466,7 @@ pub async fn sync_m3u_source(
                 category_ids.push(category_id.clone());
 
                 if !categories_map.contains_key(&category_id) {
+                    let display_order = bulk_categories.len() as i32;
                     categories_map.insert(category_id.clone(), true);
                     bulk_categories.push(BulkCategory {
                         category_id,
@@ -473,7 +474,7 @@ pub async fn sync_m3u_source(
                         source_id: source_id.clone(),
                         parent_id: None,
                         enabled: None,
-                        display_order: None,
+                        display_order: Some(display_order),
                         channel_count: None,
                         filter_words: None,
                     });
@@ -582,7 +583,7 @@ pub async fn sync_xtream_vod_movies(
     });
 
     let mut bulk_categories = Vec::with_capacity(xtream_categories.len());
-    for cat in xtream_categories {
+    for (index, cat) in xtream_categories.into_iter().enumerate() {
         use crate::db_bulk_ops::BulkVodCategory;
         bulk_categories.push(BulkVodCategory {
             category_id: format!("{}_vod_{}", source_id, cat.category_id),
@@ -590,7 +591,7 @@ pub async fn sync_xtream_vod_movies(
             name: cat.category_name,
             type_str: "movie".to_string(),
             enabled: None,
-            display_order: None,
+            display_order: Some(index as i32),
         });
     }
 
@@ -766,7 +767,7 @@ pub async fn sync_xtream_vod_series(
     });
 
     let mut bulk_categories = Vec::with_capacity(xtream_categories.len());
-    for cat in xtream_categories {
+    for (index, cat) in xtream_categories.into_iter().enumerate() {
         use crate::db_bulk_ops::BulkVodCategory;
         bulk_categories.push(BulkVodCategory {
             category_id: format!("{}_series_{}", source_id, cat.category_id),
@@ -774,7 +775,7 @@ pub async fn sync_xtream_vod_series(
             name: cat.category_name,
             type_str: "series".to_string(),
             enabled: None,
-            display_order: None,
+            display_order: Some(index as i32),
         });
     }
 

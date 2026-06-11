@@ -186,6 +186,7 @@ export function parseM3U(content: string, sourceId: string): M3UParseResult {
           category_id: categoryId,
           category_name: categoryName,
           source_id: sourceId,
+          display_order: categoriesMap.size,
         });
       }
 

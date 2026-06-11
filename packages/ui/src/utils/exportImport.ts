@@ -172,7 +172,8 @@ export async function exportAllData(): Promise<{ success: boolean; filePath?: st
         const favorites = allChannels.filter(ch => normalizeBoolean(ch.is_favorite));
         const favoriteData = favorites.map(ch => ({
             streamId: ch.stream_id,
-            sourceId: ch.source_id
+            sourceId: ch.source_id,
+            name: ch.name
         }));
 
         // 3. Get Category Preferences (including filter words and alias)
@@ -193,6 +194,7 @@ export async function exportAllData(): Promise<{ success: boolean; filePath?: st
             .map(cat => ({
                 categoryId: cat.category_id,
                 sourceId: cat.source_id,
+                name: cat.category_name,
                 enabled: cat.enabled,
                 displayOrder: cat.display_order,
                 filterWords: cat.filter_words,
@@ -212,6 +214,7 @@ export async function exportAllData(): Promise<{ success: boolean; filePath?: st
             .map(ch => ({
                 streamId: ch.stream_id,
                 sourceId: ch.source_id,
+                name: ch.name,
                 enabled: ch.enabled,
                 alias: ch.alias
             }));
@@ -223,6 +226,8 @@ export async function exportAllData(): Promise<{ success: boolean; filePath?: st
             .map(cat => ({
                 categoryId: cat.category_id,
                 sourceId: cat.source_id,
+                name: cat.name,
+                type: cat.type,
                 enabled: cat.enabled,
                 displayOrder: cat.display_order
             }));
@@ -525,7 +530,7 @@ export async function importAllData(): Promise<{ success: boolean; error?: strin
                 const favoriteStubs = data.favorites.map(fav => ({
                     stream_id: fav.streamId,
                     source_id: fav.sourceId,
-                    name: 'Unknown', // Placeholder, will be overwritten by sync
+                    name: (fav as any).name ?? 'Unknown', // Placeholder, will be overwritten by sync
                     category_ids: [],
                     is_favorite: true
                 } as unknown as StoredChannel));
@@ -538,7 +543,7 @@ export async function importAllData(): Promise<{ success: boolean; error?: strin
                 const catStubs = data.categoryPreferences.map(pref => ({
                     category_id: pref.categoryId,
                     source_id: pref.sourceId,
-                    category_name: 'Unknown', // Placeholder
+                    category_name: (pref as any).name ?? 'Unknown', // Placeholder
                     enabled: pref.enabled,
                     display_order: pref.displayOrder,
                     filter_words: pref.filterWords,
@@ -553,8 +558,8 @@ export async function importAllData(): Promise<{ success: boolean; error?: strin
                 const vodCatStubs = data.vodCategoryPreferences.map(pref => ({
                     category_id: pref.categoryId,
                     source_id: pref.sourceId,
-                    name: 'Unknown', // Placeholder
-                    type: 'movie',
+                    name: (pref as any).name ?? 'Unknown', // Placeholder
+                    type: (pref as any).type ?? 'movie',
                     enabled: pref.enabled,
                     display_order: pref.displayOrder
                 } as any));
@@ -567,7 +572,7 @@ export async function importAllData(): Promise<{ success: boolean; error?: strin
                 const channelStubs = data.channelPreferences.map(pref => ({
                     stream_id: pref.streamId,
                     source_id: pref.sourceId,
-                    name: 'Unknown', // Placeholder, will be overwritten by sync
+                    name: (pref as any).name ?? 'Unknown', // Placeholder, will be overwritten by sync
                     category_ids: [],
                     enabled: pref.enabled,
                     alias: pref.alias

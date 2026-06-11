@@ -584,10 +584,11 @@ export class StalkerClient {
 
         console.log(`[Stalker] Fetched ${genres.length} live categories`);
 
-        return genres.map(genre => ({
+        return genres.map((genre, index) => ({
             category_id: `${this.sourceId}_${genre.id}`,
             category_name: genre.title,
             source_id: this.sourceId,
+            display_order: index,
         }));
     }
 
@@ -752,11 +753,12 @@ export class StalkerClient {
 
         console.log(`[Stalker] Filtered to ${filteredData.length} VOD categories`);
 
-        return filteredData.map(cat => ({
+        return filteredData.map((cat, index) => ({
             category_id: `${this.sourceId}_vod_${cat.id}`,
             category_name: cat.title,
             parent_id: 0,
             source_id: this.sourceId,
+            display_order: index,
         }));
     }
 
@@ -870,7 +872,7 @@ export class StalkerClient {
             console.log(`[Stalker] Fetched ${categories.length} VOD categories as fallback for series`);
         }
 
-        return categories.map(cat => ({
+        return categories.map((cat, index) => ({
             category_id: `${this.sourceId}_series_${cat.id}`,
             category_name: cat.title,
             parent_id: 0,
@@ -878,6 +880,7 @@ export class StalkerClient {
             epg_channel_id: '',
             is_category: true,
             category_type: 'series',
+            display_order: index,
         }));
     }
 

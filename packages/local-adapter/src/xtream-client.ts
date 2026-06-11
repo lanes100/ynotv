@@ -254,10 +254,11 @@ export class XtreamClient {
     const url = this.buildApiUrl('get_live_categories');
     const data = await this.fetchJson<XtreamCategory[]>(url);
 
-    return data.map(cat => ({
+    return data.map((cat, index) => ({
       category_id: `${this.sourceId}_${cat.category_id}`,
       category_name: cat.category_name,
       source_id: this.sourceId,
+      display_order: index,
     }));
   }
 
@@ -293,10 +294,11 @@ export class XtreamClient {
     const url = this.buildApiUrl('get_vod_categories');
     const data = await this.fetchJson<XtreamCategory[]>(url);
 
-    return data.map(cat => ({
+    return data.map((cat, index) => ({
       category_id: `${this.sourceId}_vod_${cat.category_id}`,
       category_name: cat.category_name,
       source_id: this.sourceId,
+      display_order: index,
     }));
   }
 
@@ -335,10 +337,11 @@ export class XtreamClient {
     const url = this.buildApiUrl('get_series_categories');
     const data = await this.fetchJson<XtreamCategory[]>(url);
 
-    return data.map(cat => ({
+    return data.map((cat, index) => ({
       category_id: `${this.sourceId}_series_${cat.category_id}`,
       category_name: cat.category_name,
       source_id: this.sourceId,
+      display_order: index,
     }));
   }
 

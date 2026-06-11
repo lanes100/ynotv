@@ -66,6 +66,7 @@ export interface Category {
   category_name: string;
   source_id: string;
   parent_id?: number;     // For hierarchical categories (rare)
+  display_order?: number;
 }
 
 export interface Channel {
