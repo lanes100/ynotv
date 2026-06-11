@@ -43,8 +43,9 @@ export function TrackSelectionModal({ isOpen, type, onClose }: TrackSelectionMod
       const trackList = await Bridge.getTrackList();
 
       // Filter regular subtitle tracks (non-CC)
+      const targetType = type === 'subtitle' ? 'sub' : type;
       const filteredTracks = trackList
-        .filter((t: any) => t.type === type && !isCCTrack(t))
+        .filter((t: any) => t.type === targetType && !isCCTrack(t))
         .map((t: any) => ({
           id: t.id,
           type: t.type,
@@ -68,13 +69,16 @@ export function TrackSelectionModal({ isOpen, type, onClose }: TrackSelectionMod
 
       // Find currently selected track
       const current = filteredTracks.find((t: Track) => t.selected);
+      const currentCc = ccList.find((t: CCTrack) => t.selected);
       if (current) {
         setSelectedId(current.id);
-      }
-
-      const currentCc = ccList.find((t: CCTrack) => t.selected);
-      if (currentCc) {
+        setSelectedCcId(null);
+      } else if (currentCc) {
         setSelectedCcId(currentCc.id);
+        setSelectedId(null);
+      } else {
+        setSelectedId(0);
+        setSelectedCcId(null);
       }
     } catch (e) {
       console.error('Failed to load tracks:', e);
@@ -163,7 +167,7 @@ export function TrackSelectionModal({ isOpen, type, onClose }: TrackSelectionMod
           ) : (
             <>
               {/* Regular Subtitle/Audio Tracks */}
-              {tracks.length > 0 && (
+              {(tracks.length > 0 || (type === 'subtitle' && ccTracks.length > 0)) && (
                 <>
                   <div className="track-section-title">
                     {type === 'subtitle' ? 'Subtitles' : 'Audio Tracks'}

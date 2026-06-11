@@ -2741,18 +2741,30 @@ function App() {
       )}
 
       {/* Track Selection Modals */}
-      <SubtitleControlModal
-        isOpen={showSubtitleModal}
-        onClose={() => {
-          controlsHoveredRef.current = false;
-          setShowSubtitleModal(false);
-          handleMouseMove();
-        }}
-        vodTitle={vodInfo?.title}
-        vodYear={vodInfo?.year}
-        seasonNum={vodInfo?.seasonNum}
-        episodeNum={vodInfo?.episodeNum}
-      />
+      {currentChannel?.stream_id === 'vod' || currentChannel?.stream_id?.startsWith('recording_') ? (
+        <SubtitleControlModal
+          isOpen={showSubtitleModal}
+          onClose={() => {
+            controlsHoveredRef.current = false;
+            setShowSubtitleModal(false);
+            handleMouseMove();
+          }}
+          vodTitle={vodInfo?.title}
+          vodYear={vodInfo?.year}
+          seasonNum={vodInfo?.seasonNum}
+          episodeNum={vodInfo?.episodeNum}
+        />
+      ) : (
+        <TrackSelectionModal
+          isOpen={showSubtitleModal}
+          type="subtitle"
+          onClose={() => {
+            controlsHoveredRef.current = false;
+            setShowSubtitleModal(false);
+            handleMouseMove();
+          }}
+        />
+      )}
       <TrackSelectionModal
         isOpen={showAudioModal}
         type="audio"
