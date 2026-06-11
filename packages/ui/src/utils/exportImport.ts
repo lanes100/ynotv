@@ -24,6 +24,12 @@ export interface ExportData {
         enabled?: boolean;
         alias?: string;
     }>;
+    vodCategoryPreferences?: Array<{
+        categoryId: string;
+        sourceId: string;
+        enabled?: boolean;
+        displayOrder?: number;
+    }>;
     customGroups: Array<{
         groupId: string;
         name: string;
@@ -210,6 +216,17 @@ export async function exportAllData(): Promise<{ success: boolean; filePath?: st
                 alias: ch.alias
             }));
 
+        // 4b. Get VOD Category Preferences (enabled/disabled status and display order)
+        const allVodCategories = await db.vodCategories.toArray();
+        const vodCategoryPreferences = allVodCategories
+            .filter(cat => cat.enabled === false || (cat.display_order !== undefined && cat.display_order !== 0))
+            .map(cat => ({
+                categoryId: cat.category_id,
+                sourceId: cat.source_id,
+                enabled: cat.enabled,
+                displayOrder: cat.display_order
+            }));
+
         // 5. Get Custom Groups with their channels
         const allCustomGroups = await db.customGroups.toArray();
         const allGroupChannels = await db.customGroupChannels.toArray();
@@ -389,6 +406,7 @@ export async function exportAllData(): Promise<{ success: boolean; filePath?: st
             favorites: favoriteData,
             categoryPreferences,
             channelPreferences,
+            vodCategoryPreferences,
             customGroups,
             watchlist,
             epgChannelOverrides,
@@ -474,9 +492,12 @@ export async function importAllData(): Promise<{ success: boolean; error?: strin
             db.watchlist, db.epgChannelOverrides, db.epgProgramOverrides,
             db.dvrSchedules, db.dvrRecordings, db.dvrSettings,
             db.failoverGroups, db.failoverGroupMembers,
-            db.vodHistory, db.episodeHistory, db.prefs
+            db.vodHistory, db.episodeHistory, db.prefs,
+            db.sourcesMeta, db.programs, db.epgChannels,
+            db.vodMovies, db.vodSeries, db.vodEpisodes,
+            db.vodCategories, db.channelMetadata
         ], async () => {
-            // Clear existing data
+            // Clear existing data (both configurations and cache tables)
             await db.channels.clear();
             await db.categories.clear();
             await db.watchlist.clear();
@@ -490,6 +511,14 @@ export async function importAllData(): Promise<{ success: boolean; error?: strin
             await db.vodHistory.clear();
             await db.episodeHistory.clear();
             await db.prefs.clear();
+            await db.sourcesMeta.clear();
+            await db.programs.clear();
+            await db.epgChannels.clear();
+            await db.vodMovies.clear();
+            await db.vodSeries.clear();
+            await db.vodEpisodes.clear();
+            await db.vodCategories.clear();
+            await db.channelMetadata.clear();
 
             // Restore Favorites stubs
             if (data.favorites && data.favorites.length > 0) {
@@ -517,6 +546,20 @@ export async function importAllData(): Promise<{ success: boolean; error?: strin
                 } as StoredCategory));
 
                 await db.categories.bulkAdd(catStubs);
+            }
+
+            // Restore VOD Category Preference stubs
+            if (data.vodCategoryPreferences && data.vodCategoryPreferences.length > 0) {
+                const vodCatStubs = data.vodCategoryPreferences.map(pref => ({
+                    category_id: pref.categoryId,
+                    source_id: pref.sourceId,
+                    name: 'Unknown', // Placeholder
+                    type: 'movie',
+                    enabled: pref.enabled,
+                    display_order: pref.displayOrder
+                } as any));
+
+                await db.vodCategories.bulkAdd(vodCatStubs);
             }
 
             // Restore Channel Preference stubs (enabled/disabled status and alias)
