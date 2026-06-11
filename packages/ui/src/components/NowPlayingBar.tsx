@@ -63,6 +63,7 @@ interface NowPlayingBarProps {
   onSetAspectRatio?: (mode: AspectRatioMode) => void;
   overlay?: React.ReactNode;
   onNavigateDvr?: () => void;
+  onReplayStream?: () => void;
 }
 
 // Format seconds to "H:MM:SS" or "M:SS"
@@ -117,6 +118,7 @@ export function NowPlayingBar({
   onSetAspectRatio,
   overlay,
   onNavigateDvr,
+  onReplayStream,
 }: NowPlayingBarProps) {
   // scrubMode: 'timeshift' | 'epgcatchup' — local toggle when channel supports both
   const [scrubMode, setScrubMode] = useState<'timeshift' | 'epgcatchup'>('timeshift');
@@ -780,6 +782,16 @@ export function NowPlayingBar({
                   {isVod && vodInfo?.type === 'series' ? <NextIcon /> : <ChannelDownIcon />}
                 </button>
               )}
+              {!isVod && !isCatchup && onReplayStream && (
+                <button
+                  className="npb-btn npb-reload-btn"
+                  onClick={onReplayStream}
+                  disabled={!canControl}
+                  title="Reload Channel (Q)"
+                >
+                  <ReloadIcon />
+                </button>
+              )}
               <button
                 className="npb-btn"
                 onClick={onTogglePlay}
@@ -1118,6 +1130,17 @@ function FullscreenIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
       <path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z" />
+    </svg>
+  );
+}
+
+function ReloadIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 2v6h-6" />
+      <path d="M3 12a9 9 0 0 1 15-6.7L21 8" />
+      <path d="M3 22v-6h6" />
+      <path d="M21 12a9 9 0 0 1-15 6.7L3 16" />
     </svg>
   );
 }

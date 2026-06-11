@@ -1759,6 +1759,7 @@ export function ChannelPanel({
               onTimeshiftCatchUp={onTimeshiftCatchUp}
               onChannelUp={onChannelUp}
               onChannelDown={onChannelDown}
+              onReplayStream={selectedChannel ? () => onPlayChannel(selectedChannel) : undefined}
             />
           )}
 
