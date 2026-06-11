@@ -248,6 +248,14 @@ export function VerticalSidebar({
                     All {type === 'series' ? 'Series' : 'Movies'}
                 </button>
 
+                {/* Favorites Link */}
+                <button
+                    className={`vertical-sidebar__item ${selectedId === 'favorites' ? 'active' : ''}`}
+                    onClick={() => onSelect('favorites')}
+                >
+                    Favorites
+                </button>
+
                 {/* Recent Link */}
                 <button
                     className={`vertical-sidebar__item ${selectedId === 'recent' ? 'active' : ''}`}

@@ -1,15 +1,17 @@
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { Virtuoso } from 'react-virtuoso';
 import { HeroSection } from './vod/HeroSection';
 import { HorizontalCarousel } from './vod/HorizontalCarousel';
 import { VerticalSidebar } from './vod/VerticalSidebar';
 import { VodBrowse } from './vod/VodBrowse';
 import { RecentView } from './vod/RecentView';
+import { FavoritesView } from './vod/FavoritesView';
 import { MovieDetail } from './vod/MovieDetail';
 import { SeriesDetail } from './vod/SeriesDetail';
 import { SourceContextMenu } from './SourceContextMenu';
 import { ManageVodCategories } from './vod/ManageVodCategories';
 import { useVodCategories, useRecentlyWatchedMovies, useRecentlyWatchedSeries } from '../hooks/useVod';
+import { useVodFavoritesStore } from '../stores/vodFavoritesStore';
 import {
   useCinemetaPopular,
   useCinemetaNew,
@@ -34,8 +36,7 @@ import {
   useSetSeriesSelectedSeason,
 } from '../stores/uiStore';
 import type { StoredMovie, StoredSeries } from '../db';
-import { removeFromRecentlyWatched } from '../db';
-import { recordVodWatch } from '../db';
+import { removeFromRecentlyWatched, recordVodWatch, db } from '../db';
 import { type MediaItem, type VodType, type VodPlayInfo } from '../types/media';
 import './VodPage.css';
 
@@ -185,6 +186,65 @@ export function VodPage({ type, onPlay, onClose }: VodPageProps) {
         episodeTitle: s.episode_title 
       }]))
     : undefined;
+
+  // Favorites - from Zustand persist store
+  const allFavorites = useVodFavoritesStore((s) => s.favorites);
+  const favoritesList = useMemo(
+    () => allFavorites.filter(f => f.type === type),
+    [allFavorites, type]
+  );
+
+
+  const [favoriteItems, setFavoriteItems] = useState<(StoredMovie | StoredSeries)[]>([]);
+  const [favoritesLoading, setFavoritesLoading] = useState(false);
+
+  // Load full item data from DB when favorites view is selected
+  useEffect(() => {
+    if (selectedCategoryId !== 'favorites' || favoritesList.length === 0) {
+      setFavoriteItems([]);
+      return;
+    }
+
+    let cancelled = false;
+    const loadItems = async () => {
+      setFavoritesLoading(true);
+      try {
+        const dbInstance = await (db as any).dbPromise;
+        const ids = favoritesList.map(f => f.id);
+        const placeholders = ids.map(() => '?').join(',');
+
+        if (type === 'movie') {
+          const items: StoredMovie[] = await dbInstance.select(
+            `SELECT * FROM vodMovies WHERE stream_id IN (${placeholders})`,
+            ids
+          );
+          if (!cancelled) {
+            const orderMap = new Map(ids.map((id, i) => [id, i]));
+            items.sort((a, b) => (orderMap.get(a.stream_id) ?? 0) - (orderMap.get(b.stream_id) ?? 0));
+            setFavoriteItems(items);
+          }
+        } else {
+          const items: StoredSeries[] = await dbInstance.select(
+            `SELECT * FROM vodSeries WHERE series_id IN (${placeholders})`,
+            ids
+          );
+          if (!cancelled) {
+            const orderMap = new Map(ids.map((id, i) => [id, i]));
+            items.sort((a, b) => (orderMap.get(a.series_id) ?? 0) - (orderMap.get(b.series_id) ?? 0));
+            setFavoriteItems(items);
+          }
+        }
+      } catch (error) {
+        console.error('[VodPage] Error loading favorites:', error);
+        if (!cancelled) setFavoriteItems([]);
+      } finally {
+        if (!cancelled) setFavoritesLoading(false);
+      }
+    };
+
+    loadItems();
+    return () => { cancelled = true; };
+  }, [selectedCategoryId, favoritesList, type]);
 
   // VOD categories
   const { categories } = useVodCategories(type);
@@ -481,6 +541,13 @@ export function VodPage({ type, onPlay, onClose }: VodPageProps) {
             loading={recentlyWatchedLoading}
             onItemClick={handleRecentItemClick}
             onRemove={handleRemoveFromRecentlyWatched}
+          />
+        ) : selectedCategoryId === 'favorites' ? (
+          <FavoritesView
+            type={type}
+            items={favoriteItems}
+            loading={favoritesLoading}
+            onItemClick={handleItemClick}
           />
         ) : selectedCategoryId && selectedCategory ? (
           // Category view: Virtualized grid filtered by category

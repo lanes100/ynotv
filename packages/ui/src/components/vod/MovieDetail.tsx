@@ -15,6 +15,7 @@ import { getRpdbPosterUrl } from '../../services/rpdb';
 import type { StoredMovie } from '../../db';
 import { resolvePlayUrl } from '../../services/stream-resolver';
 import { useDownloadStore } from '../../stores/downloadStore';
+import { useVodFavoritesStore } from '../../stores/vodFavoritesStore';
 import './MovieDetail.css';
 
 export interface MovieDetailProps {
@@ -71,6 +72,23 @@ export function MovieDetail({ movie, onClose, onPlay, apiKey }: MovieDetailProps
 
   const [downloading, setDownloading] = useState(false);
   const startDownload = useDownloadStore((s) => s.startDownload);
+
+  const isFav = useVodFavoritesStore((s) => s.isFavorite(movie.stream_id, 'movie'));
+  const addFavorite = useVodFavoritesStore((s) => s.addFavorite);
+  const removeFavorite = useVodFavoritesStore((s) => s.removeFavorite);
+  const handleToggleFavorite = useCallback(() => {
+    if (isFav) {
+      removeFavorite(movie.stream_id, 'movie');
+    } else {
+      addFavorite({
+        id: movie.stream_id,
+        type: 'movie',
+        title: movie.title || movie.name,
+        poster: movie.stream_icon,
+        year: movie.year || movie.release_date?.slice(0, 4),
+      });
+    }
+  }, [isFav, movie, addFavorite, removeFavorite]);
 
   const handleDownload = useCallback(async () => {
     if (!movie.direct_url) return;
@@ -217,6 +235,17 @@ export function MovieDetail({ movie, onClose, onPlay, apiKey }: MovieDetailProps
                   <path d="M8 5v14l11-7z" />
                 </svg>
                 Play
+              </button>
+
+              <button
+                className={`movie-detail__btn movie-detail__btn--secondary ${isFav ? 'favorited' : ''}`}
+                onClick={handleToggleFavorite}
+                title={isFav ? 'Remove from Favorites' : 'Add to Favorites'}
+              >
+                <svg viewBox="0 0 24 24" fill={isFav ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2">
+                  <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                {isFav ? 'Remove Favorite' : 'Add to Favorite'}
               </button>
 
               {movie.direct_url && (

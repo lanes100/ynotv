@@ -20,6 +20,7 @@ import { recordVodWatch, recordEpisodeWatch } from '../../db';
 import type { VodPlayInfo } from '../../types/media';
 import { resolvePlayUrl } from '../../services/stream-resolver';
 import { useDownloadStore } from '../../stores/downloadStore';
+import { useVodFavoritesStore } from '../../stores/vodFavoritesStore';
 import './SeriesDetail.css';
 
 export interface SeriesDetailProps {
@@ -38,6 +39,23 @@ export function SeriesDetail({ series, onClose, onPlayEpisode, apiKey, initialSe
 
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const startDownload = useDownloadStore((s) => s.startDownload);
+
+  const isFav = useVodFavoritesStore((s) => s.isFavorite(series.series_id, 'series'));
+  const addFavorite = useVodFavoritesStore((s) => s.addFavorite);
+  const removeFavorite = useVodFavoritesStore((s) => s.removeFavorite);
+  const handleToggleFavorite = useCallback(() => {
+    if (isFav) {
+      removeFavorite(series.series_id, 'series');
+    } else {
+      addFavorite({
+        id: series.series_id,
+        type: 'series',
+        title: series.title || series.name,
+        poster: series.cover,
+        year: series.year || series.release_date?.slice(0, 4),
+      });
+    }
+  }, [isFav, series, addFavorite, removeFavorite]);
 
   // Load RPDB settings for poster
   const { apiKey: rpdbApiKey } = useRpdbSettings();
@@ -379,6 +397,18 @@ export function SeriesDetail({ series, onClose, onPlayEpisode, apiKey, initialSe
                 <span className="series-detail__credit-value">{lazyCredits.cast}</span>
               </div>
             )}
+
+            {/* Favorite Button */}
+            <button
+              className={`series-detail__fav-btn ${isFav ? 'favorited' : ''}`}
+              onClick={handleToggleFavorite}
+              title={isFav ? 'Remove from Favorites' : 'Add to Favorites'}
+            >
+              <svg viewBox="0 0 24 24" fill={isFav ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2">
+                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              {isFav ? 'Remove Favorite' : 'Add to Favorite'}
+            </button>
           </div>
         </div>
 

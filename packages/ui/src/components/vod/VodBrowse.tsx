@@ -15,8 +15,9 @@ import {
   usePaginatedSeries,
   useAlphabetIndex,
   useCurrentLetter,
-  useLazyStalkerLoader, // Import the new hook
+  useLazyStalkerLoader,
 } from '../../hooks/useVod';
+import { useVodFavoritesStore } from '../../stores/vodFavoritesStore';
 import './VodBrowse.css';
 
 // Poster size presets (card width in pixels)
@@ -223,6 +224,20 @@ export function VodBrowse({
   // Combine loading states
   const loading = dataLoading || lazyLoading;
 
+  // Favorites - single store subscription, compute Set of IDs for current type
+  const allFavorites = useVodFavoritesStore((s) => s.favorites);
+  const favoritedIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const f of allFavorites) {
+      if ((type === 'movies' && f.type === 'movie') || (type === 'series' && f.type === 'series')) {
+        ids.add(f.id);
+      }
+    }
+    return ids;
+  }, [allFavorites, type]);
+  const addFavorite = useVodFavoritesStore((s) => s.addFavorite);
+  const removeFavorite = useVodFavoritesStore((s) => s.removeFavorite);
+
 
   // Alphabet navigation
   const alphabetIndex = useAlphabetIndex(items);
@@ -292,6 +307,11 @@ export function VodBrowse({
     (_index: number, item: StoredMovie | StoredSeries) => {
       if (!item) return null;
 
+      const itemId = type === 'movies'
+        ? (item as StoredMovie).stream_id
+        : (item as StoredSeries).series_id;
+      const isFav = favoritedIds.has(itemId);
+
       // Determine size label based on poster size
       let sizeLabel: 'small' | 'medium' | 'large' = 'medium';
       if (posterSize <= 120) sizeLabel = 'small';
@@ -309,10 +329,29 @@ export function VodBrowse({
           onClick={onItemClick}
           size={sizeLabel}
           style={cardStyle}
+          isFavorited={isFav}
+          onToggleFavorite={(clickedItem) => {
+            const clickedId = type === 'movies'
+              ? (clickedItem as StoredMovie).stream_id
+              : (clickedItem as StoredSeries).series_id;
+            if (favoritedIds.has(clickedId)) {
+              removeFavorite(clickedId, type === 'movies' ? 'movie' : 'series');
+            } else {
+              addFavorite({
+                id: clickedId,
+                type: type === 'movies' ? 'movie' : 'series',
+                title: clickedItem.title || clickedItem.name,
+                poster: type === 'movies'
+                  ? (clickedItem as StoredMovie).stream_icon
+                  : (clickedItem as StoredSeries).cover,
+                year: clickedItem.year || clickedItem.release_date?.slice(0, 4),
+              });
+            }
+          }}
         />
       );
     },
-    [type, onItemClick, posterSize, cardDimensions]
+    [type, onItemClick, posterSize, cardDimensions, favoritedIds, addFavorite, removeFavorite]
   );
 
   // CSS custom properties for dynamic sizing - MUST be before any early returns

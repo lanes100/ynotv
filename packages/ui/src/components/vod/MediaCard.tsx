@@ -17,11 +17,14 @@ export interface MediaCardProps {
   seasonNum?: number;
   episodeNum?: number;
   episodeTitle?: string;
+  // Favorite toggle on poster
+  isFavorited?: boolean;
+  onToggleFavorite?: (item: StoredMovie | StoredSeries) => void;
   // Optional style for dynamic sizing (e.g., marquee animation)
   style?: React.CSSProperties;
 }
 
-export const MediaCard = memo(function MediaCard({ item, type, onClick, onRemove, size = 'medium', progressPercent, isRecentlyWatched, seasonNum, episodeNum, episodeTitle, style }: MediaCardProps) {
+export const MediaCard = memo(function MediaCard({ item, type, onClick, onRemove, size = 'medium', progressPercent, isRecentlyWatched, seasonNum, episodeNum, episodeTitle, isFavorited, onToggleFavorite, style }: MediaCardProps) {
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
   const [titleOverflows, setTitleOverflows] = useState(false);
@@ -76,6 +79,12 @@ export const MediaCard = memo(function MediaCard({ item, type, onClick, onRemove
     e.preventDefault();
     onRemove?.(item);
   }, [item, onRemove]);
+
+  const handleToggleFav = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    onToggleFavorite?.(item);
+  }, [item, onToggleFavorite]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -138,6 +147,20 @@ export const MediaCard = memo(function MediaCard({ item, type, onClick, onRemove
           >
             <svg viewBox="0 0 24 24" fill="currentColor">
               <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
+            </svg>
+          </button>
+        )}
+
+        {/* Favorite button on poster */}
+        {onToggleFavorite && (
+          <button
+            className={`media-card__fav-btn ${isFavorited ? 'favorited' : ''}`}
+            onClick={handleToggleFav}
+            aria-label={isFavorited ? 'Remove from Favorites' : 'Add to Favorites'}
+            title={isFavorited ? 'Remove from Favorites' : 'Add to Favorites'}
+          >
+            <svg viewBox="0 0 24 24" fill={isFavorited ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2">
+              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </button>
         )}

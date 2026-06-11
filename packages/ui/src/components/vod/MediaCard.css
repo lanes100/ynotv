@@ -183,6 +183,53 @@
   height: 16px;
 }
 
+/* Favorite button on poster */
+.media-card__fav-btn {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.5);
+  border: none;
+  border-radius: 50%;
+  color: #fff;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.2s ease, background 0.2s ease, transform 0.2s ease;
+  z-index: 20;
+  padding: 0;
+  backdrop-filter: blur(4px);
+}
+
+.media-card:hover .media-card__fav-btn:not(.favorited),
+.media-card:focus-visible .media-card__fav-btn:not(.favorited) {
+  opacity: 1;
+}
+
+.media-card__fav-btn.favorited {
+  opacity: 1;
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.2);
+}
+
+.media-card__fav-btn:hover {
+  transform: scale(1.15);
+  background: rgba(0, 0, 0, 0.7);
+}
+
+.media-card__fav-btn.favorited:hover {
+  background: rgba(239, 68, 68, 0.35);
+}
+
+.media-card__fav-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
 /* Info section - compact and polished */
 .media-card__info {
   height: 32px;
