@@ -403,6 +403,7 @@ export function WorldCupTab({ onSearchChannels, onPlayChannel }: WorldCupTabProp
                   event={m}
                   onClick={() => setSelectedEvent(m)}
                   onChannelClick={onSearchChannels}
+                  onSearchTeams={onSearchChannels}
                   onPlayChannel={onPlayChannel}
                 />
               ))}
@@ -672,6 +673,7 @@ export function WorldCupTab({ onSearchChannels, onPlayChannel }: WorldCupTabProp
                 event={event}
                 onClick={() => setSelectedEvent(event)}
                 onChannelClick={onSearchChannels}
+                onSearchTeams={onSearchChannels}
                 onPlayChannel={onPlayChannel}
               />
             ))}
