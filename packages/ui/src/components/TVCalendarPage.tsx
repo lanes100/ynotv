@@ -1223,60 +1223,61 @@ export function TVCalendarPage({ onClose, onPlayChannel }: Props) {
 
   return (
     <div className="tvcp-page">
-      <aside className="tvcp-sidebar">
-        <div className="tvcp-sidebar-header">
-          <h2 className="tvcp-sidebar-title">TV Calendar</h2>
-          <p className="tvcp-sidebar-subtitle">Track Shows & Episodes</p>
+      {/* Top Navigation */}
+      <header className="tvcp-topbar">
+        <div className="tvcp-topbar-left">
+          <div className="tvcp-brand">
+            <svg className="tvcp-brand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+              <line x1="16" y1="2" x2="16" y2="6" />
+              <line x1="8" y1="2" x2="8" y2="6" />
+              <line x1="3" y1="10" x2="21" y2="10" />
+            </svg>
+            <span className="tvcp-brand-name">TV Calendar</span>
+          </div>
         </div>
 
-        <nav className="tvcp-nav">
+        <div className="tvcp-topbar-center">
           <button
-            className={`tvcp-nav-item ${activeTab === 'search' ? 'active' : ''}`}
+            className={`tvcp-topbar-item ${activeTab === 'search' ? 'active' : ''}`}
             onClick={() => setActiveTab('search')}
           >
-            <span className="tvcp-nav-icon"><SearchIcon /></span>
-            <span className="tvcp-nav-label">Search Shows</span>
+            <span className="tvcp-topbar-icon"><SearchIcon /></span>
+            <span>Search Shows</span>
           </button>
           <button
-            className={`tvcp-nav-item ${activeTab === 'calendar' ? 'active' : ''}`}
+            className={`tvcp-topbar-item ${activeTab === 'calendar' ? 'active' : ''}`}
             onClick={() => setActiveTab('calendar')}
           >
-            <span className="tvcp-nav-icon"><CalendarIcon /></span>
-            <span className="tvcp-nav-label">Calendar</span>
+            <span className="tvcp-topbar-icon"><CalendarIcon /></span>
+            <span>Calendar</span>
           </button>
           <button
-            className={`tvcp-nav-item ${activeTab === 'upcoming' ? 'active' : ''}`}
+            className={`tvcp-topbar-item ${activeTab === 'upcoming' ? 'active' : ''}`}
             onClick={() => setActiveTab('upcoming')}
           >
-            <span className="tvcp-nav-icon"><UpcomingIcon /></span>
-            <span className="tvcp-nav-label">Upcoming Shows</span>
+            <span className="tvcp-topbar-icon"><UpcomingIcon /></span>
+            <span>Upcoming Shows</span>
           </button>
           <button
-            className={`tvcp-nav-item ${activeTab === 'myshows' ? 'active' : ''}`}
+            className={`tvcp-topbar-item ${activeTab === 'myshows' ? 'active' : ''}`}
             onClick={() => setActiveTab('myshows')}
           >
-            <span className="tvcp-nav-icon"><ShowsIcon /></span>
-            <span className="tvcp-nav-label">My Shows</span>
-            {shows.length > 0 && <span className="tvcp-nav-badge">{shows.length}</span>}
+            <span className="tvcp-topbar-icon"><ShowsIcon /></span>
+            <span>My Shows</span>
+            {shows.length > 0 && <span className="tvcp-topbar-badge">{shows.length}</span>}
           </button>
           <button
-            className={`tvcp-nav-item ${activeTab === 'settings' ? 'active' : ''}`}
+            className={`tvcp-topbar-item ${activeTab === 'settings' ? 'active' : ''}`}
             onClick={() => setActiveTab('settings')}
           >
-            <span className="tvcp-nav-icon"><SettingsIcon /></span>
-            <span className="tvcp-nav-label">Settings</span>
-          </button>
-        </nav>
-
-        <div className="tvcp-sidebar-footer">
-          <button className="tvcp-back-btn" onClick={onClose}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M19 12H5M12 19l-7-7 7-7" />
-            </svg>
-            Back to TV
+            <span className="tvcp-topbar-icon"><SettingsIcon /></span>
+            <span>Settings</span>
           </button>
         </div>
-      </aside>
+
+        <div className="tvcp-topbar-right" />
+      </header>
 
       <main className="tvcp-main">
         {renderContent()}

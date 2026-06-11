@@ -7,6 +7,7 @@
   right: 0;
   bottom: 0;
   display: flex;
+  flex-direction: column;
   background: var(--bg-primary, #0f0f0f);
   color: var(--text-primary, #ffffff);
   z-index: 100;
@@ -1664,4 +1665,121 @@
     grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
     gap: 12px;
   }
+}
+
+/* ============================================
+   TOPBAR NAVIGATION
+   ============================================ */
+.tvcp-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 56px;
+  width: 100%;
+  background: var(--bg-secondary, #13131a);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 0 24px;
+  box-sizing: border-box;
+  flex-shrink: 0;
+  z-index: 100;
+  position: relative;
+}
+
+.tvcp-topbar-left {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 150px;
+}
+
+.tvcp-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.tvcp-brand-icon {
+  width: 22px;
+  height: 22px;
+  color: var(--accent-primary, #667eea);
+  flex-shrink: 0;
+}
+
+.tvcp-brand-name {
+  font-size: 1.15rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--text-primary, #ffffff);
+}
+
+.tvcp-topbar-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 100%;
+}
+
+.tvcp-topbar-item {
+  position: relative;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.6));
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0 16px;
+  transition: color 0.15s ease, background 0.15s ease;
+  box-sizing: border-box;
+}
+
+.tvcp-topbar-item:hover {
+  color: var(--text-primary, #ffffff);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.tvcp-topbar-item.active {
+  color: var(--text-primary, #ffffff);
+}
+
+.tvcp-topbar-item.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 12px;
+  right: 12px;
+  height: 3px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 3px 3px 0 0;
+}
+
+.tvcp-topbar-icon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  opacity: 0.85;
+}
+
+.tvcp-topbar-badge {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 10px;
+  min-width: 14px;
+  text-align: center;
+  margin-left: 4px;
+}
+
+.tvcp-topbar-right {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex: 1;
+  min-width: 200px;
 }

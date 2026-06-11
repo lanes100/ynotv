@@ -249,100 +249,86 @@ export function DvrDashboard({ onPlay, onClose }: DvrDashboardProps) {
 
     return (
         <div className="dvr-dashboard">
-            {/* Sidebar */}
-            <aside className="dvr-sidebar">
-                <div className="dvr-sidebar-header">
-                    <h2 className="dvr-sidebar-title">DVR</h2>
-                    <p className="dvr-sidebar-subtitle">Digital Video Recorder</p>
+            {/* Top Navigation */}
+            <header className="dvr-topbar">
+                <div className="dvr-topbar-left">
+                    <div className="dvr-brand">
+                        <svg className="dvr-brand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                            <path d="M15 10l4.553-2.276A1 1 0 0 1 21 8.618v6.764a1 1 0 0 1-1.447.894L15 14M5 18h8a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2z" />
+                        </svg>
+                        <span className="dvr-brand-name">DVR</span>
+                    </div>
                 </div>
 
-                <nav className="dvr-nav">
+                <div className="dvr-topbar-center">
                     <button
-                        className={`dvr-nav-item ${activeTab === 'scheduled' ? 'active' : ''}`}
+                        className={`dvr-topbar-item ${activeTab === 'scheduled' ? 'active' : ''}`}
                         onClick={() => setActiveTab('scheduled')}
                     >
-                        <span className="dvr-nav-icon">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-                                <line x1="16" y1="2" x2="16" y2="6" />
-                                <line x1="8" y1="2" x2="8" y2="6" />
-                                <line x1="3" y1="10" x2="21" y2="10" />
-                            </svg>
-                        </span>
-                        <span className="dvr-nav-label">Scheduled</span>
-                        {upcomingCount > 0 && <span className="dvr-nav-badge">{upcomingCount}</span>}
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="dvr-topbar-icon">
+                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                            <line x1="16" y1="2" x2="16" y2="6" />
+                            <line x1="8" y1="2" x2="8" y2="6" />
+                            <line x1="3" y1="10" x2="21" y2="10" />
+                        </svg>
+                        <span>Scheduled</span>
+                        {upcomingCount > 0 && <span className="dvr-topbar-badge">{upcomingCount}</span>}
                     </button>
 
                     <button
-                        className={`dvr-nav-item ${activeTab === 'recorded' ? 'active' : ''}`}
+                        className={`dvr-topbar-item ${activeTab === 'recorded' ? 'active' : ''}`}
                         onClick={() => setActiveTab('recorded')}
                     >
-                        <span className="dvr-nav-icon">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <polygon points="23 7 16 12 23 17 23 7" />
-                                <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
-                            </svg>
-                        </span>
-                        <span className="dvr-nav-label">Recordings</span>
-                        {recorded.length > 0 && <span className="dvr-nav-badge">{recorded.length}</span>}
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="dvr-topbar-icon">
+                            <polygon points="23 7 16 12 23 17 23 7" />
+                            <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
+                        </svg>
+                        <span>Recordings</span>
+                        {recorded.length > 0 && <span className="dvr-topbar-badge">{recorded.length}</span>}
                     </button>
 
                     <button
-                        className={`dvr-nav-item ${activeTab === 'downloads' ? 'active' : ''}`}
+                        className={`dvr-topbar-item ${activeTab === 'downloads' ? 'active' : ''}`}
                         onClick={() => setActiveTab('downloads')}
                     >
-                        <span className="dvr-nav-icon">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                                <polyline points="7 10 12 15 17 10" />
-                                <line x1="12" y1="15" x2="12" y2="3" />
-                            </svg>
-                        </span>
-                        <span className="dvr-nav-label">Downloads</span>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="dvr-topbar-icon">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                            <polyline points="7 10 12 15 17 10" />
+                            <line x1="12" y1="15" x2="12" y2="3" />
+                        </svg>
+                        <span>Downloads</span>
                         {activeDownloadsCount > 0 ? (
-                            <span className="dvr-nav-badge">{activeDownloadsCount}</span>
+                            <span className="dvr-topbar-badge">{activeDownloadsCount}</span>
                         ) : downloads.length > 0 ? (
-                            <span className="dvr-nav-badge" style={{ background: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.7)' }}>{downloads.length}</span>
+                            <span className="dvr-topbar-badge dvr-topbar-badge-inactive">{downloads.length}</span>
                         ) : null}
                     </button>
 
                     <button
-                        className={`dvr-nav-item ${activeTab === 'settings' ? 'active' : ''}`}
+                        className={`dvr-topbar-item ${activeTab === 'settings' ? 'active' : ''}`}
                         onClick={() => setActiveTab('settings')}
                     >
-                        <span className="dvr-nav-icon">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <circle cx="12" cy="12" r="3" />
-                                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
-                            </svg>
-                        </span>
-                        <span className="dvr-nav-label">Settings</span>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="dvr-topbar-icon">
+                            <circle cx="12" cy="12" r="3" />
+                            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                        </svg>
+                        <span>Settings</span>
                     </button>
-                </nav>
+                </div>
 
-                <div className="dvr-sidebar-footer">
+                <div className="dvr-topbar-right">
                     {activeCount > 0 && (
                         <div className="dvr-recording-indicator">
                             <span className="dvr-recording-pulse" />
-                            <span className="dvr-recording-text">{activeCount} recording{activeCount !== 1 ? 's' : ''} active</span>
+                            <span className="dvr-recording-text">{activeCount} active</span>
                         </div>
                     )}
-                    <button className="dvr-back-btn" onClick={onClose}>
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <path d="M19 12H5M12 19l-7-7 7-7" />
-                        </svg>
-                        Back to TV
-                    </button>
                 </div>
-            </aside>
+            </header>
 
             {/* Main Content */}
             <main className="dvr-main">
-                <header className="dvr-main-header">
-                    <h1 className="dvr-main-title">
-                        {activeTab === 'scheduled' ? 'Scheduled Recordings' : activeTab === 'recorded' ? 'Your Recordings' : activeTab === 'downloads' ? 'Media Downloads' : 'DVR Settings'}
-                    </h1>
-                </header>
+
 
                 <div className="dvr-content">
                     {loading ? (

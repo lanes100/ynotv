@@ -125,17 +125,7 @@ export function SportsHub({
     return saved ? parseInt(saved) : 400; // default 400px
   });
 
-  const [isSidebarHidden, setIsSidebarHidden] = useState(() => {
-    return localStorage.getItem('sportsSidebarHidden') === 'true';
-  });
-
-  const toggleSidebar = useCallback(() => {
-    setIsSidebarHidden(prev => {
-      const next = !prev;
-      localStorage.setItem('sportsSidebarHidden', String(next));
-      return next;
-    });
-  }, []);
+  // Sidebar state and toggle removed since we transitioned to topbar navigation
 
   const sports = getAvailableSports();
 
@@ -505,74 +495,47 @@ export function SportsHub({
 
   return (
     <div className={`sports-hub ${previewEnabled ? 'with-preview' : ''}`}>
-      {!isSidebarHidden ? (
-        <aside className="sports-sidebar">
-          <div className="sports-sidebar-header">
-            <div className="sports-sidebar-title-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <h2 className="sports-sidebar-title">Sports Hub</h2>
-              <div style={{ display: 'flex', gap: '4px' }}>
-                {onTogglePreview && (
-                  <button
-                    className={`sports-preview-toggle ${previewEnabled ? 'active' : ''}`}
-                    onClick={onTogglePreview}
-                    title={previewEnabled ? "Hide Video Preview" : "Show Video Preview"}
-                    style={{ background: 'transparent', border: 'none', color: previewEnabled ? '#00d4ff' : 'rgba(255,255,255,0.5)', cursor: 'pointer', padding: '4px' }}
-                  >
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
-                      <line x1="8" y1="21" x2="16" y2="21" />
-                      <line x1="12" y1="17" x2="12" y2="21" />
-                    </svg>
-                  </button>
-                )}
-                <button
-                  className="sports-sidebar-collapse-btn"
-                  onClick={toggleSidebar}
-                  title="Hide Sidebar"
-                  style={{ background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.5)', cursor: 'pointer', padding: '4px' }}
-                >
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <polyline points="15 18 9 12 15 6"></polyline>
-                  </svg>
-                </button>
-              </div>
-            </div>
-            <p className="sports-sidebar-subtitle">Live Scores & TV Listings</p>
+      {/* Top Navigation */}
+      <header className="sports-topbar">
+        <div className="sports-topbar-left">
+          <div className="sports-brand">
+            <svg className="sports-brand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" />
+              <line x1="4" y1="22" x2="4" y2="15" />
+            </svg>
+            <span className="sports-brand-name">Sports Hub</span>
           </div>
+        </div>
 
-          <nav className="sports-nav">
-            {(['live', 'upcoming', 'worldcup', 'leagues', 'favorites', 'news', 'leaders', 'settings'] as SportsTabId[]).map((tab) => (
-              <button
-                key={tab}
-                className={`sports-nav-item ${activeTab === tab ? 'active' : ''}`}
-                onClick={() => setActiveTab(tab)}
-              >
-                <span className="sports-nav-icon">{getTabIcon(tab)}</span>
-                <span className="sports-nav-label">{getTabLabel(tab)}</span>
-              </button>
-            ))}
-          </nav>
-
-          <div className="sports-sidebar-footer">
-            <button className="sports-back-btn" onClick={onClose}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M19 12H5M12 19l-7-7 7-7" />
-              </svg>
-              Back to TV
+        <div className="sports-topbar-center">
+          {((['live', 'upcoming', 'worldcup', 'leagues', 'favorites', 'news', 'leaders', 'settings'] as SportsTabId[])).map((tab) => (
+            <button
+              key={tab}
+              className={`sports-topbar-item ${activeTab === tab ? 'active' : ''}`}
+              onClick={() => setActiveTab(tab)}
+            >
+              <span className="sports-topbar-icon">{getTabIcon(tab)}</span>
+              <span>{getTabLabel(tab)}</span>
             </button>
-          </div>
-        </aside>
-      ) : (
-        <button 
-          className="sports-sidebar-show-btn" 
-          onClick={toggleSidebar}
-          title="Show Sidebar"
-        >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <polyline points="9 18 15 12 9 6"></polyline>
-          </svg>
-        </button>
-      )}
+          ))}
+        </div>
+
+        <div className="sports-topbar-right">
+          {onTogglePreview && (
+            <button
+              className={`sports-topbar-preview-toggle ${previewEnabled ? 'active' : ''}`}
+              onClick={onTogglePreview}
+              title={previewEnabled ? "Hide Video Preview" : "Show Video Preview"}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
+                <line x1="8" y1="21" x2="16" y2="21" />
+                <line x1="12" y1="17" x2="12" y2="21" />
+              </svg>
+            </button>
+          )}
+        </div>
+      </header>
 
       <main className="sports-main">
         {!previewEnabled && (
