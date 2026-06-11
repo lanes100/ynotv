@@ -184,14 +184,14 @@ export function StremTab({
               LIVE PREVIEW
             </div>
             <div className="stremio-detail-stream-badges" style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
-              <span className="stremio-stream-badge" style={{ backgroundColor: '#FFBE01', color: '#FFBE01', borderColor: '#FFBE01' }}>
-                4K
+              <span className="stremio-stream-badge-img" style={{ backgroundColor: '#ffffff', borderColor: '#ffffff' }}>
+                <img src="https://raw.githubusercontent.com/nobnobz/Omni-Template-Bot-Bid-Raiser/main/Other/regex%20tags/4k.png" alt="4K" />
               </span>
-              <span className="stremio-stream-badge" style={{ backgroundColor: '#FFBE01', color: '#ffffff', borderColor: '#FFBE01' }}>
-                HDR
+              <span className="stremio-stream-badge-img" style={{ backgroundColor: '#ffffff', borderColor: '#ffffff' }}>
+                <img src="https://raw.githubusercontent.com/nobnobz/Omni-Template-Bot-Bid-Raiser/main/Other/regex%20tags/HDR.png" alt="HDR" />
               </span>
-              <span className="stremio-stream-badge-img" style={{ backgroundColor: '#00e932e6', borderColor: '#00ff37ff' }}>
-                <img src="https://raw.githubusercontent.com/ngreyx1/badges/refs/heads/main/images%20w%3Ao%20logo/colored-webdl.png" alt="WebDL" />
+              <span className="stremio-stream-badge-img" style={{ backgroundColor: '#ffffff', borderColor: '#ffffff' }}>
+                <img src="https://raw.githubusercontent.com/ngreyx1/badges/refs/heads/main/images%20w:o%20logo/webdl-black.png" alt="WEB-DL" />
               </span>
               <span className="stremio-stream-badge-img" style={{ backgroundColor: '#ffffff', borderColor: '#ffffff' }}>
                 <img src="https://raw.githubusercontent.com/nobnobz/Omni-Template-Bot-Bid-Raiser/main/Other/regex%20tags/51.png" alt="5.1" />
@@ -345,22 +345,24 @@ export function StremTab({
                       >
                         {source.isActive ? 'Active' : 'Inactive'}
                       </button>
-                      <button
-                        onClick={() => handleDeleteSource(source.url)}
-                        title="Remove"
-                        style={{
-                          background: 'rgba(239,68,68,0.1)',
-                          border: '1px solid rgba(239,68,68,0.2)',
-                          color: '#ef4444',
-                          borderRadius: '4px',
-                          padding: '3px 8px',
-                          fontSize: '0.7rem',
-                          fontWeight: 600,
-                          cursor: 'pointer',
-                        }}
-                      >
-                        Delete
-                      </button>
+                      {!source.isDefault && (
+                        <button
+                          onClick={() => handleDeleteSource(source.url)}
+                          title="Remove"
+                          style={{
+                            background: 'rgba(239,68,68,0.1)',
+                            border: '1px solid rgba(239,68,68,0.2)',
+                            color: '#ef4444',
+                            borderRadius: '4px',
+                            padding: '3px 8px',
+                            fontSize: '0.7rem',
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                          }}
+                        >
+                          Delete
+                        </button>
+                      )}
                     </div>
                   </div>
 

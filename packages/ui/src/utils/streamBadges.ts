@@ -178,3 +178,388 @@ export function parseBadgePayload(json: string): ImportedBadgePayload {
 
   return { filters, groups };
 }
+
+
+export const DEFAULT_BADGE_SOURCES: BadgeSource[] = [
+  {
+  "url": "https://gist.githubusercontent.com/BringerOfRainX1/91203014c5d32c1ca7d5b51870a19786/raw/Badges%20json",
+  "name": "Default",
+  "isActive": true,
+  "isDefault": true,
+  "payload": {
+    "groups": [
+      {
+        "borderColor": "#FFFFFF",
+        "color": "#FFFFFF",
+        "id": "gq",
+        "isExpanded": true,
+        "name": "Quality"
+      },
+      {
+        "borderColor": "#FFFFFF",
+        "color": "#FFFFFF",
+        "id": "gv",
+        "isExpanded": true,
+        "name": "Visual"
+      },
+      {
+        "borderColor": "#FFFFFF",
+        "color": "#FFFFFF",
+        "id": "gr",
+        "isExpanded": true,
+        "name": "Resolution"
+      },
+      {
+        "borderColor": "#FFFFFF",
+        "color": "#FFFFFF",
+        "id": "ga",
+        "isExpanded": true,
+        "name": "Audio"
+      },
+      {
+        "borderColor": "#FFFFFF",
+        "color": "#FFFFFF",
+        "id": "gc",
+        "isExpanded": true,
+        "name": "Channels"
+      }
+    ],
+    "filters": [
+      {
+        "borderColor": "#FFFFFF",
+        "groupId": "gr",
+        "id": "r-4k",
+        "imageURL": "https://raw.githubusercontent.com/nobnobz/Omni-Template-Bot-Bid-Raiser/main/Other/regex%20tags/4k.png",
+        "isEnabled": true,
+        "name": "4K",
+        "pattern": "(?i)^(?=.*(?:2160[pi]?|4k|uhd))(?!.*(?:1080[pi]?|720[pi]?))",
+        "tagColor": "#FFFFFF",
+        "tagStyle": "filled",
+        "textColor": "#000000",
+        "type": "filter"
+      },
+      {
+        "borderColor": "#FFFFFF",
+        "groupId": "gr",
+        "id": "r-1080",
+        "imageURL": "https://raw.githubusercontent.com/nobnobz/Omni-Template-Bot-Bid-Raiser/main/Other/regex%20tags/1080p.png",
+        "isEnabled": true,
+        "name": "1080p",
+        "pattern": "(?i)\\b1080[pi]?\\b",
+        "tagColor": "#FFFFFF",
+        "tagStyle": "filled",
+        "textColor": "#000000",
+        "type": "filter"
+      },
+      {
+        "borderColor": "#FFFFFF",
+        "groupId": "gr",
+        "id": "r-720",
+        "imageURL": "https://raw.githubusercontent.com/nobnobz/Omni-Template-Bot-Bid-Raiser/main/Other/regex%20tags/720p.png",
+        "isEnabled": true,
+        "name": "720p",
+        "pattern": "(?i)\\b720[pi]?\\b",
+        "tagColor": "#FFFFFF",
+        "tagStyle": "filled",
+        "textColor": "#000000",
+        "type": "filter"
+      },
+      {
+        "borderColor": "#FFFFFF",
+        "groupId": "gq",
+        "id": "q-r",
+        "imageURL": "https://raw.githubusercontent.com/ngreyx1/badges/refs/heads/main/images%20w:o%20logo/remux-black.png",
+        "isEnabled": true,
+        "name": "Remux",
+        "pattern": "(?i)\\bremux\\b",
+        "tagColor": "#FFFFFF",
+        "tagStyle": "filled",
+        "textColor": "#000000",
+        "type": "filter"
+      },
+      {
+        "borderColor": "#FFFFFF",
+        "groupId": "gq",
+        "id": "q-b",
+        "imageURL": "https://raw.githubusercontent.com/ngreyx1/badges/refs/heads/main/images%20w:o%20logo/bluray-black.png",
+        "isEnabled": true,
+        "name": "BluRay",
+        "pattern": "(?i)^(?=.*(?:bluray|blu-ray))(?!.*remux)",
+        "tagColor": "#FFFFFF",
+        "tagStyle": "filled",
+        "textColor": "#000000",
+        "type": "filter"
+      },
+      {
+        "borderColor": "#FFFFFF",
+        "groupId": "gq",
+        "id": "q-w",
+        "imageURL": "https://raw.githubusercontent.com/ngreyx1/badges/refs/heads/main/images%20w:o%20logo/webdl-black.png",
+        "isEnabled": true,
+        "name": "WEB-DL",
+        "pattern": "(?i)\\bweb[-_. ]?dl\\b",
+        "tagColor": "#FFFFFF",
+        "tagStyle": "filled",
+        "textColor": "#000000",
+        "type": "filter"
+      },
+      {
+        "borderColor": "#FFFFFF",
+        "groupId": "gq",
+        "id": "q-wr",
+        "imageURL": "https://raw.githubusercontent.com/ngreyx1/badges/refs/heads/main/images%20w:o%20logo/webrip-black.png",
+        "isEnabled": true,
+        "name": "WEBRip",
+        "pattern": "(?i)\\bweb[-_. ]?rip\\b",
+        "tagColor": "#FFFFFF",
+        "tagStyle": "filled",
+        "textColor": "#000000",
+        "type": "filter"
+      },
+      {
+        "borderColor": "#FFFFFF",
+        "groupId": "gq",
+        "id": "v-seadex",
+        "imageURL": "https://raw.githubusercontent.com/ngreyx1/badges/refs/heads/main/images%20w:o%20logo/SEADEX-black.png",
+        "isEnabled": true,
+        "name": "SeaDex",
+        "pattern": "(?i)\\b(?:seadex|best[\\s._-]?release|alt[\\s._-]?(?:best[\\s._-]?)?release)\\b|ᴀʟᴛ ʀᴇʟᴇᴀsᴇ|ʙᴇsᴛ ʀᴇʟᴇᴀsᴇ",
+        "tagColor": "#FFFFFF",
+        "tagStyle": "filled",
+        "textColor": "#000000",
+        "type": "filter"
+      },
+      {
+        "borderColor": "#FFFFFF",
+        "groupId": "gv",
+        "id": "v-imax",
+        "imageURL": "https://raw.githubusercontent.com/nobnobz/Omni-Template-Bot-Bid-Raiser/main/Other/regex%20tags/IMAXv2.PNG",
+        "isEnabled": true,
+        "name": "IMAX",
+        "pattern": "(?i)^(?=.*\\bIMAX\\b)(?!.*enhanced)",
+        "tagColor": "#FFFFFF",
+        "tagStyle": "filled",
+        "textColor": "#000000",
+        "type": "filter"
+      },
+      {
+        "borderColor": "#FFFFFF",
+        "groupId": "gv",
+        "id": "a-dv",
+        "imageURL": "https://raw.githubusercontent.com/nobnobz/Omni-Template-Bot-Bid-Raiser/main/Other/regex%20tags/DV.png",
+        "isEnabled": true,
+        "name": "DV",
+        "pattern": "(?i)\\b(?:dv|dovi|dolby[\\s._-]?vision)\\b",
+        "tagColor": "#FFFFFF",
+        "tagStyle": "filled",
+        "textColor": "#000000",
+        "type": "filter"
+      },
+      {
+        "borderColor": "#FFFFFF",
+        "groupId": "gv",
+        "id": "v-hdr10p",
+        "imageURL": "https://raw.githubusercontent.com/nobnobz/Omni-Template-Bot-Bid-Raiser/main/Other/regex%20tags/HDR10Plus.png",
+        "isEnabled": true,
+        "name": "HDR10+",
+        "pattern": "(?i)^(?!.*\\b(?:dv|dovi|dolby[\\s._-]?vision)\\b)(?=.*hdr[\\s._-]?10[\\s._-]?(?:\\\\+|plus|p))",
+        "tagColor": "#FFFFFF",
+        "tagStyle": "filled",
+        "textColor": "#000000",
+        "type": "filter"
+      },
+      {
+        "borderColor": "#FFFFFF",
+        "groupId": "gv",
+        "id": "v-hdr10",
+        "imageURL": "https://raw.githubusercontent.com/nobnobz/Omni-Template-Bot-Bid-Raiser/main/Other/regex%20tags/HDR10.png",
+        "isEnabled": true,
+        "name": "HDR10",
+        "pattern": "(?i)^(?!.*\\b(?:dv|dovi|dolby[\\s._-]?vision)\\b)(?=.*hdr[\\s._-]?10)(?!.*hdr[\\s._-]?10[\\s._-]?(?:\\\\+|plus|p))",
+        "tagColor": "#FFFFFF",
+        "tagStyle": "filled",
+        "textColor": "#000000",
+        "type": "filter"
+      },
+      {
+        "borderColor": "#FFFFFF",
+        "groupId": "gv",
+        "id": "v-hdr",
+        "imageURL": "https://raw.githubusercontent.com/nobnobz/Omni-Template-Bot-Bid-Raiser/main/Other/regex%20tags/HDR.png",
+        "isEnabled": true,
+        "name": "HDR",
+        "pattern": "(?i)^(?!.*\\b(?:dv|dovi|dolby[\\s._-]?vision)\\b)(?=.*\\bHDR\\b)(?!.*hdr[\\s._-]?10)",
+        "tagColor": "#FFFFFF",
+        "tagStyle": "filled",
+        "textColor": "#000000",
+        "type": "filter"
+      },
+      {
+        "borderColor": "#FFFFFF",
+        "groupId": "ga",
+        "id": "a-th",
+        "imageURL": "https://raw.githubusercontent.com/nobnobz/Omni-Template-Bot-Bid-Raiser/main/Other/regex%20tags/TrueHD.png",
+        "isEnabled": true,
+        "name": "TrueHD",
+        "pattern": "(?i)(?:\\btrue[ ._-]?hd\\b|^(?=.*\\batmos\\b)(?=.*\\bremux\\b)(?!.*\\b(?:true[ ._-]?hd|ddp|dd\\+|e-?ac3|eac3)\\b).+$)",
+        "tagColor": "#FFFFFF",
+        "tagStyle": "filled",
+        "textColor": "#000000",
+        "type": "filter"
+      },
+      {
+        "borderColor": "#FFFFFF",
+        "groupId": "ga",
+        "id": "a-at",
+        "imageURL": "https://raw.githubusercontent.com/nobnobz/Omni-Template-Bot-Bid-Raiser/main/Other/regex%20tags/Atmos.png",
+        "isEnabled": true,
+        "name": "Atmos",
+        "pattern": "(?i)^(?!.*\\btrue[ _\\.\\-]?hd\\b).*\\batmos\\b.*$",
+        "tagColor": "#FFFFFF",
+        "tagStyle": "filled",
+        "textColor": "#000000",
+        "type": "filter"
+      },
+      {
+        "borderColor": "#FFFFFF",
+        "groupId": "ga",
+        "id": "a-dtsx",
+        "imageURL": "https://raw.githubusercontent.com/nobnobz/Omni-Template-Bot-Bid-Raiser/main/Other/regex%20tags/dtsx.png",
+        "isEnabled": true,
+        "name": "DTS:X",
+        "pattern": "(?i)\\bdts[-_.: ]?x\\b",
+        "tagColor": "#FFFFFF",
+        "tagStyle": "filled",
+        "textColor": "#000000",
+        "type": "filter"
+      },
+      {
+        "borderColor": "#FFFFFF",
+        "groupId": "ga",
+        "id": "a-dtsma",
+        "imageURL": "https://raw.githubusercontent.com/nobnobz/Omni-Template-Bot-Bid-Raiser/main/Other/regex%20tags/dtsHDMA.png",
+        "isEnabled": true,
+        "name": "DTS-HD MA",
+        "pattern": "(?i)^(?=.*\\bdts[-_. ]?(?:hd[-_. ]?)?ma\\b)(?!.*\\bdts[-_.: ]?x\\b)",
+        "tagColor": "#FFFFFF",
+        "tagStyle": "filled",
+        "textColor": "#000000",
+        "type": "filter"
+      },
+      {
+        "borderColor": "#FFFFFF",
+        "groupId": "ga",
+        "id": "a-dtshd",
+        "imageURL": "https://raw.githubusercontent.com/nobnobz/Omni-Template-Bot-Bid-Raiser/main/Other/regex%20tags/dtsHD.png",
+        "isEnabled": true,
+        "name": "DTS-HD",
+        "pattern": "(?i)^(?=.*\\bdts[-_. ]?hd\\b)(?!.*\\bdts[-_. ]?(?:hd[-_. ]?)?ma\\b)(?!.*\\bdts[-_.: ]?x\\b)",
+        "tagColor": "#FFFFFF",
+        "tagStyle": "filled",
+        "textColor": "#000000",
+        "type": "filter"
+      },
+      {
+        "borderColor": "#FFFFFF",
+        "groupId": "ga",
+        "id": "a-dts",
+        "imageURL": "https://raw.githubusercontent.com/nobnobz/Omni-Template-Bot-Bid-Raiser/main/Other/regex%20tags/dts.png",
+        "isEnabled": true,
+        "name": "DTS",
+        "pattern": "(?i)^(?=.*\\bDTS\\b)(?!.*\\bdts[-_. ]?(?:hd|ma|xll|x)\\b)",
+        "tagColor": "#FFFFFF",
+        "tagStyle": "filled",
+        "textColor": "#000000",
+        "type": "filter"
+      },
+      {
+        "borderColor": "#FFFFFF",
+        "groupId": "ga",
+        "id": "a-dp",
+        "imageURL": "https://raw.githubusercontent.com/nobnobz/Omni-Template-Bot-Bid-Raiser/main/Other/regex%20tags/DDPLUS.png",
+        "isEnabled": true,
+        "name": "DD+",
+        "pattern": "(?i)^(?=.*(?:\\bddp|\\bdd\\+|\\beac-?3|\\be-?ac-?3))(?!.*\\batmos\\b)(?!.*\\btrue[\\s._-]?hd\\b)(?!.*\\b(?:dv|dovi|dolby[\\s._-]?vision)\\b)",
+        "tagColor": "#FFFFFF",
+        "tagStyle": "filled",
+        "textColor": "#000000",
+        "type": "filter"
+      },
+      {
+        "borderColor": "#FFFFFF",
+        "groupId": "ga",
+        "id": "a-dd",
+        "imageURL": "https://raw.githubusercontent.com/nobnobz/Omni-Template-Bot-Bid-Raiser/main/Other/regex%20tags/DD.png",
+        "isEnabled": true,
+        "name": "DD",
+        "pattern": "(?i)^(?=.*\\b(?:dd[25][. ][01]|dd[^p+a-z]\\b|\\bac-?3)\\b)(?!.*(?:\\bddp|\\bdd\\+|\\beac-?3|\\be-?ac-?3))(?!.*\\btrue[\\s._-]?hd\\b)(?!.*\\batmos\\b)(?!.*\\b(?:dv|dovi|dolby[\\s._-]?vision)\\b)",
+        "tagColor": "#FFFFFF",
+        "tagStyle": "filled",
+        "textColor": "#000000",
+        "type": "filter"
+      },
+      {
+        "borderColor": "#FFFFFF",
+        "groupId": "gc",
+        "id": "ch-71",
+        "imageURL": "https://raw.githubusercontent.com/nobnobz/Omni-Template-Bot-Bid-Raiser/main/Other/regex%20tags/71.png",
+        "isEnabled": true,
+        "name": "7.1",
+        "pattern": "[^0-9][7-8][. ][01](?![0-9])",
+        "tagColor": "#FFFFFF",
+        "tagStyle": "filled",
+        "textColor": "#000000",
+        "type": "filter"
+      },
+      {
+        "borderColor": "#FFFFFF",
+        "groupId": "gc",
+        "id": "ch-61",
+        "imageURL": "https://raw.githubusercontent.com/nobnobz/Omni-Template-Bot-Bid-Raiser/main/Other/regex%20tags/61.png",
+        "isEnabled": true,
+        "name": "6.1",
+        "pattern": "(?i)(?=.*[^0-9]6[ .][0-1]\\b)(?!.*[^0-9][7-8][ .][0-1]\\b)(?!.*[^0-9]5[ .][0-1]\\b)(?!.*(?<!repac)[^0-9][1-4][ .][0-1]\\b|\\\\b(Stereo|Mono)\\\\b)",
+        "tagColor": "#FFFFFF",
+        "tagStyle": "filled",
+        "textColor": "#000000",
+        "type": "filter"
+      },
+      {
+        "borderColor": "#FFFFFF",
+        "groupId": "gc",
+        "id": "ch-51",
+        "imageURL": "https://raw.githubusercontent.com/nobnobz/Omni-Template-Bot-Bid-Raiser/main/Other/regex%20tags/51.png",
+        "isEnabled": true,
+        "name": "5.1",
+        "pattern": "^(?=.*[^0-9]5[. ][01](?![0-9]))(?!.*[^0-9][7-8][. ][01](?![0-9]))",
+        "tagColor": "#FFFFFF",
+        "tagStyle": "filled",
+        "textColor": "#000000",
+        "type": "filter"
+      }
+    ]
+  }
+}
+];
+
+export function mergeDefaultBadgeSources(loadedSources: BadgeSource[] | undefined): BadgeSource[] {
+  const defaults = DEFAULT_BADGE_SOURCES;
+  if (!loadedSources || loadedSources.length === 0) {
+    return defaults;
+  }
+  const hasDefault = loadedSources.some(s => s.isDefault || s.url === defaults[0].url);
+  if (!hasDefault) {
+    return [defaults[0], ...loadedSources];
+  }
+  return loadedSources.map(s => {
+    if (s.url === defaults[0].url || s.isDefault) {
+      return {
+        ...s,
+        name: 'Default',
+        isDefault: true,
+        payload: defaults[0].payload
+      };
+    }
+    return s;
+  });
+}

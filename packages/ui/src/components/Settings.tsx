@@ -22,6 +22,7 @@ import { StremTab } from './settings/StremTab';
 import { ProxyTab } from './settings/ProxyTab';
 import type { ShortcutsMap, ThemeId } from '../types/app';
 import type { StremioStreamPickerMode, BadgeSource } from '../types/stremio';
+import { DEFAULT_BADGE_SOURCES, mergeDefaultBadgeSources } from '../utils/streamBadges';
 import './Settings.css';
 
 interface SettingsProps {
@@ -177,7 +178,7 @@ export function Settings({
   // Stremio settings
   const [stremioStreamPickerMode, setStremioStreamPickerMode] = useState<StremioStreamPickerMode>('modal');
   const [showStremioStreamBadges, setShowStremioStreamBadges] = useState(true);
-  const [badgeSources, setBadgeSources] = useState<BadgeSource[]>([]);
+  const [badgeSources, setBadgeSources] = useState<BadgeSource[]>(DEFAULT_BADGE_SOURCES);
   const [stremioBadgeSize, setStremioBadgeSize] = useState(100);
 
   useEffect(() => {
@@ -194,7 +195,7 @@ export function Settings({
 
   useEffect(() => {
     if (badgeSourcesProp !== undefined) {
-      setBadgeSources(badgeSourcesProp);
+      setBadgeSources(mergeDefaultBadgeSources(badgeSourcesProp));
     }
   }, [badgeSourcesProp]);
 
@@ -557,9 +558,7 @@ export function Settings({
       setStallDetectionEnabled(settings.stallDetectionEnabled ?? true);
       setStremioStreamPickerMode(settings.stremioStreamPickerMode ?? 'modal');
       setShowStremioStreamBadges(settings.showStremioStreamBadges ?? true);
-      if (Array.isArray(settings.badgeSources)) {
-        setBadgeSources(settings.badgeSources as BadgeSource[]);
-      }
+      setBadgeSources(mergeDefaultBadgeSources(settings.badgeSources as BadgeSource[] | undefined));
       const loadedBadgeSize = settings.stremioBadgeSize ?? 100;
       setStremioBadgeSize(loadedBadgeSize);
       document.documentElement.style.setProperty('--stremio-badge-scale', String(loadedBadgeSize / 100));

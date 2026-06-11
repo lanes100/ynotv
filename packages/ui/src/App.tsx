@@ -91,7 +91,7 @@ import { useUIStore } from './stores/uiStore';
 import { fetchSubtitles } from './services/stremio-addon';
 import { scrobbler } from './services/scrobbler';
 import { SkipIntroButton } from './components/SkipIntroButton';
-import { useSkipIntro } from './hooks/useSkipIntro';
+import { useSkipIntro } from './hooks/useSkipIntro';import { DEFAULT_BADGE_SOURCES, mergeDefaultBadgeSources } from './utils/streamBadges';
 
 // NEW: Extracted hooks
 import { useAppSettings } from './hooks/useAppSettings';
@@ -182,7 +182,7 @@ function App() {
     }
   }, []);
 
-  const [badgeSources, setBadgeSources] = useState<BadgeSource[]>([]);
+  const [badgeSources, setBadgeSources] = useState<BadgeSource[]>(DEFAULT_BADGE_SOURCES);
   const handleBadgeSourcesChange = useCallback(async (sources: BadgeSource[]) => {
     setBadgeSources(sources);
     if (window.storage) {
@@ -202,9 +202,7 @@ function App() {
         if (res.data?.showStremioStreamBadges !== undefined) {
           setShowStremioStreamBadges(res.data.showStremioStreamBadges as boolean);
         }
-        if (Array.isArray(res.data?.badgeSources)) {
-          setBadgeSources(res.data.badgeSources as BadgeSource[]);
-        }
+        setBadgeSources(mergeDefaultBadgeSources(res.data?.badgeSources as BadgeSource[] | undefined));
         if (res.data?.popoutMode) {
           setPopoutMode(res.data.popoutMode as 'off' | 'popout' | 'external');
         }

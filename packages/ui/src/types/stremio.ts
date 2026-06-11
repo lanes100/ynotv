@@ -120,6 +120,7 @@ export interface ImportedBadgeFilter {
   tagStyle: string;
   textColor: string;
   borderColor: string;
+  type?: string;
 }
 
 export interface ImportedBadgeGroup {
@@ -127,6 +128,7 @@ export interface ImportedBadgeGroup {
   name: string;
   color: string;
   isExpanded: boolean;
+  borderColor?: string;
 }
 
 export interface ImportedBadgePayload {
@@ -139,6 +141,7 @@ export interface BadgeSource {
   name: string;
   payload: ImportedBadgePayload;
   isActive: boolean;
+  isDefault?: boolean;
 }
 
 export type StremioStreamPickerMode = 'modal' | 'autoplay';
