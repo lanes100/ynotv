@@ -102,6 +102,44 @@ import { useWindowManager } from './hooks/useWindowManager';
 import { usePopoutPlayer } from './hooks/usePopoutPlayer';
 
 // ============================================================================
+// TransitionView Component
+// ============================================================================
+
+interface TransitionViewProps {
+  visible: boolean;
+  children: React.ReactNode;
+}
+
+function TransitionView({ visible, children }: TransitionViewProps) {
+  const [shouldRender, setShouldRender] = useState(visible);
+  const [animationClass, setAnimationClass] = useState(visible ? 'view-enter-active' : 'view-exit');
+
+  useEffect(() => {
+    if (visible) {
+      setShouldRender(true);
+      const timer = setTimeout(() => {
+        setAnimationClass('view-enter-active');
+      }, 10);
+      return () => clearTimeout(timer);
+    } else {
+      setAnimationClass('view-exit-active');
+      const timer = setTimeout(() => {
+        setShouldRender(false);
+      }, 220); // Match CSS transition duration
+      return () => clearTimeout(timer);
+    }
+  }, [visible]);
+
+  if (!shouldRender) return null;
+
+  return (
+    <div className={`view-transition-container ${animationClass}`}>
+      {children}
+    </div>
+  );
+}
+
+// ============================================================================
 // App Component
 // ============================================================================
 
@@ -2965,31 +3003,31 @@ function App() {
       )}
 
       {/* Movies Page */}
-      {activeView === 'movies' && (
+      <TransitionView visible={activeView === 'movies'}>
         <MoviesPage
           onPlay={(info) => handlePlayVodWrapper(info, () => setActiveView('none'))}
           onClose={() => setActiveView('none')}
         />
-      )}
+      </TransitionView>
 
       {/* Series Page */}
-      {activeView === 'series' && (
+      <TransitionView visible={activeView === 'series'}>
         <SeriesPage
           onPlay={(info) => handlePlayVodWrapper(info, () => setActiveView('none'))}
           onClose={() => setActiveView('none')}
         />
-      )}
+      </TransitionView>
 
       {/* DVR Dashboard */}
-      {activeView === 'dvr' && (
+      <TransitionView visible={activeView === 'dvr'}>
         <DvrDashboard
           onPlay={(recording) => handlePlayRecording(recording, () => setActiveView('none'))}
           onClose={() => setActiveView('none')}
         />
-      )}
+      </TransitionView>
 
       {/* Sports Hub */}
-      {activeView === 'sports' && (
+      <TransitionView visible={activeView === 'sports'}>
         <SportsHub
           onClose={() => setActiveView('none')}
           onSearchChannels={(query) => {
@@ -3011,10 +3049,10 @@ function App() {
           onChannelUp={handleChannelUp}
           onChannelDown={handleChannelDown}
         />
-      )}
+      </TransitionView>
 
       {/* Stremio Page */}
-      {activeView === 'stremio' && (
+      <TransitionView visible={activeView === 'stremio'}>
         <StremioPage
           onClose={() => setActiveView('none')}
           stremioStreamPickerMode={stremioStreamPickerMode}
@@ -3022,10 +3060,10 @@ function App() {
           showStremioStreamBadges={showStremioStreamBadges}
           badgeSources={badgeSources}
         />
-      )}
+      </TransitionView>
 
       {/* TV Calendar */}
-      {activeView === 'calendar' && (
+      <TransitionView visible={activeView === 'calendar'}>
         <TVCalendarPage
           onClose={() => setActiveView('none')}
           onPlayChannel={async (channelName) => {
@@ -3041,7 +3079,7 @@ function App() {
             }
           }}
         />
-      )}
+      </TransitionView>
 
       {/* Watchlist Notifications */}
       <WatchlistNotificationContainer

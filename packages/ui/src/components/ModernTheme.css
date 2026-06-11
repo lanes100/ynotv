@@ -1665,3 +1665,42 @@
     box-shadow: 0 0 2px rgba(255, 59, 59, 0.4);
   }
 }
+
+/* ============================================
+   MODERN UI VIEW TRANSITIONS
+   ============================================ */
+
+.view-transition-container {
+  position: fixed;
+  top: 32px;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 100;
+  pointer-events: none;
+  opacity: 0;
+  transform: translate3d(0, 15px, 0);
+  transition: opacity 0.22s cubic-bezier(0.16, 1, 0.3, 1), transform 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.view-transition-container.view-enter-active {
+  opacity: 1;
+  transform: translate3d(0, 0, 0);
+  pointer-events: auto;
+}
+
+.view-transition-container.view-exit-active {
+  opacity: 0;
+  transform: translate3d(0, 15px, 0);
+  pointer-events: none;
+}
+
+/* Override child page positioning inside transition container to fix the double top spacing gap */
+.view-transition-container > .vod-page,
+.view-transition-container > .dvr-dashboard,
+.view-transition-container > .sports-hub,
+.view-transition-container > .stremio-page,
+.view-transition-container > .tvcp-page {
+  top: 0 !important;
+  height: 100% !important;
+}
