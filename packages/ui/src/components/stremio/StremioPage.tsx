@@ -11,12 +11,16 @@ import {
   useStremioSelectedSeason,
   useSetStremioSelectedSeason,
   useUIStore,
+  useStremioNavigate,
+  useStremioGoBack,
+  useStremioActivePersonId,
 } from '../../stores/uiStore';
 import { StremioTopbar } from './StremioTopbar';
 import { StremioHome } from './StremioHome';
 import { StremioLibrary } from './StremioLibrary';
 import { StremioCalendar } from './StremioCalendar';
 import { StremioDetail } from './StremioDetail';
+import { StremioPersonDetail } from './StremioPersonDetail';
 import { AddonManagerPanel } from './AddonManagerPanel';
 import { StremioAccountModal } from './StremioAccountModal';
 import { StremioHoverProvider } from '../../contexts/StremioHoverContext';
@@ -56,6 +60,9 @@ export function StremioPage({
   const setActiveMeta = useSetStremioActiveMeta();
   const selectedSeason = useStremioSelectedSeason();
   const setSelectedSeason = useSetStremioSelectedSeason();
+  const stremioNavigate = useStremioNavigate();
+  const stremioGoBack = useStremioGoBack();
+  const activePersonId = useStremioActivePersonId();
   const [showAddonManager, setShowAddonManager] = useState(false);
   const [showAccountModal, setShowAccountModal] = useState(false);
 
@@ -69,10 +76,8 @@ export function StremioPage({
           setShowAccountModal(false);
         } else if (showAddonManager) {
           setShowAddonManager(false);
-        } else if (activeMeta) {
-          setActiveMeta(null);
-          setStremioView('home');
-          setSelectedSeason(undefined);
+        } else if (useUIStore.getState().stremioHistory.length > 1) {
+          stremioGoBack();
         } else if (stremioView === 'search' || stremioView === 'settings') {
           setStremioView('home');
         } else {
@@ -82,29 +87,24 @@ export function StremioPage({
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [activeMeta, stremioView, showAddonManager, showAccountModal, onClose, setActiveMeta, setStremioView, setSelectedSeason]);
+  }, [showAddonManager, showAccountModal, onClose, stremioGoBack, stremioView, setStremioView]);
 
   const handleItemClick = useCallback((meta: StremioMeta) => {
     if (mainRef.current) {
       setHomeScrollTop(mainRef.current.scrollTop);
     }
-    setActiveMeta(meta);
-    setStremioView('detail');
+    stremioNavigate({ view: 'detail', meta });
     // If preselectVideoId is set (from Continue Watching), keep the season
     // already set by the caller. Otherwise, reset to undefined so StremioDetail
     // auto-selects Season 1.
     if (!useUIStore.getState().stremioPreselectVideoId) {
       setSelectedSeason(undefined);
     }
-  }, [setActiveMeta, setStremioView, setSelectedSeason]);
+  }, [stremioNavigate, setSelectedSeason]);
 
   const handleBack = useCallback(() => {
-    if (activeMeta) {
-      setActiveMeta(null);
-      setStremioView(homeScrollTop > 0 ? 'home' : 'home');
-      setSelectedSeason(undefined);
-    }
-  }, [activeMeta, setActiveMeta, setStremioView, setSelectedSeason]);
+    stremioGoBack();
+  }, [stremioGoBack]);
 
   const handlePlayStream = useCallback((stream: StremioStream, meta: StremioMeta, episodeVideo?: StremioVideo) => {
     window.dispatchEvent(new CustomEvent('ynotv:stremio-play', {
@@ -169,6 +169,14 @@ export function StremioPage({
               streamPickerMode={stremioStreamPickerMode}
               showStreamBadges={showStremioStreamBadges}
               compiledBadgeRules={compiledBadgeRules}
+            />
+          )}
+
+          {stremioView === 'person' && activePersonId && (
+            <StremioPersonDetail
+              personId={activePersonId}
+              onBack={handleBack}
+              onItemClick={handleItemClick}
             />
           )}
 

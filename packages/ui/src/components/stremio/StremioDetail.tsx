@@ -9,16 +9,17 @@ import {
   useSetStremioSearchQuery,
   useSetStremioView,
   useSetStremioActiveMeta,
+  useStremioNavigate,
 } from '../../stores/uiStore';
 import { useStremioLibraryStore } from '../../stores/stremioLibraryStore';
 import { useStremioWatchStore } from '../../stores/stremioWatchStore';
 import { fetchStreams, fetchMeta } from '../../services/stremio-addon';
 import { extractStreamBadges, isLightColor } from '../../utils/streamBadges';
-import { useLazyStremioCast } from '../../hooks/useLazyStremioCast';
+import { useLazyStremioCast, type StremioCastMember } from '../../hooks/useLazyStremioCast';
 import { useLazyStremioTrailer } from '../../hooks/useLazyStremioTrailer';
 import { useLazyStremioRecommendations, type RecommendationItem } from '../../hooks/useLazyStremioRecommendations';
 import { useTmdbAccessToken } from '../../hooks/useTmdbLists';
-import { getMovieDetails, getTvShowDetails, getTmdbImageUrl } from '../../services/tmdb';
+import { getMovieDetails, getTvShowDetails, getTmdbImageUrl, tmdbPersonIdByName } from '../../services/tmdb';
 import { useDownloadStore } from '../../stores/downloadStore';
 import './StremioDetail.css';
 
@@ -77,11 +78,26 @@ export function StremioDetail({ meta, onBack, onPlay, streamPickerMode, showStre
   const { trailerUrl: tmdbTrailerUrl } = useLazyStremioTrailer(meta, tmdbToken);
   const { items: recommendations, loading: recsLoading } = useLazyStremioRecommendations(meta, tmdbToken);
 
-  const handleCastClick = useCallback((castName: string) => {
-    setStremioActiveMeta(null);
-    setStremioSearchQuery(castName);
-    setStremioView('home');
-  }, [setStremioActiveMeta, setStremioSearchQuery, setStremioView]);
+  const stremioNavigate = useStremioNavigate();
+
+  const handleCastClick = useCallback(async (member: StremioCastMember) => {
+    if (member.id) {
+      stremioNavigate({ view: 'person', personId: member.id });
+    } else {
+      // Look up TMDB ID by name first
+      if (tmdbToken) {
+        const id = await tmdbPersonIdByName(tmdbToken, member.name);
+        if (id) {
+          stremioNavigate({ view: 'person', personId: id });
+          return;
+        }
+      }
+      // Fallback: search Stremio catalog
+      setStremioActiveMeta(null);
+      setStremioSearchQuery(member.name);
+      setStremioView('home');
+    }
+  }, [stremioNavigate, tmdbToken, setStremioActiveMeta, setStremioSearchQuery, setStremioView]);
 
   const handleRecClick = useCallback((rec: RecommendationItem) => {
     const newMeta: StremioMeta = {
@@ -92,12 +108,8 @@ export function StremioDetail({ meta, onBack, onPlay, streamPickerMode, showStre
       year: rec.year ? parseInt(rec.year) : undefined,
       imdbRating: rec.rating > 0 ? String(rec.rating.toFixed(1)) : undefined,
     };
-    setStremioActiveMeta(null);
-    setTimeout(() => {
-      setStremioActiveMeta(newMeta);
-      setStremioView('detail');
-    }, 0);
-  }, [meta.type, setStremioActiveMeta, setStremioView]);
+    stremioNavigate({ view: 'detail', meta: newMeta });
+  }, [meta.type, stremioNavigate]);
 
   const fetchedIdsRef = useRef<Set<string>>(new Set());
 
@@ -460,8 +472,8 @@ export function StremioDetail({ meta, onBack, onPlay, streamPickerMode, showStre
                     <div
                       key={member.name}
                       className="stremio-detail-cast-member"
-                      onClick={() => handleCastClick(member.name)}
-                      title={`Search for ${member.name}`}
+                      onClick={() => handleCastClick(member)}
+                      title={`View ${member.name}`}
                     >
                       <div className="stremio-detail-cast-photo">
                         {member.photo ? (
@@ -488,7 +500,7 @@ export function StremioDetail({ meta, onBack, onPlay, streamPickerMode, showStre
               <div className="stremio-detail-section-label">CAST</div>
               <div className="stremio-detail-tags">
                 {meta.cast.slice(0, 10).map((c) => (
-                  <span key={c} className="stremio-detail-tag" onClick={() => handleCastClick(c)}>{c}</span>
+                  <span key={c} className="stremio-detail-tag" onClick={() => handleCastClick({ id: 0, name: c, character: '', photo: null })}>{c}</span>
                 ))}
               </div>
             </div>

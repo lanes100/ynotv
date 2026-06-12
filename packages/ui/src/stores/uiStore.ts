@@ -10,7 +10,12 @@ import type { SportsTabId } from '@ynotv/core';
 import type { MediaItem } from '../types/media';
 import type { StremioMetaPreview, StremioMeta } from '../types/stremio';
 
-export type StremioView = 'home' | 'library' | 'detail' | 'search' | 'calendar' | 'settings';
+export type StremioView = 'home' | 'library' | 'detail' | 'search' | 'calendar' | 'settings' | 'person';
+
+export type StremioHistoryFrame =
+  | { view: 'home' | 'library' | 'search' | 'calendar' | 'settings' }
+  | { view: 'detail'; meta: StremioMeta }
+  | { view: 'person'; personId: number };
 
 interface UIState {
   // Movies page
@@ -68,6 +73,12 @@ interface UIState {
   // Stremio
   stremioView: StremioView;
   setStremioView: (view: StremioView) => void;
+  stremioHistory: StremioHistoryFrame[];
+  stremioActivePersonId: number | null;
+  setStremioActivePersonId: (id: number | null) => void;
+  stremioNavigate: (frame: StremioHistoryFrame) => void;
+  stremioGoBack: () => void;
+  stremioReset: (view: StremioView) => void;
   stremioSelectedAddonId: string | null;
   setStremioSelectedAddonId: (id: string | null) => void;
   stremioSelectedCatalogId: string | null;
@@ -155,7 +166,59 @@ export const useUIStore = create<UIState>((set) => ({
 
   // Stremio
   stremioView: 'home',
-  setStremioView: (view) => set({ stremioView: view }),
+  setStremioView: (view) => set((state) => {
+    const mainViews = ['home', 'library', 'calendar', 'settings', 'search'];
+    if (mainViews.includes(view)) {
+      return {
+        stremioView: view,
+        stremioHistory: [{ view } as any],
+        stremioActiveMeta: null,
+        stremioActivePersonId: null,
+      };
+    }
+    return { stremioView: view };
+  }),
+  stremioHistory: [{ view: 'home' }],
+  stremioActivePersonId: null,
+  setStremioActivePersonId: (id) => set({ stremioActivePersonId: id }),
+  stremioNavigate: (frame) => set((state) => {
+    const nextHistory = [...state.stremioHistory, frame];
+    const updates: Partial<UIState> = { stremioHistory: nextHistory, stremioView: frame.view };
+    if (frame.view === 'detail') {
+      updates.stremioActiveMeta = frame.meta;
+      updates.stremioActivePersonId = null;
+    } else if (frame.view === 'person') {
+      updates.stremioActiveMeta = null;
+      updates.stremioActivePersonId = frame.personId;
+    } else {
+      updates.stremioActiveMeta = null;
+      updates.stremioActivePersonId = null;
+    }
+    return updates;
+  }),
+  stremioGoBack: () => set((state) => {
+    if (state.stremioHistory.length <= 1) return {};
+    const nextHistory = state.stremioHistory.slice(0, -1);
+    const top = nextHistory[nextHistory.length - 1];
+    const updates: Partial<UIState> = { stremioHistory: nextHistory, stremioView: top.view };
+    if (top.view === 'detail') {
+      updates.stremioActiveMeta = top.meta;
+      updates.stremioActivePersonId = null;
+    } else if (top.view === 'person') {
+      updates.stremioActiveMeta = null;
+      updates.stremioActivePersonId = top.personId;
+    } else {
+      updates.stremioActiveMeta = null;
+      updates.stremioActivePersonId = null;
+    }
+    return updates;
+  }),
+  stremioReset: (view) => set({
+    stremioView: view,
+    stremioHistory: [{ view } as any],
+    stremioActiveMeta: null,
+    stremioActivePersonId: null,
+  }),
   stremioSelectedAddonId: null,
   setStremioSelectedAddonId: (id) => set({ stremioSelectedAddonId: id }),
   stremioSelectedCatalogId: null,
@@ -254,3 +317,9 @@ export const useSetTraktCatalogRefreshToken = () => useUIStore((s) => s.setTrakt
 
 export const useStremioSelectedCloudCatalogKey = () => useUIStore((s) => s.stremioSelectedCloudCatalogKey);
 export const useSetStremioSelectedCloudCatalogKey = () => useUIStore((s) => s.setStremioSelectedCloudCatalogKey);
+
+export const useStremioHistory = () => useUIStore((s) => s.stremioHistory);
+export const useStremioActivePersonId = () => useUIStore((s) => s.stremioActivePersonId);
+export const useSetStremioActivePersonId = () => useUIStore((s) => s.setStremioActivePersonId);
+export const useStremioNavigate = () => useUIStore((s) => s.stremioNavigate);
+export const useStremioGoBack = () => useUIStore((s) => s.stremioGoBack);

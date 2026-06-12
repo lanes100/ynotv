@@ -529,3 +529,35 @@ export function findTrailerUrl(videos: Video[]): string | null {
     ?? videos.find(v => v.site === 'YouTube');
   return trailer ? `https://www.youtube.com/watch?v=${trailer.key}` : null;
 }
+
+/**
+ * Fetch person details (bio, profile, credits)
+ */
+export async function getPersonDetails(
+  accessToken: string,
+  personId: number
+): Promise<any> {
+  const tmdb = getTmdb(accessToken);
+  return await tmdb.people.details(personId, ['combined_credits', 'external_ids'] as any);
+}
+
+/**
+ * Find person ID by name
+ */
+export async function tmdbPersonIdByName(
+  accessToken: string,
+  name: string
+): Promise<number | null> {
+  const tmdb = getTmdb(accessToken);
+  try {
+    const response = await tmdb.search.people({ query: name });
+    if (response.results && response.results.length > 0) {
+      // Sort by popularity desc
+      const ranked = [...response.results].sort((a, b) => (b.popularity ?? 0) - (a.popularity ?? 0));
+      return ranked[0].id;
+    }
+  } catch (err) {
+    console.error('[TMDB] Search person by name failed:', err);
+  }
+  return null;
+}

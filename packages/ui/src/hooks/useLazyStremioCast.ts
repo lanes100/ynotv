@@ -4,6 +4,7 @@ import { getTmdb, getTmdbImageUrl } from '../services/tmdb';
 import { searchMovies, searchTvShows, getMovieCredits, getTvShowCredits } from '../services/tmdb';
 
 export interface StremioCastMember {
+  id: number;
   name: string;
   character: string;
   photo: string | null;
@@ -97,6 +98,7 @@ export function useLazyStremioCast(
           if (!cancelled && credits.cast) {
             setCast(
               credits.cast.slice(0, 12).map((c: any) => ({
+                id: c.id,
                 name: c.name,
                 character: c.character,
                 photo: c.profile_path ? getTmdbImageUrl(c.profile_path, 'w185') : null,
@@ -108,6 +110,7 @@ export function useLazyStremioCast(
           if (!cancelled && credits.cast) {
             setCast(
               credits.cast.slice(0, 12).map((c: any) => ({
+                id: c.id,
                 name: c.name,
                 character: c.character,
                 photo: c.profile_path ? getTmdbImageUrl(c.profile_path, 'w185') : null,
