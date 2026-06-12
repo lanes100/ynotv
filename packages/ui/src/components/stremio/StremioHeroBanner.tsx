@@ -9,6 +9,7 @@ interface StremioHeroBannerProps {
 }
 
 export function StremioHeroBanner({ addons, onItemClick }: StremioHeroBannerProps) {
+  const addonsKey = addons.map((a) => `${a.id}:${a.enabled !== false}`).join(',');
   const [items, setItems] = useState<StremioMetaPreview[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -112,7 +113,8 @@ export function StremioHeroBanner({ addons, onItemClick }: StremioHeroBannerProp
     return () => {
       active = false;
     };
-  }, [addons]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [addonsKey]);
 
   // Reset activeIndex when items change
   useEffect(() => {

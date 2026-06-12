@@ -1,6 +1,6 @@
 import { useRef, useState, useCallback, useEffect } from 'react';
 import type { InstalledAddon, StremioManifestCatalog, StremioMetaPreview } from '../../types/stremio';
-import { fetchCatalog } from '../../services/stremio-addon';
+import { fetchCatalog, getCachedCatalog } from '../../services/stremio-addon';
 import { useStremioHover } from '../../contexts/StremioHoverContext';
 import './StremioHome.css';
 
@@ -32,8 +32,21 @@ export function StremioCatalogRow({
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
-  const [items, setItems] = useState<StremioMetaPreview[]>(staticItems || []);
-  const [loading, setLoading] = useState(!staticItems && !!addon && !!catalog);
+
+  const cached = (!staticItems && addon && catalog)
+    ? getCachedCatalog(addon.baseUrl, catalog.type, catalog.id, { limit: '20' })
+    : undefined;
+
+  const [items, setItems] = useState<StremioMetaPreview[]>(() => {
+    if (staticItems) return staticItems;
+    if (cached?.metas) return cached.metas.slice(0, 20);
+    return [];
+  });
+  const [loading, setLoading] = useState(() => {
+    if (staticItems) return false;
+    if (cached) return false;
+    return !!addon && !!catalog;
+  });
 
   const isPageMode = onPageChange !== undefined;
 

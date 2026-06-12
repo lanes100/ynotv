@@ -4,9 +4,11 @@ const MANIFEST_CACHE = new Map<string, { manifest: StremioManifest; ts: number }
 const CACHE_TTL = 5 * 60 * 1000;
 
 const CATALOG_CACHE = new Map<string, Promise<StremioCatalogResponse>>();
+const CATALOG_RESPONSE_CACHE = new Map<string, StremioCatalogResponse>();
 
 export function clearCatalogCache() {
   CATALOG_CACHE.clear();
+  CATALOG_RESPONSE_CACHE.clear();
 }
 
 async function fetchJson(url: string): Promise<any> {
@@ -44,6 +46,26 @@ export async function fetchManifest(url: string): Promise<StremioManifest> {
   return manifest;
 }
 
+export function getCachedCatalog(
+  baseUrl: string,
+  type: string,
+  id: string,
+  extra?: Record<string, string>
+): StremioCatalogResponse | undefined {
+  let url = `${normalizeBaseUrl(baseUrl)}/catalog/${type}/${id}`;
+  const extraArgs = extra
+    ? Object.entries(extra)
+      .filter(([, v]) => v)
+      .map(([k, v]) => `${k}=${encodeURIComponent(v)}`)
+      .join('&')
+    : '';
+  if (extraArgs) {
+    url += `/${extraArgs}`;
+  }
+  url += '.json';
+  return CATALOG_RESPONSE_CACHE.get(url);
+}
+
 export async function fetchCatalog(
   baseUrl: string,
   type: string,
@@ -62,6 +84,11 @@ export async function fetchCatalog(
   }
   url += '.json';
 
+  const cachedResponse = CATALOG_RESPONSE_CACHE.get(url);
+  if (cachedResponse) {
+    return cachedResponse;
+  }
+
   const cachedPromise = CATALOG_CACHE.get(url);
   if (cachedPromise) {
     return cachedPromise;
@@ -70,9 +97,13 @@ export async function fetchCatalog(
   const promise = fetchJson(url) as Promise<StremioCatalogResponse>;
   CATALOG_CACHE.set(url, promise);
 
-  promise.catch(() => {
-    CATALOG_CACHE.delete(url);
-  });
+  promise
+    .then((resp) => {
+      CATALOG_RESPONSE_CACHE.set(url, resp);
+    })
+    .catch(() => {
+      CATALOG_CACHE.delete(url);
+    });
 
   return promise;
 }

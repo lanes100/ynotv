@@ -92,6 +92,7 @@ export function StremioRecentlyWatched({ addons, onItemClick }: StremioRecentlyW
   }, [isSyncActive, cloudLibraryItems, localHistory, library]);
 
   const removeFromHistory = useStremioWatchStore((s) => s.removeFromHistory);
+  const dismissFromContinueWatching = useStremioAuthStore((s) => s.dismissFromContinueWatching);
   const setSelectedSeason = useSetStremioSelectedSeason();
   const setPreselectVideoId = useSetStremioPreselectVideoId();
 
@@ -206,7 +207,7 @@ export function StremioRecentlyWatched({ addons, onItemClick }: StremioRecentlyW
                   title="Remove from Continue Watching"
                   onClick={(e) => {
                     e.stopPropagation();
-                    removeFromHistory(entry.metaId);
+                    dismissFromContinueWatching(entry.metaId, entry.type);
                   }}
                 >
                   ✕

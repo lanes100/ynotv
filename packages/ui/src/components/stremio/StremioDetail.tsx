@@ -44,6 +44,18 @@ function formatReleaseDate(dStr?: string) {
 
 export function StremioDetail({ meta, onBack, onPlay, streamPickerMode, showStreamBadges = false, compiledBadgeRules }: StremioDetailProps) {
   const addons = useStremioAddonStore((s) => s.enabledAddons);
+  const addonsKey = addons.map((a) => `${a.id}:${a.enabled !== false}`).join(',');
+
+  const metaRef = useRef(meta);
+  useEffect(() => {
+    metaRef.current = meta;
+  }, [meta]);
+
+  const onPlayRef = useRef(onPlay);
+  useEffect(() => {
+    onPlayRef.current = onPlay;
+  }, [onPlay]);
+
   const selectedSeason = useStremioSelectedSeason();
   const setSelectedSeason = useSetStremioSelectedSeason();
   
@@ -95,7 +107,7 @@ export function StremioDetail({ meta, onBack, onPlay, streamPickerMode, showStre
     
     const isTmdbId = meta.id.startsWith('tmdb:');
     const isSeriesItem = meta.type === 'series';
-    const isIncomplete = isTmdbId || (isSeriesItem && !meta.videos) || !meta.description;
+    const isIncomplete = isTmdbId || (isSeriesItem && !metaRef.current.videos) || !metaRef.current.description;
     
     if (!isIncomplete) return;
 
@@ -163,20 +175,20 @@ export function StremioDetail({ meta, onBack, onPlay, streamPickerMode, showStre
       // 3. Update the active meta in the store to trigger a re-render with full metadata
       if (fullMeta) {
         // Keep the TMDb rating if Stremio rating is not present
-        if (!fullMeta.imdbRating && meta.imdbRating) {
-          fullMeta.imdbRating = meta.imdbRating;
+        if (!fullMeta.imdbRating && metaRef.current.imdbRating) {
+          fullMeta.imdbRating = metaRef.current.imdbRating;
         }
         setStremioActiveMeta(fullMeta);
       } else if (tmdbDetails) {
         console.warn('[StremioDetail] Stremio metadata fetch failed, using TMDB fallback details');
         // Fallback: If Stremio metadata fetch failed but we have TMDB details, enrich what we have
         const enrichedMeta: StremioMeta = {
-          ...meta,
+          ...metaRef.current,
           id: imdbId || meta.id,
-          description: tmdbDetails.overview || meta.description,
-          genres: tmdbDetails.genres?.map((g: any) => g.name) || meta.genres,
-          runtime: tmdbDetails.runtime ? `${tmdbDetails.runtime} min` : meta.runtime,
-          background: getTmdbImageUrl(tmdbDetails.backdrop_path, 'original') || meta.background,
+          description: tmdbDetails.overview || metaRef.current.description,
+          genres: tmdbDetails.genres?.map((g: any) => g.name) || metaRef.current.genres,
+          runtime: tmdbDetails.runtime ? `${tmdbDetails.runtime} min` : metaRef.current.runtime,
+          background: getTmdbImageUrl(tmdbDetails.backdrop_path, 'original') || metaRef.current.background,
         };
         setStremioActiveMeta(enrichedMeta);
       } else {
@@ -189,7 +201,8 @@ export function StremioDetail({ meta, onBack, onPlay, streamPickerMode, showStre
     return () => {
       active = false;
     };
-  }, [meta.id, meta.type, tmdbToken, addons, setStremioActiveMeta]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [meta.id, meta.type, tmdbToken, addonsKey, setStremioActiveMeta]);
 
   const [streams, setStreams] = useState<StremioStream[]>([]);
   const [selectedVideo, setSelectedVideo] = useState<StremioVideo | null>(null);
@@ -293,8 +306,8 @@ export function StremioDetail({ meta, onBack, onPlay, streamPickerMode, showStre
 
   // Auto-load streams for preselected video (from Continue Watching poster click)
   useEffect(() => {
-    if (!isSeries || !preselectVideoId || !meta.videos) return;
-    const video = meta.videos.find((v) => v.id === preselectVideoId);
+    if (!isSeries || !preselectVideoId || !metaRef.current.videos) return;
+    const video = metaRef.current.videos.find((v) => v.id === preselectVideoId);
     if (!video) return;
     setPreselectVideoId(null);
     setSelectedVideo(video);
@@ -306,10 +319,11 @@ export function StremioDetail({ meta, onBack, onPlay, streamPickerMode, showStre
       setLoadingStreams(false);
       if (streamPickerMode === 'autoplay' && result.length > 0) {
         const direct = result.find((s) => s.url && !s.behaviorHints?.notWebReady) || result[0];
-        if (direct) onPlay(direct, meta, video);
+        if (direct) onPlayRef.current(direct, metaRef.current, video);
       }
     });
-  }, [isSeries, preselectVideoId, meta.id, meta.videos, addons, streamPickerMode, onPlay, meta, setPreselectVideoId]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isSeries, preselectVideoId, meta.id, meta.videos?.length, addonsKey, streamPickerMode, setPreselectVideoId]);
 
   // Load streams on mount for Movies
   useEffect(() => {
@@ -324,12 +338,13 @@ export function StremioDetail({ meta, onBack, onPlay, streamPickerMode, showStre
 
         if (streamPickerMode === 'autoplay' && result.length > 0) {
           const direct = result.find((s) => s.url && !s.behaviorHints?.notWebReady) || result[0];
-          if (direct) onPlay(direct, meta);
+          if (direct) onPlayRef.current(direct, metaRef.current);
         }
       };
       loadMovieStreams();
     }
-  }, [isSeries, meta.id, meta.type, addons, streamPickerMode, onPlay, meta]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isSeries, meta.id, meta.type, addonsKey, streamPickerMode]);
 
   /** Find the next episode in the series after the given one */
   const getNextEpisode = useCallback((ep: StremioVideo): StremioVideo | undefined => {

@@ -328,3 +328,46 @@
   background: rgba(80, 200, 120, 0.18);
   border-color: rgba(80, 200, 120, 0.4);
 }
+
+/* ─── Sync Positions Button ───────────────────────────────── */
+
+.stremio-addon-sync-btn {
+  padding: 6px 14px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  border: 1px solid var(--accent-primary, #00d4ff);
+  background: transparent;
+  color: var(--accent-primary, #00d4ff);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  animation: pulse-sync-btn 2.5s infinite;
+  box-shadow: 0 0 8px rgba(0, 212, 255, 0.2);
+}
+
+@keyframes pulse-sync-btn {
+  0% {
+    box-shadow: 0 0 0 0 rgba(0, 212, 255, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 6px rgba(0, 212, 255, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(0, 212, 255, 0);
+  }
+}
+
+.stremio-addon-sync-btn:hover:not(:disabled) {
+  background: var(--accent-primary, #00d4ff);
+  color: #14141e;
+  box-shadow: 0 0 12px var(--accent-glow, rgba(0, 212, 255, 0.4));
+}
+
+.stremio-addon-sync-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  animation: none;
+}

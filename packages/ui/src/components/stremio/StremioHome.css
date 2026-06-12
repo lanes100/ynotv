@@ -625,3 +625,58 @@
   margin-left: 2px; /* slight offset to optically center the play triangle */
   fill: white;
 }
+
+/* ─── Streaming Services Rail ────────────────────────────── */
+
+.stremio-service-rail-scroll {
+  position: relative;
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 8px 4px 16px 4px;
+  scrollbar-width: none;
+}
+
+.stremio-service-rail-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.stremio-service-rail-track {
+  display: flex;
+  gap: 12px;
+}
+
+.stremio-service-tile-btn {
+  flex-shrink: 0;
+  width: 200px;
+  height: 90px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #000000;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.32, 0.72, 0.24, 1);
+}
+
+.stremio-service-tile-btn:hover {
+  background: #0d0d0d;
+  transform: translateY(-4px);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.55);
+  border-color: var(--accent-primary, #00d4ff);
+}
+
+.stremio-service-tile-btn img {
+  height: 32px;
+  width: auto;
+  opacity: 0.7;
+  filter: brightness(0) invert(1) !important;
+  transition: all 0.2s ease;
+  pointer-events: none;
+}
+
+.stremio-service-tile-btn:hover img {
+  opacity: 1;
+  transform: scale(1.05);
+}

@@ -125,6 +125,7 @@ interface StremioAuthStore {
     name: string,
     poster?: string
   ) => Promise<void>;
+  dismissFromContinueWatching: (metaId: string, type: 'movie' | 'series') => Promise<void>;
 }
 
 export const useStremioAuthStore = create<StremioAuthStore>()(
@@ -226,6 +227,7 @@ export const useStremioAuthStore = create<StremioAuthStore>()(
               manifest: a.manifest,
             }));
             await setStremioAddons(authKey, toPushAddons);
+            useStremioAddonStore.setState({ addonsReordered: false });
           }
 
           // 2. Sync Library and Watch Progress
@@ -664,6 +666,50 @@ export const useStremioAuthStore = create<StremioAuthStore>()(
           await putStremioLibraryItem(authKey, item);
         } catch (e) {
           console.error('[Sync] Failed to sync playback progress to Stremio:', e);
+        }
+      },
+
+      dismissFromContinueWatching: async (metaId: string, type: 'movie' | 'series') => {
+        const { authKey, cloudLibraryItems } = get();
+
+        // 1. Instantly update local Zustand cloud library items cache to clear progress
+        const updatedCloudItems = cloudLibraryItems.map(item => {
+          if (item._id === metaId) {
+            return {
+              ...item,
+              state: {
+                ...item.state,
+                timeOffset: 0,
+              },
+              _mtime: new Date().toISOString(),
+            };
+          }
+          return item;
+        });
+        set({ cloudLibraryItems: updatedCloudItems });
+
+        // 2. Clear progress in local database and local history store
+        import('../db').then(({ removeFromRecentlyWatched }) => {
+          removeFromRecentlyWatched(metaId, type).catch(() => {});
+        });
+        useStremioWatchStore.getState().removeFromHistory(metaId);
+
+        // 3. Sync update to Stremio Cloud if logged in
+        if (authKey) {
+          const cloudItem = cloudLibraryItems.find(x => x._id === metaId);
+          if (cloudItem) {
+            const updatedItem: StremioLibraryItem = {
+              ...cloudItem,
+              state: {
+                ...cloudItem.state,
+                timeOffset: 0,
+              },
+              _mtime: new Date().toISOString(),
+            };
+            await putStremioLibraryItem(authKey, updatedItem).catch(e => {
+              console.error('[StremioAuthStore] Failed to sync Continue Watching dismissal:', e);
+            });
+          }
         }
       },
     }),

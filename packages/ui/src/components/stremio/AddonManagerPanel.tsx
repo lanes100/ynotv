@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { useStremioAddonStore } from '../../stores/stremioAddonStore';
+import { useStremioAuthStore } from '../../stores/stremioAuthStore';
 import type { InstalledAddon } from '../../types/stremio';
 import './AddonManagerPanel.css';
 
@@ -14,10 +15,16 @@ export function AddonManagerPanel({ onClose }: AddonManagerPanelProps) {
   const removeAddon = useStremioAddonStore((s) => s.removeAddon);
   const toggleAddon = useStremioAddonStore((s) => s.toggleAddon);
   const reorderAddons = useStremioAddonStore((s) => s.reorderAddons);
+  const addonsReordered = useStremioAddonStore((s) => s.addonsReordered);
+  const syncAddonPositions = useStremioAddonStore((s) => s.syncAddonPositions);
+
+  const authKey = useStremioAuthStore((s) => s.authKey);
+  const syncAddons = useStremioAuthStore((s) => s.syncAddons);
 
   const [manifestUrl, setManifestUrl] = useState('');
   const [error, setError] = useState('');
   const [installing, setInstalling] = useState<string | boolean>(false);
+  const [syncingPositions, setSyncingPositions] = useState(false);
 
   const openConfigureUrl = async (baseUrl: string) => {
     const url = `${baseUrl.replace(/\/$/, '')}/configure`;
@@ -43,11 +50,34 @@ export function AddonManagerPanel({ onClose }: AddonManagerPanelProps) {
     }
   };
 
+  const handleSyncPositions = async () => {
+    setSyncingPositions(true);
+    setError('');
+    try {
+      await syncAddonPositions();
+    } catch (e: any) {
+      setError(e.message || 'Failed to sync addon positions.');
+    } finally {
+      setSyncingPositions(false);
+    }
+  };
+
   return (
     <div className="stremio-addon-overlay" onClick={onClose}>
       <div className="stremio-addon-modal" onClick={(e) => e.stopPropagation()}>
         <div className="stremio-addon-header">
-          <h3 className="stremio-addon-title">Addon Manager ({addons.length})</h3>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <h3 className="stremio-addon-title">Addon Manager ({addons.length})</h3>
+            {authKey && syncAddons && addonsReordered && (
+              <button
+                className="stremio-addon-sync-btn"
+                onClick={handleSyncPositions}
+                disabled={syncingPositions}
+              >
+                {syncingPositions ? 'Syncing...' : 'Sync Addon Positions'}
+              </button>
+            )}
+          </div>
           <button className="stremio-addon-close" onClick={onClose}>✕</button>
         </div>
 

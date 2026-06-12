@@ -17,11 +17,13 @@ interface StremioAddonStore {
   addons: InstalledAddon[];
   enabledAddons: InstalledAddon[];
   initialized: boolean;
+  addonsReordered: boolean;
   initializeDefaults: () => Promise<void>;
   addAddon: (url: string) => Promise<void>;
   removeAddon: (id: string) => void;
   toggleAddon: (id: string) => void;
   reorderAddons: (currentIndex: number, direction: 'up' | 'down') => void;
+  syncAddonPositions: () => Promise<void>;
 }
 
 export const useStremioAddonStore = create<StremioAddonStore>()(
@@ -30,6 +32,7 @@ export const useStremioAddonStore = create<StremioAddonStore>()(
       addons: [],
       enabledAddons: [],
       initialized: false,
+      addonsReordered: false,
       reorderAddons: (currentIndex: number, direction: 'up' | 'down') => {
         const state = get();
         const nextIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
@@ -41,7 +44,22 @@ export const useStremioAddonStore = create<StremioAddonStore>()(
         newAddons[nextIndex] = temp;
 
         clearCatalogCache();
-        set({ addons: newAddons, enabledAddons: deriveEnabled(newAddons) });
+        set({ addons: newAddons, enabledAddons: deriveEnabled(newAddons), addonsReordered: true });
+      },
+
+      syncAddonPositions: async () => {
+        const state = get();
+        const { useStremioAuthStore } = await import('./stremioAuthStore');
+        const auth = useStremioAuthStore.getState();
+        if (auth.authKey && auth.syncAddons) {
+          const { setStremioAddons } = await import('../services/stremio-api');
+          const toPush = state.addons.map(a => ({
+            transportUrl: `${a.baseUrl}/manifest.json`,
+            manifest: a.manifest,
+          }));
+          await setStremioAddons(auth.authKey, toPush);
+          set({ addonsReordered: false });
+        }
       },
 
       initializeDefaults: async () => {
@@ -101,7 +119,9 @@ export const useStremioAddonStore = create<StremioAddonStore>()(
                 transportUrl: `${a.baseUrl}/manifest.json`,
                 manifest: a.manifest,
               }));
-              setStremioAddons(auth.authKey!, toPush).catch(() => {});
+              setStremioAddons(auth.authKey!, toPush)
+                .then(() => set({ addonsReordered: false }))
+                .catch(() => {});
             });
           }
         });
@@ -122,7 +142,9 @@ export const useStremioAddonStore = create<StremioAddonStore>()(
                 transportUrl: `${a.baseUrl}/manifest.json`,
                 manifest: a.manifest,
               }));
-              setStremioAddons(auth.authKey!, toPush).catch(() => {});
+              setStremioAddons(auth.authKey!, toPush)
+                .then(() => set({ addonsReordered: false }))
+                .catch(() => {});
             });
           }
         });
@@ -145,7 +167,9 @@ export const useStremioAddonStore = create<StremioAddonStore>()(
                 transportUrl: `${a.baseUrl}/manifest.json`,
                 manifest: a.manifest,
               }));
-              setStremioAddons(auth.authKey!, toPush).catch(() => {});
+              setStremioAddons(auth.authKey!, toPush)
+                .then(() => set({ addonsReordered: false }))
+                .catch(() => {});
             });
           }
         });

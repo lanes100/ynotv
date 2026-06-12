@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import type { InstalledAddon, StremioMetaPreview, StremioMeta } from '../../types/stremio';
 import { fetchCatalog, fetchMeta } from '../../services/stremio-addon';
 import { scrobbler, TRAKT_CATALOG_DEFINITIONS, type TraktCatalogType } from '../../services/scrobbler';
@@ -18,6 +18,9 @@ import {
   useStremioSelectedCloudCatalogKey,
   useSetStremioSelectedCloudCatalogKey,
 } from '../../stores/uiStore';
+import { useTmdbApiKey } from '../../hooks/useTmdbLists';
+import { SERVICES, type StreamingService } from '../../constants/streamingProviders';
+import { StreamingServiceView } from './StreamingServiceView';
 import { StremioCatalogRow } from './StremioCatalogRow';
 import { CatalogDetailView } from './CatalogDetailView';
 import { CloudCatalogDetailView } from './CloudCatalogDetailView';
@@ -64,6 +67,40 @@ export function StremioHome({ addons, onItemClick }: StremioHomeProps) {
   const [expandedSearchRowId, setExpandedSearchRowId] = useState<string | null>(null);
   const [searching, setSearching] = useState(false);
   const [catalogFilter, setCatalogFilter] = useState('');
+  const [selectedService, setSelectedService] = useState<string | null>(null);
+  const tmdbApiKey = useTmdbApiKey();
+
+  const serviceScrollRef = useRef<HTMLDivElement>(null);
+  const [canScrollServiceLeft, setCanScrollServiceLeft] = useState(false);
+  const [canScrollServiceRight, setCanScrollServiceRight] = useState(false);
+
+  const updateServiceScrollButtons = useCallback(() => {
+    const el = serviceScrollRef.current;
+    if (!el) return;
+    setCanScrollServiceLeft(el.scrollLeft > 2);
+    setCanScrollServiceRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 2);
+  }, []);
+
+  useEffect(() => {
+    if (!tmdbApiKey) return;
+    updateServiceScrollButtons();
+    window.addEventListener('resize', updateServiceScrollButtons);
+    
+    // Add small delay to let children render and compute scroll width
+    const timer = setTimeout(updateServiceScrollButtons, 150);
+
+    return () => {
+      window.removeEventListener('resize', updateServiceScrollButtons);
+      clearTimeout(timer);
+    };
+  }, [tmdbApiKey, updateServiceScrollButtons]);
+
+  const scrollService = (dir: 'left' | 'right') => {
+    const el = serviceScrollRef.current;
+    if (!el) return;
+    const amount = el.clientWidth * 0.75;
+    el.scrollTo({ left: el.scrollLeft + (dir === 'left' ? -amount : amount), behavior: 'smooth' });
+  };
 
   const refreshToken = useTraktCatalogRefreshToken();
   const setSelectedSeason = useSetStremioSelectedSeason();
@@ -272,6 +309,18 @@ export function StremioHome({ addons, onItemClick }: StremioHomeProps) {
       setPreselectVideoId(`${p.id}:${p.traktSeason}:${p.traktEpisode}`);
     }
 
+    if (preview.id.startsWith('tmdb:')) {
+      const newMeta: StremioMeta = {
+        id: preview.id,
+        type: preview.type,
+        name: preview.name,
+        poster: preview.poster ?? undefined,
+        imdbRating: preview.imdbRating,
+      };
+      onItemClick(newMeta);
+      return;
+    }
+
     // Query across all addons to fetch full metadata
     const meta = await fetchMeta(addons, preview.type, preview.id);
     if (meta) {
@@ -354,6 +403,19 @@ export function StremioHome({ addons, onItemClick }: StremioHomeProps) {
     );
   }
 
+  if (selectedService) {
+    return (
+      <div className="stremio-home">
+        <StreamingServiceView
+          service={selectedService}
+          onBack={() => setSelectedService(null)}
+          onItemClick={handleItemClickWrapper}
+          addons={addons}
+        />
+      </div>
+    );
+  }
+
   if (selectedCatalogItems) {
     const { addon: selAddon, catalog: selCat } = selectedCatalogItems;
     return (
@@ -413,6 +475,66 @@ export function StremioHome({ addons, onItemClick }: StremioHomeProps) {
           addons={addons}
           onItemClick={onItemClick}
         />
+
+        {tmdbApiKey && (
+          <div className="stremio-row stremio-rw-row" style={{ position: 'relative' }}>
+            <div className="stremio-row-header">
+              <h3 className="stremio-row-title stremio-rw-title">
+                Your Streaming
+              </h3>
+              <div className="stremio-row-nav">
+                <button
+                  className="stremio-row-nav-btn"
+                  onClick={() => scrollService('left')}
+                  disabled={!canScrollServiceLeft}
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M15 18l-6-6 6-6" />
+                  </svg>
+                </button>
+                <button
+                  className="stremio-row-nav-btn"
+                  onClick={() => scrollService('right')}
+                  disabled={!canScrollServiceRight}
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M9 18l6-6-6-6" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+            <div
+              className="stremio-service-rail-scroll"
+              ref={serviceScrollRef}
+              onScroll={updateServiceScrollButtons}
+            >
+              <div className="stremio-service-rail-track">
+                {Object.keys(SERVICES).map((svcKey) => {
+                  const svc = SERVICES[svcKey as StreamingService];
+                  return (
+                    <button
+                      key={svcKey}
+                      className="stremio-service-tile-btn"
+                      onClick={() => setSelectedService(svcKey)}
+                    >
+                      <img
+                        src={svc.logo}
+                        alt={svc.name}
+                        style={{
+                          height: '24px',
+                          width: 'auto',
+                          filter: svc.logoFilter || 'none',
+                        }}
+                      />
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            {canScrollServiceLeft && <div className="stremio-row-fade stremio-row-fade-left" style={{ zIndex: 3 }} />}
+            {canScrollServiceRight && <div className="stremio-row-fade stremio-row-fade-right" style={{ zIndex: 3 }} />}
+          </div>
+        )}
 
         {traktCatalogsBeforeAddon && cloudCatalogRows.map((row) => (
           <StremioCatalogRow

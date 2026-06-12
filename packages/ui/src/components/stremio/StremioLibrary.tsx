@@ -19,6 +19,7 @@ export function StremioLibrary({ onItemClick }: StremioLibraryProps) {
   const library = useStremioLibraryStore((s) => s.library);
   const updateLibraryItem = useStremioLibraryStore((s) => s.updateLibraryItem);
   const addons = useStremioAddonStore((s) => s.enabledAddons);
+  const addonsKey = addons.map((a) => `${a.id}:${a.enabled !== false}`).join(',');
   const episodeProgress = useStremioWatchStore((s) => s.episodeProgress || {});
 
   const authStore = useStremioAuthStore();
@@ -64,7 +65,8 @@ export function StremioLibrary({ onItemClick }: StremioLibraryProps) {
     };
     refresh();
     return () => { cancelled = true; };
-  }, [library, addons, updateLibraryItem]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [library, addonsKey, updateLibraryItem]);
 
   const getNewCount = useCallback((item: LibraryItem): number => {
     if (item.type !== 'series' || !item.videos) return 0;
