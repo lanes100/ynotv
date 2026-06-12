@@ -92,7 +92,9 @@ import { useUIStore } from './stores/uiStore';
 import { fetchSubtitles } from './services/stremio-addon';
 import { scrobbler } from './services/scrobbler';
 import { SkipIntroButton } from './components/SkipIntroButton';
-import { useSkipIntro } from './hooks/useSkipIntro';import { DEFAULT_BADGE_SOURCES, mergeDefaultBadgeSources } from './utils/streamBadges';
+import { useSkipIntro } from './hooks/useSkipIntro';
+import { BackButtonOverlay } from './components/BackButtonOverlay';
+import { DEFAULT_BADGE_SOURCES, mergeDefaultBadgeSources } from './utils/streamBadges';
 
 // NEW: Extracted hooks
 import { useAppSettings } from './hooks/useAppSettings';
@@ -453,6 +455,8 @@ function App() {
 
   // Popout mode state: 'off' | 'popout' | 'external'
   const [popoutMode, setPopoutMode] = useState<'off' | 'popout' | 'external'>('off');
+  // Playback source view state to know where to go back when stopped
+  const [playbackSourceView, setPlaybackSourceView] = useState<'movies' | 'series' | 'dvr' | 'stremio' | null>(null);
   const isPopoutModeLoadedRef = useRef(false);
 
   const cyclePopoutMode = useCallback(() => {
@@ -766,10 +770,13 @@ function App() {
     }
 
     await handleStopRaw();
-    if (isStremio) {
+    if (playbackSourceView) {
+      setActiveView(playbackSourceView);
+      setPlaybackSourceView(null);
+    } else if (isStremio) {
       setActiveView('stremio');
     }
-  }, [vodInfo, handleStopRaw, setActiveView]);
+  }, [vodInfo, handleStopRaw, setActiveView, playbackSourceView]);
 
   // ==========================================================================
   // Aspect Ratio — tracked separately for the hero screen
@@ -1294,6 +1301,7 @@ function App() {
   }, []);
 
   const handlePlayChannelWrapper = useCallback(async (channel: StoredChannel, autoSwitched?: boolean) => {
+    setPlaybackSourceView(null);
     if (popoutMode === 'external') {
       await handlePlayInExternal(channel);
     } else if (popoutMode === 'popout') {
@@ -1412,6 +1420,7 @@ function App() {
         }
 
         stremioMetaRef.current = meta;
+        setPlaybackSourceView('stremio');
         setActiveViewRef.current('none');
         const isSeries = meta.type === 'series' && episodeVideo;
 
@@ -1513,6 +1522,10 @@ function App() {
     const handler = async (e: Event) => {
       const { url, title } = (e as CustomEvent).detail;
       if (!url) return;
+      const currentView = activeViewRef.current;
+      if (currentView === 'movies' || currentView === 'series' || currentView === 'stremio' || currentView === 'dvr') {
+        setPlaybackSourceView(currentView);
+      }
       setActiveViewRef.current?.('none');
       await handlePlayVodRef.current({
         url,
@@ -2248,16 +2261,25 @@ function App() {
   // ==========================================================================
   return (
     <div className={`app${showControls ? '' : ' controls-hidden'}${sportsOverlayWidget === 'autohide' ? ' has-live-sports-autohide' : ''}${sportsOverlayWidget === 'persistent' ? ' has-live-sports-persistent' : ''}${recentOverlayWidget !== null ? ' has-recent-widget' : ''}${favoritesOverlayWidget ? ' has-favorites-widget' : ''}`} onMouseMove={handleMouseMove}>
+      <BackButtonOverlay
+        visible={showControls && activeView === 'none'}
+        sourceView={playbackSourceView}
+        onBack={handleStop}
+      />
       {/* Custom title bar for frameless window */}
       <div className={`title-bar${showControls ? ' visible' : ''}`} data-tauri-drag-region>
         <div className="title-bar-left-group" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Logo className="title-bar-logo" />
-          <LayoutPicker
-            currentLayout={multiviewLayout}
-            onSelect={switchLayout}
-            engineMode={multiviewEngineMode}
-            onEngineChange={setMultiviewEngineMode}
-          />
+          {!(activeView === 'none' && playbackSourceView) && (
+            <>
+              <Logo className="title-bar-logo" />
+              <LayoutPicker
+                currentLayout={multiviewLayout}
+                onSelect={switchLayout}
+                engineMode={multiviewEngineMode}
+                onEngineChange={setMultiviewEngineMode}
+              />
+            </>
+          )}
         </div>
 
         <div className="title-bar-spacer"></div>
@@ -3095,7 +3117,10 @@ function App() {
       {/* Movies Page */}
       <TransitionView visible={activeView === 'movies'}>
         <MoviesPage
-          onPlay={(info) => handlePlayVodWrapper(info, () => setActiveView('none'))}
+          onPlay={(info) => {
+            setPlaybackSourceView('movies');
+            handlePlayVodWrapper(info, () => setActiveView('none'));
+          }}
           onClose={() => setActiveView('none')}
         />
       </TransitionView>
@@ -3103,7 +3128,10 @@ function App() {
       {/* Series Page */}
       <TransitionView visible={activeView === 'series'}>
         <SeriesPage
-          onPlay={(info) => handlePlayVodWrapper(info, () => setActiveView('none'))}
+          onPlay={(info) => {
+            setPlaybackSourceView('series');
+            handlePlayVodWrapper(info, () => setActiveView('none'));
+          }}
           onClose={() => setActiveView('none')}
         />
       </TransitionView>
@@ -3111,7 +3139,10 @@ function App() {
       {/* DVR Dashboard */}
       <TransitionView visible={activeView === 'dvr'}>
         <DvrDashboard
-          onPlay={(recording) => handlePlayRecording(recording, () => setActiveView('none'))}
+          onPlay={(recording) => {
+            setPlaybackSourceView('dvr');
+            handlePlayRecording(recording, () => setActiveView('none'));
+          }}
           onClose={() => setActiveView('none')}
         />
       </TransitionView>
