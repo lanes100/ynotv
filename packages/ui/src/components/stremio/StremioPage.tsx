@@ -18,6 +18,7 @@ import { StremioLibrary } from './StremioLibrary';
 import { StremioCalendar } from './StremioCalendar';
 import { StremioDetail } from './StremioDetail';
 import { AddonManagerPanel } from './AddonManagerPanel';
+import { StremioAccountModal } from './StremioAccountModal';
 import { StremioHoverProvider } from '../../contexts/StremioHoverContext';
 import { StremioHoverCard } from './StremioHoverCard';
 import './StremioPage.css';
@@ -40,6 +41,7 @@ export function StremioPage({ onClose, stremioStreamPickerMode, onStreamPickerMo
   const selectedSeason = useStremioSelectedSeason();
   const setSelectedSeason = useSetStremioSelectedSeason();
   const [showAddonManager, setShowAddonManager] = useState(false);
+  const [showAccountModal, setShowAccountModal] = useState(false);
 
   const mainRef = useRef<HTMLDivElement | null>(null);
   const [homeScrollTop, setHomeScrollTop] = useState(0);
@@ -47,7 +49,9 @@ export function StremioPage({ onClose, stremioStreamPickerMode, onStreamPickerMo
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        if (showAddonManager) {
+        if (showAccountModal) {
+          setShowAccountModal(false);
+        } else if (showAddonManager) {
           setShowAddonManager(false);
         } else if (activeMeta) {
           setActiveMeta(null);
@@ -62,7 +66,7 @@ export function StremioPage({ onClose, stremioStreamPickerMode, onStreamPickerMo
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [activeMeta, stremioView, showAddonManager, onClose, setActiveMeta, setStremioView, setSelectedSeason]);
+  }, [activeMeta, stremioView, showAddonManager, showAccountModal, onClose, setActiveMeta, setStremioView, setSelectedSeason]);
 
   const handleItemClick = useCallback((meta: StremioMeta) => {
     if (mainRef.current) {
@@ -111,9 +115,14 @@ export function StremioPage({ onClose, stremioStreamPickerMode, onStreamPickerMo
           <AddonManagerPanel onClose={() => setShowAddonManager(false)} />
         )}
 
+        {showAccountModal && (
+          <StremioAccountModal onClose={() => setShowAccountModal(false)} />
+        )}
+
         <StremioTopbar
           addons={addons}
           onOpenAddonManager={() => setShowAddonManager(true)}
+          onOpenAccount={() => setShowAccountModal(true)}
         />
 
         <div className="stremio-main" ref={mainRef}>

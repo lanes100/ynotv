@@ -1,6 +1,7 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useStremioLibraryStore, type LibraryItem } from '../../stores/stremioLibraryStore';
 import { useStremioWatchStore } from '../../stores/stremioWatchStore';
+import { useStremioAuthStore } from '../../stores/stremioAuthStore';
 import type { StremioMeta } from '../../types/stremio';
 import { useStremioAddonStore } from '../../stores/stremioAddonStore';
 import { fetchMeta } from '../../services/stremio-addon';
@@ -20,10 +21,17 @@ export function StremioLibrary({ onItemClick }: StremioLibraryProps) {
   const addons = useStremioAddonStore((s) => s.enabledAddons);
   const episodeProgress = useStremioWatchStore((s) => s.episodeProgress || {});
 
+  const authStore = useStremioAuthStore();
+  const isSyncActive = authStore.authKey && authStore.syncLibrary;
+  const cloudLibraryItems = authStore.cloudLibraryItems || [];
+
   const [search, setSearch] = useState('');
   const [selectedType, setSelectedType] = useState('All');
   const [sortBy, setSortBy] = useState<'added' | 'name' | 'rating' | 'year'>('added');
   const [refreshing, setRefreshing] = useState(false);
+  const [activeTab, setActiveTab] = useState<'watchlist' | 'history'>('watchlist');
+
+  const history = useStremioWatchStore((s) => s.history || []);
 
   // Refresh stale library items in the background
   useEffect(() => {
@@ -67,7 +75,34 @@ export function StremioLibrary({ onItemClick }: StremioLibraryProps) {
   }, [episodeProgress]);
 
   const filteredItems = useMemo(() => {
-    let items = [...library];
+    let items: LibraryItem[] = [];
+    if (isSyncActive) {
+      items = cloudLibraryItems
+        .filter((i) => {
+          if (i.removed) return false;
+          if (i.state?.flaggedWatched === 1) return false;
+          if ((i.state?.timeOffset ?? 0) > 0) return false;
+          if (i.temp) return false;
+          return true;
+        })
+        .map((i) => {
+          const local = library.find((x) => x.id === i._id);
+          return {
+            id: i._id,
+            type: i.type,
+            name: i.name,
+            poster: i.poster,
+            posterShape: i.posterShape,
+            imdbRating: local?.imdbRating,
+            year: local?.year,
+            videos: local?.videos,
+            videoCount: local?.videoCount,
+            lastChecked: local?.lastChecked,
+          } as LibraryItem;
+        });
+    } else {
+      items = [...library];
+    }
 
     if (selectedType !== 'All') {
       const typeLower = selectedType.toLowerCase();
@@ -101,7 +136,93 @@ export function StremioLibrary({ onItemClick }: StremioLibraryProps) {
     });
 
     return items;
-  }, [library, search, selectedType, sortBy]);
+  }, [library, search, selectedType, sortBy, isSyncActive, cloudLibraryItems]);
+
+  const filteredHistory = useMemo(() => {
+    let items: any[] = [];
+    if (isSyncActive) {
+      items = cloudLibraryItems
+        .filter((i) => {
+          if (i.removed && !i.temp) return false;
+          return i.state?.flaggedWatched === 1 || (i.state?.timeOffset ?? 0) > 0;
+        })
+        .map((i) => {
+          const local = library.find((x) => x.id === i._id);
+          const progressFraction = i.state.duration && i.state.timeOffset ? Math.min(1.0, i.state.timeOffset / i.state.duration) : 0;
+          
+          let lastSeason = i.state.season;
+          let lastEpisode = i.state.episode;
+          let nextVideoId: string | undefined;
+          let nextSeason: number | undefined;
+          let nextEpisode: number | undefined;
+          
+          if (i.type === 'series') {
+            if (i.state.video_id) {
+              const parts = i.state.video_id.split(':');
+              if (parts.length >= 3) {
+                lastSeason = parseInt(parts[parts.length - 2], 10);
+                lastEpisode = parseInt(parts[parts.length - 1], 10);
+              }
+            }
+            
+            if (lastSeason !== undefined && lastEpisode !== undefined && local?.videos) {
+              const sorted = [...local.videos].sort((a, b) => {
+                if ((a.season ?? 0) !== (b.season ?? 0)) return (a.season ?? 0) - (b.season ?? 0);
+                return (a.episode ?? 0) - (b.episode ?? 0);
+              });
+              const idx = sorted.findIndex((v) => v.id === i.state.video_id);
+              const isFinished = progressFraction >= 0.9;
+              if (isFinished && idx >= 0 && idx < sorted.length - 1) {
+                const nxt = sorted[idx + 1];
+                nextVideoId = nxt.id;
+                nextSeason = nxt.season;
+                nextEpisode = nxt.episode;
+              }
+            }
+          }
+          
+          return {
+            metaId: i._id,
+            type: i.type as 'movie' | 'series',
+            name: i.name,
+            poster: i.poster,
+            progressFraction,
+            lastWatchedVideoId: i.state.video_id,
+            lastSeason,
+            lastEpisode,
+            nextVideoId,
+            nextSeason,
+            nextEpisode,
+            watchedAt: i._mtime ? Date.parse(i._mtime) : Date.now(),
+          };
+        });
+    } else {
+      items = [...history];
+    }
+
+    if (selectedType !== 'All') {
+      const typeLower = selectedType.toLowerCase();
+      if (typeLower === 'movies') {
+        items = items.filter((x) => x.type === 'movie');
+      } else if (typeLower === 'series') {
+        items = items.filter((x) => x.type === 'series');
+      }
+    }
+
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      items = items.filter((x) => x.name.toLowerCase().includes(q));
+    }
+
+    items.sort((a, b) => {
+      if (sortBy === 'name') {
+        return a.name.localeCompare(b.name);
+      }
+      return b.watchedAt - a.watchedAt;
+    });
+
+    return items;
+  }, [history, search, selectedType, sortBy, isSyncActive, cloudLibraryItems, library]);
 
   const handleCardClick = async (item: LibraryItem) => {
     const addon = addons.find((a) => a.manifest.catalogs?.some((c) => c.type === item.type));
@@ -111,15 +232,47 @@ export function StremioLibrary({ onItemClick }: StremioLibraryProps) {
     }
   };
 
+  const handleHistoryCardClick = async (entry: any) => {
+    const addon = addons.find((a) => a.manifest.catalogs?.some((c) => c.type === entry.type));
+    if (addon) {
+      const meta = await fetchMeta([addon], entry.type, entry.metaId);
+      if (meta) {
+        import('../../stores/uiStore').then(({ useUIStore }) => {
+          if (entry.type === 'series' && entry.lastSeason != null) {
+            useUIStore.getState().setStremioSelectedSeason(entry.lastSeason);
+            if (entry.lastWatchedVideoId) {
+              useUIStore.getState().setStremioPreselectVideoId(entry.lastWatchedVideoId);
+            }
+          }
+        });
+        onItemClick(meta);
+      }
+    }
+  };
+
   const { onCardMouseEnter, onCardMouseLeave, onCardClick } = useStremioHover();
 
   return (
     <div className="stremio-library">
       <div className="stremio-library-header">
-        <h2 className="stremio-library-title">
-          Library
+        <div className="stremio-library-title-group">
+          <h2 className="stremio-library-title">Library</h2>
+          <div className="stremio-library-tabs">
+            <button
+              className={`stremio-library-tab ${activeTab === 'watchlist' ? 'active' : ''}`}
+              onClick={() => setActiveTab('watchlist')}
+            >
+              Watchlist
+            </button>
+            <button
+              className={`stremio-library-tab ${activeTab === 'history' ? 'active' : ''}`}
+              onClick={() => setActiveTab('history')}
+            >
+              History
+            </button>
+          </div>
           {refreshing && <span className="stremio-library-refreshing"> Refreshing...</span>}
-        </h2>
+        </div>
         <div className="stremio-library-controls">
           <input
             className="stremio-library-search"
@@ -136,65 +289,154 @@ export function StremioLibrary({ onItemClick }: StremioLibraryProps) {
             <option value="All">All Types</option>
             <option value="Movies">Movies</option>
             <option value="Series">Series</option>
-            <option value="Other">Other</option>
+            {activeTab === 'watchlist' && <option value="Other">Other</option>}
           </select>
           <select
             className="stremio-library-select"
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as any)}
           >
-            <option value="added">Recently Added</option>
-            <option value="name">A-Z</option>
-            <option value="rating">IMDb Rating</option>
-            <option value="year">Release Year</option>
+            {activeTab === 'watchlist' ? (
+              <>
+                <option value="added">Recently Added</option>
+                <option value="name">A-Z</option>
+                <option value="rating">IMDb Rating</option>
+                <option value="year">Release Year</option>
+              </>
+            ) : (
+              <>
+                <option value="recent">Recently Watched</option>
+                <option value="name">A-Z</option>
+              </>
+            )}
           </select>
         </div>
       </div>
 
-      {filteredItems.length === 0 ? (
-        <div className="stremio-library-empty">
-          {library.length === 0
-            ? 'Your library is empty. Go discover and add items to your library!'
-            : 'No library items match your search and filter criteria.'}
-        </div>
+      {activeTab === 'watchlist' ? (
+        filteredItems.length === 0 ? (
+          <div className="stremio-library-empty">
+            {library.length === 0
+              ? 'Your watchlist is empty. Go discover and add items to your library!'
+              : 'No watchlist items match your search and filter criteria.'}
+          </div>
+        ) : (
+          <div className="stremio-library-grid">
+            {filteredItems.map((item) => {
+              const newCount = item.type === 'series' ? getNewCount(item) : 0;
+              return (
+                <div
+                  key={item.id}
+                  className="stremio-meta-card"
+                  onMouseEnter={(e) => onCardMouseEnter(item as StremioMetaPreview, e.currentTarget, e)}
+                  onMouseLeave={onCardMouseLeave}
+                  onClick={() => {
+                    onCardClick();
+                    handleCardClick(item);
+                  }}
+                >
+                  {item.poster && (
+                    <div className="stremio-library-poster-wrap">
+                      <img
+                        className="stremio-meta-poster"
+                        src={item.poster}
+                        alt={item.name}
+                        loading="lazy"
+                      />
+                      {newCount > 0 && (
+                        <div className="stremio-library-new-badge">
+                          {newCount}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  <div className="stremio-meta-card-info">
+                    <div className="stremio-meta-card-title">{item.name}</div>
+                    {item.imdbRating && <div className="stremio-meta-card-rating">★ {item.imdbRating}</div>}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )
       ) : (
-        <div className="stremio-library-grid">
-          {filteredItems.map((item) => {
-            const newCount = item.type === 'series' ? getNewCount(item) : 0;
-            return (
-              <div
-                key={item.id}
-                className="stremio-meta-card"
-                onMouseEnter={(e) => onCardMouseEnter(item as StremioMetaPreview, e.currentTarget, e)}
-                onMouseLeave={onCardMouseLeave}
-                onClick={() => {
-                  onCardClick();
-                  handleCardClick(item);
-                }}
-              >
-                {item.poster && (
-                  <div className="stremio-library-poster-wrap">
-                    <img
-                      className="stremio-meta-poster"
-                      src={item.poster}
-                      alt={item.name}
-                      loading="lazy"
-                    />
-                    {newCount > 0 && (
-                      <div className="stremio-library-new-badge">
-                        {newCount}
-                      </div>
+        filteredHistory.length === 0 ? (
+          <div className="stremio-library-empty">
+            {history.length === 0
+              ? 'Your watch history is empty.'
+              : 'No history items match your search and filter criteria.'}
+          </div>
+        ) : (
+          <div className="stremio-library-grid">
+            {filteredHistory.map((entry) => {
+              const isSeries = entry.type === 'series';
+              const hasNext = isSeries && entry.nextVideoId != null;
+              const progressPercent = Math.round(entry.progressFraction * 100);
+              const showProgress = !hasNext && progressPercent > 2 && progressPercent < 98;
+              let badge: string | null = null;
+              if (isSeries && hasNext && entry.nextSeason != null && entry.nextEpisode != null) {
+                badge = `▶ S${entry.nextSeason} E${entry.nextEpisode}`;
+              } else if (isSeries && entry.lastSeason != null && entry.lastEpisode != null) {
+                badge = `S${entry.lastSeason} E${entry.lastEpisode}`;
+              }
+
+              return (
+                <div
+                  key={entry.metaId}
+                  className="stremio-meta-card"
+                  onMouseEnter={(e) => {
+                    const previewItem: StremioMetaPreview = {
+                      id: entry.metaId,
+                      type: entry.type,
+                      name: entry.name,
+                      poster: entry.poster || undefined,
+                    };
+                    onCardMouseEnter(previewItem, e.currentTarget, e);
+                  }}
+                  onMouseLeave={onCardMouseLeave}
+                  onClick={() => {
+                    onCardClick();
+                    handleHistoryCardClick(entry);
+                  }}
+                >
+                  {entry.poster && (
+                    <div className="stremio-library-poster-wrap">
+                      <img
+                        className="stremio-meta-poster"
+                        src={entry.poster}
+                        alt={entry.name}
+                        loading="lazy"
+                      />
+                      {showProgress && (
+                        <div className="stremio-library-progress-track">
+                          <div
+                            className="stremio-library-progress-fill"
+                            style={{ width: `${progressPercent}%` }}
+                          />
+                        </div>
+                      )}
+                      {badge && (
+                        <div className={`stremio-library-ep-badge${hasNext ? ' next' : ''}`}>
+                          {badge}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  <div className="stremio-meta-card-info">
+                    <div className="stremio-meta-card-title">{entry.name}</div>
+                    {hasNext ? (
+                      <div className="stremio-library-card-sub next">Next Episode</div>
+                    ) : (
+                      showProgress && (
+                        <div className="stremio-library-card-sub">{progressPercent}% watched</div>
+                      )
                     )}
                   </div>
-                )}
-                <div className="stremio-meta-card-info">
-                  <div className="stremio-meta-card-title">{item.name}</div>
-                  {item.imdbRating && <div className="stremio-meta-card-rating">★ {item.imdbRating}</div>}
                 </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        )
       )}
     </div>
   );

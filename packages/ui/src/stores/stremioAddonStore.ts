@@ -88,27 +88,66 @@ export const useStremioAddonStore = create<StremioAddonStore>()(
           installedAt: Date.now(),
         };
         clearCatalogCache();
-        set(s => {
-          const newAddons = [...s.addons, addon];
-          return { addons: newAddons, enabledAddons: deriveEnabled(newAddons) };
+        
+        const newAddons = [...state.addons, addon];
+        set({ addons: newAddons, enabledAddons: deriveEnabled(newAddons) });
+
+        // Sync to Stremio cloud if logged in & sync enabled
+        import('./stremioAuthStore').then(({ useStremioAuthStore }) => {
+          const auth = useStremioAuthStore.getState();
+          if (auth.authKey && auth.syncAddons) {
+            import('../services/stremio-api').then(({ setStremioAddons }) => {
+              const toPush = newAddons.map(a => ({
+                transportUrl: `${a.baseUrl}/manifest.json`,
+                manifest: a.manifest,
+              }));
+              setStremioAddons(auth.authKey!, toPush).catch(() => {});
+            });
+          }
         });
       },
 
       removeAddon: (id: string) => {
         clearCatalogCache();
-        set(s => {
-          const newAddons = s.addons.filter(a => a.id !== id);
-          return { addons: newAddons, enabledAddons: deriveEnabled(newAddons) };
+        const state = get();
+        const newAddons = state.addons.filter(a => a.id !== id);
+        set({ addons: newAddons, enabledAddons: deriveEnabled(newAddons) });
+
+        // Sync to Stremio cloud if logged in & sync enabled
+        import('./stremioAuthStore').then(({ useStremioAuthStore }) => {
+          const auth = useStremioAuthStore.getState();
+          if (auth.authKey && auth.syncAddons) {
+            import('../services/stremio-api').then(({ setStremioAddons }) => {
+              const toPush = newAddons.map(a => ({
+                transportUrl: `${a.baseUrl}/manifest.json`,
+                manifest: a.manifest,
+              }));
+              setStremioAddons(auth.authKey!, toPush).catch(() => {});
+            });
+          }
         });
       },
 
       toggleAddon: (id: string) => {
         clearCatalogCache();
-        set(s => {
-          const newAddons = s.addons.map(a =>
-            a.id === id ? { ...a, enabled: a.enabled === false ? true : false } : a
-          );
-          return { addons: newAddons, enabledAddons: deriveEnabled(newAddons) };
+        const state = get();
+        const newAddons = state.addons.map(a =>
+          a.id === id ? { ...a, enabled: a.enabled === false ? true : false } : a
+        );
+        set({ addons: newAddons, enabledAddons: deriveEnabled(newAddons) });
+
+        // Sync to Stremio cloud if logged in & sync enabled
+        import('./stremioAuthStore').then(({ useStremioAuthStore }) => {
+          const auth = useStremioAuthStore.getState();
+          if (auth.authKey && auth.syncAddons) {
+            import('../services/stremio-api').then(({ setStremioAddons }) => {
+              const toPush = newAddons.map(a => ({
+                transportUrl: `${a.baseUrl}/manifest.json`,
+                manifest: a.manifest,
+              }));
+              setStremioAddons(auth.authKey!, toPush).catch(() => {});
+            });
+          }
         });
       },
     }),

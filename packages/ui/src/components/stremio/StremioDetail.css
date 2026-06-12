@@ -1089,4 +1089,17 @@
   border-color: var(--text-primary, white);
 }
 
+.stremio-detail-streams-loading-mini {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--surface-secondary, rgba(255, 255, 255, 0.05));
+  border: 1px solid var(--surface-border, rgba(255, 255, 255, 0.08));
+  border-radius: 6px;
+  margin-bottom: 12px;
+  font-size: 0.85rem;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.7));
+}
+
 

@@ -69,6 +69,7 @@ interface StremioWatchStore {
   getEpisodeWatched: (videoId: string) => boolean;
   getEpisodeProgressFraction: (videoId: string) => number;
   toggleEpisodeWatched: (videoId: string, metaId: string, season: number, episode: number) => void;
+  setEpisodesFinishedDirectly: (progressMap: Record<string, StremioEpisodeProgress>) => void;
   removeFromHistory: (metaId: string) => void;
   clearHistory: () => void;
 }
@@ -78,6 +79,7 @@ export const useStremioWatchStore = create<StremioWatchStore>()(
     (set, get) => ({
       history: [],
       episodeProgress: {},
+
 
       recordMovieWatch: (metaId, name, poster, lastSelectedStream) => {
         set((state) => {
@@ -241,6 +243,12 @@ export const useStremioWatchStore = create<StremioWatchStore>()(
             ).catch(() => {});
           });
         }
+      },
+
+      setEpisodesFinishedDirectly: (progressMap) => {
+        set((state) => ({
+          episodeProgress: { ...(state.episodeProgress || {}), ...progressMap },
+        }));
       },
 
       removeFromHistory: (metaId) => {

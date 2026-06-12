@@ -9,6 +9,7 @@ import { Bridge, registerOnAppClose, unregisterOnAppClose } from '../services/ta
 import { resolvePlayUrl } from '../services/stream-resolver';
 import { addToRecentChannels } from '../utils/recentChannels';
 import { db, recordVodWatch, updateVodWatchProgress, getVodWatchProgress, recordEpisodeWatch, getEpisodeProgress } from '../db';
+import { useStremioWatchStore } from '../stores/stremioWatchStore';
 import type { useMpvListeners } from './useMpvListeners';
 import { logInfo, logWarn, logError } from '../utils/logger';
 import { toSubSourceLang, fromSubSourceLang, LANG_MAP } from '../services/subsource';
@@ -328,6 +329,8 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
 
   // Pending seek ref for deferred scrubbing
   const pendingCatchupSeekRef = useRef<number | null>(null);
+  const pendingStremioSeekFractionRef = useRef<number | null>(null);
+  const pendingResumeSeekRef = useRef<number | null>(null);
 
   // Playback state
   const [currentChannel, setCurrentChannel] = useState<StoredChannel | null>(null);
@@ -503,6 +506,31 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
       const targetSeek = pendingCatchupSeekRef.current;
       pendingCatchupSeekRef.current = null;
       Bridge.seek(targetSeek).catch(e => console.warn('[usePlayback] Deferred seek failed:', e));
+      setPosition(targetSeek);
+    }
+  }, [duration, playing, setPosition]);
+
+  // Handle pending Stremio synced progress seek when duration becomes available
+  useEffect(() => {
+    if (pendingStremioSeekFractionRef.current !== null && duration > 0 && playing) {
+      const fraction = pendingStremioSeekFractionRef.current;
+      pendingStremioSeekFractionRef.current = null;
+      const targetSeek = Math.floor(fraction * duration);
+      if (targetSeek > 0) {
+        logInfo(`[usePlayback] Seeking Stremio VOD to synced fraction: ${fraction} at ${targetSeek} seconds`);
+        Bridge.seek(targetSeek).catch(e => console.warn('[usePlayback] Stremio deferred seek failed:', e));
+        setPosition(targetSeek);
+      }
+    }
+  }, [duration, playing, setPosition]);
+
+  // Handle pending database resume seek when duration becomes available (immune to load delays)
+  useEffect(() => {
+    if (pendingResumeSeekRef.current !== null && duration > 0 && playing) {
+      const targetSeek = pendingResumeSeekRef.current;
+      pendingResumeSeekRef.current = null;
+      logInfo(`[usePlayback] Seeking VOD to database resume position: ${targetSeek} seconds`);
+      Bridge.seek(targetSeek).catch(e => console.warn('[usePlayback] Resume seek failed:', e));
       setPosition(targetSeek);
     }
   }, [duration, playing, setPosition]);
@@ -1706,6 +1734,23 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
             }
           }
         }
+
+        // If still no progress found in DB and this is a Stremio stream, check the Zustand store for fraction-based fallback
+        if (resumePosition === 0 && info.source_id === 'stremio') {
+          console.log('[Playback] Checking stremioWatchStore for fraction-based progress fallback');
+          const watchStore = useStremioWatchStore.getState();
+          let fraction = 0;
+          if (info.type === 'series' && info.episodeId) {
+            fraction = watchStore.getEpisodeProgressFraction(info.episodeId);
+          } else if (info.type === 'movie' && info.mediaId) {
+            fraction = (watchStore.history || []).find((h) => h.metaId === info.mediaId)?.progressFraction ?? 0;
+          }
+          
+          if (fraction > 0.02 && fraction < 0.95) {
+            logInfo(`[Playback] Found Stremio synced progress fraction fallback: ${fraction}`);
+            pendingStremioSeekFractionRef.current = fraction;
+          }
+        }
       }
       
       console.log('[Playback] Final resume position:', resumePosition);
@@ -1730,17 +1775,7 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
       // Resume from saved position if available
       if (resumePosition > 0) {
         setPosition(resumePosition);
-        // Seek after a delay to ensure video is loaded and playing
-        setTimeout(() => {
-          Bridge.seek(resumePosition).catch(e => {
-            // Try once more after a longer delay
-            setTimeout(() => {
-              Bridge.seek(resumePosition).catch(e2 => 
-                logWarn('[Playback] Resume seek failed:', e2)
-              );
-            }, 2000);
-          });
-        }, 1000);
+        pendingResumeSeekRef.current = resumePosition;
       }
       
       // Close the VOD page when playing

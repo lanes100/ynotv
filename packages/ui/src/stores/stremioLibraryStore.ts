@@ -48,9 +48,68 @@ export const useStremioLibraryStore = create<StremioLibraryStore>()(
           lastChecked: Date.now(),
         };
         set({ library: [libItem, ...current] });
+
+        // Sync to Stremio cloud if logged in & sync enabled
+        import('./stremioAuthStore').then(({ useStremioAuthStore }) => {
+          const auth = useStremioAuthStore.getState();
+          if (auth.authKey && auth.syncLibrary) {
+            import('../services/stremio-api').then(({ putStremioLibraryItem }) => {
+              const cloudItem = auth.cloudLibraryItems?.find((c) => c._id === libItem.id);
+              const itemToPut = {
+                _id: libItem.id,
+                name: libItem.name,
+                type: libItem.type,
+                poster: libItem.poster,
+                posterShape: (libItem.posterShape as any) ?? 'poster',
+                removed: false,
+                temp: false,
+                _ctime: cloudItem?._ctime ?? new Date().toISOString(),
+                _mtime: new Date().toISOString(),
+                state: cloudItem?.state ?? {},
+              };
+              useStremioAuthStore.setState((s) => ({
+                cloudLibraryItems: s.cloudLibraryItems.map((c) => c._id === libItem.id ? itemToPut : c).concat(
+                  s.cloudLibraryItems.some((c) => c._id === libItem.id) ? [] : [itemToPut]
+                )
+              }));
+              putStremioLibraryItem(auth.authKey!, itemToPut).catch(() => {});
+            });
+          }
+        });
       },
       removeFromLibrary: (id) => {
+        const target = get().library.find(x => x.id === id);
         set({ library: get().library.filter((x) => x.id !== id) });
+
+        // Sync to Stremio cloud if logged in & sync enabled
+        if (target) {
+          import('./stremioAuthStore').then(({ useStremioAuthStore }) => {
+            const auth = useStremioAuthStore.getState();
+            if (auth.authKey && auth.syncLibrary) {
+              import('../services/stremio-api').then(({ putStremioLibraryItem }) => {
+                const cloudItem = auth.cloudLibraryItems?.find((c) => c._id === target.id);
+                const hasProgress = !!cloudItem?.state && ((cloudItem.state.timeOffset ?? 0) > 0 || !!cloudItem.state.watched);
+                const itemToPut = {
+                  _id: target.id,
+                  name: target.name,
+                  type: target.type,
+                  poster: target.poster,
+                  posterShape: (target.posterShape as any) ?? 'poster',
+                  removed: !hasProgress,
+                  temp: true,
+                  _mtime: new Date().toISOString(),
+                  state: cloudItem?.state ?? {},
+                };
+                useStremioAuthStore.setState((s) => ({
+                  cloudLibraryItems: s.cloudLibraryItems.map((c) => c._id === target.id ? itemToPut : c).concat(
+                    s.cloudLibraryItems.some((c) => c._id === target.id) ? [] : [itemToPut]
+                  )
+                }));
+                putStremioLibraryItem(auth.authKey!, itemToPut).catch(() => {});
+              });
+            }
+          });
+        }
       },
       isInLibrary: (id) => {
         return get().library.some((x) => x.id === id);

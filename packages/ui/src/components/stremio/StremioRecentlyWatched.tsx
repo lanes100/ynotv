@@ -1,7 +1,9 @@
-import { useRef, useState, useCallback, useEffect } from 'react';
+import { useRef, useState, useCallback, useEffect, useMemo } from 'react';
 import type { InstalledAddon, StremioMeta, StremioMetaPreview } from '../../types/stremio';
 import { fetchMeta } from '../../services/stremio-addon';
 import { useStremioWatchStore, type StremioWatchEntry } from '../../stores/stremioWatchStore';
+import { useStremioAuthStore } from '../../stores/stremioAuthStore';
+import { useStremioLibraryStore } from '../../stores/stremioLibraryStore';
 import { useSetStremioSelectedSeason, useSetStremioPreselectVideoId } from '../../stores/uiStore';
 import { useStremioHover } from '../../contexts/StremioHoverContext';
 import './StremioHome.css';
@@ -17,7 +19,78 @@ export function StremioRecentlyWatched({ addons, onItemClick }: StremioRecentlyW
   const [canScrollRight, setCanScrollRight] = useState(false);
   const [loadingId, setLoadingId] = useState<string | null>(null);
 
-  const history = useStremioWatchStore((s) => s.history || []);
+  const authStore = useStremioAuthStore();
+  const isSyncActive = authStore.authKey && authStore.syncProgress;
+  const cloudLibraryItems = authStore.cloudLibraryItems || [];
+  const localHistory = useStremioWatchStore((s) => s.history || []);
+  const library = useStremioLibraryStore((s) => s.library || []);
+
+  const history = useMemo(() => {
+    if (isSyncActive) {
+      console.log('[ContinueWatching] cloudLibraryItems:', cloudLibraryItems);
+      const filtered = cloudLibraryItems
+        .filter((i) => (!i.removed || i.temp) && i.type !== 'other' && !i._id.startsWith('iptv:') && i.state && i.state.timeOffset && i.state.timeOffset > 0)
+        .map((i) => {
+          const isSeries = i.type === 'series';
+          const progressFraction = i.state.duration && i.state.timeOffset ? Math.min(1.0, i.state.timeOffset / i.state.duration) : 0;
+          
+          let lastSeason = i.state.season;
+          let lastEpisode = i.state.episode;
+          let nextVideoId: string | undefined;
+          let nextSeason: number | undefined;
+          let nextEpisode: number | undefined;
+
+          if (isSeries && i.state.video_id) {
+            const parts = i.state.video_id.split(':');
+            if (parts.length >= 3) {
+              lastSeason = parseInt(parts[parts.length - 2], 10);
+              lastEpisode = parseInt(parts[parts.length - 1], 10);
+            }
+          }
+
+          const isFinished = progressFraction >= 0.9;
+          
+          if (isSeries && lastSeason !== undefined && lastEpisode !== undefined) {
+            const localItem = library.find((x) => x.id === i._id);
+            if (localItem?.videos) {
+              const sorted = [...localItem.videos].sort((a, b) => {
+                if ((a.season ?? 0) !== (b.season ?? 0)) return (a.season ?? 0) - (b.season ?? 0);
+                return (a.episode ?? 0) - (b.episode ?? 0);
+              });
+              const idx = sorted.findIndex((v) => v.id === i.state.video_id);
+              if (isFinished && idx >= 0 && idx < sorted.length - 1) {
+                const nxt = sorted[idx + 1];
+                nextVideoId = nxt.id;
+                nextSeason = nxt.season;
+                nextEpisode = nxt.episode;
+              }
+            }
+          }
+
+          return {
+            metaId: i._id,
+            type: i.type as 'movie' | 'series',
+            name: i.name,
+            poster: i.poster,
+            progressFraction,
+            lastWatchedVideoId: i.state.video_id,
+            lastSeason,
+            lastEpisode,
+            nextVideoId,
+            nextSeason,
+            nextEpisode,
+            watchedAt: i._mtime ? Date.parse(i._mtime) : Date.now(),
+          } as StremioWatchEntry;
+        })
+        .sort((a, b) => b.watchedAt - a.watchedAt);
+      
+      console.log('[ContinueWatching] filtered history:', filtered);
+      return filtered;
+    } else {
+      return localHistory;
+    }
+  }, [isSyncActive, cloudLibraryItems, localHistory, library]);
+
   const removeFromHistory = useStremioWatchStore((s) => s.removeFromHistory);
   const setSelectedSeason = useSetStremioSelectedSeason();
   const setPreselectVideoId = useSetStremioPreselectVideoId();
@@ -48,10 +121,14 @@ export function StremioRecentlyWatched({ addons, onItemClick }: StremioRecentlyW
     try {
       const meta = await fetchMeta(addons, entry.type, entry.metaId);
       if (meta) {
-        if (entry.type === 'series' && entry.lastSeason != null) {
-          setSelectedSeason(entry.lastSeason);
-          if (entry.lastWatchedVideoId) {
-            setPreselectVideoId(entry.lastWatchedVideoId);
+        if (entry.type === 'series') {
+          const targetSeason = entry.nextSeason != null ? entry.nextSeason : entry.lastSeason;
+          if (targetSeason != null) {
+            setSelectedSeason(targetSeason);
+          }
+          const targetVideoId = entry.nextVideoId || entry.lastWatchedVideoId;
+          if (targetVideoId) {
+            setPreselectVideoId(targetVideoId);
           }
         }
         onItemClick(meta);

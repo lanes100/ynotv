@@ -98,24 +98,32 @@ export async function fetchMeta(
 export async function fetchStreams(
   addons: InstalledAddon[],
   type: string,
-  id: string
+  id: string,
+  onStreams?: (streams: StremioStream[]) => void
 ): Promise<StremioStream[]> {
   const results: StremioStream[] = [];
-  for (const addon of addons) {
-    if (!addonHasResource(addon, 'stream')) continue;
+  
+  const promises = addons.map(async (addon) => {
+    if (!addonHasResource(addon, 'stream')) return;
     try {
       const url = `${normalizeBaseUrl(addon.baseUrl)}/stream/${type}/${id}.json`;
       const data = await fetchJson(url) as { streams: StremioStream[] };
       if (data?.streams) {
-        for (const s of data.streams) {
-          s.addonName = addon.manifest.name;
+        const addonStreams = data.streams.map(s => ({
+          ...s,
+          addonName: addon.manifest.name
+        }));
+        results.push(...addonStreams);
+        if (onStreams) {
+          onStreams(addonStreams);
         }
-        results.push(...data.streams);
       }
     } catch {
-      // Try next addon
+      // Ignore errors for individual addon
     }
-  }
+  });
+
+  await Promise.all(promises);
   return results;
 }
 
@@ -126,8 +134,9 @@ export async function fetchSubtitles(
   extra?: Record<string, string>
 ): Promise<StremioSubtitle[]> {
   const results: StremioSubtitle[] = [];
-  for (const addon of addons) {
-    if (!addonHasResource(addon, 'subtitles')) continue;
+  
+  const promises = addons.map(async (addon) => {
+    if (!addonHasResource(addon, 'subtitles')) return;
     try {
       let url = `${normalizeBaseUrl(addon.baseUrl)}/subtitles/${type}/${id}`;
       const extraArgs = extra
@@ -142,14 +151,17 @@ export async function fetchSubtitles(
       url += '.json';
       const data = await fetchJson(url) as { subtitles: StremioSubtitle[] };
       if (data?.subtitles) {
-        for (const sub of data.subtitles) {
-          sub.addonName = addon.manifest.name;
-        }
-        results.push(...data.subtitles);
+        const addonSubtitles = data.subtitles.map(sub => ({
+          ...sub,
+          addonName: addon.manifest.name
+        }));
+        results.push(...addonSubtitles);
       }
     } catch {
-      // Try next addon
+      // Ignore errors for individual addon
     }
-  }
+  });
+
+  await Promise.all(promises);
   return results;
 }

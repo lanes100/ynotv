@@ -253,3 +253,34 @@
 .stremio-topbar-search-history-clear-all:hover {
   color: rgba(255, 255, 255, 0.7);
 }
+
+/* Account Button Styling */
+.stremio-topbar-account-btn {
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+  padding-left: 16px !important;
+  margin-left: 8px;
+}
+
+.stremio-topbar-avatar {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--accent-primary, #7b61ff);
+  color: #ffffff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 0 10px rgba(123, 97, 255, 0.3);
+}
+
+.stremio-topbar-account-btn.logged-in {
+  color: var(--accent-primary, #7b61ff) !important;
+}
+
+.stremio-topbar-account-btn.logged-in:hover {
+  color: var(--accent-hover, #674df0) !important;
+}
+

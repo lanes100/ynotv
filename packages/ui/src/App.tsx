@@ -87,6 +87,7 @@ import { AdvancedSearchModal, type AdvancedSearchConfig } from './components/Adv
 import { StremioPage } from './components/stremio/StremioPage';
 import { useStremioAddonStore } from './stores/stremioAddonStore';
 import { useStremioWatchStore } from './stores/stremioWatchStore';
+import { useStremioAuthStore } from './stores/stremioAuthStore';
 import { useUIStore } from './stores/uiStore';
 import { fetchSubtitles } from './services/stremio-addon';
 import { scrobbler } from './services/scrobbler';
@@ -713,8 +714,36 @@ function App() {
             epInfo.nextSeason,
             epInfo.nextEpisode
           );
+
+          // Sync to Stremio cloud
+          const auth = useStremioAuthStore.getState();
+          if (auth.authKey && auth.syncProgress) {
+            auth.syncPlaybackProgress(
+              epInfo.metaId,
+              epInfo.videoId,
+              pos,
+              dur,
+              'series',
+              epInfo.name,
+              epInfo.poster
+            ).catch(() => {});
+          }
         } else if (movieInfo) {
           watchStore.updateMovieProgress(movieInfo.metaId, fraction);
+
+          // Sync to Stremio cloud
+          const auth = useStremioAuthStore.getState();
+          if (auth.authKey && auth.syncProgress) {
+            auth.syncPlaybackProgress(
+              movieInfo.metaId,
+              movieInfo.metaId,
+              pos,
+              dur,
+              'movie',
+              movieInfo.name,
+              movieInfo.poster
+            ).catch(() => {});
+          }
         }
       }
     }
@@ -783,12 +812,14 @@ function App() {
   // Initialize Stremio addons
   // ==========================================================================
   const initializeStremioAddons = useStremioAddonStore((s) => s.initializeDefaults);
+  const initializeStremioSync = useStremioAuthStore((s) => s.syncNow);
 
   useEffect(() => {
     if (layoutSettingsLoaded) {
       initializeStremioAddons();
+      initializeStremioSync();
     }
-  }, [layoutSettingsLoaded, initializeStremioAddons]);
+  }, [layoutSettingsLoaded, initializeStremioAddons, initializeStremioSync]);
 
   // ==========================================================================
   // Channel Info Overlay
@@ -1320,10 +1351,6 @@ function App() {
         // Record watch in stremio watch store
         const watchStore = useStremioWatchStore.getState();
 
-        // Capture saved fraction before recording new start
-        const savedFraction = meta.type === 'series' && episodeVideo
-          ? watchStore.getEpisodeProgressFraction(episodeVideo.id)
-          : ((watchStore.history || []).find((h) => h.metaId === meta.id)?.progressFraction ?? 0);
 
         if (meta.type === 'series' && episodeVideo) {
           // Compute next episode: iterate videos sorted by season/episode
@@ -1404,23 +1431,6 @@ function App() {
           episodeId: episodeVideo?.id,
         });
 
-        // Resume from saved stremio progress if available
-        if (savedFraction > 0.02 && savedFraction < 0.95) {
-          const retrySeek = (attempt = 0) => {
-            const dur = durationRef.current;
-            if (dur > 0) {
-              const seekTo = Math.floor(savedFraction * dur);
-              if (seekTo > 0) {
-                Bridge.seek(seekTo).catch(() => {
-                  setTimeout(() => Bridge.seek(seekTo).catch(() => {}), 2000);
-                });
-              }
-            } else if (attempt < 10) {
-              setTimeout(() => retrySeek(attempt + 1), 1000);
-            }
-          };
-          setTimeout(() => retrySeek(), 1500);
-        }
 
         if (stream.infoHash) {
           console.log('[Stremio] Playing torrent stream:', stream.infoHash);
@@ -1535,8 +1545,36 @@ function App() {
           Math.floor(pos),
           Math.floor(dur)
         ).catch(() => {});
+
+        // Sync to Stremio Cloud
+        const auth = useStremioAuthStore.getState();
+        if (auth.authKey && auth.syncProgress) {
+          auth.syncPlaybackProgress(
+            epInfo.metaId,
+            epInfo.videoId,
+            pos,
+            dur,
+            'series',
+            epInfo.name,
+            epInfo.poster
+          ).catch(() => {});
+        }
       } else if (movieInfo) {
         watchStore.updateMovieProgress(movieInfo.metaId, fraction);
+
+        // Sync to Stremio Cloud
+        const auth = useStremioAuthStore.getState();
+        if (auth.authKey && auth.syncProgress) {
+          auth.syncPlaybackProgress(
+            movieInfo.metaId,
+            movieInfo.metaId,
+            pos,
+            dur,
+            'movie',
+            movieInfo.name,
+            movieInfo.poster
+          ).catch(() => {});
+        }
       }
     };
 

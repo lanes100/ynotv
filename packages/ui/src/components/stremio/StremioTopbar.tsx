@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import type { InstalledAddon } from '../../types/stremio';
+import { useStremioAuthStore } from '../../stores/stremioAuthStore';
 import {
   useStremioSearchQuery,
   useSetStremioSearchQuery,
@@ -20,9 +21,11 @@ import './StremioTopbar.css';
 interface StremioTopbarProps {
   addons: InstalledAddon[];
   onOpenAddonManager: () => void;
+  onOpenAccount: () => void;
 }
 
-export function StremioTopbar({ addons, onOpenAddonManager }: StremioTopbarProps) {
+export function StremioTopbar({ addons, onOpenAddonManager, onOpenAccount }: StremioTopbarProps) {
+  const { authKey, user } = useStremioAuthStore();
   const selectedAddonId = useStremioSelectedAddonId();
   const setSelectedAddonId = useSetStremioSelectedAddonId();
   const selectedCatalogId = useStremioSelectedCatalogId();
@@ -182,6 +185,23 @@ export function StremioTopbar({ addons, onOpenAddonManager }: StremioTopbarProps
           </svg>
           <span>Manage Addons</span>
         </button>
+
+        {authKey ? (
+          <button className="stremio-topbar-item stremio-topbar-account-btn logged-in" onClick={onOpenAccount}>
+            <div className="stremio-topbar-avatar">
+              {user?.fullname ? user.fullname.charAt(0).toUpperCase() : user?.email.charAt(0).toUpperCase() || 'U'}
+            </div>
+            <span>Account</span>
+          </button>
+        ) : (
+          <button className="stremio-topbar-item stremio-topbar-account-btn" onClick={onOpenAccount}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="stremio-topbar-icon">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+              <circle cx="12" cy="7" r="4" />
+            </svg>
+            <span>Log In</span>
+          </button>
+        )}
       </div>
 
       {/* Right aligned search bar */}

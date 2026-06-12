@@ -298,9 +298,11 @@ export function StremioDetail({ meta, onBack, onPlay, streamPickerMode, showStre
     if (!video) return;
     setPreselectVideoId(null);
     setSelectedVideo(video);
+    setStreams([]);
     setLoadingStreams(true);
-    fetchStreams(addons, 'series', video.id).then((result) => {
-      setStreams(result);
+    fetchStreams(addons, 'series', video.id, (newStreams) => {
+      setStreams((prev) => [...prev, ...newStreams]);
+    }).then((result) => {
       setLoadingStreams(false);
       if (streamPickerMode === 'autoplay' && result.length > 0) {
         const direct = result.find((s) => s.url && !s.behaviorHints?.notWebReady) || result[0];
@@ -313,9 +315,11 @@ export function StremioDetail({ meta, onBack, onPlay, streamPickerMode, showStre
   useEffect(() => {
     if (!isSeries) {
       const loadMovieStreams = async () => {
+        setStreams([]);
         setLoadingStreams(true);
-        const result = await fetchStreams(addons, meta.type, meta.id);
-        setStreams(result);
+        const result = await fetchStreams(addons, meta.type, meta.id, (newStreams) => {
+          setStreams((prev) => [...prev, ...newStreams]);
+        });
         setLoadingStreams(false);
 
         if (streamPickerMode === 'autoplay' && result.length > 0) {
@@ -340,9 +344,11 @@ export function StremioDetail({ meta, onBack, onPlay, streamPickerMode, showStre
 
   const handleEpisodeClick = useCallback(async (ep: StremioVideo) => {
     setSelectedVideo(ep);
+    setStreams([]);
     setLoadingStreams(true);
-    const result = await fetchStreams(addons, 'series', ep.id);
-    setStreams(result);
+    const result = await fetchStreams(addons, 'series', ep.id, (newStreams) => {
+      setStreams((prev) => [...prev, ...newStreams]);
+    });
     setLoadingStreams(false);
 
     if (streamPickerMode === 'autoplay' && result.length > 0) {
@@ -708,7 +714,7 @@ export function StremioDetail({ meta, onBack, onPlay, streamPickerMode, showStre
                 </h3>
               </div>
 
-              {!loadingStreams && streams.length > 0 && addonNames.length > 0 && (
+              {streams.length > 0 && addonNames.length > 0 && (
                 <div className="stremio-detail-addon-filters">
                   <button
                     className={`stremio-addon-filter-btn ${selectedAddonFilter === 'All' ? 'active' : ''}`}
@@ -729,7 +735,7 @@ export function StremioDetail({ meta, onBack, onPlay, streamPickerMode, showStre
               )}
 
               <div className="stremio-detail-streams-list">
-                {loadingStreams ? (
+                {streams.length === 0 && loadingStreams ? (
                   <div className="stremio-detail-streams-loading">
                     <div className="stremio-spinner" />
                     <span>Loading streams...</span>
@@ -743,7 +749,14 @@ export function StremioDetail({ meta, onBack, onPlay, streamPickerMode, showStre
                     No streams found for the selected addon filter.
                   </div>
                 ) : (
-                  filteredStreams.map((stream, idx) => {
+                  <>
+                    {loadingStreams && (
+                      <div className="stremio-detail-streams-loading-mini">
+                        <div className="stremio-spinner" style={{ width: 14, height: 14, borderWidth: '1.5px' }} />
+                        <span>Checking more sources...</span>
+                      </div>
+                    )}
+                    {filteredStreams.map((stream, idx) => {
                     const name = stream.name || '';
                     const desc = stream.description || stream.title || '';
                     const displayName = name.trim();
@@ -827,7 +840,8 @@ export function StremioDetail({ meta, onBack, onPlay, streamPickerMode, showStre
                         )}
                       </div>
                     );
-                  })
+                  })}
+                  </>
                 )}
               </div>
             </div>
