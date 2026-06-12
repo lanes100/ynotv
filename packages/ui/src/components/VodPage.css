@@ -82,6 +82,7 @@
   min-height: 0;
   /* Important: allows flex child to shrink below content size */
   overflow-y: auto;
+  position: relative;
 }
 
 .vod-page__content::-webkit-scrollbar,

@@ -11,6 +11,11 @@ import { SeriesDetail } from './vod/SeriesDetail';
 import { SourceContextMenu } from './SourceContextMenu';
 import { ManageVodCategories } from './vod/ManageVodCategories';
 import { useVodCategories, useRecentlyWatchedMovies, useRecentlyWatchedSeries } from '../hooks/useVod';
+import { StreamingPlatformsRow } from './vod/StreamingPlatformsRow';
+import { StreamingServiceView } from './stremio/StreamingServiceView';
+import { StremioHoverProvider } from '../contexts/StremioHoverContext';
+import { StremioHoverCard } from './stremio/StremioHoverCard';
+import './stremio/StremioHome.css';
 import { useVodFavoritesStore } from '../stores/vodFavoritesStore';
 import {
   useCinemetaPopular,
@@ -61,6 +66,8 @@ interface HomeVirtuosoContext {
   onItemClick: (item: MediaItem) => void;
   onHeroPlay: (item: MediaItem) => void;
   onRemoveFromRecentlyWatched?: (item: MediaItem) => void;
+  enabledStreamingServices: string[];
+  onServiceClick: (service: string) => void;
 }
 
 // Header component for Virtuoso (defined outside render to prevent remounting)
@@ -89,7 +96,22 @@ const CarouselRowContent = (
   context: HomeVirtuosoContext | undefined
 ) => {
   if (!context) return null;
-  const { type, onItemClick, onRemoveFromRecentlyWatched } = context;
+  const { 
+    type, 
+    onItemClick, 
+    onRemoveFromRecentlyWatched,
+    enabledStreamingServices,
+    onServiceClick
+  } = context;
+
+  if (row.key === 'streaming-platforms') {
+    return (
+      <StreamingPlatformsRow
+        enabledServices={enabledStreamingServices}
+        onServiceClick={onServiceClick}
+      />
+    );
+  }
 
   return (
     <HorizontalCarousel
@@ -121,6 +143,38 @@ export function VodPage({ type, onPlay, onClose }: VodPageProps) {
   // Context Menu & Management State (local, not persisted)
   const [contextMenu, setContextMenu] = useState<{ sourceId: string; sourceName: string; x: number; y: number } | null>(null);
   const [manageCategoriesSource, setManageCategoriesSource] = useState<{ id: string; name: string } | null>(null);
+
+  // Streaming platform state
+  const [selectedService, setSelectedService] = useState<string | null>(null);
+  const [streamingCatalogsEnabled, setStreamingCatalogsEnabled] = useState(true);
+  const [enabledStreamingServices, setEnabledStreamingServices] = useState<string[]>(['netflix', 'disney', 'hulu', 'prime', 'apple', 'max', 'paramount', 'peacock']);
+  const [prevViewState, setPrevViewState] = useState<{ categoryId: string | null; service: string | null } | null>(null);
+
+  useEffect(() => {
+    async function loadSettings() {
+      if (!window.storage) return;
+      const result = await window.storage.getSettings();
+      const s = result.data as any;
+      if (!s) return;
+      if (s.streamingCatalogsEnabled !== undefined) {
+        setStreamingCatalogsEnabled(s.streamingCatalogsEnabled);
+      }
+      if (s.enabledStreamingServices !== undefined) {
+        setEnabledStreamingServices(s.enabledStreamingServices);
+      }
+    }
+
+    loadSettings();
+
+    const handleSettingsChange = () => {
+      loadSettings();
+    };
+
+    window.addEventListener('ynotv:streaming-catalogs-changed', handleSettingsChange);
+    return () => {
+      window.removeEventListener('ynotv:streaming-catalogs-changed', handleSettingsChange);
+    };
+  }, []);
 
   // Category state - use the appropriate store based on type
   const moviesCategory = useMoviesCategory();
@@ -277,6 +331,15 @@ export function VodPage({ type, onPlay, onClose }: VodPageProps) {
       });
     }
 
+    // Streaming Platforms Row
+    if (tmdbApiKey && streamingCatalogsEnabled && enabledStreamingServices.length > 0) {
+      rows.push({
+        key: 'streaming-platforms',
+        title: 'Streaming Platforms',
+        items: [],
+      });
+    }
+
     // Popular (Cinemeta "top" catalog)
     if (popularItems.length > 0) {
       rows.push({
@@ -334,6 +397,7 @@ export function VodPage({ type, onPlay, onClose }: VodPageProps) {
     if (item.source_id === 'tmdb' || item.source_id === 'cinemeta') {
       const title = item.title || item.name || '';
       if (title) {
+        setPrevViewState({ categoryId: selectedCategoryId, service: selectedService });
         setSearchQuery(title);
         setSelectedCategoryId('all');
         setSelectedItem(null);
@@ -356,13 +420,14 @@ export function VodPage({ type, onPlay, onClose }: VodPageProps) {
     }
     
     setSelectedItem(item);
-  }, [type, recentlyWatchedEpisodeData]);
+  }, [type, recentlyWatchedEpisodeData, selectedCategoryId, selectedService]);
 
   // Handle clicks from Recent view (includes season/episode info for series)
   const handleRecentItemClick = useCallback((item: MediaItem, seasonNum?: number, episodeNum?: number, episodeTitle?: string) => {
     if (item.source_id === 'tmdb' || item.source_id === 'cinemeta') {
       const title = item.title || item.name || '';
       if (title) {
+        setPrevViewState({ categoryId: selectedCategoryId, service: selectedService });
         setSearchQuery(title);
         setSelectedCategoryId('all');
         setSelectedItem(null);
@@ -379,7 +444,19 @@ export function VodPage({ type, onPlay, onClose }: VodPageProps) {
     }
     
     setSelectedItem(item);
-  }, [type]);
+  }, [type, selectedCategoryId, selectedService]);
+
+  const handleStreamingItemClick = useCallback((item: any) => {
+    const title = item.name || item.title || '';
+    if (title) {
+      setPrevViewState({ categoryId: selectedCategoryId, service: selectedService });
+      setSearchQuery(title);
+      setSelectedCategoryId('all');
+      setSelectedItem(null);
+      setSelectedSeason(undefined);
+      setSelectedService(null);
+    }
+  }, [selectedCategoryId, selectedService, setSearchQuery, setSelectedCategoryId, setSelectedItem, setSelectedSeason, setSelectedService]);
 
   const handlePlay = useCallback((info: VodPlayInfo) => {
     if (onPlay) {
@@ -454,14 +531,33 @@ export function VodPage({ type, onPlay, onClose }: VodPageProps) {
     onItemClick: handleItemClick,
     onHeroPlay: handleHeroPlay,
     onRemoveFromRecentlyWatched: handleRemoveFromRecentlyWatched,
-  }), [type, featuredItems, heroLoading, handleItemClick, handleHeroPlay, handleRemoveFromRecentlyWatched]);
+    enabledStreamingServices,
+    onServiceClick: setSelectedService,
+  }), [type, featuredItems, heroLoading, handleItemClick, handleHeroPlay, handleRemoveFromRecentlyWatched, enabledStreamingServices]);
 
-  // Handle category selection - also close detail view and clear search
+  // Handle category selection - also close detail view, clear search and streaming service view
   const handleCategorySelect = useCallback((id: string | null) => {
     setSelectedCategoryId(id);
     setSelectedItem(null);
     setSearchQuery('');
+    setSelectedService(null);
+    setPrevViewState(null);
   }, [setSelectedCategoryId, setSearchQuery]);
+
+  const handleSidebarBack = useCallback(() => {
+    if (searchQuery.trim() && prevViewState) {
+      setSearchQuery('');
+      setSelectedCategoryId(prevViewState.categoryId);
+      setSelectedService(prevViewState.service);
+      setPrevViewState(null);
+    } else if (selectedService) {
+      setSelectedService(null);
+    } else {
+      if (onClose) {
+        onClose();
+      }
+    }
+  }, [searchQuery, prevViewState, selectedService, onClose]);
 
   // Handle mouse back button and browser back - close detail view
   useEffect(() => {
@@ -504,9 +600,12 @@ export function VodPage({ type, onPlay, onClose }: VodPageProps) {
         selectedId={selectedCategoryId}
         onSelect={handleCategorySelect}
         type={type}
-        onBack={onClose}
+        onBack={handleSidebarBack}
         searchQuery={searchQuery}
         onSearchChange={(query) => {
+          if (query.trim() && !searchQuery.trim() && !prevViewState) {
+            setPrevViewState({ categoryId: selectedCategoryId, service: selectedService });
+          }
           setSearchQuery(query);
           if (query.trim() && selectedCategoryId === null) {
             setSelectedCategoryId('all');
@@ -524,7 +623,17 @@ export function VodPage({ type, onPlay, onClose }: VodPageProps) {
 
       {/* Main content */}
       <main className="vod-page__content">
-        {selectedCategoryId === 'all' ? (
+        {selectedService ? (
+          <StremioHoverProvider>
+            <StreamingServiceView
+              service={selectedService}
+              type={type}
+              onBack={() => setSelectedService(null)}
+              onItemClick={handleStreamingItemClick}
+            />
+            <StremioHoverCard />
+          </StremioHoverProvider>
+        ) : selectedCategoryId === 'all' ? (
           // All items: Virtualized grid with no filter
           <VodBrowse
             type={browseType}
@@ -565,7 +674,6 @@ export function VodPage({ type, onPlay, onClose }: VodPageProps) {
             data={carouselRows}
             context={homeVirtuosoContext}
             overscan={200}
-            fixedItemHeight={386}
             computeItemKey={(_, row) => row.key}
             components={homeVirtuosoComponents}
             itemContent={CarouselRowContent}

@@ -1,6 +1,6 @@
 .series-detail {
   position: fixed;
-  top: 32px; /* Below frameless title bar */
+  top: 0;
   left: 0;
   right: 0;
   bottom: 0;
@@ -31,7 +31,7 @@
 /* Backdrop - full page with gradient fade */
 .series-detail__backdrop {
   position: fixed;
-  top: 32px;
+  top: 0;
   left: 0;
   right: 0;
   bottom: 0;

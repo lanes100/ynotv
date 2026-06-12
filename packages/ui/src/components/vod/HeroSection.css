@@ -107,7 +107,7 @@
   z-index: 2;
   height: 100%;
   max-width: 48%;
-  padding: 48px;
+  padding: 48px 24px;
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
@@ -316,7 +316,7 @@
 .hero__indicators {
   position: absolute;
   bottom: 36px;
-  right: 48px;
+  right: 24px;
   display: flex;
   align-items: center;
   gap: 8px;

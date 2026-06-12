@@ -10,7 +10,8 @@ interface StreamingServiceViewProps {
   service: string;
   onBack: () => void;
   onItemClick: (item: StremioMetaPreview) => void;
-  addons: InstalledAddon[];
+  addons?: InstalledAddon[];
+  type?: 'movie' | 'series';
 }
 
 type Category = {
@@ -43,11 +44,39 @@ const TMDB_API = 'https://api.themoviedb.org/3';
 const TMDB_IMG = 'https://image.tmdb.org/t/p';
 const PAGE_BATCH = 4; // Fetch 4 pages of results per scroll batch
 
-export function StreamingServiceView({ service, onBack, onItemClick }: StreamingServiceViewProps) {
+export function StreamingServiceView({ service, onBack, onItemClick, type }: StreamingServiceViewProps) {
   const tmdbToken = useTmdbApiKey();
   const svcMeta = SERVICES[service as StreamingService];
   
-  const [activeCategory, setActiveCategory] = useState<Category>(CATEGORIES[0]);
+  const categories = useMemo(() => {
+    const isMovieType = type === 'movie';
+    const isSeriesType = type === 'series';
+
+    return CATEGORIES.map(cat => {
+      if (isMovieType) {
+        return { ...cat, fetchTv: false };
+      } else if (isSeriesType) {
+        return { ...cat, fetchMovies: false };
+      }
+      return cat;
+    }).filter(cat => {
+      if (isMovieType) {
+        return cat.id !== 'tv' && cat.id !== 'reality' && cat.id !== 'movies' && cat.fetchMovies;
+      } else if (isSeriesType) {
+        return cat.id !== 'movies' && cat.id !== 'thriller' && cat.id !== 'romance' && cat.id !== 'tv' && cat.fetchTv;
+      }
+      return true;
+    });
+  }, [type]);
+
+  const [activeCategory, setActiveCategory] = useState<Category>(categories[0] || CATEGORIES[0]);
+
+  useEffect(() => {
+    if (categories.length > 0 && !categories.some(c => c.id === activeCategory.id)) {
+      setActiveCategory(categories[0]);
+    }
+  }, [categories, activeCategory]);
+
   const [movies, setMovies] = useState<StremioMetaPreview[]>([]);
   const [series, setSeries] = useState<StremioMetaPreview[]>([]);
   const [loading, setLoading] = useState(true);
@@ -263,7 +292,7 @@ export function StreamingServiceView({ service, onBack, onItemClick }: Streaming
 
       {/* Category Pills */}
       <div className="stremio-service-categories">
-        {CATEGORIES.map(cat => {
+        {categories.map(cat => {
           const isActive = cat.id === activeCategory.id;
           return (
             <button

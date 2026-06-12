@@ -46,15 +46,43 @@ export function useLazyStremioCast(
 
         let tmdbId: number | null = null;
 
-        if (isSeries) {
-          const results = await searchTvShows(accessToken, title, year ? parseInt(String(year)) : undefined);
-          if (!cancelled && results.length > 0) {
-            tmdbId = results[0].id;
+        // 1. Try to get TMDB ID directly from meta ID if it starts with tmdb:
+        if (meta.id.startsWith('tmdb:')) {
+          tmdbId = parseInt(meta.id.replace('tmdb:', ''), 10);
+        }
+
+        // 2. Try to get it from moviedb_id
+        if (!tmdbId && (meta as any).moviedb_id) {
+          tmdbId = parseInt(String((meta as any).moviedb_id), 10);
+        }
+
+        // 3. Try finding it by IMDb ID via TMDB find API
+        if (!tmdbId && meta.id.startsWith('tt')) {
+          try {
+            const tmdb = getTmdb(accessToken);
+            const findResult = await tmdb.find.byExternalId(meta.id, { external_source: 'imdb_id' });
+            if (isSeries) {
+              tmdbId = findResult.tv_results?.[0]?.id || null;
+            } else {
+              tmdbId = findResult.movie_results?.[0]?.id || null;
+            }
+          } catch (err) {
+            console.error('[TMDB] Find by IMDb ID failed in cast hook:', err);
           }
-        } else {
-          const results = await searchMovies(accessToken, title, year ? parseInt(String(year)) : undefined);
-          if (!cancelled && results.length > 0) {
-            tmdbId = results[0].id;
+        }
+
+        // 4. Fallback to title/year search
+        if (!tmdbId) {
+          if (isSeries) {
+            const results = await searchTvShows(accessToken, title, year ? parseInt(String(year)) : undefined);
+            if (!cancelled && results.length > 0) {
+              tmdbId = results[0].id;
+            }
+          } else {
+            const results = await searchMovies(accessToken, title, year ? parseInt(String(year)) : undefined);
+            if (!cancelled && results.length > 0) {
+              tmdbId = results[0].id;
+            }
           }
         }
 

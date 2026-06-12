@@ -22,7 +22,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 48px;
+  padding: 0 24px;
   margin-bottom: 12px;
 }
 
@@ -87,7 +87,7 @@
 .carousel__track {
   display: flex;
   gap: 12px;
-  padding: 4px 48px 12px;
+  padding: 4px 24px 12px;
 }
 
 /* Scroll fade indicators */
@@ -95,7 +95,7 @@
   position: absolute;
   top: 0;
   bottom: 0;
-  width: 48px;
+  width: 24px;
   pointer-events: none;
   z-index: 5;
 }
