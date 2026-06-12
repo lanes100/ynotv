@@ -54,6 +54,8 @@ const SETTINGS_SEARCH_INDEX: SettingsSearchResult[] = [
 
   // LiveTV > EPG
   { id: 'epg-darken-current', label: 'Make EPG Current airing program blocks darker', description: 'When enabled, the currently airing program in the EPG will have a deeper/darker highlight.', tabId: 'livetv', tabLabel: 'LiveTV', subTabId: 'epg', section: 'EPG' },
+  { id: 'epg-bold-channels', label: 'Bold Channel Names', description: 'When enabled, it bolds the channel names in the EPG.', tabId: 'livetv', tabLabel: 'LiveTV', subTabId: 'epg', section: 'EPG' },
+  { id: 'epg-bold-top-categories', label: 'Bold Top Categories', description: 'When enabled, it bolds the top categories in the sidebar (All Channels, Favorites, Watchlist, Recently Viewed, custom groups).', tabId: 'livetv', tabLabel: 'LiveTV', subTabId: 'epg', section: 'EPG' },
   { id: 'epg-view-layout', label: 'EPG View Layout', description: 'Select between the standard left-to-right setup or the full-width cinematic format.', tabId: 'livetv', tabLabel: 'LiveTV', subTabId: 'epg', section: 'Preview Panel' },
   { id: 'epg-title-font-size', label: 'EPG Title Font Size', description: 'Adjust the font size for program titles in the EPG preview panel.', tabId: 'livetv', tabLabel: 'LiveTV', subTabId: 'epg', section: 'EPG' },
   { id: 'epg-body-font-size', label: 'EPG Body Text Font Size', description: 'Adjust the font size for program descriptions in the EPG preview panel.', tabId: 'livetv', tabLabel: 'LiveTV', subTabId: 'epg', section: 'EPG' },

@@ -222,6 +222,8 @@ export function Settings({
 
   // LiveTV settings state
   const [epgDarkenCurrent, setEpgDarkenCurrent] = useState(false);
+  const [epgBoldChannelNames, setEpgBoldChannelNames] = useState(false);
+  const [epgBoldTopCategories, setEpgBoldTopCategories] = useState(false);
   const [epgTitleFontSize, setEpgTitleFontSize] = useState(32);
   const [epgBodyFontSize, setEpgBodyFontSize] = useState(16);
   const epgView = useEpgView();
@@ -415,6 +417,8 @@ export function Settings({
         useEventBasedReconnect?: boolean;
         stallDetectionEnabled?: boolean;
         epgDarkenCurrent?: boolean;
+        epgBoldChannelNames?: boolean;
+        epgBoldTopCategories?: boolean;
         epgView?: 'traditional' | 'alternate';
         collapseSourceCategoriesOnStartup?: boolean;
         modernUiEnabled?: boolean;
@@ -589,6 +593,18 @@ export function Settings({
       // Apply CSS class on load
       if (darkenCurrent) {
         document.documentElement.classList.add('epg-darken-current');
+      }
+
+      const boldChannels = settings.epgBoldChannelNames ?? false;
+      setEpgBoldChannelNames(boldChannels);
+      if (boldChannels) {
+        document.documentElement.classList.add('epg-bold-channel-names');
+      }
+
+      const boldTopCategories = settings.epgBoldTopCategories ?? false;
+      setEpgBoldTopCategories(boldTopCategories);
+      if (boldTopCategories) {
+        document.documentElement.classList.add('epg-bold-top-categories');
       }
 
       // Load EPG view layout setting
@@ -933,6 +949,30 @@ export function Settings({
     }
     if (window.storage) {
       await window.storage.updateSettings({ epgDarkenCurrent: enabled });
+    }
+  };
+
+  const handleEpgBoldChannelNamesChange = async (enabled: boolean) => {
+    setEpgBoldChannelNames(enabled);
+    if (enabled) {
+      document.documentElement.classList.add('epg-bold-channel-names');
+    } else {
+      document.documentElement.classList.remove('epg-bold-channel-names');
+    }
+    if (window.storage) {
+      await window.storage.updateSettings({ epgBoldChannelNames: enabled });
+    }
+  };
+
+  const handleEpgBoldTopCategoriesChange = async (enabled: boolean) => {
+    setEpgBoldTopCategories(enabled);
+    if (enabled) {
+      document.documentElement.classList.add('epg-bold-top-categories');
+    } else {
+      document.documentElement.classList.remove('epg-bold-top-categories');
+    }
+    if (window.storage) {
+      await window.storage.updateSettings({ epgBoldTopCategories: enabled });
     }
   };
 
@@ -1505,6 +1545,10 @@ export function Settings({
             initialSubTab={pendingSubTab as 'epg' | 'font-size' | 'sort-order' | 'search' | 'live-view' | 'widgets' | undefined}
             epgDarkenCurrent={epgDarkenCurrent}
             onEpgDarkenCurrentChange={handleEpgDarkenCurrentChange}
+            epgBoldChannelNames={epgBoldChannelNames}
+            onEpgBoldChannelNamesChange={handleEpgBoldChannelNamesChange}
+            epgBoldTopCategories={epgBoldTopCategories}
+            onEpgBoldTopCategoriesChange={handleEpgBoldTopCategoriesChange}
             epgView={epgView}
             onEpgViewChange={handleEpgViewChange}
             epgTitleFontSize={epgTitleFontSize}

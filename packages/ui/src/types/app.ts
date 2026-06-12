@@ -82,6 +82,9 @@ export interface AppSettings {
     categoryFontSize?: number;
     epgTitleFontSize?: number;
     epgBodyFontSize?: number;
+    epgDarkenCurrent?: boolean;
+    epgBoldChannelNames?: boolean;
+    epgBoldTopCategories?: boolean;
     shortcuts?: ShortcutsMap;
     startupWidth?: number;
     startupHeight?: number;

@@ -913,6 +913,10 @@
   color: var(--text-secondary, rgba(255, 255, 255, 0.9));
 }
 
+.epg-bold-channel-names .guide-channel-name {
+  font-weight: 700 !important;
+}
+
 .guide-channel-info:hover .guide-channel-name {
   /* Only animate if we want a scrolling effect. */
   overflow: visible;
