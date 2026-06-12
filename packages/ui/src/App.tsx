@@ -229,6 +229,16 @@ function App() {
     }
   }, []);
 
+  // Stremio badge size
+  const [stremioBadgeSize, setStremioBadgeSize] = useState(100);
+  const handleStremioBadgeSizeChange = useCallback(async (size: number) => {
+    setStremioBadgeSize(size);
+    document.documentElement.style.setProperty('--stremio-badge-scale', String(size / 100));
+    if (window.storage) {
+      await window.storage.updateSettings({ stremioBadgeSize: size });
+    }
+  }, []);
+
   // Load stremioStreamPickerMode from storage
   useEffect(() => {
     if (!layoutSettingsLoaded) return;
@@ -242,6 +252,13 @@ function App() {
           setShowStremioStreamBadges(res.data.showStremioStreamBadges as boolean);
         }
         setBadgeSources(mergeDefaultBadgeSources(res.data?.badgeSources as BadgeSource[] | undefined));
+        if (res.data?.stremioBadgeSize !== undefined) {
+          const size = res.data.stremioBadgeSize as number;
+          setStremioBadgeSize(size);
+          document.documentElement.style.setProperty('--stremio-badge-scale', String(size / 100));
+        } else {
+          document.documentElement.style.setProperty('--stremio-badge-scale', '1');
+        }
         if (res.data?.popoutMode) {
           setPopoutMode(res.data.popoutMode as 'off' | 'popout' | 'external');
         }
@@ -3008,6 +3025,8 @@ function App() {
           onShowStremioStreamBadgesChange={handleShowStremioStreamBadgesChange}
           badgeSources={badgeSources}
           onBadgeSourcesChange={handleBadgeSourcesChange}
+          stremioBadgeSize={stremioBadgeSize}
+          onStremioBadgeSizeChange={handleStremioBadgeSizeChange}
           initialTab={settingsTab}
           editSourceId={editSourceId}
           onClose={() => {
@@ -3096,7 +3115,11 @@ function App() {
           stremioStreamPickerMode={stremioStreamPickerMode}
           onStreamPickerModeChange={handleStremioStreamPickerModeChange}
           showStremioStreamBadges={showStremioStreamBadges}
+          onShowStremioStreamBadgesChange={handleShowStremioStreamBadgesChange}
           badgeSources={badgeSources}
+          onBadgeSourcesChange={handleBadgeSourcesChange}
+          stremioBadgeSize={stremioBadgeSize}
+          onStremioBadgeSizeChange={handleStremioBadgeSizeChange}
         />
       </TransitionView>
 

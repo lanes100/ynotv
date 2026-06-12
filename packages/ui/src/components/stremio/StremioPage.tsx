@@ -21,17 +21,33 @@ import { AddonManagerPanel } from './AddonManagerPanel';
 import { StremioAccountModal } from './StremioAccountModal';
 import { StremioHoverProvider } from '../../contexts/StremioHoverContext';
 import { StremioHoverCard } from './StremioHoverCard';
+import { StremTab } from '../settings/StremTab';
+import '../Settings.css';
 import './StremioPage.css';
 
 interface StremioPageProps {
   onClose: () => void;
   stremioStreamPickerMode: StremioStreamPickerMode;
-  onStreamPickerModeChange: (mode: StremioStreamPickerMode) => void;
+  onStreamPickerModeChange: (mode: StremioStreamPickerMode) => Promise<void>;
   showStremioStreamBadges: boolean;
+  onShowStremioStreamBadgesChange: (show: boolean) => Promise<void>;
   badgeSources: BadgeSource[];
+  onBadgeSourcesChange: (sources: BadgeSource[]) => Promise<void>;
+  stremioBadgeSize: number;
+  onStremioBadgeSizeChange: (size: number) => Promise<void>;
 }
 
-export function StremioPage({ onClose, stremioStreamPickerMode, onStreamPickerModeChange, showStremioStreamBadges, badgeSources }: StremioPageProps) {
+export function StremioPage({
+  onClose,
+  stremioStreamPickerMode,
+  onStreamPickerModeChange,
+  showStremioStreamBadges,
+  onShowStremioStreamBadgesChange,
+  badgeSources,
+  onBadgeSourcesChange,
+  stremioBadgeSize,
+  onStremioBadgeSizeChange,
+}: StremioPageProps) {
   const addons = useStremioAddonStore((s) => s.enabledAddons);
   const stremioView = useStremioView();
   const setStremioView = useSetStremioView();
@@ -57,7 +73,7 @@ export function StremioPage({ onClose, stremioStreamPickerMode, onStreamPickerMo
           setActiveMeta(null);
           setStremioView('home');
           setSelectedSeason(undefined);
-        } else if (stremioView === 'search') {
+        } else if (stremioView === 'search' || stremioView === 'settings') {
           setStremioView('home');
         } else {
           onClose();
@@ -154,6 +170,21 @@ export function StremioPage({ onClose, stremioStreamPickerMode, onStreamPickerMo
               showStreamBadges={showStremioStreamBadges}
               compiledBadgeRules={compiledBadgeRules}
             />
+          )}
+
+          {stremioView === 'settings' && (
+            <div className="stremio-settings-container" style={{ padding: '24px 32px 80px 32px', maxWidth: '800px', margin: '0 auto' }}>
+              <StremTab
+                stremioStreamPickerMode={stremioStreamPickerMode}
+                onStremioStreamPickerModeChange={onStreamPickerModeChange}
+                showStremioStreamBadges={showStremioStreamBadges}
+                onShowStremioStreamBadgesChange={onShowStremioStreamBadgesChange}
+                badgeSources={badgeSources}
+                onBadgeSourcesChange={onBadgeSourcesChange}
+                stremioBadgeSize={stremioBadgeSize}
+                onStremioBadgeSizeChange={onStremioBadgeSizeChange}
+              />
+            </div>
           )}
         </div>
 

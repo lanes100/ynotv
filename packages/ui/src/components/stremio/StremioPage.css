@@ -44,3 +44,9 @@
 .stremio-main::-webkit-scrollbar-thumb:hover {
   background: var(--accent-primary, rgba(0, 212, 255, 0.5));
 }
+
+.stremio-settings-container .settings-tab-content {
+  height: auto !important;
+  overflow-y: visible !important;
+}
+

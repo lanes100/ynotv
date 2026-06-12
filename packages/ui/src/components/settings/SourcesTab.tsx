@@ -17,12 +17,11 @@ import { useToastStore } from '../../stores/toastStore';
 import { parseM3U, XtreamClient, StalkerClient } from '@ynotv/local-adapter';
 import { CategoryManager } from './CategoryManager';
 import { DataRefreshTab } from './DataRefreshTab';
-import { TmdbTab } from './TmdbTab';
 import './SourcesTab.css';
 import { useSourceVersion } from '../../contexts/SourceVersionContext';
 import type { GlobalEpgLink } from '../../types/app';
 
-export type SourcesSubTabId = 'source' | 'epg' | 'refresh' | 'tmdb';
+export type SourcesSubTabId = 'source' | 'epg' | 'refresh';
 
 interface SourcesTabProps {
   initialSubTab?: SourcesSubTabId;
@@ -37,17 +36,6 @@ interface SourcesTabProps {
   onVodRefreshChange?: (hours: number) => void;
   onEpgRefreshChange?: (hours: number) => void;
   onEpgSyncConcurrencyChange?: (value: number) => void;
-  // TMDB/RPDB sub-tab props
-  tmdbApiKey?: string;
-  tmdbKeyValid?: boolean | null;
-  onApiKeyChange?: (key: string) => void;
-  onApiKeyValidChange?: (valid: boolean | null) => void;
-  rpdbApiKey?: string;
-  rpdbKeyValid?: boolean | null;
-  onRpdbApiKeyChange?: (key: string) => void;
-  onRpdbKeyValidChange?: (valid: boolean | null) => void;
-  rpdbBackdropsEnabled?: boolean;
-  onRpdbBackdropsEnabledChange?: (enabled: boolean) => void;
 }
 
 type SourceType = 'm3u' | 'xtream' | 'stalker';
@@ -158,16 +146,6 @@ export function SourcesTab({
   onVodRefreshChange,
   onEpgRefreshChange,
   onEpgSyncConcurrencyChange,
-  tmdbApiKey = '',
-  tmdbKeyValid = null,
-  onApiKeyChange,
-  onApiKeyValidChange,
-  rpdbApiKey = '',
-  rpdbKeyValid = null,
-  onRpdbApiKeyChange,
-  onRpdbKeyValidChange,
-  rpdbBackdropsEnabled = false,
-  onRpdbBackdropsEnabledChange,
 }: SourcesTabProps) {
   const { incrementVersion } = useSourceVersion(); // Get version incrementer
   const [showAddForm, setShowAddForm] = useState(false);
@@ -222,8 +200,8 @@ export function SourcesTab({
   // Backup delete confirmation modal state
   const [deleteBackupConfirm, setDeleteBackupConfirm] = useState<{ type: 'stalker' | 'xtream'; index: number } | null>(null);
 
-  // Sub-tab state: 'source' | 'epg' | 'refresh' | 'tmdb'
-  const [activeSubTab, setActiveSubTab] = useState<'source' | 'epg' | 'refresh' | 'tmdb'>('source');
+  // Sub-tab state: 'source' | 'epg' | 'refresh'
+  const [activeSubTab, setActiveSubTab] = useState<'source' | 'epg' | 'refresh'>('source');
 
   useEffect(() => {
     if (initialSubTab) {
@@ -1250,23 +1228,6 @@ export function SourcesTab({
           }}
         >
           Data Refresh
-        </button>
-        <button
-          className={`sub-tab-btn ${activeSubTab === 'tmdb' ? 'active' : ''}`}
-          onClick={() => setActiveSubTab('tmdb')}
-          style={{
-            padding: '10px 20px',
-            background: activeSubTab === 'tmdb' ? 'rgba(255,255,255,0.08)' : 'transparent',
-            border: 'none',
-            borderBottom: activeSubTab === 'tmdb' ? '2px solid var(--accent-primary, #00d4ff)' : '2px solid transparent',
-            color: activeSubTab === 'tmdb' ? 'white' : 'rgba(255,255,255,0.6)',
-            cursor: 'pointer',
-            fontSize: '0.9rem',
-            fontWeight: 500,
-            transition: 'all 0.2s ease',
-          }}
-        >
-          TMDB/RPDB
         </button>
       </div>
 
@@ -2338,20 +2299,7 @@ export function SourcesTab({
         />
       )}
 
-      {activeSubTab === 'tmdb' && (
-        <TmdbTab
-          tmdbApiKey={tmdbApiKey}
-          tmdbKeyValid={tmdbKeyValid}
-          onApiKeyChange={onApiKeyChange || (() => {})}
-          onApiKeyValidChange={onApiKeyValidChange || (() => {})}
-          rpdbApiKey={rpdbApiKey}
-          rpdbKeyValid={rpdbKeyValid}
-          onRpdbApiKeyChange={onRpdbApiKeyChange || (() => {})}
-          onRpdbKeyValidChange={onRpdbKeyValidChange || (() => {})}
-          rpdbBackdropsEnabled={rpdbBackdropsEnabled}
-          onRpdbBackdropsEnabledChange={onRpdbBackdropsEnabledChange || (() => {})}
-        />
-      )}
+
 
       {/* Add/Edit Global EPG Form */}
       {showAddEpgForm && createPortal(

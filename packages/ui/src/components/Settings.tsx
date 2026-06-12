@@ -20,6 +20,7 @@ import { SubtitlesTab, type SubtitleSettings } from './settings/SubtitlesTab';
 import { ScrobblingTab } from './settings/ScrobblingTab';
 import { StremTab } from './settings/StremTab';
 import { ProxyTab } from './settings/ProxyTab';
+import { TmdbTab } from './settings/TmdbTab';
 import type { ShortcutsMap, ThemeId } from '../types/app';
 import type { StremioStreamPickerMode, BadgeSource } from '../types/stremio';
 import { DEFAULT_BADGE_SOURCES, mergeDefaultBadgeSources } from '../utils/streamBadges';
@@ -58,6 +59,8 @@ interface SettingsProps {
   onShowStremioStreamBadgesChange?: (show: boolean) => void;
   badgeSources?: BadgeSource[];
   onBadgeSourcesChange?: (sources: BadgeSource[]) => void;
+  stremioBadgeSize?: number;
+  onStremioBadgeSizeChange?: (size: number) => void;
 }
 
 export function Settings({
@@ -93,6 +96,8 @@ export function Settings({
   onShowStremioStreamBadgesChange,
   badgeSources: badgeSourcesProp,
   onBadgeSourcesChange,
+  stremioBadgeSize: stremioBadgeSizeProp,
+  onStremioBadgeSizeChange,
 }: SettingsProps) {
   const [activeTab, setActiveTab] = useState<SettingsTabId>(initialTab);
   const [pendingSubTab, setPendingSubTab] = useState<string | null>(null);
@@ -104,6 +109,10 @@ export function Settings({
 
   const [tmdbApiKey, setTmdbApiKey] = useState('');
   const [tmdbKeyValid, setTmdbKeyValid] = useState<boolean | null>(null);
+
+  // Streaming Catalogs state
+  const [streamingCatalogsEnabled, setStreamingCatalogsEnabled] = useState(true);
+  const [enabledStreamingServices, setEnabledStreamingServices] = useState<string[]>(['netflix', 'disney', 'hulu', 'prime', 'apple', 'max', 'paramount', 'peacock']);
 
   // Refresh settings state
   const [vodRefreshHours, setVodRefreshHours] = useState(24);
@@ -198,6 +207,12 @@ export function Settings({
       setBadgeSources(mergeDefaultBadgeSources(badgeSourcesProp));
     }
   }, [badgeSourcesProp]);
+
+  useEffect(() => {
+    if (stremioBadgeSizeProp !== undefined) {
+      setStremioBadgeSize(stremioBadgeSizeProp);
+    }
+  }, [stremioBadgeSizeProp]);
 
   // Category settings state
   const [showAllChannels, setShowAllChannels] = useState(true);
@@ -371,6 +386,8 @@ export function Settings({
         posterDbApiKey?: string;
         rpdbBackdropsEnabled?: boolean;
         allowLanSources?: boolean;
+        streamingCatalogsEnabled?: boolean;
+        enabledStreamingServices?: string[];
         debugLoggingEnabled?: boolean;
         logRetentionDays?: number;
         channelSortOrder?: 'alphabetical' | 'number' | 'provider';
@@ -463,6 +480,9 @@ export function Settings({
       if (key) {
         setTmdbKeyValid(true); // Assume valid if previously saved
       }
+
+      setStreamingCatalogsEnabled(settings.streamingCatalogsEnabled ?? true);
+      setEnabledStreamingServices(settings.enabledStreamingServices ?? ['netflix', 'disney', 'hulu', 'prime', 'apple', 'max', 'paramount', 'peacock']);
 
       // Load refresh settings
       if (settings.vodRefreshHours !== undefined) {
@@ -837,6 +857,9 @@ export function Settings({
   const handleStremioBadgeSizeChange = async (size: number) => {
     setStremioBadgeSize(size);
     document.documentElement.style.setProperty('--stremio-badge-scale', String(size / 100));
+    if (onStremioBadgeSizeChange) {
+      onStremioBadgeSizeChange(size);
+    }
     if (window.storage) {
       await window.storage.updateSettings({ stremioBadgeSize: size });
     }
@@ -1272,12 +1295,28 @@ export function Settings({
     }
   };
 
+  const handleStreamingCatalogsEnabledChange = async (enabled: boolean) => {
+    setStreamingCatalogsEnabled(enabled);
+    if (window.storage) {
+      await window.storage.updateSettings({ streamingCatalogsEnabled: enabled });
+      window.dispatchEvent(new CustomEvent('ynotv:streaming-catalogs-changed'));
+    }
+  };
+
+  const handleEnabledStreamingServicesChange = async (services: string[]) => {
+    setEnabledStreamingServices(services);
+    if (window.storage) {
+      await window.storage.updateSettings({ enabledStreamingServices: services });
+      window.dispatchEvent(new CustomEvent('ynotv:streaming-catalogs-changed'));
+    }
+  };
+
   function renderTabContent() {
     switch (activeTab) {
       case 'sources':
         return (
           <SourcesTab
-            initialSubTab={pendingSubTab as 'source' | 'epg' | 'refresh' | 'tmdb' | undefined}
+            initialSubTab={pendingSubTab as 'source' | 'epg' | 'refresh' | undefined}
             sources={sources}
             isEncryptionAvailable={isEncryptionAvailable}
             onSourcesChange={loadSources}
@@ -1288,16 +1327,6 @@ export function Settings({
             onVodRefreshChange={setVodRefreshHours}
             onEpgRefreshChange={setEpgRefreshHours}
             onEpgSyncConcurrencyChange={setEpgSyncConcurrency}
-            tmdbApiKey={tmdbApiKey}
-            tmdbKeyValid={tmdbKeyValid}
-            onApiKeyChange={setTmdbApiKey}
-            onApiKeyValidChange={setTmdbKeyValid}
-            rpdbApiKey={posterDbApiKey}
-            rpdbKeyValid={posterDbKeyValid}
-            onRpdbApiKeyChange={setPosterDbApiKey}
-            onRpdbKeyValidChange={setPosterDbKeyValid}
-            rpdbBackdropsEnabled={rpdbBackdropsEnabled}
-            onRpdbBackdropsEnabledChange={setRpdbBackdropsEnabled}
           />
         );
       case 'subtitles':
@@ -1439,6 +1468,26 @@ export function Settings({
             onSkipIntroTimerSecondsChange={handleSkipIntroTimerSecondsChange}
             skipIntroAutoSkip={skipIntroAutoSkip}
             onSkipIntroAutoSkipChange={handleSkipIntroAutoSkipChange}
+          />
+        );
+      case 'metadata':
+        return (
+          <TmdbTab
+            initialSubTab={pendingSubTab as 'tmdb' | 'rpdb' | undefined}
+            tmdbApiKey={tmdbApiKey}
+            tmdbKeyValid={tmdbKeyValid}
+            onApiKeyChange={setTmdbApiKey}
+            onApiKeyValidChange={setTmdbKeyValid}
+            rpdbApiKey={posterDbApiKey}
+            rpdbKeyValid={posterDbKeyValid}
+            onRpdbApiKeyChange={setPosterDbApiKey}
+            onRpdbKeyValidChange={setPosterDbKeyValid}
+            rpdbBackdropsEnabled={rpdbBackdropsEnabled}
+            onRpdbBackdropsEnabledChange={setRpdbBackdropsEnabled}
+            streamingCatalogsEnabled={streamingCatalogsEnabled}
+            onStreamingCatalogsEnabledChange={handleStreamingCatalogsEnabledChange}
+            enabledStreamingServices={enabledStreamingServices}
+            onEnabledStreamingServicesChange={handleEnabledStreamingServicesChange}
           />
         );
       case 'cache':

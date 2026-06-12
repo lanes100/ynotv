@@ -69,6 +69,33 @@ export function StremioHome({ addons, onItemClick }: StremioHomeProps) {
   const [catalogFilter, setCatalogFilter] = useState('');
   const [selectedService, setSelectedService] = useState<string | null>(null);
   const tmdbApiKey = useTmdbApiKey();
+  const [streamingCatalogsEnabled, setStreamingCatalogsEnabled] = useState(true);
+  const [enabledStreamingServices, setEnabledStreamingServices] = useState<string[]>(['netflix', 'disney', 'hulu', 'prime', 'apple', 'max', 'paramount', 'peacock']);
+
+  useEffect(() => {
+    async function loadSettings() {
+      if (!window.storage) return;
+      const res = await window.storage.getSettings();
+      const s = res.data || {};
+      if (s.streamingCatalogsEnabled !== undefined) {
+        setStreamingCatalogsEnabled(s.streamingCatalogsEnabled);
+      }
+      if (s.enabledStreamingServices !== undefined) {
+        setEnabledStreamingServices(s.enabledStreamingServices);
+      }
+    }
+
+    loadSettings();
+
+    const handleSettingsChange = () => {
+      loadSettings();
+    };
+
+    window.addEventListener('ynotv:streaming-catalogs-changed', handleSettingsChange);
+    return () => {
+      window.removeEventListener('ynotv:streaming-catalogs-changed', handleSettingsChange);
+    };
+  }, []);
 
   const serviceScrollRef = useRef<HTMLDivElement>(null);
   const [canScrollServiceLeft, setCanScrollServiceLeft] = useState(false);
@@ -476,11 +503,11 @@ export function StremioHome({ addons, onItemClick }: StremioHomeProps) {
           onItemClick={onItemClick}
         />
 
-        {tmdbApiKey && (
+        {tmdbApiKey && streamingCatalogsEnabled && (
           <div className="stremio-row stremio-rw-row" style={{ position: 'relative' }}>
             <div className="stremio-row-header">
               <h3 className="stremio-row-title stremio-rw-title">
-                Your Streaming
+                Streaming Platforms
               </h3>
               <div className="stremio-row-nav">
                 <button
@@ -509,26 +536,28 @@ export function StremioHome({ addons, onItemClick }: StremioHomeProps) {
               onScroll={updateServiceScrollButtons}
             >
               <div className="stremio-service-rail-track">
-                {Object.keys(SERVICES).map((svcKey) => {
-                  const svc = SERVICES[svcKey as StreamingService];
-                  return (
-                    <button
-                      key={svcKey}
-                      className="stremio-service-tile-btn"
-                      onClick={() => setSelectedService(svcKey)}
-                    >
-                      <img
-                        src={svc.logo}
-                        alt={svc.name}
-                        style={{
-                          height: '24px',
-                          width: 'auto',
-                          filter: svc.logoFilter || 'none',
-                        }}
-                      />
-                    </button>
-                  );
-                })}
+                {Object.keys(SERVICES)
+                  .filter((svcKey) => enabledStreamingServices.includes(svcKey))
+                  .map((svcKey) => {
+                    const svc = SERVICES[svcKey as StreamingService];
+                    return (
+                      <button
+                        key={svcKey}
+                        className="stremio-service-tile-btn"
+                        onClick={() => setSelectedService(svcKey)}
+                      >
+                        <img
+                          src={svc.logo}
+                          alt={svc.name}
+                          style={{
+                            height: '24px',
+                            width: 'auto',
+                            filter: svc.logoFilter || 'none',
+                          }}
+                        />
+                      </button>
+                    );
+                  })}
               </div>
             </div>
             {canScrollServiceLeft && <div className="stremio-row-fade stremio-row-fade-left" style={{ zIndex: 3 }} />}

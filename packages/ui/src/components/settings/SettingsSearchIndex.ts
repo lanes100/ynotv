@@ -16,6 +16,7 @@ const TAB_LABELS: Record<SettingsTabId, string> = {
   sources: 'Sources',
   livetv: 'LiveTV',
   playback: 'Playback',
+  metadata: 'Metadata',
   subtitles: 'Subtitles & Audio',
   strem: 'Strem',
   theme: 'Theme',
@@ -43,10 +44,10 @@ const SETTINGS_SEARCH_INDEX: SettingsSearchResult[] = [
   { id: 'epg-refresh-hours', label: 'EPG Refresh Hours', tabId: 'sources', tabLabel: 'Sources', subTabId: 'refresh', section: 'Data Refresh' },
   { id: 'epg-sync-concurrency', label: 'EPG Sync Concurrency', tabId: 'sources', tabLabel: 'Sources', subTabId: 'refresh', section: 'Data Refresh' },
   { id: 'data-refresh', label: 'Data Refresh', tabId: 'sources', tabLabel: 'Sources', subTabId: 'refresh', section: 'Data Refresh' },
-  { id: 'tmdb-api-key', label: 'TMDB API Key', description: 'API key for The Movie Database integration.', tabId: 'sources', tabLabel: 'Sources', subTabId: 'tmdb', section: 'TMDB / RPDB' },
-  { id: 'rpdb-api-key', label: 'RPDB API Key', description: 'API key for Poster DB integration.', tabId: 'sources', tabLabel: 'Sources', subTabId: 'tmdb', section: 'TMDB / RPDB' },
-  { id: 'rpdb-backdrops', label: 'RPDB Backdrops', tabId: 'sources', tabLabel: 'Sources', subTabId: 'tmdb', section: 'TMDB / RPDB' },
-  { id: 'tmdb-rpdb', label: 'TMDB / RPDB', tabId: 'sources', tabLabel: 'Sources', subTabId: 'tmdb', section: 'TMDB / RPDB' },
+  { id: 'tmdb-api-key', label: 'TMDB API Key', description: 'API key for The Movie Database integration.', tabId: 'metadata', tabLabel: 'Metadata', subTabId: 'tmdb', section: 'TMDB / RPDB' },
+  { id: 'rpdb-api-key', label: 'RPDB API Key', description: 'API key for Poster DB integration.', tabId: 'metadata', tabLabel: 'Metadata', subTabId: 'rpdb', section: 'TMDB / RPDB' },
+  { id: 'rpdb-backdrops', label: 'RPDB Backdrops', tabId: 'metadata', tabLabel: 'Metadata', subTabId: 'rpdb', section: 'TMDB / RPDB' },
+  { id: 'tmdb-rpdb', label: 'TMDB / RPDB', tabId: 'metadata', tabLabel: 'Metadata', subTabId: 'tmdb', section: 'TMDB / RPDB' },
 
   // --- LiveTV ---
   { id: 'livetv-tab', label: 'LiveTV', tabId: 'livetv', tabLabel: 'LiveTV', section: 'LiveTV' },

@@ -435,3 +435,29 @@
   border-color: rgba(0, 212, 255, 0.5);
   color: #00d4ff;
 }
+
+/* ─── Streaming Provider Cards ─────────────────────────────── */
+
+.streaming-provider-card {
+  box-sizing: border-box;
+}
+
+.streaming-provider-card:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-color: rgba(255, 255, 255, 0.15) !important;
+  transform: translateY(-1px);
+}
+
+.streaming-provider-card.checked:hover {
+  background: rgba(0, 212, 255, 0.12) !important;
+  border-color: rgba(0, 212, 255, 0.4) !important;
+}
+
+.streaming-provider-card:active {
+  transform: translateY(0);
+}
+
+.streaming-catalogs-section.disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
