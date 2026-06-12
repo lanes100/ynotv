@@ -633,12 +633,15 @@ function LeagueDetail({
                         {group.teams.map((team) => (
                           <div key={team.id} className="sports-standings-row">
                             <span>{team.rank}</span>
-                            <span className="sports-standings-team">
+                            <button
+                              className="sports-standings-team"
+                              onClick={() => onTeamSelect({ id: team.id, name: team.name, shortName: team.shortName, logo: team.logo, leagueId: league.id })}
+                            >
                               {team.logo && (
                                 <img src={team.logo} alt="" className="sports-standings-logo" />
                               )}
                               {team.name}
-                            </span>
+                            </button>
                             <span>{team.wins}</span>
                             <span>{team.losses}</span>
                             <span>{team.winPercent}</span>
@@ -660,12 +663,15 @@ function LeagueDetail({
                   {standings.map((team, idx) => (
                     <div key={team.id} className="sports-standings-row">
                       <span>{idx + 1}</span>
-                      <span className="sports-standings-team">
+                      <button
+                        className="sports-standings-team"
+                        onClick={() => onTeamSelect({ id: team.id, name: team.name, shortName: team.shortName, logo: team.logo, leagueId: league.id })}
+                      >
                         {team.logo && (
                           <img src={team.logo} alt="" className="sports-standings-logo" />
                         )}
                         {team.name}
-                      </span>
+                      </button>
                       <span>{team.wins}</span>
                       <span>{team.losses}</span>
                       <span>{team.winPercent}</span>

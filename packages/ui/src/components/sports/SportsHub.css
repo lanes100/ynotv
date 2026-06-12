@@ -1577,6 +1577,18 @@
   display: flex;
   align-items: center;
   gap: 10px;
+  background: none;
+  border: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  padding: 0;
+  text-align: left;
+  transition: color 0.2s ease;
+}
+
+.sports-standings-team:hover {
+  color: var(--accent-primary, #00d4ff);
 }
 
 .sports-standings-logo {
