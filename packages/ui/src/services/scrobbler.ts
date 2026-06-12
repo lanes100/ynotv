@@ -32,6 +32,7 @@ export type TraktCatalogType =
   | 'anticipated-shows';
 
 const TRAKT_PAGE_LIMIT = 30;
+const TRAKT_CACHE_STALE_MS = 30 * 60 * 1000;
 
 const TRAKT_CATALOG_URLS: Record<TraktCatalogType, string> = {
   'playback': `${TRAKT_API_URL}/sync/playback?limit=${TRAKT_PAGE_LIMIT}`,
@@ -184,6 +185,10 @@ async function makeRequest(url: string, options: any = {}) {
 class ScrobblerService {
   private lastActiveMedia: PlaybackMediaInfo | null = null;
   private isScrobblingActive = false;
+
+  // Cache for Trakt catalogs (stale after 30 minutes, playback type not cached)
+  private catalogCache = new Map<string, { data: { items: StremioMetaPreview[]; hasMore: boolean }; timestamp: number }>();
+  private listCatalogCache = new Map<string, { data: { items: StremioMetaPreview[]; hasMore: boolean }; timestamp: number }>();
 
   // Retrieve app settings securely
   private async getSettings(): Promise<AppSettings> {
@@ -761,6 +766,13 @@ class ScrobblerService {
   // Catalog Fetching (Transforms Trakt/Simkl APIs into Stremio-friendly items)
   // --------------------------------------------------------------------------
   async fetchTraktCatalog(type: TraktCatalogType, page: number = 1): Promise<{ items: StremioMetaPreview[]; hasMore: boolean }> {
+    if (type !== 'playback') {
+      const cacheKey = `${type}:${page}`;
+      const cached = this.catalogCache.get(cacheKey);
+      if (cached && Date.now() - cached.timestamp < TRAKT_CACHE_STALE_MS) {
+        return cached.data;
+      }
+    }
     const settings = await this.getSettings();
     if (!settings.traktEnabled || !settings.traktAccessToken) return { items: [], hasMore: false };
 
@@ -874,7 +886,11 @@ class ScrobblerService {
           }).filter(Boolean) as StremioMetaPreview[];
 
           const hasMore = items.length >= TRAKT_PAGE_LIMIT;
-          return { items, hasMore };
+          const result = { items, hasMore };
+          if (type !== 'playback') {
+            this.catalogCache.set(`${type}:${page}`, { data: result, timestamp: Date.now() });
+          }
+          return result;
         }
       }
     } catch (e) {
@@ -918,6 +934,11 @@ class ScrobblerService {
   }
 
   async fetchTraktListCatalog(listId: string, page: number = 1): Promise<{ items: StremioMetaPreview[]; hasMore: boolean }> {
+    const cacheKey = `${listId}:${page}`;
+    const cached = this.listCatalogCache.get(cacheKey);
+    if (cached && Date.now() - cached.timestamp < TRAKT_CACHE_STALE_MS) {
+      return cached.data;
+    }
     const settings = await this.getSettings();
     if (!settings.traktEnabled || !settings.traktAccessToken) return { items: [], hasMore: false };
 
@@ -960,7 +981,9 @@ class ScrobblerService {
           }).filter(Boolean) as StremioMetaPreview[];
 
           const hasMore = items.length >= TRAKT_PAGE_LIMIT;
-          return { items, hasMore };
+          const result = { items, hasMore };
+          this.listCatalogCache.set(`${listId}:${page}`, { data: result, timestamp: Date.now() });
+          return result;
         }
       }
     } catch (e) {

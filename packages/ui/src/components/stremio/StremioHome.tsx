@@ -67,6 +67,8 @@ export function StremioHome({ addons, onItemClick }: StremioHomeProps) {
   const [searchRows, setSearchRows] = useState<StremioSearchRow[]>([]);
   const [expandedSearchRowId, setExpandedSearchRowId] = useState<string | null>(null);
   const [searching, setSearching] = useState(false);
+  const [searchingAddons, setSearchingAddons] = useState<string[]>([]);
+  const searchSessionRef = useRef(0);
   const [catalogFilter, setCatalogFilter] = useState('');
   const [selectedService, setSelectedService] = useState<string | null>(null);
   const tmdbApiKey = useTmdbApiKey();
@@ -288,47 +290,100 @@ export function StremioHome({ addons, onItemClick }: StremioHomeProps) {
       setSearchRows([]);
       setExpandedSearchRowId(null);
       setSearching(false);
+      setSearchingAddons([]);
       return;
     }
+
+    // Increment session ID for this new search
+    searchSessionRef.current += 1;
+    const currentSession = searchSessionRef.current;
+
+    setSearchRows([]);
     setSearching(true);
-    const rows: StremioSearchRow[] = [];
+
+    // Identify all search targets (addon + catalog combination)
+    const targets: {
+      addonId: string;
+      addonName: string;
+      catType: string;
+      catId: string;
+      catName: string;
+      baseUrl: string;
+    }[] = [];
 
     for (const addon of addons) {
       if (!addonHasResource(addon, 'catalog') || !addonHasResource(addon, 'meta')) continue;
       for (const cat of addon.manifest.catalogs || []) {
         if (cat.extra?.some(e => e.name === 'search') || cat.extraSupported?.includes('search')) {
-          try {
-            const resp = await fetchCatalog(addon.baseUrl, cat.type, cat.id, { search: query });
-            if (resp?.metas) {
-              const rowItems: StremioSearchResult[] = [];
-              const seenInRow = new Set<string>();
-              for (const m of resp.metas) {
-                const key = `${m.type}:${m.id}`;
-                if (!seenInRow.has(key)) {
-                  seenInRow.add(key);
-                  rowItems.push({ ...m, sourceAddonId: addon.id });
-                }
-              }
-              if (rowItems.length > 0) {
-                rows.push({
-                  id: `${addon.id}:${cat.type}:${cat.id}`,
-                  title: `${cat.name || addon.manifest.name} \u2014 ${cat.type.charAt(0).toUpperCase() + cat.type.slice(1)}`,
-                  items: rowItems,
-                });
-              }
-            }
-          } catch {
-            // Skip
-          }
+          targets.push({
+            addonId: addon.id,
+            addonName: addon.manifest.name || 'Addon',
+            catType: cat.type,
+            catId: cat.id,
+            catName: cat.name || addon.manifest.name || 'Addon',
+            baseUrl: addon.baseUrl,
+          });
         }
       }
     }
-    setSearchRows(rows);
-    setExpandedSearchRowId((prev) => {
-      if (!prev) return null;
-      return rows.some((r) => r.id === prev) ? prev : null;
+
+    if (targets.length === 0) {
+      setSearching(false);
+      setSearchingAddons([]);
+      return;
+    }
+
+    // Set initial list of active search targets
+    const initialAddonsList = targets.map(t => `${t.addonName} (${t.catType})`);
+    setSearchingAddons(initialAddonsList);
+
+    // Run searches in parallel
+    targets.forEach(async (target) => {
+      const targetLabel = `${target.addonName} (${target.catType})`;
+      try {
+        const resp = await fetchCatalog(target.baseUrl, target.catType, target.catId, { search: query });
+        
+        // Verify this query is still current
+        if (searchSessionRef.current !== currentSession) return;
+
+        if (resp?.metas && resp.metas.length > 0) {
+          const rowItems: StremioSearchResult[] = [];
+          const seenInRow = new Set<string>();
+          for (const m of resp.metas) {
+            const key = `${m.type}:${m.id}`;
+            if (!seenInRow.has(key)) {
+              seenInRow.add(key);
+              rowItems.push({ ...m, sourceAddonId: target.addonId });
+            }
+          }
+
+          if (rowItems.length > 0) {
+            const newRow: StremioSearchRow = {
+              id: `${target.addonId}:${target.catType}:${target.catId}`,
+              title: `${target.catName} \u2014 ${target.catType.charAt(0).toUpperCase() + target.catType.slice(1)}`,
+              items: rowItems,
+            };
+            setSearchRows((prev) => {
+              // Ensure we don't add duplicate rows
+              if (prev.some(r => r.id === newRow.id)) return prev;
+              return [...prev, newRow];
+            });
+          }
+        }
+      } catch (err) {
+        console.warn(`Search failed for ${targetLabel}:`, err);
+      } finally {
+        if (searchSessionRef.current === currentSession) {
+          setSearchingAddons((prev) => {
+            const updated = prev.filter(label => label !== targetLabel);
+            if (updated.length === 0) {
+              setSearching(false);
+            }
+            return updated;
+          });
+        }
+      }
     });
-    setSearching(false);
   }, [addons]);
 
   useEffect(() => {
@@ -429,12 +484,13 @@ export function StremioHome({ addons, onItemClick }: StremioHomeProps) {
   }, [selectedService, selectedCatalogItems, selectedCloudCatalogKey, view, tmdbApiKey, streamingCatalogsEnabled, enabledStreamingServices, updateServiceScrollButtons]);
 
   if (view === 'search') {
+    const showLoadingIndicator = searchingAddons.length > 0;
+    const hasResults = searchRows.length > 0;
+
     return (
       <div className="stremio-home">
         <div className="stremio-search-results">
-          {searching ? (
-            <div className="stremio-loading-text">Searching...</div>
-          ) : searchRows.length > 0 ? (
+          {hasResults && (
             <div className="stremio-catalog-rows">
               {searchRows.map((row) => (
                 <div key={row.id}>
@@ -480,9 +536,20 @@ export function StremioHome({ addons, onItemClick }: StremioHomeProps) {
                 </div>
               ))}
             </div>
-          ) : searchQuery.length >= 2 ? (
+          )}
+
+          {showLoadingIndicator && (
+            <div className="stremio-loading-text stremio-search-progress-indicator" style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: hasResults ? '20px 0' : '40px 0', justifyContent: 'center', color: 'rgba(255, 255, 255, 0.45)', fontSize: '0.9rem' }}>
+              <div className="stremio-spinner" style={{ width: '14px', height: '14px', borderWidth: '1.5px' }} />
+              <span>Searching in: {searchingAddons.join(', ')}...</span>
+            </div>
+          )}
+
+          {!hasResults && !showLoadingIndicator && searchQuery.length >= 2 && (
             <div className="stremio-loading-text">No results found.</div>
-          ) : (
+          )}
+
+          {!hasResults && !showLoadingIndicator && searchQuery.length < 2 && (
             <div className="stremio-loading-text">Type at least 2 characters to search.</div>
           )}
         </div>
