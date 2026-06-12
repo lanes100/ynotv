@@ -467,3 +467,42 @@
     bottom: 24px;
   }
 }
+
+.stremio-hero-btn-watchlist {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  padding: 12px 28px;
+  border-radius: 8px;
+  font-size: 0.92rem;
+  font-weight: 700;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition: all 0.25s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.stremio-hero-btn-watchlist:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+}
+
+.stremio-hero-btn-watchlist.in-watchlist {
+  background: rgba(0, 212, 255, 0.1);
+  color: var(--accent-primary, #00d4ff);
+  border-color: rgba(0, 212, 255, 0.3);
+}
+
+.stremio-hero-btn-watchlist.in-watchlist:hover {
+  background: rgba(0, 212, 255, 0.15);
+  border-color: rgba(0, 212, 255, 0.5);
+}
+
+.stremio-hero-btn-watchlist:active {
+  transform: translateY(0);
+}

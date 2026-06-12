@@ -8,6 +8,7 @@ export interface ServiceDefinition {
   tint: string;
   logoHeight?: number;
   logoFilter?: string;
+  logoHeightHome?: number;
 }
 
 export const SERVICES: Record<StreamingService, ServiceDefinition> = {
@@ -19,6 +20,7 @@ export const SERVICES: Record<StreamingService, ServiceDefinition> = {
     tint: "#0E47A1",
     logoHeight: 46,
     logoFilter: "brightness(0) invert(1)",
+    logoHeightHome: 38,
   },
   hulu: { id: 15, name: "Hulu", logo: "/services/hulu.svg", tint: "#1CE783" },
   prime: { id: 9, providerIds: [9, 119], name: "Prime Video", logo: "/services/prime.svg", tint: "#00A8E1" },
@@ -30,6 +32,7 @@ export const SERVICES: Record<StreamingService, ServiceDefinition> = {
     name: "Paramount+",
     logo: "/services/paramount.svg",
     tint: "#0064FF",
+    logoHeightHome: 36,
   },
   peacock: { id: 386, providerIds: [386, 387], name: "Peacock", logo: "/services/peacock.svg", tint: "#FF7112" },
 };

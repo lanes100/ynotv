@@ -3,6 +3,7 @@ import type { InstalledAddon, StremioMetaPreview } from '../../types/stremio';
 import { useTmdbApiKey } from '../../hooks/useTmdbLists';
 import { SERVICES, providerIdsFor, type StreamingService } from '../../constants/streamingProviders';
 import { useStremioHover } from '../../contexts/StremioHoverContext';
+import { useUIStore } from '../../stores/uiStore';
 import './StreamingServiceView.css';
 
 interface StreamingServiceViewProps {
@@ -57,6 +58,26 @@ export function StreamingServiceView({ service, onBack, onItemClick }: Streaming
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const { onCardMouseEnter, onCardMouseLeave, onCardClick } = useStremioHover();
+
+  const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
+    const el = e.currentTarget;
+    if (el.clientWidth > 0) {
+      useUIStore.getState().setStremioCatalogScrollPosition(`service-vertical:${service}:${activeCategory.id}`, el.scrollTop);
+    }
+  }, [service, activeCategory.id]);
+
+  useEffect(() => {
+    if (loading) return;
+    const el = scrollContainerRef.current;
+    if (!el) return;
+    const saved = useUIStore.getState().stremioCatalogScrollPositions[`service-vertical:${service}:${activeCategory.id}`];
+    if (typeof saved === 'number' && saved > 0) {
+      const timer = setTimeout(() => {
+        el.scrollTop = saved;
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [loading, service, activeCategory.id]);
 
   // Reset and reload when service or category changes
   useEffect(() => {
@@ -207,7 +228,7 @@ export function StreamingServiceView({ service, onBack, onItemClick }: Streaming
   if (!svcMeta) return null;
 
   return (
-    <div className="stremio-service-view" ref={scrollContainerRef}>
+    <div className="stremio-service-view" ref={scrollContainerRef} onScroll={handleScroll}>
       {/* Background tint overlay */}
       <div
         className="stremio-service-bg-tint"
@@ -428,6 +449,27 @@ function StreamingCatalogRow({ title, children }: StreamingCatalogRowProps) {
     setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 2);
   }, []);
 
+  const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
+    updateScrollButtons();
+    const el = e.currentTarget;
+    if (el.clientWidth > 0) {
+      useUIStore.getState().setStremioCatalogScrollPosition(`service-row:${title}`, el.scrollLeft);
+    }
+  }, [title, updateScrollButtons]);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const saved = useUIStore.getState().stremioCatalogScrollPositions[`service-row:${title}`];
+    if (typeof saved === 'number' && saved > 0) {
+      const timer = setTimeout(() => {
+        el.scrollLeft = saved;
+        updateScrollButtons();
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [title, children, updateScrollButtons]);
+
   useEffect(() => {
     updateScrollButtons();
     window.addEventListener('resize', updateScrollButtons);
@@ -462,7 +504,7 @@ function StreamingCatalogRow({ title, children }: StreamingCatalogRowProps) {
         </div>
       </div>
       <div className="stremio-service-row-scroll-track-wrapper" style={{ position: 'relative' }}>
-        <div className="stremio-service-row-scroll-track" ref={scrollRef} onScroll={updateScrollButtons}>
+        <div className="stremio-service-row-scroll-track" ref={scrollRef} onScroll={handleScroll}>
           <div className="stremio-service-row-track-inner">
             {children}
           </div>

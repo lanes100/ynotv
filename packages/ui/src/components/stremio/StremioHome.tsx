@@ -17,6 +17,7 @@ import {
   useSetStremioPreselectVideoId,
   useStremioSelectedCloudCatalogKey,
   useSetStremioSelectedCloudCatalogKey,
+  useUIStore,
 } from '../../stores/uiStore';
 import { useTmdbApiKey } from '../../hooks/useTmdbLists';
 import { SERVICES, type StreamingService } from '../../constants/streamingProviders';
@@ -107,6 +108,14 @@ export function StremioHome({ addons, onItemClick }: StremioHomeProps) {
     setCanScrollServiceLeft(el.scrollLeft > 2);
     setCanScrollServiceRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 2);
   }, []);
+
+  const handleServiceRailScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
+    updateServiceScrollButtons();
+    const el = e.currentTarget;
+    if (el.clientWidth > 0) {
+      useUIStore.getState().setStremioCatalogScrollPosition('service-rail', el.scrollLeft);
+    }
+  }, [updateServiceScrollButtons]);
 
   useEffect(() => {
     if (!tmdbApiKey) return;
@@ -368,6 +377,57 @@ export function StremioHome({ addons, onItemClick }: StremioHomeProps) {
     return null;
   }, [addons, selectedAddonId, selectedCatalogId, selectedCatalogType]);
 
+  // Save/restore main scrollbar vertical position for the Stremio Home page
+  useEffect(() => {
+    const isHomeActive = !selectedService && !selectedCatalogItems && !selectedCloudCatalogKey && view === 'home';
+    if (!isHomeActive) return;
+
+    const el = document.querySelector('.stremio-main');
+    if (!el) return;
+
+    const saved = useUIStore.getState().stremioCatalogScrollPositions['home-vertical'];
+    if (typeof saved === 'number' && saved > 0) {
+      const timer = setTimeout(() => {
+        el.scrollTop = saved;
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [selectedService, selectedCatalogItems, selectedCloudCatalogKey, view]);
+
+  useEffect(() => {
+    const isHomeActive = !selectedService && !selectedCatalogItems && !selectedCloudCatalogKey && view === 'home';
+    if (!isHomeActive) return;
+
+    const el = document.querySelector('.stremio-main');
+    if (!el) return;
+
+    const handleScroll = () => {
+      if (el.clientHeight > 0) {
+        useUIStore.getState().setStremioCatalogScrollPosition('home-vertical', el.scrollTop);
+      }
+    };
+
+    el.addEventListener('scroll', handleScroll, { passive: true });
+    return () => el.removeEventListener('scroll', handleScroll);
+  }, [selectedService, selectedCatalogItems, selectedCloudCatalogKey, view]);
+
+  useEffect(() => {
+    const isHomeActive = !selectedService && !selectedCatalogItems && !selectedCloudCatalogKey && view === 'home';
+    if (!isHomeActive) return;
+
+    const el = serviceScrollRef.current;
+    if (!el) return;
+
+    const saved = useUIStore.getState().stremioCatalogScrollPositions['service-rail'];
+    if (typeof saved === 'number' && saved > 0) {
+      const timer = setTimeout(() => {
+        el.scrollLeft = saved;
+        updateServiceScrollButtons();
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [selectedService, selectedCatalogItems, selectedCloudCatalogKey, view, tmdbApiKey, streamingCatalogsEnabled, enabledStreamingServices, updateServiceScrollButtons]);
+
   if (view === 'search') {
     return (
       <div className="stremio-home">
@@ -533,7 +593,7 @@ export function StremioHome({ addons, onItemClick }: StremioHomeProps) {
             <div
               className="stremio-service-rail-scroll"
               ref={serviceScrollRef}
-              onScroll={updateServiceScrollButtons}
+              onScroll={handleServiceRailScroll}
             >
               <div className="stremio-service-rail-track">
                 {Object.keys(SERVICES)
@@ -550,7 +610,7 @@ export function StremioHome({ addons, onItemClick }: StremioHomeProps) {
                           src={svc.logo}
                           alt={svc.name}
                           style={{
-                            height: '24px',
+                            height: svc.logoHeightHome ? `${svc.logoHeightHome}px` : '24px',
                             width: 'auto',
                             filter: svc.logoFilter || 'none',
                           }}

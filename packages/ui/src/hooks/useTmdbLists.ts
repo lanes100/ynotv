@@ -56,12 +56,20 @@ export function useTmdbAccessToken(): string | null {
     async function loadToken() {
       if (!window.storage) return;
       const result = await window.storage.getSettings();
-      if (result.data && 'tmdbApiKey' in result.data) {
-        // Still stored as tmdbApiKey in settings for backwards compat
+      if (result.data) {
         setAccessToken((result.data as { tmdbApiKey?: string }).tmdbApiKey ?? null);
       }
     }
     loadToken();
+
+    const handleKeyChange = () => {
+      loadToken();
+    };
+
+    window.addEventListener('ynotv:tmdb-key-changed', handleKeyChange);
+    return () => {
+      window.removeEventListener('ynotv:tmdb-key-changed', handleKeyChange);
+    };
   }, []);
 
   return accessToken;

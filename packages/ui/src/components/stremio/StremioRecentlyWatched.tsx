@@ -4,7 +4,7 @@ import { fetchMeta } from '../../services/stremio-addon';
 import { useStremioWatchStore, type StremioWatchEntry } from '../../stores/stremioWatchStore';
 import { useStremioAuthStore } from '../../stores/stremioAuthStore';
 import { useStremioLibraryStore } from '../../stores/stremioLibraryStore';
-import { useSetStremioSelectedSeason, useSetStremioPreselectVideoId } from '../../stores/uiStore';
+import { useSetStremioSelectedSeason, useSetStremioPreselectVideoId, useUIStore } from '../../stores/uiStore';
 import { useStremioHover } from '../../contexts/StremioHoverContext';
 import './StremioHome.css';
 
@@ -103,6 +103,30 @@ export function StremioRecentlyWatched({ addons, onItemClick }: StremioRecentlyW
     setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 1);
   }, []);
 
+  const stremioView = useUIStore((s) => s.stremioView);
+
+  const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
+    update();
+    const el = e.currentTarget;
+    if (el.clientWidth > 0) {
+      useUIStore.getState().setStremioCatalogScrollPosition('recently-watched', el.scrollLeft);
+    }
+  }, [update]);
+
+  useEffect(() => {
+    if (stremioView !== 'home') return;
+    const el = scrollRef.current;
+    if (!el) return;
+    const saved = useUIStore.getState().stremioCatalogScrollPositions['recently-watched'];
+    if (typeof saved === 'number' && saved > 0) {
+      const timer = setTimeout(() => {
+        el.scrollLeft = saved;
+        update();
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [stremioView, history.length, update]);
+
   useEffect(() => {
     update();
     window.addEventListener('resize', update);
@@ -165,7 +189,7 @@ export function StremioRecentlyWatched({ addons, onItemClick }: StremioRecentlyW
         </div>
       </div>
 
-      <div className="stremio-row-scroll" ref={scrollRef} onScroll={update}>
+      <div className="stremio-row-scroll" ref={scrollRef} onScroll={handleScroll}>
         <div className="stremio-row-track">
           {history.map((entry) => {
             const isLoading = loadingId === entry.metaId;

@@ -2,6 +2,7 @@ import { useRef, useState, useCallback, useEffect } from 'react';
 import type { InstalledAddon, StremioManifestCatalog, StremioMetaPreview } from '../../types/stremio';
 import { fetchCatalog, getCachedCatalog } from '../../services/stremio-addon';
 import { useStremioHover } from '../../contexts/StremioHoverContext';
+import { useUIStore } from '../../stores/uiStore';
 import './StremioHome.css';
 
 interface StremioCatalogRowProps {
@@ -32,6 +33,7 @@ export function StremioCatalogRow({
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
+  const stremioView = useUIStore((s) => s.stremioView);
 
   const cached = (!staticItems && addon && catalog)
     ? getCachedCatalog(addon.baseUrl, catalog.type, catalog.id, { limit: '20' })
@@ -91,6 +93,29 @@ export function StremioCatalogRow({
     window.addEventListener('resize', update);
     return () => window.removeEventListener('resize', update);
   }, [isPageMode, update, items.length, loading]);
+
+  const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
+    if (isPageMode) return;
+    update();
+    const el = e.currentTarget;
+    if (el.clientWidth > 0) {
+      useUIStore.getState().setStremioCatalogScrollPosition(title, el.scrollLeft);
+    }
+  }, [isPageMode, title, update]);
+
+  useEffect(() => {
+    if (loading || stremioView !== 'home') return;
+    const el = scrollRef.current;
+    if (!el) return;
+    const saved = useUIStore.getState().stremioCatalogScrollPositions[title];
+    if (typeof saved === 'number' && saved > 0) {
+      const timer = setTimeout(() => {
+        el.scrollLeft = saved;
+        update();
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [loading, title, stremioView, update]);
 
   const scroll = (dir: 'left' | 'right') => {
     const el = scrollRef.current;
@@ -160,7 +185,7 @@ export function StremioCatalogRow({
           )}
         </div>
       </div>
-      <div className="stremio-row-scroll" ref={scrollRef} onScroll={isPageMode ? undefined : update}>
+      <div className="stremio-row-scroll" ref={scrollRef} onScroll={handleScroll}>
         <div className="stremio-row-track">
           {items.map((item, idx) => (
             <div

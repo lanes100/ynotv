@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { InstalledAddon, StremioMetaPreview } from '../../types/stremio';
 import { fetchCatalog } from '../../services/stremio-addon';
+import { useStremioLibraryStore } from '../../stores/stremioLibraryStore';
 import './StremioHeroBanner.css';
 
 interface StremioHeroBannerProps {
@@ -17,6 +18,10 @@ export function StremioHeroBanner({ addons, onItemClick }: StremioHeroBannerProp
   const [logoError, setLogoError] = useState(false);
   
   const autoCycleRef = useRef<any>(null);
+
+  const addToLibrary = useStremioLibraryStore((s) => s.addToLibrary);
+  const removeFromLibrary = useStremioLibraryStore((s) => s.removeFromLibrary);
+  const isInLibrary = useStremioLibraryStore((s) => s.isInLibrary);
 
   // Fetch popular items from Cinemeta or fallbacks
   useEffect(() => {
@@ -177,6 +182,17 @@ export function StremioHeroBanner({ addons, onItemClick }: StremioHeroBannerProp
   const activeItem = items[activeIndex];
   const backdropUrl = activeItem.background || activeItem.poster;
 
+  const isAdded = isInLibrary(activeItem.id);
+
+  const handleWatchlistToggle = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (isAdded) {
+      removeFromLibrary(activeItem.id);
+    } else {
+      addToLibrary(activeItem);
+    }
+  };
+
   return (
     <div
       className="stremio-hero-banner"
@@ -281,6 +297,26 @@ export function StremioHeroBanner({ addons, onItemClick }: StremioHeroBannerProp
               <path d="M8 5v14l11-7z" />
             </svg>
             Watch Now
+          </button>
+          <button
+            className={`stremio-hero-btn-watchlist ${isAdded ? 'in-watchlist' : ''}`}
+            onClick={handleWatchlistToggle}
+          >
+            {isAdded ? (
+              <>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="btn-icon">
+                  <path d="M20 6L9 17l-5-5" />
+                </svg>
+                In Watchlist
+              </>
+            ) : (
+              <>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="btn-icon">
+                  <path d="M12 5v14M5 12h14" />
+                </svg>
+                Add to Watchlist
+              </>
+            )}
           </button>
         </div>
       </div>

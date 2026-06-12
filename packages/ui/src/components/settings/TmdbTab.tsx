@@ -65,6 +65,7 @@ export function TmdbTab({
 
     if (isValid) {
       await window.storage.updateSettings({ tmdbApiKey });
+      window.dispatchEvent(new CustomEvent('ynotv:tmdb-key-changed'));
     }
 
     setTmdbValidating(false);
@@ -252,7 +253,7 @@ export function TmdbTab({
                         src={svc.logo} 
                         alt={svc.name} 
                         style={{ 
-                          height: '18px', 
+                          height: svc.logoHeightHome ? `${svc.logoHeightHome * 0.75}px` : '18px', 
                           width: 'auto',
                           filter: 'brightness(0) invert(1)',
                           opacity: isEnabled ? 1 : 0.4,
