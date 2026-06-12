@@ -327,10 +327,78 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
     setIgnoreHttpErrors, isIgnoringHttpErrors,
   } = mpvListeners;
 
+  const playingRef = useRef(playing);
+  useEffect(() => {
+    playingRef.current = playing;
+  }, [playing]);
+
   // Pending seek ref for deferred scrubbing
   const pendingCatchupSeekRef = useRef<number | null>(null);
   const pendingStremioSeekFractionRef = useRef<number | null>(null);
   const pendingResumeSeekRef = useRef<number | null>(null);
+  const isInitialSeekPendingRef = useRef(false);
+  const cancelPendingSeekRef = useRef<(() => void) | null>(null);
+
+  const seekWithRetry = useCallback((targetSeek: number, description: string, onSuccess?: () => void) => {
+    cancelPendingSeekRef.current?.();
+
+    let attempts = 0;
+    const maxAttempts = 15;
+    const delayMs = 500;
+    let timeoutId: any = null;
+
+    const execute = () => {
+      if (!playingRef.current) {
+        logInfo(`[Playback] Aborting seek retry for ${description}: player is no longer playing`);
+        cancelPendingSeekRef.current = null;
+        return;
+      }
+
+      Bridge.seek(targetSeek)
+        .then(() => {
+          logInfo(`[Playback] Seek for ${description} succeeded at ${targetSeek}s (attempt ${attempts + 1})`);
+          cancelPendingSeekRef.current = null;
+          onSuccess?.();
+        })
+        .catch(e => {
+          attempts++;
+          if (!playingRef.current) {
+            logInfo(`[Playback] Aborting seek retry for ${description}: player is no longer playing`);
+            cancelPendingSeekRef.current = null;
+            return;
+          }
+          if (attempts < maxAttempts) {
+            logWarn(`[Playback] Seek for ${description} failed (attempt ${attempts}): ${e}. Retrying in ${delayMs}ms...`);
+            timeoutId = setTimeout(execute, delayMs);
+          } else {
+            logError(`[Playback] Seek for ${description} failed after ${maxAttempts} attempts:`, e);
+            cancelPendingSeekRef.current = null;
+            onSuccess?.();
+          }
+        });
+    };
+
+    const cancel = () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+        timeoutId = null;
+      }
+    };
+
+    cancelPendingSeekRef.current = cancel;
+    execute();
+
+    return cancel;
+  }, []);
+
+  const clearPendingSeeks = useCallback(() => {
+    cancelPendingSeekRef.current?.();
+    cancelPendingSeekRef.current = null;
+    pendingCatchupSeekRef.current = null;
+    pendingStremioSeekFractionRef.current = null;
+    pendingResumeSeekRef.current = null;
+    isInitialSeekPendingRef.current = false;
+  }, []);
 
   // Playback state
   const [currentChannel, setCurrentChannel] = useState<StoredChannel | null>(null);
@@ -502,38 +570,53 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
 
   // Handle pending catchup seek when duration becomes available
   useEffect(() => {
-    if (pendingCatchupSeekRef.current !== null && duration > 0 && playing) {
+    if (pendingCatchupSeekRef.current !== null && duration > 0) {
       const targetSeek = pendingCatchupSeekRef.current;
       pendingCatchupSeekRef.current = null;
-      Bridge.seek(targetSeek).catch(e => console.warn('[usePlayback] Deferred seek failed:', e));
       setPosition(targetSeek);
+      const cancelSeek = seekWithRetry(targetSeek, 'catchup', () => {
+        isInitialSeekPendingRef.current = false;
+      });
+      return () => {
+        cancelSeek();
+      };
     }
-  }, [duration, playing, setPosition]);
+  }, [duration, setPosition, seekWithRetry]);
 
   // Handle pending Stremio synced progress seek when duration becomes available
   useEffect(() => {
-    if (pendingStremioSeekFractionRef.current !== null && duration > 0 && playing) {
+    if (pendingStremioSeekFractionRef.current !== null && duration > 0) {
       const fraction = pendingStremioSeekFractionRef.current;
       pendingStremioSeekFractionRef.current = null;
       const targetSeek = Math.floor(fraction * duration);
       if (targetSeek > 0) {
         logInfo(`[usePlayback] Seeking Stremio VOD to synced fraction: ${fraction} at ${targetSeek} seconds`);
-        Bridge.seek(targetSeek).catch(e => console.warn('[usePlayback] Stremio deferred seek failed:', e));
         setPosition(targetSeek);
+        const cancelSeek = seekWithRetry(targetSeek, 'Stremio synced fraction', () => {
+          isInitialSeekPendingRef.current = false;
+        });
+        return () => {
+          cancelSeek();
+        };
       }
     }
-  }, [duration, playing, setPosition]);
+  }, [duration, setPosition, seekWithRetry]);
 
   // Handle pending database resume seek when duration becomes available (immune to load delays)
   useEffect(() => {
-    if (pendingResumeSeekRef.current !== null && duration > 0 && playing) {
+    if (pendingResumeSeekRef.current !== null && duration > 0) {
       const targetSeek = pendingResumeSeekRef.current;
       pendingResumeSeekRef.current = null;
       logInfo(`[usePlayback] Seeking VOD to database resume position: ${targetSeek} seconds`);
-      Bridge.seek(targetSeek).catch(e => console.warn('[usePlayback] Resume seek failed:', e));
       setPosition(targetSeek);
+      const cancelSeek = seekWithRetry(targetSeek, 'database resume', () => {
+        isInitialSeekPendingRef.current = false;
+      });
+      return () => {
+        cancelSeek();
+      };
     }
-  }, [duration, playing, setPosition]);
+  }, [duration, setPosition, seekWithRetry]);
 
   // Periodic progress saving for VOD playback + save on app close
   useEffect(() => {
@@ -550,6 +633,11 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
       const currentDuration = durationRef.current;
       
       console.log('[Playback] Interval firing - current position:', currentPosition);
+      
+      if (isInitialSeekPendingRef.current) {
+        console.log('[Playback] Initial seek is still pending, skipping progress save');
+        return;
+      }
       
       if (!currentVodInfo) {
         console.log('[Playback] No vodInfo in ref, skipping save');
@@ -1340,6 +1428,7 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
 
     clearRetryTimers();
     clearWatchdog();
+    clearPendingSeeks();
     setRetryState(null);
     isRetryingRef.current = false;
     retryAttemptRef.current = 0;
@@ -1535,6 +1624,9 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
   }, [playing, duration, !!vodInfo, startAutoSelectPolling]);
 
   const handlePlayCatchup = useCallback(async (channel: StoredChannel, programTitle: string, startTimeMs: number, durationMinutes: number, programDesc?: string) => {
+    if (pendingCatchupSeekRef.current === null) {
+      clearPendingSeeks();
+    }
     // Save VOD progress before switching to catchup
     if (vodInfo && position > 0 && duration > 0) {
       const mediaId = vodInfo.mediaId || (vodInfo.source_id && vodInfo.url
@@ -1628,18 +1720,21 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
       setCatchupInfo({ channelId: channel.stream_id, programTitle, startTime: startTimeMs, duration: durationMinutes, programDesc });
       setPlaying(true);
     }
-  }, [vodInfo, position, duration]);
+  }, [vodInfo, position, duration, clearPendingSeeks]);
 
   const handleCatchupSeek = useCallback(async (channel: StoredChannel, programTitle: string, startTimeMs: number, durationMinutes: number, seekSeconds: number, programDesc?: string) => {
     seekingRef.current = true;
+    clearPendingSeeks();
     pendingCatchupSeekRef.current = seekSeconds;
+    isInitialSeekPendingRef.current = true;
     await handlePlayCatchup(channel, programTitle, startTimeMs, durationMinutes, programDesc);
     setTimeout(() => { seekingRef.current = false; }, 200);
-  }, [handlePlayCatchup]);
+  }, [handlePlayCatchup, clearPendingSeeks]);
 
   const handlePlayVod = useCallback(async (info: VodPlayInfo, onCloseView?: () => void) => {
     setError(null);
     setCatchupInfo(null);
+    clearPendingSeeks();
 
     let resolved;
     let sourceData: { type?: string } | undefined;
@@ -1749,6 +1844,7 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
           if (fraction > 0.02 && fraction < 0.95) {
             logInfo(`[Playback] Found Stremio synced progress fraction fallback: ${fraction}`);
             pendingStremioSeekFractionRef.current = fraction;
+            isInitialSeekPendingRef.current = true;
           }
         }
       }
@@ -1767,6 +1863,11 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
       setVodInfo({ ...info, url: workingUrl });
       setPlaying(true);
       applySubtitleSettings();
+
+      // Explicitly force MPV to unpause after loading
+      if (!Bridge.getIsCasting?.()) {
+        Bridge.play().catch(e => console.warn('[usePlayback] play() after VOD load failed:', e));
+      }
       
       hasAutoSelectedSubRef.current = false;
       hasAutoSelectedAudioRef.current = false;
@@ -1776,15 +1877,17 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
       if (resumePosition > 0) {
         setPosition(resumePosition);
         pendingResumeSeekRef.current = resumePosition;
+        isInitialSeekPendingRef.current = true;
       }
       
       // Close the VOD page when playing
       onCloseView?.();
     }
-  }, [setIgnoreHttpErrors, setPosition]);
+  }, [setIgnoreHttpErrors, setPosition, clearPendingSeeks]);
 
   const handlePlayRecording = useCallback(async (recording: import('../db').DvrRecording, onCloseView?: () => void) => {
     setError(null);
+    clearPendingSeeks();
 
     try {
       let url = recording.file_path;
@@ -1825,6 +1928,12 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
         setCatchupInfo(null);
         setPlaying(true);
         applySubtitleSettings();
+
+        // Explicitly force MPV to unpause after loading
+        if (!Bridge.getIsCasting?.()) {
+          Bridge.play().catch(e => console.warn('[usePlayback] play() after recording load failed:', e));
+        }
+
         // Close DVR dashboard when playing
         onCloseView?.();
       } else {
@@ -1834,11 +1943,13 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
     } catch (error: any) {
       setError(error?.message || 'Failed to play recording');
     }
-  }, []);
+  }, [clearPendingSeeks]);
 
   const handleStop = useCallback(async () => {
-    // Save progress before stopping if playing VOD
-    if (vodInfo && position > 0 && duration > 0) {
+    // Save progress before stopping if playing VOD and initial seek is not pending
+    if (isInitialSeekPendingRef.current) {
+      console.log('[Playback] Initial seek was still pending on stop, skipping progress save');
+    } else if (vodInfo && position > 0 && duration > 0) {
       const mediaId = vodInfo.mediaId || (vodInfo.source_id && vodInfo.url
         ? `${vodInfo.source_id}_${vodInfo.url}`
         : null);
@@ -1894,6 +2005,7 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
       }
     }
     
+    clearPendingSeeks();
     await Bridge.stop();
     setPlaying(false);
     setCurrentChannel(null);
@@ -1924,7 +2036,7 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
     recoveryArmedRef.current = false;
     userPausedRef.current = false;
     setFailoverState(null);
-  }, [vodInfo, position, duration]);
+  }, [vodInfo, position, duration, clearPendingSeeks]);
 
   const handleSeek = useCallback(async (seconds: number) => {
     seekingRef.current = true;
