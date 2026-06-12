@@ -288,13 +288,18 @@ export function useAppSettings(): AppSettings {
           }
 
           // Apply EPG bold channel names setting on load
-          if (result.data.epgBoldChannelNames) {
+          if (result.data.epgBoldChannelNames !== false) {
             document.documentElement.classList.add('epg-bold-channel-names');
           }
 
           // Apply EPG bold top categories setting on load
-          if (result.data.epgBoldTopCategories) {
+          if (result.data.epgBoldTopCategories !== false) {
             document.documentElement.classList.add('epg-bold-top-categories');
+          }
+
+          // Apply EPG bold source categories setting on load
+          if (result.data.epgBoldSourceCategories !== false) {
+            document.documentElement.classList.add('epg-bold-source-categories');
           }
 
           // Use localStorage state if available (more recent), otherwise use Tauri storage

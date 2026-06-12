@@ -363,6 +363,10 @@
   font-weight: 700 !important;
 }
 
+.epg-bold-source-categories .category-item.nested .category-name {
+  font-weight: 700 !important;
+}
+
 .category-list-bar:hover {
   background: rgba(255, 255, 255, 0.06);
   border-color: rgba(255, 255, 255, 0.08);

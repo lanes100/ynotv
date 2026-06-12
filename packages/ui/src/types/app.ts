@@ -85,6 +85,7 @@ export interface AppSettings {
     epgDarkenCurrent?: boolean;
     epgBoldChannelNames?: boolean;
     epgBoldTopCategories?: boolean;
+    epgBoldSourceCategories?: boolean;
     shortcuts?: ShortcutsMap;
     startupWidth?: number;
     startupHeight?: number;

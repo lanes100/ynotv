@@ -74,6 +74,14 @@ export function StremioHome({ addons, onItemClick }: StremioHomeProps) {
   const tmdbApiKey = useTmdbApiKey();
   const [streamingCatalogsEnabled, setStreamingCatalogsEnabled] = useState(true);
   const [enabledStreamingServices, setEnabledStreamingServices] = useState<string[]>(['netflix', 'disney', 'hulu', 'prime', 'apple', 'max', 'paramount', 'peacock']);
+  const [showScrollTop, setShowScrollTop] = useState(false);
+
+  const scrollToTop = useCallback(() => {
+    const el = document.querySelector('.stremio-main');
+    if (el) {
+      el.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, []);
 
   useEffect(() => {
     async function loadSettings() {
@@ -451,14 +459,22 @@ export function StremioHome({ addons, onItemClick }: StremioHomeProps) {
 
   useEffect(() => {
     const isHomeActive = !selectedService && !selectedCatalogItems && !selectedCloudCatalogKey && view === 'home';
-    if (!isHomeActive) return;
+    if (!isHomeActive) {
+      setShowScrollTop(false);
+      return;
+    }
 
     const el = document.querySelector('.stremio-main');
     if (!el) return;
 
+    // Set initial state based on current scroll position
+    setShowScrollTop(el.scrollTop > 400);
+
     const handleScroll = () => {
       if (el.clientHeight > 0) {
-        useUIStore.getState().setStremioCatalogScrollPosition('home-vertical', el.scrollTop);
+        const scrollTop = el.scrollTop;
+        useUIStore.getState().setStremioCatalogScrollPosition('home-vertical', scrollTop);
+        setShowScrollTop(scrollTop > 400);
       }
     };
 
@@ -753,6 +769,16 @@ export function StremioHome({ addons, onItemClick }: StremioHomeProps) {
           />
         )}
       </div>
+
+      <button
+        className={`stremio-scroll-top ${showScrollTop ? 'visible' : ''}`}
+        onClick={scrollToTop}
+        aria-label="Scroll to top"
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M18 15l-6-6-6 6" />
+        </svg>
+      </button>
     </div>
   );
 }

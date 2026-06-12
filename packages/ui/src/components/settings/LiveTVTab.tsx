@@ -15,6 +15,8 @@ interface LiveTVTabProps {
   onEpgBoldChannelNamesChange: (enabled: boolean) => void;
   epgBoldTopCategories: boolean;
   onEpgBoldTopCategoriesChange: (enabled: boolean) => void;
+  epgBoldSourceCategories: boolean;
+  onEpgBoldSourceCategoriesChange: (enabled: boolean) => void;
   epgView: 'traditional' | 'alternate';
   onEpgViewChange: (view: 'traditional' | 'alternate') => void;
   epgTitleFontSize: number;
@@ -80,6 +82,8 @@ export function LiveTVTab({
   onEpgBoldChannelNamesChange,
   epgBoldTopCategories,
   onEpgBoldTopCategoriesChange,
+  epgBoldSourceCategories,
+  onEpgBoldSourceCategoriesChange,
   epgView,
   onEpgViewChange,
   epgTitleFontSize,
@@ -231,38 +235,69 @@ export function LiveTVTab({
                     </div>
                   </div>
                 </div>
+              </div>
+            </div>
 
-                {/* Bold Channel Names */}
-                <div className="timeshift-toggle-row" style={{ marginTop: '20px' }}>
-                  <div className="timeshift-toggle-info">
-                    <span className="timeshift-toggle-label">Bold Channel Names</span>
-                    <span className="timeshift-toggle-sub">When enabled, the channel names will be displayed in bold font in the EPG.</span>
-                  </div>
-                  <label className="toggle-switch">
-                    <input
-                      type="checkbox"
-                      checked={epgBoldChannelNames}
-                      onChange={(e) => onEpgBoldChannelNamesChange(e.target.checked)}
-                    />
-                    <span className="toggle-slider" />
-                  </label>
-                </div>
+            {/* Bold Typography Settings */}
+            <div className="settings-section">
+              <div className="section-header">
+                <h3>Bold Typography</h3>
+              </div>
+              <p className="section-description">
+                Enable bold font formatting for EPG elements and sidebar categories.
+              </p>
 
-                {/* Bold Top Categories */}
-                <div className="timeshift-toggle-row" style={{ marginTop: '20px' }}>
-                  <div className="timeshift-toggle-info">
-                    <span className="timeshift-toggle-label">Bold Top Categories</span>
-                    <span className="timeshift-toggle-sub">When enabled, the top categories (All Channels, Favorites, Watchlist, Recently Viewed, custom groups) in the categories sidebar will be displayed in bold font.</span>
-                  </div>
-                  <label className="toggle-switch">
-                    <input
-                      type="checkbox"
-                      checked={epgBoldTopCategories}
-                      onChange={(e) => onEpgBoldTopCategoriesChange(e.target.checked)}
-                    />
-                    <span className="toggle-slider" />
-                  </label>
-                </div>
+              <div style={{ marginTop: '16px', overflowX: 'auto' }}>
+                <table style={{
+                  width: '100%',
+                  borderCollapse: 'collapse',
+                  fontSize: '0.9rem',
+                  background: 'rgba(0, 0, 0, 0.1)',
+                  borderRadius: '8px',
+                  overflow: 'hidden'
+                }}>
+                  <thead>
+                    <tr style={{ background: 'rgba(255, 255, 255, 0.02)', borderBottom: '1px solid rgba(255, 255, 255, 0.08)' }}>
+                      <th style={{ padding: '12px 16px', textAlign: 'center', color: 'rgba(255, 255, 255, 0.6)', fontWeight: 600, fontSize: '0.85rem' }}>Channel Names</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'center', color: 'rgba(255, 255, 255, 0.6)', fontWeight: 600, fontSize: '0.85rem' }}>Top Categories</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'center', color: 'rgba(255, 255, 255, 0.6)', fontWeight: 600, fontSize: '0.85rem' }}>Source Categories</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td style={{ padding: '16px', textAlign: 'center', borderRight: '1px solid rgba(255, 255, 255, 0.04)' }}>
+                        <label className="toggle-switch" style={{ margin: '0 auto' }}>
+                          <input
+                            type="checkbox"
+                            checked={epgBoldChannelNames}
+                            onChange={(e) => onEpgBoldChannelNamesChange(e.target.checked)}
+                          />
+                          <span className="toggle-slider" />
+                        </label>
+                      </td>
+                      <td style={{ padding: '16px', textAlign: 'center', borderRight: '1px solid rgba(255, 255, 255, 0.04)' }}>
+                        <label className="toggle-switch" style={{ margin: '0 auto' }}>
+                          <input
+                            type="checkbox"
+                            checked={epgBoldTopCategories}
+                            onChange={(e) => onEpgBoldTopCategoriesChange(e.target.checked)}
+                          />
+                          <span className="toggle-slider" />
+                        </label>
+                      </td>
+                      <td style={{ padding: '16px', textAlign: 'center' }}>
+                        <label className="toggle-switch" style={{ margin: '0 auto' }}>
+                          <input
+                            type="checkbox"
+                            checked={epgBoldSourceCategories}
+                            onChange={(e) => onEpgBoldSourceCategoriesChange(e.target.checked)}
+                          />
+                          <span className="toggle-slider" />
+                        </label>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
               </div>
             </div>
 

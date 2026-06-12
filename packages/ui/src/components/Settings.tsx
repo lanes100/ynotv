@@ -222,8 +222,9 @@ export function Settings({
 
   // LiveTV settings state
   const [epgDarkenCurrent, setEpgDarkenCurrent] = useState(false);
-  const [epgBoldChannelNames, setEpgBoldChannelNames] = useState(false);
-  const [epgBoldTopCategories, setEpgBoldTopCategories] = useState(false);
+  const [epgBoldChannelNames, setEpgBoldChannelNames] = useState(true);
+  const [epgBoldTopCategories, setEpgBoldTopCategories] = useState(true);
+  const [epgBoldSourceCategories, setEpgBoldSourceCategories] = useState(true);
   const [epgTitleFontSize, setEpgTitleFontSize] = useState(32);
   const [epgBodyFontSize, setEpgBodyFontSize] = useState(16);
   const epgView = useEpgView();
@@ -419,6 +420,7 @@ export function Settings({
         epgDarkenCurrent?: boolean;
         epgBoldChannelNames?: boolean;
         epgBoldTopCategories?: boolean;
+        epgBoldSourceCategories?: boolean;
         epgView?: 'traditional' | 'alternate';
         collapseSourceCategoriesOnStartup?: boolean;
         modernUiEnabled?: boolean;
@@ -595,16 +597,22 @@ export function Settings({
         document.documentElement.classList.add('epg-darken-current');
       }
 
-      const boldChannels = settings.epgBoldChannelNames ?? false;
+      const boldChannels = settings.epgBoldChannelNames ?? true;
       setEpgBoldChannelNames(boldChannels);
       if (boldChannels) {
         document.documentElement.classList.add('epg-bold-channel-names');
       }
 
-      const boldTopCategories = settings.epgBoldTopCategories ?? false;
+      const boldTopCategories = settings.epgBoldTopCategories ?? true;
       setEpgBoldTopCategories(boldTopCategories);
       if (boldTopCategories) {
         document.documentElement.classList.add('epg-bold-top-categories');
+      }
+
+      const boldSourceCategories = settings.epgBoldSourceCategories ?? true;
+      setEpgBoldSourceCategories(boldSourceCategories);
+      if (boldSourceCategories) {
+        document.documentElement.classList.add('epg-bold-source-categories');
       }
 
       // Load EPG view layout setting
@@ -973,6 +981,18 @@ export function Settings({
     }
     if (window.storage) {
       await window.storage.updateSettings({ epgBoldTopCategories: enabled });
+    }
+  };
+
+  const handleEpgBoldSourceCategoriesChange = async (enabled: boolean) => {
+    setEpgBoldSourceCategories(enabled);
+    if (enabled) {
+      document.documentElement.classList.add('epg-bold-source-categories');
+    } else {
+      document.documentElement.classList.remove('epg-bold-source-categories');
+    }
+    if (window.storage) {
+      await window.storage.updateSettings({ epgBoldSourceCategories: enabled });
     }
   };
 
@@ -1549,6 +1569,8 @@ export function Settings({
             onEpgBoldChannelNamesChange={handleEpgBoldChannelNamesChange}
             epgBoldTopCategories={epgBoldTopCategories}
             onEpgBoldTopCategoriesChange={handleEpgBoldTopCategoriesChange}
+            epgBoldSourceCategories={epgBoldSourceCategories}
+            onEpgBoldSourceCategoriesChange={handleEpgBoldSourceCategoriesChange}
             epgView={epgView}
             onEpgViewChange={handleEpgViewChange}
             epgTitleFontSize={epgTitleFontSize}
