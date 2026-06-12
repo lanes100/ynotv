@@ -11,6 +11,8 @@ interface StremTabProps {
   onBadgeSourcesChange: (sources: BadgeSource[]) => Promise<void>;
   stremioBadgeSize: number;
   onStremioBadgeSizeChange: (size: number) => Promise<void>;
+  showHoverDetails: boolean;
+  onShowHoverDetailsChange: (show: boolean) => Promise<void>;
 }
 
 export function StremTab({
@@ -22,6 +24,8 @@ export function StremTab({
   onBadgeSourcesChange,
   stremioBadgeSize,
   onStremioBadgeSizeChange,
+  showHoverDetails,
+  onShowHoverDetailsChange,
 }: StremTabProps) {
   const [badgeUrl, setBadgeUrl] = useState('');
   const [badgePaste, setBadgePaste] = useState('');
@@ -131,6 +135,21 @@ export function StremTab({
             Auto-play
           </button>
         </div>
+      </div>
+
+      <div className="retry-setting-row" style={{ borderBottom: 'none', marginTop: '20px' }}>
+        <div className="timeshift-toggle-info">
+          <span className="timeshift-toggle-label">Hover Details</span>
+          <span className="timeshift-toggle-sub">Show hover cards with details when hovering over items.</span>
+        </div>
+        <label className="toggle-switch">
+          <input
+            type="checkbox"
+            checked={showHoverDetails}
+            onChange={(e) => onShowHoverDetailsChange(e.target.checked)}
+          />
+          <span className="toggle-slider" />
+        </label>
       </div>
 
       <h3 style={{ margin: '24px 0 8px 0', fontSize: '0.95rem', fontWeight: 500, color: 'rgba(255,255,255,0.9)' }}>

@@ -138,6 +138,8 @@ export function StremioHoverProvider({ children }: { children: React.ReactNode }
   };
 
   const onCardMouseEnter = (item: StremioMetaPreview, element: HTMLElement, event?: React.MouseEvent) => {
+    if (document.documentElement.hasAttribute('data-hover-details-disabled')) return;
+
     if (hideTimerRef.current) {
       clearTimeout(hideTimerRef.current);
       hideTimerRef.current = null;

@@ -241,6 +241,16 @@ function App() {
     }
   }, []);
 
+  // Stremio hover details
+  const [showHoverDetails, setShowHoverDetails] = useState(true);
+  const handleShowHoverDetailsChange = useCallback(async (show: boolean) => {
+    setShowHoverDetails(show);
+    document.documentElement.toggleAttribute('data-hover-details-disabled', !show);
+    if (window.storage) {
+      await window.storage.updateSettings({ showHoverDetails: show });
+    }
+  }, []);
+
   // Load stremioStreamPickerMode from storage
   useEffect(() => {
     if (!layoutSettingsLoaded) return;
@@ -260,6 +270,10 @@ function App() {
           document.documentElement.style.setProperty('--stremio-badge-scale', String(size / 100));
         } else {
           document.documentElement.style.setProperty('--stremio-badge-scale', '1');
+        }
+        if (res.data?.showHoverDetails !== undefined) {
+          setShowHoverDetails(res.data.showHoverDetails as boolean);
+          document.documentElement.toggleAttribute('data-hover-details-disabled', !res.data.showHoverDetails);
         }
         if (res.data?.popoutMode) {
           setPopoutMode(res.data.popoutMode as 'off' | 'popout' | 'external');
@@ -3082,6 +3096,8 @@ function App() {
           onBadgeSourcesChange={handleBadgeSourcesChange}
           stremioBadgeSize={stremioBadgeSize}
           onStremioBadgeSizeChange={handleStremioBadgeSizeChange}
+          showHoverDetails={showHoverDetails}
+          onShowHoverDetailsChange={handleShowHoverDetailsChange}
           initialTab={settingsTab}
           editSourceId={editSourceId}
           onClose={() => {
@@ -3184,6 +3200,8 @@ function App() {
           onBadgeSourcesChange={handleBadgeSourcesChange}
           stremioBadgeSize={stremioBadgeSize}
           onStremioBadgeSizeChange={handleStremioBadgeSizeChange}
+          showHoverDetails={showHoverDetails}
+          onShowHoverDetailsChange={handleShowHoverDetailsChange}
         />
       </TransitionView>
 

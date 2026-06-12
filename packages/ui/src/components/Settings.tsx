@@ -61,6 +61,8 @@ interface SettingsProps {
   onBadgeSourcesChange?: (sources: BadgeSource[]) => void;
   stremioBadgeSize?: number;
   onStremioBadgeSizeChange?: (size: number) => void;
+  showHoverDetails?: boolean;
+  onShowHoverDetailsChange?: (show: boolean) => void;
 }
 
 export function Settings({
@@ -98,6 +100,8 @@ export function Settings({
   onBadgeSourcesChange,
   stremioBadgeSize: stremioBadgeSizeProp,
   onStremioBadgeSizeChange,
+  showHoverDetails: showHoverDetailsProp,
+  onShowHoverDetailsChange,
 }: SettingsProps) {
   const [activeTab, setActiveTab] = useState<SettingsTabId>(initialTab);
   const [pendingSubTab, setPendingSubTab] = useState<string | null>(null);
@@ -189,6 +193,7 @@ export function Settings({
   const [showStremioStreamBadges, setShowStremioStreamBadges] = useState(true);
   const [badgeSources, setBadgeSources] = useState<BadgeSource[]>(DEFAULT_BADGE_SOURCES);
   const [stremioBadgeSize, setStremioBadgeSize] = useState(100);
+  const [showHoverDetails, setShowHoverDetails] = useState(true);
 
   useEffect(() => {
     if (stremioStreamPickerModeProp !== undefined) {
@@ -213,6 +218,12 @@ export function Settings({
       setStremioBadgeSize(stremioBadgeSizeProp);
     }
   }, [stremioBadgeSizeProp]);
+
+  useEffect(() => {
+    if (showHoverDetailsProp !== undefined) {
+      setShowHoverDetails(showHoverDetailsProp);
+    }
+  }, [showHoverDetailsProp]);
 
   // Category settings state
   const [showAllChannels, setShowAllChannels] = useState(true);
@@ -889,6 +900,17 @@ export function Settings({
     }
   };
 
+  const handleShowHoverDetailsChange = async (show: boolean) => {
+    setShowHoverDetails(show);
+    document.documentElement.toggleAttribute('data-hover-details-disabled', !show);
+    if (onShowHoverDetailsChange) {
+      onShowHoverDetailsChange(show);
+    }
+    if (window.storage) {
+      await window.storage.updateSettings({ showHoverDetails: show });
+    }
+  };
+
   const handleTimeshiftChange = async (enabled: boolean, cacheBytes: number, bufferOffset?: number) => {
     setTimeshiftEnabled(enabled);
     setTimeshiftCacheBytes(cacheBytes);
@@ -1408,6 +1430,8 @@ export function Settings({
             onBadgeSourcesChange={handleBadgeSourcesChange}
             stremioBadgeSize={stremioBadgeSize}
             onStremioBadgeSizeChange={handleStremioBadgeSizeChange}
+            showHoverDetails={showHoverDetails}
+            onShowHoverDetailsChange={handleShowHoverDetailsChange}
           />
         );
       case 'security':

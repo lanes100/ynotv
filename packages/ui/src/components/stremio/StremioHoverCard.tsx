@@ -84,6 +84,7 @@ export function StremioHoverCard() {
   }, [isVisible, anchorRect, mouseY]);
 
   if (!isVisible || !activeItem || !style) return null;
+  if (document.documentElement.hasAttribute('data-hover-details-disabled')) return null;
 
   const title = activeItem.name;
   const year = details?.year ?? activeItem.year;

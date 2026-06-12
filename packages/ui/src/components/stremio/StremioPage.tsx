@@ -39,6 +39,8 @@ interface StremioPageProps {
   onBadgeSourcesChange: (sources: BadgeSource[]) => Promise<void>;
   stremioBadgeSize: number;
   onStremioBadgeSizeChange: (size: number) => Promise<void>;
+  showHoverDetails: boolean;
+  onShowHoverDetailsChange: (show: boolean) => Promise<void>;
 }
 
 export function StremioPage({
@@ -51,6 +53,8 @@ export function StremioPage({
   onBadgeSourcesChange,
   stremioBadgeSize,
   onStremioBadgeSizeChange,
+  showHoverDetails,
+  onShowHoverDetailsChange,
 }: StremioPageProps) {
   const addons = useStremioAddonStore((s) => s.enabledAddons);
   const stremioView = useStremioView();
@@ -191,6 +195,8 @@ export function StremioPage({
                 onBadgeSourcesChange={onBadgeSourcesChange}
                 stremioBadgeSize={stremioBadgeSize}
                 onStremioBadgeSizeChange={onStremioBadgeSizeChange}
+                showHoverDetails={showHoverDetails}
+                onShowHoverDetailsChange={onShowHoverDetailsChange}
               />
             </div>
           )}
