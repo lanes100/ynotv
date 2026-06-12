@@ -97,11 +97,18 @@ function getTeamInfo(competitor: ESPNEvent['competitions'][0]['competitors'][0] 
 
 function getScore(competitor: ESPNEvent['competitions'][0]['competitors'][0] | undefined): number | undefined {
   const score = competitor?.score;
+  if (score === undefined || score === null) {
+    return undefined;
+  }
+  if (typeof score === 'number') {
+    return score;
+  }
   if (typeof score === 'object' && score?.value !== undefined) {
     return Math.round(score.value);
   }
   if (typeof score === 'string' && score !== '') {
-    return parseInt(score, 10) || undefined;
+    const parsed = parseInt(score, 10);
+    return isNaN(parsed) ? undefined : parsed;
   }
   return undefined;
 }

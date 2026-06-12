@@ -1,10 +1,10 @@
 import React, { useEffect } from 'react';
-import { useSportsSettingsStore, getLeaguesByCategory, type LeagueConfig } from '../../stores/sportsSettingsStore';
+import { useSportsSettingsStore, getLeaguesByCategory } from '../../stores/sportsSettingsStore';
 
 interface SettingsTabProps {}
 
 export function SettingsTab({}: SettingsTabProps) {
-  const { liveLeagues, upcomingLeagues, newsLeagues, toggleLeague, toggleLeagueAll, setCategorySection, setCategoryAll, resetToDefaults, loaded, loadSettings } = useSportsSettingsStore();
+  const { enabledLeagues, toggleLeagueAll, setCategoryAll, resetToDefaults, loaded, loadSettings } = useSportsSettingsStore();
   const leaguesByCategory = getLeaguesByCategory();
 
   useEffect(() => {
@@ -28,137 +28,69 @@ export function SettingsTab({}: SettingsTabProps) {
     'rugby-league': 'Rugby League',
   };
 
-  const isLeagueInAll = (leagueId: string) =>
-    liveLeagues.includes(leagueId) && upcomingLeagues.includes(leagueId) && newsLeagues.includes(leagueId);
-
-  const isAllInCategory = (category: string, section: 'live' | 'upcoming' | 'news') => {
+  const isAllInCategory = (category: string) => {
     const leagues = leaguesByCategory[category];
     if (!leagues || leagues.length === 0) return false;
-    const selected = section === 'live' ? liveLeagues : section === 'upcoming' ? upcomingLeagues : newsLeagues;
-    return leagues.every(l => selected.includes(l.id));
+    return leagues.every(l => enabledLeagues.includes(l.id));
   };
-
-  const isAllInCategoryAll = (category: string) => {
-    const leagues = leaguesByCategory[category];
-    if (!leagues || leagues.length === 0) return false;
-    return leagues.every(l => liveLeagues.includes(l.id) && upcomingLeagues.includes(l.id) && newsLeagues.includes(l.id));
-  };
-
-  const rows: React.JSX.Element[] = [];
-
-  categoryOrder.forEach(category => {
-    const leagues = leaguesByCategory[category];
-    if (!leagues || leagues.length === 0) return;
-
-    rows.push(
-      <tr key={`cat-${category}`} className="category-row">
-        <td colSpan={5} className="category-cell">
-          <div className="category-header">
-            <span className="category-label">{categoryLabels[category]}</span>
-            <div className="category-actions">
-              <label className="cat-checkbox" title="All sections">
-                <input
-                  type="checkbox"
-                  checked={isAllInCategoryAll(category)}
-                  onChange={(e) => setCategoryAll(category, e.target.checked)}
-                />
-                <span>All</span>
-              </label>
-              <label className="cat-checkbox live" title="Live Now">
-                <input
-                  type="checkbox"
-                  checked={isAllInCategory(category, 'live')}
-                  onChange={(e) => setCategorySection('live', category, e.target.checked)}
-                />
-                <span>Live</span>
-              </label>
-              <label className="cat-checkbox upcoming" title="Upcoming">
-                <input
-                  type="checkbox"
-                  checked={isAllInCategory(category, 'upcoming')}
-                  onChange={(e) => setCategorySection('upcoming', category, e.target.checked)}
-                />
-                <span>Upcoming</span>
-              </label>
-              <label className="cat-checkbox news" title="News">
-                <input
-                  type="checkbox"
-                  checked={isAllInCategory(category, 'news')}
-                  onChange={(e) => setCategorySection('news', category, e.target.checked)}
-                />
-                <span>News</span>
-              </label>
-            </div>
-          </div>
-        </td>
-      </tr>
-    );
-
-    leagues.forEach(league => {
-      rows.push(
-        <tr key={league.id} className="league-row">
-          <td className="col-league">
-            <span className="league-name">{league.name}</span>
-          </td>
-          <td className="col-select-all">
-            <input
-              type="checkbox"
-              checked={isLeagueInAll(league.id)}
-              onChange={() => toggleLeagueAll(league.id)}
-              className="settings-checkbox"
-            />
-          </td>
-          <td className="col-live">
-            <input
-              type="checkbox"
-              checked={liveLeagues.includes(league.id)}
-              onChange={() => toggleLeague('live', league.id)}
-              className="settings-checkbox"
-            />
-          </td>
-          <td className="col-upcoming">
-            <input
-              type="checkbox"
-              checked={upcomingLeagues.includes(league.id)}
-              onChange={() => toggleLeague('upcoming', league.id)}
-              className="settings-checkbox"
-            />
-          </td>
-          <td className="col-news">
-            <input
-              type="checkbox"
-              checked={newsLeagues.includes(league.id)}
-              onChange={() => toggleLeague('news', league.id)}
-              className="settings-checkbox"
-            />
-          </td>
-        </tr>
-      );
-    });
-  });
 
   return (
     <div className="sports-tab-content">
       <div className="sports-settings-header">
-        <h2 className="sports-settings-title">Configure which leagues appear in each section</h2>
+        <div>
+          <h2 className="sports-settings-title" style={{ fontSize: '1.4rem', fontWeight: 750, color: 'var(--text-primary, #ffffff)' }}>
+            Configure Active Leagues
+          </h2>
+          <p className="sports-settings-subtitle">Enabled leagues will appear across scores, upcoming games, news, and the leagues tab.</p>
+        </div>
         <button className="sports-settings-reset" onClick={resetToDefaults}>
           Reset to Defaults
         </button>
       </div>
 
-      <div className="sports-settings-table-wrapper">
-        <table className="sports-settings-table">
-          <thead>
-            <tr>
-              <th className="col-league">League</th>
-              <th className="col-select-all">Select All</th>
-              <th className="col-live">Live Now</th>
-              <th className="col-upcoming">Upcoming</th>
-              <th className="col-news">News</th>
-            </tr>
-          </thead>
-          <tbody>{rows}</tbody>
-        </table>
+      <div className="sports-settings-grid">
+        {categoryOrder.map(category => {
+          const leagues = leaguesByCategory[category];
+          if (!leagues || leagues.length === 0) return null;
+
+          const isAllEnabled = isAllInCategory(category);
+
+          return (
+            <div key={category} className="sports-settings-card">
+              <div className="sports-settings-card-header">
+                <span className="sports-settings-category-title">{categoryLabels[category]}</span>
+                <label className="sports-settings-toggle">
+                  <input
+                    type="checkbox"
+                    checked={isAllEnabled}
+                    onChange={(e) => setCategoryAll(category, e.target.checked)}
+                  />
+                  <span className="sports-settings-toggle-slider"></span>
+                  <span className="sports-settings-toggle-label">All</span>
+                </label>
+              </div>
+
+              <div className="sports-settings-leagues-list">
+                {leagues.map(league => {
+                  const isEnabled = enabledLeagues.includes(league.id);
+                  return (
+                    <div key={league.id} className="sports-settings-league-item">
+                      <span className="sports-settings-league-name">{league.name}</span>
+                      <label className="sports-settings-toggle">
+                        <input
+                          type="checkbox"
+                          checked={isEnabled}
+                          onChange={() => toggleLeagueAll(league.id)}
+                        />
+                        <span className="sports-settings-toggle-slider"></span>
+                      </label>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

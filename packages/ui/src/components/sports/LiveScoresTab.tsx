@@ -6,6 +6,7 @@ import {
 } from '../../services/sports';
 import { useSportsSettingsStore } from '../../stores/sportsSettingsStore';
 import { useSportsPolling, formatLastUpdated } from '../../hooks/useSportsPolling';
+import { useSetSportsSelectedTab } from '../../stores/uiStore';
 import { GameCard } from './GameCard';
 import { GameDetail } from './GameDetail';
 import { GameCardSkeleton } from './LoadingSkeleton';
@@ -19,6 +20,7 @@ interface LiveScoresTabProps {
 export function LiveScoresTab({ onSearchChannels, onPlayChannel }: LiveScoresTabProps) {
   const [selectedEvent, setSelectedEvent] = useState<SportsEvent | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const setSelectedTab = useSetSportsSelectedTab();
   
   const { liveLeagues, loaded, loadSettings } = useSportsSettingsStore();
 
@@ -159,6 +161,17 @@ export function LiveScoresTab({ onSearchChannels, onPlayChannel }: LiveScoresTab
             );
           })}
         </div>
+        <button
+          className="live-header-settings-reminder"
+          onClick={() => setSelectedTab('settings')}
+          title="Configure active leagues in Settings"
+        >
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+          </svg>
+          Configure Leagues
+        </button>
       </div>
 
       {sortedLeagues.length === 0 ? (

@@ -18,6 +18,7 @@ import {
 } from '../../services/sports';
 import { TeamDetail } from './TeamDetail';
 import { GameDetail } from './GameDetail';
+import { useSportsSettingsStore } from '../../stores/sportsSettingsStore';
 
 interface LeaguesTabProps {
   onSearchChannels?: (channelName: string) => void;
@@ -28,6 +29,144 @@ type LeagueView = 'teams' | 'schedule' | 'standings';
 
 // Sports that are individual (no teams)
 const INDIVIDUAL_SPORTS = ['ufc', 'pga', 'lpga', 'atp', 'wta', 'f1', 'nascar', 'indycar'];
+
+const SPORT_DISPLAY_NAMES: Record<string, string> = {
+  football: 'Football',
+  basketball: 'Basketball',
+  baseball: 'Baseball',
+  hockey: 'Hockey',
+  soccer: 'Soccer',
+  mma: 'MMA & Combat',
+  golf: 'Golf',
+  tennis: 'Tennis',
+  racing: 'Racing',
+  rugby: 'Rugby Union',
+  'rugby-league': 'Rugby League',
+};
+
+const SPORT_GRADIENTS: Record<string, string> = {
+  football: 'linear-gradient(135deg, #1b4d3e, #0f2a20)',
+  basketball: 'linear-gradient(135deg, #ff8c00, #d35400)',
+  baseball: 'linear-gradient(135deg, #f43f5e, #be123c)',
+  hockey: 'linear-gradient(135deg, #38bdf8, #0369a1)',
+  soccer: 'linear-gradient(135deg, #4ade80, #15803d)',
+  mma: 'linear-gradient(135deg, #ef4444, #991b1b)',
+  golf: 'linear-gradient(135deg, #10b981, #065f46)',
+  tennis: 'linear-gradient(135deg, #a3e635, #4d7c0f)',
+  racing: 'linear-gradient(135deg, #4b5563, #111827)',
+  rugby: 'linear-gradient(135deg, #ea580c, #7c2d12)',
+  'rugby-league': 'linear-gradient(135deg, #f97316, #9a3412)',
+};
+
+const getSportDisplayName = (sport: string) => {
+  return SPORT_DISPLAY_NAMES[sport] || (sport.charAt(0).toUpperCase() + sport.slice(1));
+};
+
+const getSportGradient = (sport: string) => {
+  return SPORT_GRADIENTS[sport] || 'linear-gradient(135deg, #818cf8, #3730a3)';
+};
+
+function SportIcon({ sport, size = 20 }: { sport: string; size?: number }) {
+  switch (sport.toLowerCase()) {
+    case 'football':
+      return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M12 22V14" />
+          <path d="M5 14h14" />
+          <path d="M5 14V4" />
+          <path d="M19 14V4" />
+        </svg>
+      );
+    case 'basketball':
+      return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="10" />
+          <path d="M2 12h20M12 2v20" />
+          <path d="M5 5c3.5 3.5 3.5 10.5 0 14M19 5c-3.5 3.5-3.5 10.5 0 14" />
+        </svg>
+      );
+    case 'baseball':
+      return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="10" />
+          <path d="M6 18c2-3 2-9 0-12M18 18c-2-3-2-9 0-12" />
+        </svg>
+      );
+    case 'hockey':
+      return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M18 4L6.5 17.5L4 16.5M6 4l11.5 13.5L20 16.5" />
+          <ellipse cx="12" cy="18.5" rx="3" ry="1.5" fill="currentColor" />
+        </svg>
+      );
+    case 'soccer':
+      return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="10" />
+          <polygon points="12,8 15.5,10.5 14,14.5 10,14.5 8.5,10.5" fill="currentColor" />
+          <line x1="12" y1="8" x2="12" y2="2" />
+          <line x1="15.5" y1="10.5" x2="21.5" y2="8.5" />
+          <line x1="14" y1="14.5" x2="18" y2="20" />
+          <line x1="10" y1="14.5" x2="6" y2="20" />
+          <line x1="8.5" y1="10.5" x2="2.5" y2="8.5" />
+        </svg>
+      );
+    case 'mma':
+      return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <polygon points="8,3 16,3 21,8 21,16 16,21 8,21 3,16 3,8" />
+          <path d="M3 8l18 8M3 16l18-8M8 3l8 18M16 3L8 21" strokeOpacity="0.3" />
+          <circle cx="12" cy="12" r="3.5" fill="currentColor" />
+        </svg>
+      );
+    case 'golf':
+      return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <line x1="18" y1="3" x2="8" y2="19" />
+          <path d="M8 19c-1 0-2 .5-2 1.5s1.5 1.5 2.5 1.5 1.5-1 1.5-2-.5-1-2-1z" fill="currentColor" />
+          <circle cx="15" cy="19" r="1.5" fill="currentColor" />
+          <path d="M5 3v10M5 3l5 2.5L5 8" fill="none" />
+        </svg>
+      );
+    case 'tennis':
+      return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="7" r="2.5" fill="currentColor" />
+          <path d="M6 18l5-5M6 18a3 3 0 1 1-4.24-4.24A3 3 0 0 1 6 18z" />
+          <path d="M18 18l-5-5M18 18a3 3 0 1 0 4.24-4.24A3 3 0 0 0 18 18z" />
+          <path d="M9 15l6-6" />
+        </svg>
+      );
+    case 'racing':
+      return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M4 22V3" />
+          <path d="M4 5c3-1.5 5 1.5 8 0s5-1.5 8 0v8c-3-1.5-5 1.5-8 0s-5-1.5-8 0z" />
+          <rect x="4" y="5" width="4" height="4" fill="currentColor" stroke="none" />
+          <rect x="12" y="5" width="4" height="4" fill="currentColor" stroke="none" />
+          <rect x="8" y="9" width="4" height="4" fill="currentColor" stroke="none" />
+          <rect x="16" y="9" width="4" height="4" fill="currentColor" stroke="none" />
+        </svg>
+      );
+    case 'rugby':
+    case 'rugby-league':
+      return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <ellipse cx="12" cy="12" rx="10" ry="7" transform="rotate(-30 12 12)" />
+          <path d="M3.5 17c5-3 12-3 17 0" transform="rotate(-30 12 12)" />
+          <path d="M3.5 7c5 3 12 3 17 0" transform="rotate(-30 12 12)" />
+        </svg>
+      );
+    default:
+      return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6M18 9h1.5a2.5 2.5 0 0 0 0-5H18" />
+          <path d="M6 4h12v8c0 3-2.5 5.5-6 5.5S6 15 6 12V4z" />
+          <path d="M12 17.5v3M8 20.5h8" />
+        </svg>
+      );
+  }
+}
 
 export function LeaguesTab({ onSearchChannels, onPlayChannel }: LeaguesTabProps) {
   const [leagues, setLeagues] = useState<SportsLeague[]>([]);
@@ -43,6 +182,7 @@ export function LeaguesTab({ onSearchChannels, onPlayChannel }: LeaguesTabProps)
   const [activeView, setActiveView] = useState<LeagueView>('teams');
   const [selectedTeam, setSelectedTeam] = useState<SportsTeam | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<SportsEvent | null>(null);
+  const [activeSport, setActiveSport] = useState<string>('');
 
   const isUFC = selectedLeague?.id === 'ufc';
   const isGolf = selectedLeague?.id === 'pga' || selectedLeague?.id === 'lpga';
@@ -50,10 +190,46 @@ export function LeaguesTab({ onSearchChannels, onPlayChannel }: LeaguesTabProps)
   const isRacing = selectedLeague?.id === 'f1' || selectedLeague?.id === 'nascar' || selectedLeague?.id === 'indycar';
   const isIndividualSport = selectedLeague ? INDIVIDUAL_SPORTS.includes(selectedLeague.id) : false;
 
+  const { enabledLeagues, loaded, loadSettings } = useSportsSettingsStore();
+
+  useEffect(() => {
+    if (!loaded) {
+      loadSettings();
+    }
+  }, [loaded, loadSettings]);
+
   useEffect(() => {
     const allLeagues = getAvailableLeagues();
-    setLeagues(allLeagues);
-  }, []);
+    if (loaded) {
+      setLeagues(allLeagues.filter(l => enabledLeagues.includes(l.id)));
+    } else {
+      setLeagues(allLeagues);
+    }
+  }, [loaded, enabledLeagues]);
+
+  useEffect(() => {
+    if (leagues.length > 0) {
+      const grouped = leagues.reduce((acc, league) => {
+        const sport = league.sport || 'Other';
+        if (!acc[sport]) acc[sport] = [];
+        acc[sport].push(league);
+        return acc;
+      }, {} as Record<string, SportsLeague[]>);
+
+      const sportOrder = ['football', 'basketball', 'baseball', 'hockey', 'soccer'];
+      const sortedSports = Object.keys(grouped).sort((a, b) => {
+        const aIdx = sportOrder.indexOf(a);
+        const bIdx = sportOrder.indexOf(b);
+        return (aIdx === -1 ? 999 : aIdx) - (bIdx === -1 ? 999 : bIdx);
+      });
+
+      if (sortedSports.length > 0 && (!activeSport || !sortedSports.includes(activeSport))) {
+        setActiveSport(sortedSports[0]);
+      }
+    } else {
+      setActiveSport('');
+    }
+  }, [leagues, activeSport]);
 
   useEffect(() => {
     if (selectedLeague) {
@@ -199,33 +375,77 @@ export function LeaguesTab({ onSearchChannels, onPlayChannel }: LeaguesTabProps)
   const sportOrder = ['football', 'basketball', 'baseball', 'hockey', 'soccer'];
 
   return (
-    <div className="sports-tab-content">
-      {Object.entries(groupedLeagues)
-        .sort(([a], [b]) => {
-          const aIdx = sportOrder.indexOf(a);
-          const bIdx = sportOrder.indexOf(b);
-          return (aIdx === -1 ? 999 : aIdx) - (bIdx === -1 ? 999 : bIdx);
-        })
-        .map(([sport, sportLeagues]) => (
-          <section key={sport} className="sports-section">
-            <h2 className="sports-section-title">
-              {sport.charAt(0).toUpperCase() + sport.slice(1)}
-            </h2>
-            <div className="sports-leagues-grid">
-              {sportLeagues.map((league) => (
-                <button
-                  key={league.id}
-                  className="sports-league-card"
-                  onClick={() => setSelectedLeague(league)}
+    <div className="sports-leagues-layout">
+      {/* Left Sidebar: Sport selection list */}
+      <aside className="sports-leagues-sidebar">
+        {Object.entries(groupedLeagues)
+          .sort(([a], [b]) => {
+            const aIdx = sportOrder.indexOf(a);
+            const bIdx = sportOrder.indexOf(b);
+            return (aIdx === -1 ? 999 : aIdx) - (bIdx === -1 ? 999 : bIdx);
+          })
+          .map(([sport, sportLeagues]) => {
+            const isActive = activeSport === sport;
+            return (
+              <button
+                key={sport}
+                className={`sports-leagues-sidebar-item ${isActive ? 'active' : ''}`}
+                onClick={() => setActiveSport(sport)}
+              >
+                <div 
+                  className="sports-leagues-sidebar-icon"
+                  style={{ background: getSportGradient(sport) }}
                 >
-                  <div className="sports-league-card-info">
-                    <span className="sports-league-card-name">{league.name}</span>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </section>
-        ))}
+                  <SportIcon sport={sport} size={18} />
+                </div>
+                <span className="sports-leagues-sidebar-name">
+                  {getSportDisplayName(sport)}
+                </span>
+                <span className="sports-leagues-sidebar-badge">
+                  {sportLeagues.length}
+                </span>
+              </button>
+            );
+          })}
+      </aside>
+
+      {/* Right Content Pane: Leagues listing for selected sport */}
+      <main className="sports-leagues-content">
+        <div className="sports-leagues-content-header">
+          <div 
+            className="sports-leagues-content-icon"
+            style={{ background: getSportGradient(activeSport) }}
+          >
+            <SportIcon sport={activeSport} size={24} />
+          </div>
+          <div>
+            <h2 className="sports-leagues-content-title">
+              {getSportDisplayName(activeSport)} Leagues
+            </h2>
+            <p className="sports-leagues-content-subtitle">
+              Select a league to view teams, schedule, and standings
+            </p>
+          </div>
+        </div>
+
+        <div className="sports-leagues-grid-layout">
+          {(groupedLeagues[activeSport] || []).map((league) => (
+            <button
+              key={league.id}
+              className="sports-leagues-item-btn"
+              onClick={() => setSelectedLeague(league)}
+            >
+              <div className="sports-leagues-item-info">
+                <span className="sports-leagues-name">{league.name}</span>
+                <span className="sports-leagues-sub">{league.sport.toUpperCase()}</span>
+              </div>
+              <svg className="sports-leagues-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 18l6-6-6-6" />
+              </svg>
+            </button>
+          ))}
+        </div>
+      </main>
     </div>
   );
 }
