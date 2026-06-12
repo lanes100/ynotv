@@ -13,6 +13,8 @@ import { ManageVodCategories } from './vod/ManageVodCategories';
 import { useVodCategories, useRecentlyWatchedMovies, useRecentlyWatchedSeries } from '../hooks/useVod';
 import { StreamingPlatformsRow } from './vod/StreamingPlatformsRow';
 import { StreamingServiceView } from './stremio/StreamingServiceView';
+import { StremioPersonDetail } from './stremio/StremioPersonDetail';
+import type { StremioMeta } from '../types/stremio';
 import { StremioHoverProvider } from '../contexts/StremioHoverContext';
 import { StremioHoverCard } from './stremio/StremioHoverCard';
 import './stremio/StremioHome.css';
@@ -198,6 +200,9 @@ export function VodPage({ type, onPlay, onClose }: VodPageProps) {
   const seriesSelectedSeason = useSeriesSelectedSeason();
   const setSeriesSelectedSeason = useSetSeriesSelectedSeason();
 
+  // Local cast detail view state
+  const [activePersonId, setActivePersonId] = useState<number | null>(null);
+
   // Use appropriate store values based on type
   const selectedCategoryId = type === 'movie' ? moviesCategory : seriesCategory;
   const setSelectedCategoryId = type === 'movie' ? setMoviesCategory : setSeriesCategory;
@@ -207,6 +212,26 @@ export function VodPage({ type, onPlay, onClose }: VodPageProps) {
   const setSearchQuery = type === 'movie' ? setMoviesSearchQuery : setSeriesSearchQuery;
   const selectedSeason = type === 'series' ? seriesSelectedSeason : undefined;
   const setSelectedSeason = type === 'series' ? setSeriesSelectedSeason : () => {};
+
+  // Clear person ID if selectedItem changes
+  useEffect(() => {
+    setActivePersonId(null);
+  }, [selectedItem]);
+
+  const handleCastItemClick = useCallback((meta: StremioMeta) => {
+    setActivePersonId(null);
+    const targetType = meta.type;
+    if (targetType === type) {
+      setSelectedItem(null);
+      setSearchQuery(meta.name);
+      setSelectedCategoryId('all');
+    } else {
+      setSelectedItem(null);
+      window.dispatchEvent(new CustomEvent('ynotv:search-vod', {
+        detail: { type: targetType, title: meta.name }
+      }));
+    }
+  }, [type, setSelectedItem, setSearchQuery, setSelectedCategoryId]);
 
   // TMDB API key for detail view enrichment (optional)
   const tmdbApiKey = useTmdbApiKey();
@@ -706,6 +731,7 @@ export function VodPage({ type, onPlay, onClose }: VodPageProps) {
             });
           }}
           apiKey={tmdbApiKey}
+          onCastClick={(personId) => setActivePersonId(personId)}
         />
       )}
       {selectedItem && type === 'series' && (
@@ -715,7 +741,19 @@ export function VodPage({ type, onPlay, onClose }: VodPageProps) {
           onPlayEpisode={handlePlay}
           apiKey={tmdbApiKey}
           initialSeason={selectedSeason}
+          onCastClick={(personId) => setActivePersonId(personId)}
         />
+      )}
+
+      {/* Local VOD Cast detail overlay */}
+      {activePersonId && (
+        <div className="vod-cast-detail-overlay">
+          <StremioPersonDetail
+            personId={activePersonId}
+            onBack={() => setActivePersonId(null)}
+            onItemClick={handleCastItemClick}
+          />
+        </div>
       )}
 
       {/* Context Menu */}

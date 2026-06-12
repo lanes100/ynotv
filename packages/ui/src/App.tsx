@@ -1526,6 +1526,39 @@ function App() {
   }, []);
 
   // ==========================================================================
+  // VOD Cast Page & Search Routing Handlers
+  // ==========================================================================
+  useEffect(() => {
+    const navigateHandler = (e: Event) => {
+      const { personId } = (e as CustomEvent).detail;
+      if (!personId) return;
+      setActiveViewRef.current?.('stremio');
+      useUIStore.getState().stremioNavigate({ view: 'person', personId });
+    };
+    window.addEventListener('ynotv:navigate-to-person', navigateHandler);
+    return () => window.removeEventListener('ynotv:navigate-to-person', navigateHandler);
+  }, []);
+
+  useEffect(() => {
+    const searchHandler = (e: Event) => {
+      const { type, title } = (e as CustomEvent).detail;
+      if (!title) return;
+      const store = useUIStore.getState();
+      if (type === 'movie') {
+        store.setMoviesSearchQuery(title);
+        store.setMoviesSelectedItem(null);
+        setActiveViewRef.current?.('movies');
+      } else {
+        store.setSeriesSearchQuery(title);
+        store.setSeriesSelectedItem(null);
+        setActiveViewRef.current?.('series');
+      }
+    };
+    window.addEventListener('ynotv:search-vod', searchHandler);
+    return () => window.removeEventListener('ynotv:search-vod', searchHandler);
+  }, []);
+
+  // ==========================================================================
   // Stremio Progress Updater — saves watch progress every 10 seconds
   // ==========================================================================
   useEffect(() => {

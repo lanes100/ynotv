@@ -23,9 +23,10 @@ export interface MovieDetailProps {
   onClose: () => void;
   onPlay?: (movie: StoredMovie, plot?: string | null) => void;
   apiKey?: string | null; // TMDB API key for lazy backdrop loading
+  onCastClick?: (personId: number) => void;
 }
 
-export function MovieDetail({ movie, onClose, onPlay, apiKey }: MovieDetailProps) {
+export function MovieDetail({ movie, onClose, onPlay, apiKey, onCastClick }: MovieDetailProps) {
   // Handle escape key
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -288,7 +289,22 @@ export function MovieDetail({ movie, onClose, onPlay, apiKey }: MovieDetailProps
             <h2 className="movie-detail__section-title">Cast</h2>
             <div className="movie-detail__cast-row">
               {cast.map((member, idx) => (
-                <div key={`${member.name}-${idx}`} className="movie-detail__cast-member">
+                <button
+                  key={`${member.name}-${idx}`}
+                  className="movie-detail__cast-member"
+                  onClick={() => {
+                    if (member.id) {
+                      if (onCastClick) {
+                        onCastClick(member.id);
+                      } else {
+                        window.dispatchEvent(new CustomEvent('ynotv:navigate-to-person', {
+                          detail: { personId: member.id }
+                        }));
+                      }
+                    }
+                  }}
+                  title={`View ${member.name}`}
+                >
                   <div className="movie-detail__cast-photo">
                     {member.photo ? (
                       <img src={member.photo} alt={member.name} loading="lazy" />
@@ -300,7 +316,7 @@ export function MovieDetail({ movie, onClose, onPlay, apiKey }: MovieDetailProps
                   </div>
                   <span className="movie-detail__cast-name">{member.name}</span>
                   <span className="movie-detail__cast-character">{member.character}</span>
-                </div>
+                </button>
               ))}
             </div>
           </div>

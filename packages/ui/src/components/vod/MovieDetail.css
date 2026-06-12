@@ -441,3 +441,23 @@
     height: 130px;
   }
 }
+
+/* Cast member button style and hover lift effect */
+button.movie-detail__cast-member {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  outline: none;
+  text-align: center;
+  transition: transform 0.2s ease, filter 0.2s ease;
+}
+
+button.movie-detail__cast-member:hover {
+  transform: translateY(-4px);
+}
+
+button.movie-detail__cast-member:hover .movie-detail__cast-photo {
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
+  filter: brightness(1.1);
+}

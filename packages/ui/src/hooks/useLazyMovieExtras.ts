@@ -16,6 +16,7 @@ import { getTmdb, getTmdbImageUrl, searchMovies, getMovieDetails, getMovieCredit
 import { cleanTitleForSearch } from '../utils/cleanTitle';
 
 export interface CastMember {
+  id: number;
   name: string;
   character: string;
   photo: string | null;
@@ -107,6 +108,7 @@ export function useLazyMovieExtras(
           const credits = await getMovieCredits(apiKey, foundTmdbId);
           if (!cancelled && credits.cast) {
             newCast = credits.cast.slice(0, 12).map((c) => ({
+              id: c.id,
               name: c.name,
               character: c.character,
               photo: c.profile_path ? getTmdbImageUrl(c.profile_path, 'w185') : null,

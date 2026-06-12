@@ -144,3 +144,11 @@
     padding: 8px 24px 16px;
   }
 }
+
+/* Cast detail overlay in VOD tabs */
+.vod-cast-detail-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 210; /* Above detail modal (200) */
+  background: var(--color-canvas, #0c0d14);
+}

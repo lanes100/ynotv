@@ -7,7 +7,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { getTmdbImageUrl, TMDB_POSTER_SIZES } from '../../services/tmdb';
+import { getTmdbImageUrl, TMDB_POSTER_SIZES, tmdbPersonIdByName } from '../../services/tmdb';
 import { useLazyBackdrop } from '../../hooks/useLazyBackdrop';
 import { useLazyPlot } from '../../hooks/useLazyPlot';
 import { useLazyCredits } from '../../hooks/useLazyCredits';
@@ -29,9 +29,10 @@ export interface SeriesDetailProps {
   onPlayEpisode?: (info: VodPlayInfo) => void;
   apiKey?: string | null; // TMDB API key for lazy backdrop loading
   initialSeason?: number; // Initial season to show (for Recently Watched navigation)
+  onCastClick?: (personId: number) => void;
 }
 
-export function SeriesDetail({ series, onClose, onPlayEpisode, apiKey, initialSeason }: SeriesDetailProps) {
+export function SeriesDetail({ series, onClose, onPlayEpisode, apiKey, initialSeason, onCastClick }: SeriesDetailProps) {
   const [selectedSeason, setSelectedSeason] = useState<number>(initialSeason ?? 1);
 
   // Fetch episodes
@@ -214,6 +215,24 @@ export function SeriesDetail({ series, onClose, onPlayEpisode, apiKey, initialSe
   const { plot: lazyPlot, genre: lazyGenre, rating: lazyRating } = useLazyPlot(series, apiKey);
   const lazyCredits = useLazyCredits(series, apiKey);
 
+  const handleCastNameClick = useCallback(async (name: string) => {
+    if (!apiKey) return;
+    try {
+      const personId = await tmdbPersonIdByName(apiKey, name);
+      if (personId) {
+        if (onCastClick) {
+          onCastClick(personId);
+        } else {
+          window.dispatchEvent(new CustomEvent('ynotv:navigate-to-person', {
+            detail: { personId }
+          }));
+        }
+      }
+    } catch (e) {
+      console.error('Failed to lookup cast member ID:', e);
+    }
+  }, [apiKey, onCastClick]);
+
   const handlePlayEpisode = useCallback(
     (episode: StoredEpisode) => {
       // Get current progress for this episode
@@ -394,7 +413,24 @@ export function SeriesDetail({ series, onClose, onPlayEpisode, apiKey, initialSe
             {lazyCredits.cast && (
               <div className="series-detail__credits">
                 <span className="series-detail__credit-label">Cast</span>
-                <span className="series-detail__credit-value">{lazyCredits.cast}</span>
+                <span className="series-detail__credit-value">
+                  {lazyCredits.cast.split(',').map((name, index, array) => {
+                    const cleanName = name.trim();
+                    if (!cleanName) return null;
+                    return (
+                      <span key={cleanName}>
+                        <button
+                          className="series-detail__cast-link-btn"
+                          onClick={() => handleCastNameClick(cleanName)}
+                          title={`View ${cleanName}`}
+                        >
+                          {cleanName}
+                        </button>
+                        {index < array.length - 1 && ', '}
+                      </span>
+                    );
+                  })}
+                </span>
               </div>
             )}
 
