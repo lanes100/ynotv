@@ -14,6 +14,7 @@ export interface LibraryItem extends StremioMetaPreview {
 interface StremioLibraryStore {
   library: LibraryItem[];
   addToLibrary: (item: StremioMetaPreview | StremioMeta) => void;
+  addLocalLibraryItem: (item: LibraryItem) => void;
   removeFromLibrary: (id: string) => void;
   isInLibrary: (id: string) => boolean;
   updateLibraryItem: (id: string, updates: Partial<LibraryItem>) => void;
@@ -76,6 +77,11 @@ export const useStremioLibraryStore = create<StremioLibraryStore>()(
             });
           }
         });
+      },
+      addLocalLibraryItem: (item) => {
+        const current = get().library;
+        if (current.some((x) => x.id === item.id)) return;
+        set({ library: [item, ...current] });
       },
       removeFromLibrary: (id) => {
         const target = get().library.find(x => x.id === id);

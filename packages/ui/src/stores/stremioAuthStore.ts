@@ -15,6 +15,7 @@ import { useStremioAddonStore } from './stremioAddonStore';
 import { useStremioLibraryStore } from './stremioLibraryStore';
 import { useStremioWatchStore } from './stremioWatchStore';
 import { fetchMeta, fetchManifest } from '../services/stremio-addon';
+import type { StremioMeta } from '../types/stremio';
 
 // Helper to decode Stremio watched bitset
 export async function decodeStremioWatched(
@@ -241,6 +242,33 @@ export const useStremioAuthStore = create<StremioAuthStore>()(
             // Fetch current active addons to use for retrieving metadata during sync
             const enabledAddons = useStremioAddonStore.getState().enabledAddons;
 
+            // Pre-fetch metadata in parallel only for series with active watched history (state.watched) that don't have local videos cached yet
+            const seriesToFetch = cloudLibrary.filter(item => {
+              if (item.removed || item.temp || item.type !== 'series') return false;
+              if (!item.state?.watched) return false;
+              const localItem = libraryStore.library.find(x => x.id === item._id);
+              return !localItem?.videos;
+            });
+
+            const fetchedMetaMap = new Map<string, StremioMeta>();
+            if (seriesToFetch.length > 0) {
+              await Promise.all(
+                seriesToFetch.map(async (item) => {
+                  const addon = enabledAddons.find(a => a.manifest.catalogs?.some(c => c.type === item.type));
+                  if (addon) {
+                    try {
+                      const fullMeta = await fetchMeta([addon], item.type, item._id);
+                      if (fullMeta) {
+                        fetchedMetaMap.set(item._id, fullMeta);
+                      }
+                    } catch (e) {
+                      console.warn(`[Sync] Failed to pre-fetch metadata for series: ${item._id}`, e);
+                    }
+                  }
+                })
+              );
+            }
+
             // Inbound: Sync from cloud to local
             for (const item of cloudLibrary) {
               const localItem = libraryStore.library.find(x => x.id === item._id);
@@ -262,18 +290,39 @@ export const useStremioAuthStore = create<StremioAuthStore>()(
                   libraryStore.removeFromLibrary(item._id);
                 }
               } else {
-                // If item is not in local library, fetch its full metadata and add it
+                // If item is not in local library, add it locally (using pre-fetched full meta or minimal info)
                 if (!localItem && !item.removed) {
-                  const addon = enabledAddons.find(a => a.manifest.catalogs?.some(c => c.type === item.type));
-                  if (addon) {
-                    try {
-                      const fullMeta = await fetchMeta([addon], item.type, item._id);
-                      if (fullMeta) {
-                        libraryStore.addToLibrary(fullMeta);
-                      }
-                    } catch (e) {
-                      console.warn(`[Sync] Failed to fetch metadata for missing item: ${item._id}`, e);
-                    }
+                  const fetchedMeta = fetchedMetaMap.get(item._id);
+                  if (fetchedMeta) {
+                    libraryStore.addLocalLibraryItem({
+                      id: fetchedMeta.id,
+                      type: fetchedMeta.type,
+                      name: fetchedMeta.name,
+                      poster: fetchedMeta.poster,
+                      posterShape: fetchedMeta.posterShape,
+                      background: fetchedMeta.background,
+                      logo: fetchedMeta.logo,
+                      description: fetchedMeta.description,
+                      releaseInfo: fetchedMeta.releaseInfo,
+                      runtime: fetchedMeta.runtime,
+                      genres: fetchedMeta.genres,
+                      imdbRating: fetchedMeta.imdbRating,
+                      year: fetchedMeta.year,
+                      trailer: fetchedMeta.trailer,
+                      links: fetchedMeta.links,
+                      videos: fetchedMeta.videos,
+                      videoCount: fetchedMeta.videos?.length ?? 0,
+                      lastChecked: Date.now(),
+                    });
+                  } else {
+                    libraryStore.addLocalLibraryItem({
+                      id: item._id,
+                      type: item.type,
+                      name: item.name,
+                      poster: item.poster ?? undefined,
+                      posterShape: item.posterShape ?? undefined,
+                      lastChecked: 0, // stale, will refresh in background/on view
+                    });
                   }
                 }
               }
@@ -283,29 +332,10 @@ export const useStremioAuthStore = create<StremioAuthStore>()(
                 const state = item.state;
                 // Re-get localItem in case it was just added above
                 const updatedLocalItem = libraryStore.library.find(x => x.id === item._id);
-                let currentVideos = updatedLocalItem?.videos;
+                let currentVideos = updatedLocalItem?.videos ?? fetchedMetaMap.get(item._id)?.videos;
 
                 // Series progress (decoding watched bitset)
                 if (item.type === 'series') {
-                  // If we don't have the videos yet, try to load them from addons
-                  if (!currentVideos) {
-                    const addon = enabledAddons.find(a => a.manifest.catalogs?.some(c => c.type === item.type));
-                    if (addon) {
-                      try {
-                        const fullMeta = await fetchMeta([addon], item.type, item._id);
-                        if (fullMeta?.videos) {
-                          if (updatedLocalItem) {
-                            libraryStore.updateLibraryItem(item._id, {
-                              videos: fullMeta.videos,
-                              videoCount: fullMeta.videos.length,
-                            });
-                          }
-                          currentVideos = fullMeta.videos;
-                        }
-                      } catch {}
-                    }
-                  }
-
                   if (currentVideos && state.watched) {
                     const watchedIds = await decodeStremioWatched(state.watched, currentVideos);
                     const epUpdates: Record<string, any> = {};
@@ -385,32 +415,43 @@ export const useStremioAuthStore = create<StremioAuthStore>()(
                       }
                     }
                   } else if (item.type === 'series') {
-                    // Make sure we have currentVideos for mapping state.video_id to season/episode
-                    if (!currentVideos) {
-                      const addon = enabledAddons.find(a => a.manifest.catalogs?.some(c => c.type === item.type));
-                      if (addon) {
-                        try {
-                          const fullMeta = await fetchMeta([addon], item.type, item._id);
-                          if (fullMeta?.videos) {
-                            currentVideos = fullMeta.videos;
-                          }
-                        } catch {}
+                    // Try to decode season/episode directly from video_id string first
+                    let season = state.season;
+                    let episode = state.episode;
+                    let videoTitle = `Episode ${episode}`;
+
+                    if (state.video_id) {
+                      const parts = state.video_id.split(':');
+                      if (parts.length >= 3) {
+                        const parsedSeason = parseInt(parts[parts.length - 2], 10);
+                        const parsedEpisode = parseInt(parts[parts.length - 1], 10);
+                        if (!isNaN(parsedSeason) && !isNaN(parsedEpisode)) {
+                          season = parsedSeason;
+                          episode = parsedEpisode;
+                          videoTitle = `Episode ${episode}`;
+                        }
                       }
                     }
-                    if (currentVideos) {
-                      const video = currentVideos.find(v => v.id === state.video_id);
-                      if (video && video.season !== undefined && video.episode !== undefined) {
-                        const videoId = state.video_id;
-                        const season = video.season;
-                        const episode = video.episode;
 
-                        if (isFinished) {
+                    if (season !== undefined && episode !== undefined) {
+                      const videoId = state.video_id;
+
+                      // Try to map actual title from currentVideos if cached
+                      if (currentVideos && videoId) {
+                        const video = currentVideos.find(v => v.id === videoId);
+                        if (video?.title) {
+                          videoTitle = video.title;
+                        }
+                      }
+
+                      if (isFinished) {
+                        if (currentVideos && videoId) {
                           // Find next episode
                           const sorted = [...currentVideos].sort((a, b) => {
                             if ((a.season ?? 0) !== (b.season ?? 0)) return (a.season ?? 0) - (b.season ?? 0);
                             return (a.episode ?? 0) - (b.episode ?? 0);
                           });
-                          const idx = sorted.findIndex(v => v.id === state.video_id);
+                          const idx = sorted.findIndex(v => v.id === videoId);
                           if (idx >= 0 && idx < sorted.length - 1) {
                             const next = sorted[idx + 1];
                             watchStore.recordEpisodeStart(
@@ -430,57 +471,57 @@ export const useStremioAuthStore = create<StremioAuthStore>()(
                               next.episode ?? 0
                             );
                           }
-                        } else {
-                          const existing = watchStore.episodeProgress[videoId];
-                          if (!existing || existing.progressFraction < fraction) {
-                            watchStore.recordEpisodeStart(
+                        }
+                      } else if (videoId) {
+                        const existing = watchStore.episodeProgress[videoId];
+                        if (!existing || existing.progressFraction < fraction) {
+                          watchStore.recordEpisodeStart(
+                            item._id,
+                            item.name,
+                            item.poster,
+                            videoId,
+                            season,
+                            episode
+                          );
+                          watchStore.updateEpisodeProgress(
+                            item._id,
+                            videoId,
+                            fraction,
+                            season,
+                            episode
+                          );
+
+                          // Sync to local SQLite DB so resume works on play
+                          import('../db').then(({ recordVodWatch, updateVodWatchProgress, recordEpisodeWatch }) => {
+                            recordVodWatch(
                               item._id,
+                              'series',
+                              'stremio',
                               item.name,
                               item.poster,
-                              videoId,
                               season,
-                              episode
-                            );
-                            watchStore.updateEpisodeProgress(
-                              item._id,
-                              videoId,
-                              fraction,
-                              season,
-                              episode
-                            );
-
-                            // Sync to local SQLite DB so resume works on play
-                            import('../db').then(({ recordVodWatch, updateVodWatchProgress, recordEpisodeWatch }) => {
-                              recordVodWatch(
+                              episode,
+                              videoTitle
+                            ).then(() => {
+                              updateVodWatchProgress(
                                 item._id,
                                 'series',
-                                'stremio',
-                                item.name,
-                                item.poster,
-                                season,
-                                episode,
-                                video.title || `Episode ${episode}`
-                              ).then(() => {
-                                updateVodWatchProgress(
-                                  item._id,
-                                  'series',
-                                  timeOffsetSec,
-                                  durationSec
-                                ).catch(() => {});
-                              }).catch(() => {});
-
-                              recordEpisodeWatch(
-                                videoId,
-                                item._id,
-                                'stremio',
-                                season,
-                                episode,
-                                video.title || `Episode ${episode}`,
                                 timeOffsetSec,
                                 durationSec
                               ).catch(() => {});
                             }).catch(() => {});
-                          }
+
+                            recordEpisodeWatch(
+                              videoId,
+                              item._id,
+                              'stremio',
+                              season,
+                              episode,
+                              videoTitle,
+                              timeOffsetSec,
+                              durationSec
+                            ).catch(() => {});
+                          }).catch(() => {});
                         }
                       }
                     }

@@ -288,17 +288,17 @@ export function useAppSettings(): AppSettings {
           }
 
           // Apply EPG bold channel names setting on load
-          if (result.data.epgBoldChannelNames !== false) {
+          if (result.data.epgBoldChannelNames) {
             document.documentElement.classList.add('epg-bold-channel-names');
           }
 
           // Apply EPG bold top categories setting on load
-          if (result.data.epgBoldTopCategories !== false) {
+          if (result.data.epgBoldTopCategories) {
             document.documentElement.classList.add('epg-bold-top-categories');
           }
 
           // Apply EPG bold source categories setting on load
-          if (result.data.epgBoldSourceCategories !== false) {
+          if (result.data.epgBoldSourceCategories) {
             document.documentElement.classList.add('epg-bold-source-categories');
           }
 

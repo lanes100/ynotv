@@ -233,9 +233,9 @@ export function Settings({
 
   // LiveTV settings state
   const [epgDarkenCurrent, setEpgDarkenCurrent] = useState(false);
-  const [epgBoldChannelNames, setEpgBoldChannelNames] = useState(true);
-  const [epgBoldTopCategories, setEpgBoldTopCategories] = useState(true);
-  const [epgBoldSourceCategories, setEpgBoldSourceCategories] = useState(true);
+  const [epgBoldChannelNames, setEpgBoldChannelNames] = useState(false);
+  const [epgBoldTopCategories, setEpgBoldTopCategories] = useState(false);
+  const [epgBoldSourceCategories, setEpgBoldSourceCategories] = useState(false);
   const [epgTitleFontSize, setEpgTitleFontSize] = useState(32);
   const [epgBodyFontSize, setEpgBodyFontSize] = useState(16);
   const epgView = useEpgView();
@@ -608,19 +608,19 @@ export function Settings({
         document.documentElement.classList.add('epg-darken-current');
       }
 
-      const boldChannels = settings.epgBoldChannelNames ?? true;
+      const boldChannels = settings.epgBoldChannelNames ?? false;
       setEpgBoldChannelNames(boldChannels);
       if (boldChannels) {
         document.documentElement.classList.add('epg-bold-channel-names');
       }
 
-      const boldTopCategories = settings.epgBoldTopCategories ?? true;
+      const boldTopCategories = settings.epgBoldTopCategories ?? false;
       setEpgBoldTopCategories(boldTopCategories);
       if (boldTopCategories) {
         document.documentElement.classList.add('epg-bold-top-categories');
       }
 
-      const boldSourceCategories = settings.epgBoldSourceCategories ?? true;
+      const boldSourceCategories = settings.epgBoldSourceCategories ?? false;
       setEpgBoldSourceCategories(boldSourceCategories);
       if (boldSourceCategories) {
         document.documentElement.classList.add('epg-bold-source-categories');
