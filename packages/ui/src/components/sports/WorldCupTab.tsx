@@ -421,12 +421,12 @@ export function WorldCupTab({ onSearchChannels, onPlayChannel }: WorldCupTabProp
                   <div key={m.id} className="wc-match-row-item" onClick={() => setSelectedEvent(m)}>
                     <span className="time">{m.startTime.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} at {formatEventTime(m.startTime)}</span>
                     <div className="teams">
-                      <div className="team">
+                      <div className="team away">
                         <img src={m.awayTeam.logo} alt="" className="flag" onError={e => e.currentTarget.style.display = 'none'} />
                         <span className="name">{m.awayTeam.shortName || m.awayTeam.name}</span>
                       </div>
                       <span className="vs">vs</span>
-                      <div className="team">
+                      <div className="team home">
                         <img src={m.homeTeam.logo} alt="" className="flag" onError={e => e.currentTarget.style.display = 'none'} />
                         <span className="name">{m.homeTeam.shortName || m.homeTeam.name}</span>
                       </div>
@@ -448,7 +448,7 @@ export function WorldCupTab({ onSearchChannels, onPlayChannel }: WorldCupTabProp
                   <div key={m.id} className="wc-match-row-item" onClick={() => setSelectedEvent(m)}>
                     <span className="stage-lbl">{getStageLabel((m as any).seasonSlug)}</span>
                     <div className="teams">
-                      <div className="team">
+                      <div className="team away">
                         <img src={m.awayTeam.logo} alt="" className="flag" onError={e => e.currentTarget.style.display = 'none'} />
                         <span className="name">{m.awayTeam.shortName || m.awayTeam.name}</span>
                       </div>
@@ -457,7 +457,7 @@ export function WorldCupTab({ onSearchChannels, onPlayChannel }: WorldCupTabProp
                         <span className="sep">:</span>
                         <span className="score">{m.homeScore}</span>
                       </div>
-                      <div className="team">
+                      <div className="team home">
                         <img src={m.homeTeam.logo} alt="" className="flag" onError={e => e.currentTarget.style.display = 'none'} />
                         <span className="name">{m.homeTeam.shortName || m.homeTeam.name}</span>
                       </div>

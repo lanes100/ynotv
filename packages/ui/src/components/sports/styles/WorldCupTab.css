@@ -283,9 +283,10 @@
   border: 1px solid rgba(255, 255, 255, 0.05);
   border-radius: 12px;
   padding: 12px 16px;
-  display: flex;
+  display: grid;
+  grid-template-columns: 130px 1fr auto;
+  gap: 16px;
   align-items: center;
-  justify-content: space-between;
   cursor: pointer;
   transition: all 0.2s ease;
 }
@@ -296,38 +297,33 @@
   transform: translateY(-1px);
 }
 
-.wc-match-row-item .time {
-  font-size: 0.8rem;
-  color: rgba(255, 255, 255, 0.4);
-  width: 140px;
-}
-
+.wc-match-row-item .time,
 .wc-match-row-item .stage-lbl {
   font-size: 0.8rem;
   color: rgba(255, 255, 255, 0.4);
-  width: 120px;
 }
 
 .wc-match-row-item .teams {
   display: flex;
   align-items: center;
-  gap: 12px;
-  flex: 1;
+  justify-content: center;
 }
 
 .wc-match-row-item .team {
   display: flex;
   align-items: center;
   gap: 8px;
-  width: 140px;
-}
-
-.wc-match-row-item .team.home {
-  justify-content: flex-start;
+  flex: 1;
 }
 
 .wc-match-row-item .team.away {
   justify-content: flex-end;
+  text-align: right;
+}
+
+.wc-match-row-item .team.home {
+  justify-content: flex-start;
+  text-align: left;
 }
 
 .wc-match-row-item .team .flag {
@@ -335,6 +331,7 @@
   height: 14px;
   object-fit: cover;
   border-radius: 2px;
+  flex-shrink: 0;
 }
 
 .wc-match-row-item .team .name {
@@ -349,6 +346,8 @@
   font-size: 0.75rem;
   color: rgba(255, 255, 255, 0.3);
   text-transform: uppercase;
+  flex-shrink: 0;
+  padding: 0 16px;
 }
 
 .wc-match-row-item .scores {
@@ -359,6 +358,7 @@
   padding: 4px 10px;
   border-radius: 6px;
   font-weight: 700;
+  flex-shrink: 0;
 }
 
 .wc-match-row-item .scores .score {
@@ -376,6 +376,7 @@
   padding: 2px 8px;
   border-radius: 4px;
   border: 1px solid rgba(0, 212, 255, 0.2);
+  flex-shrink: 0;
 }
 
 .wc-match-row-item .final-lbl {
@@ -386,6 +387,7 @@
   border-radius: 4px;
   border: 1px solid rgba(255, 165, 0, 0.2);
   font-weight: 700;
+  flex-shrink: 0;
 }
 
 .wc-empty-box {
