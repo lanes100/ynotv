@@ -11,7 +11,7 @@ import { TVMazeSearchModal } from './TVMazeSearchModal';
 import { EpgEditorModal } from './EpgEditorModal';
 import './ProgramContextMenu.css'; // Reuse the same styles
 
-type MenuView = 'main' | 'quick' | 'custom' | 'group' | 'failover';
+type MenuView = 'main' | 'quick' | 'custom' | 'group' | 'failover' | 'playlist_add';
 
 interface ChannelContextMenuProps {
     channel: StoredChannel;
@@ -65,6 +65,10 @@ export function ChannelContextMenu({
     const [newFailoverGroupName, setNewFailoverGroupName] = useState('');
     const failoverNameInputRef = useRef<HTMLInputElement>(null);
 
+    // Playlist state
+    const [playlists, setPlaylists] = useState<any[]>([]);
+    const [addingToPlaylist, setAddingToPlaylist] = useState<string | null>(null);
+
     // Custom date/time state
     const now = new Date();
     const defaultEnd = new Date(now.getTime() + 30 * 60 * 1000);
@@ -93,6 +97,18 @@ export function ChannelContextMenu({
             if (isMounted) setFailoverGroups(groups.sort((a, b) => a.name.localeCompare(b.name)));
         }).catch(() => {
             if (isMounted) setFailoverGroups([]);
+        });
+        return () => { isMounted = false; };
+    }, [currentView]);
+
+    // Load playlists when user opens the playlist submenu
+    useEffect(() => {
+        if (currentView !== 'playlist_add') return;
+        let isMounted = true;
+        db.customPlaylists.toArray().then(list => {
+            if (isMounted) setPlaylists(list.sort((a, b) => a.name.localeCompare(b.name)));
+        }).catch(() => {
+            if (isMounted) setPlaylists([]);
         });
         return () => { isMounted = false; };
     }, [currentView]);
@@ -681,6 +697,52 @@ export function ChannelContextMenu({
         );
     }
 
+    // ── ADD TO PLAYLIST VIEW ──
+    if (currentView === 'playlist_add') {
+        return createPortal(
+            <div
+                ref={menuRef}
+                className="program-context-menu"
+                style={getMenuStyle({ minWidth: '200px' })}
+            >
+                <div className="context-menu-header">
+                    Add to Playlist
+                </div>
+                <div className="context-menu-separator" />
+                {playlists.length === 0 && (
+                    <div style={{ padding: '10px 16px', opacity: 0.5, fontSize: '0.85rem' }}>
+                        No playlists yet
+                    </div>
+                )}
+                {playlists.map(playlist => (
+                    <div
+                        key={playlist.playlist_id}
+                        className="context-menu-item"
+                        onClick={async () => {
+                            setAddingToPlaylist(playlist.playlist_id);
+                            try {
+                                const { addIndividualChannelToPlaylist } = await import('../services/playlist-editor');
+                                await addIndividualChannelToPlaylist(playlist.playlist_id, channel.stream_id);
+                            } finally {
+                                setAddingToPlaylist(null);
+                                onClose();
+                            }
+                        }}
+                        style={{ opacity: addingToPlaylist === playlist.playlist_id ? 0.5 : 1 }}
+                    >
+                        {addingToPlaylist === playlist.playlist_id ? '⏳' : '📋'} {playlist.name}
+                    </div>
+                ))}
+                <div className="context-menu-separator" />
+                <div className="context-menu-item context-menu-item-secondary" onClick={() => setCurrentView('main')}>
+                    ← Back
+                </div>
+                <ModalComponent />
+            </div>,
+            document.body
+        );
+    }
+
     // ── QUICK RECORD VIEW ──
     if (currentView === 'quick') {
         return createPortal(
@@ -879,6 +941,9 @@ export function ChannelContextMenu({
             </div>
             <div className="context-menu-item" onClick={() => setCurrentView('failover')}>
                 🔗 Add to Failover Group →
+            </div>
+            <div className="context-menu-item" onClick={() => setCurrentView('playlist_add')}>
+                📋 Add to Playlist →
             </div>
             <div className="context-menu-separator" />
             <div className="context-menu-item" onClick={handleCopyStreamUrl}>

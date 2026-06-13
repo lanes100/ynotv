@@ -639,6 +639,16 @@ export const Bridge = {
         return { success: true, data: { filePath: path } };
     },
 
+    async saveM3UFile(content: string, defaultName: string) {
+        const path = await dialog.save({
+            defaultPath: `${defaultName}.m3u`,
+            filters: [{ name: 'M3U Playlist', extensions: ['m3u', 'm3u8'] }]
+        });
+        if (!path) return { canceled: true };
+        await fs.writeTextFile(path, content);
+        return { success: true, data: { filePath: path } };
+    },
+
     async importM3UFile() {
         const path = await dialog.open({
             multiple: false,
@@ -812,6 +822,7 @@ export async function initPolyfills() {
         debouncedUpdateSettings: debouncedUpdateSettings,
         getSource: Bridge.getSource,
         saveJsonFile: Bridge.saveJsonFile,
+        saveM3UFile: Bridge.saveM3UFile,
         openJsonFile: Bridge.openJsonFile,
         importM3UFile: Bridge.importM3UFile,
         isEncryptionAvailable: () => Promise.resolve({ success: true, data: true })

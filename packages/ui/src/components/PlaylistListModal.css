@@ -1,0 +1,316 @@
+.playlist-list-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.75);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    backdrop-filter: blur(8px);
+}
+
+.playlist-list-modal {
+    width: 90vw;
+    max-width: 650px;
+    height: auto;
+    max-height: 80vh;
+    background: var(--bg-secondary, #1a1a2e);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+    border-radius: 14px;
+    display: flex;
+    flex-direction: column;
+    color: var(--text-primary, #fff);
+    overflow: hidden;
+}
+
+/* ── Header ── */
+.playlist-list-header {
+    padding: 16px 24px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.03);
+    flex-shrink: 0;
+}
+
+.playlist-list-header h2 {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-primary, #fff);
+}
+
+/* ── Content ── */
+.playlist-list-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px 24px;
+}
+
+/* ── Toolbar ── */
+.playlist-list-toolbar {
+    margin-bottom: 16px;
+}
+
+.pll-create-btn {
+    width: 100%;
+    padding: 10px 14px;
+    border-radius: 8px;
+    border: 1px dashed rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--text-primary, #fff);
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    font-family: inherit;
+}
+
+.pll-create-btn:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: var(--accent-primary, #00d4ff);
+    color: var(--accent-primary, #00d4ff);
+}
+
+.pll-create-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.pll-create-input {
+    flex: 1;
+    padding: 8px 12px;
+    border-radius: 7px;
+    border: 1px solid var(--accent-primary, #00d4ff);
+    background: rgba(0, 0, 0, 0.3);
+    color: var(--text-primary, #fff);
+    font-size: 0.9rem;
+    outline: none;
+    font-family: inherit;
+}
+
+.pll-create-ok,
+.pll-create-cancel {
+    padding: 8px 14px;
+    border-radius: 7px;
+    border: none;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+}
+
+.pll-create-ok {
+    background: var(--accent-primary, #00d4ff);
+    color: #000;
+}
+
+.pll-create-cancel {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--text-secondary, #aaa);
+}
+
+/* ── List ── */
+.pll-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.pll-item {
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 8px;
+    transition: all 0.2s;
+}
+
+.pll-item:hover {
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.pll-item.drag-over {
+    border-top: 2px solid var(--accent-primary, #00d4ff);
+    background: rgba(0, 212, 255, 0.05);
+}
+
+.pll-item.dragging {
+    opacity: 0.4;
+    border: 1px dashed var(--accent-primary, #00d4ff);
+}
+
+.pll-item-main {
+    display: flex;
+    align-items: center;
+    padding: 10px 16px;
+    gap: 12px;
+}
+
+.pll-drag-handle {
+    color: var(--text-secondary, #aaa);
+    cursor: grab;
+    font-size: 1.1rem;
+    user-select: none;
+    padding: 0 4px;
+}
+
+.pll-drag-handle:active {
+    cursor: grabbing;
+}
+
+.pll-item-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    cursor: pointer;
+}
+
+.pll-item-name {
+    font-size: 0.95rem;
+    font-weight: 500;
+}
+
+.pll-item-count {
+    font-size: 0.75rem;
+    color: var(--text-secondary, #aaa);
+}
+
+/* ── Actions ── */
+.pll-item-actions {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.pll-action-btn {
+    padding: 6px 10px;
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.03);
+    color: var(--text-primary, #fff);
+    font-size: 0.75rem;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.15s;
+}
+
+.pll-action-btn:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.pll-action-btn.pll-danger:hover {
+    background: rgba(255, 75, 75, 0.15);
+    border-color: #ff4b4b;
+    color: #ff4b4b;
+}
+
+.pll-action-btn.pll-confirm {
+    background: #4caf50;
+    color: white;
+    border-color: #4caf50;
+}
+
+/* ── Inline Edit Row ── */
+.pll-edit-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    padding: 10px 16px;
+}
+
+.pll-edit-input {
+    flex: 1;
+    padding: 6px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--accent-primary, #00d4ff);
+    background: rgba(0, 0, 0, 0.3);
+    color: var(--text-primary, #fff);
+    font-size: 0.9rem;
+    outline: none;
+    font-family: inherit;
+}
+
+.pll-edit-ok {
+    padding: 6px 12px;
+    border-radius: 6px;
+    background: var(--accent-primary, #00d4ff);
+    color: #000;
+    border: none;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.85rem;
+}
+
+/* ── Empty & Footer ── */
+.pll-empty {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--text-secondary, #aaa);
+}
+
+.pll-empty p {
+    margin: 0 0 6px 0;
+}
+
+.pll-hint {
+    font-size: 0.8rem;
+    opacity: 0.7;
+}
+
+.playlist-list-footer {
+    padding: 16px 24px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.02);
+    flex-shrink: 0;
+}
+
+.pll-footer-hint {
+    font-size: 0.75rem;
+    color: var(--text-secondary, #aaa);
+}
+
+.close-done-btn,
+.close-btn {
+    font-family: inherit;
+    cursor: pointer;
+}
+
+.close-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-secondary, #aaa);
+    font-size: 1.1rem;
+    padding: 4px;
+}
+
+.close-btn:hover {
+    color: #fff;
+}
+
+.close-done-btn {
+    padding: 8px 16px;
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 7px;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.close-done-btn:hover {
+    background: rgba(255, 255, 255, 0.15);
+}

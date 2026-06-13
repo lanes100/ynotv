@@ -12,6 +12,7 @@ import { ChannelManager } from './settings/ChannelManager';
 import { FavoriteManager } from './settings/FavoriteManager';
 import { CustomGroupManager } from './CustomGroupManager';
 import { FailoverGroupListModal } from './FailoverGroupListModal';
+import { PlaylistListModal } from './PlaylistListModal';
 
 import { useChannelSortOrder, useEpgView } from '../stores/uiStore';
 import { NowPlayingBar } from './NowPlayingBar';
@@ -398,6 +399,7 @@ export function ChannelPanel({
 
   // State for failover group list modal
   const [showFailoverGroupModal, setShowFailoverGroupModal] = useState(false);
+  const [showPlaylistListModal, setShowPlaylistListModal] = useState(false);
 
   // Volume/mute state for mini media bar
   const [previewVolume, setPreviewVolume] = useState(100);
@@ -1896,6 +1898,21 @@ export function ChannelPanel({
                         </button>
                         <button
                           className="guide-epg-shift-btn"
+                          onClick={() => setShowPlaylistListModal(true)}
+                          title="Playlist Editor"
+                        >
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <line x1="8" y1="6" x2="21" y2="6"></line>
+                            <line x1="8" y1="12" x2="21" y2="12"></line>
+                            <line x1="8" y1="18" x2="21" y2="18"></line>
+                            <line x1="3" y1="6" x2="3.01" y2="6"></line>
+                            <line x1="3" y1="12" x2="3.01" y2="12"></line>
+                            <line x1="3" y1="18" x2="3.01" y2="18"></line>
+                          </svg>
+                          Playlist Editor
+                        </button>
+                        <button
+                          className="guide-epg-shift-btn"
                           onClick={() => setShowFailoverGroupModal(true)}
                           title="Manage failover groups"
                         >
@@ -2343,6 +2360,13 @@ export function ChannelPanel({
       {showFailoverGroupModal && (
         <FailoverGroupListModal
           onClose={() => setShowFailoverGroupModal(false)}
+        />
+      )}
+
+      {/* Playlist List Modal */}
+      {showPlaylistListModal && (
+        <PlaylistListModal
+          onClose={() => setShowPlaylistListModal(false)}
         />
       )}
     </div>

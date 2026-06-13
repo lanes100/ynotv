@@ -10,7 +10,7 @@ export interface SettingsSearchResult {
   section?: string;
 }
 
-export type LiveTVSubTabId = 'epg' | 'font-size' | 'sort-order' | 'search' | 'live-view' | 'widgets';
+export type LiveTVSubTabId = 'epg' | 'font-size' | 'sort-order' | 'search' | 'live-view' | 'widgets' | 'playlists';
 
 const TAB_LABELS: Record<SettingsTabId, string> = {
   sources: 'Sources',
@@ -96,6 +96,11 @@ const SETTINGS_SEARCH_INDEX: SettingsSearchResult[] = [
   { id: 'sports-scale', label: 'Sports Scores Overlay Scale', description: 'Scale the height of the scores bar.', tabId: 'livetv', tabLabel: 'LiveTV', subTabId: 'widgets', section: 'Sports Scores Overlay' },
   { id: 'sports-background-opacity', label: 'Sports Scores Background Opacity', description: 'Controls how dark the gradient background of the scores bar is.', tabId: 'livetv', tabLabel: 'LiveTV', subTabId: 'widgets', section: 'Sports Scores Overlay' },
   { id: 'widgets', label: 'Widgets', tabId: 'livetv', tabLabel: 'LiveTV', subTabId: 'widgets', section: 'Overlay Widgets' },
+
+  // LiveTV > Playlists
+  { id: 'playlists-tab', label: 'Playlists', description: 'Create and manage custom playlists from your channels and categories.', tabId: 'livetv', tabLabel: 'LiveTV', subTabId: 'playlists', section: 'Playlists' },
+  { id: 'custom-playlists', label: 'Custom Playlists', description: 'Configure custom playlist category groups and individual channel ordering.', tabId: 'livetv', tabLabel: 'LiveTV', subTabId: 'playlists', section: 'Playlists' },
+  { id: 'playlist-editor', label: 'Playlist Editor', description: 'Access the playlist editor to add or reorder custom channels.', tabId: 'livetv', tabLabel: 'LiveTV', subTabId: 'playlists', section: 'Playlists' },
 
   // --- Playback ---
   { id: 'playback-tab', label: 'Playback', tabId: 'playback', tabLabel: 'Playback', subTabId: 'mpv', section: 'Playback' },

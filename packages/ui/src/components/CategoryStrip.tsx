@@ -2,7 +2,8 @@ import { useState, useEffect, useRef, useCallback, useMemo, useLayoutEffect } fr
 import { createPortal } from 'react-dom';
 import { useLiveQuery } from '../hooks/useSqliteLiveQuery';
 import { useCategoriesBySource, type CategoryWithCount, type SourceWithCategories } from '../hooks/useChannels';
-import { db, getWatchlistCount, type CustomGroup, updateCategoryEnabled, updateCategoryAlias } from '../db';
+import { db, getWatchlistCount, type CustomGroup, updateCategoryEnabled, updateCategoryAlias, type CustomPlaylist, type PlaylistCategoryLink } from '../db';
+import { PlaylistEditorModal } from './PlaylistEditorModal';
 import type { Source } from '@ynotv/core';
 import { useSourceVersion } from '../contexts/SourceVersionContext';
 import { normalizeBoolean } from '../utils/db-helpers';
@@ -212,6 +213,49 @@ function CustomGroupButton({ group, selectedCategoryId, onSelectCategory, onCont
   );
 }
 
+function PlaylistCategoryLinkItem({
+  link,
+  selectedCategoryId,
+  onSelectCategory,
+}: {
+  link: PlaylistCategoryLink;
+  selectedCategoryId: string | null;
+  onSelectCategory: (id: string | null) => void;
+}) {
+  const virtualId = `__plcat_${link.id}`;
+  
+  // Live lookup of category name
+  const category = useLiveQuery(
+    () => db.categories.get(link.category_id),
+    [link.category_id]
+  );
+
+  // Live count of channels in this category
+  const channelCount = useLiveQuery(
+    async () => {
+      const rows = await db.channels.whereRaw(
+        `source_id = ? AND EXISTS (SELECT 1 FROM json_each(category_ids) WHERE value = ?) AND (enabled IS NULL OR enabled NOT IN (0, '0', 'false'))`,
+        [link.source_id, link.category_id]
+      ).toArray();
+      return rows.length;
+    },
+    [link.source_id, link.category_id],
+    0
+  );
+
+  const displayName = link.custom_name || category?.alias || category?.category_name || link.category_id;
+
+  return (
+    <button
+      className={`category-item nested playlist-cat-item ${selectedCategoryId === virtualId ? 'selected' : ''}`}
+      onClick={() => onSelectCategory(virtualId)}
+    >
+      <ScrollingText className="category-name">{displayName}</ScrollingText>
+      <span className="category-count">{channelCount ?? 0}</span>
+    </button>
+  );
+}
+
 
 
 export function CategoryStrip({ selectedCategoryId, onSelectCategory, visible, onEditSource, onClose, onShow, isLiveTV }: CategoryStripProps) {
@@ -328,6 +372,68 @@ export function CategoryStrip({ selectedCategoryId, onSelectCategory, visible, o
   const [managingGroup, setManagingGroup] = useState<{ id: string, name: string } | null>(null);
   const [contextMenu, setContextMenu] = useState<{ x: number, y: number, groupId: string } | null>(null);
 
+  // Custom Playlists states
+  const [expandedPlaylists, setExpandedPlaylists] = useState<Record<string, boolean>>(() => {
+    try {
+      const saved = localStorage.getItem('ynotv:expandedPlaylists');
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
+  const [playlistContextMenu, setPlaylistContextMenu] = useState<{
+    x: number; y: number; playlistId: string; playlistName: string
+  } | null>(null);
+  const [editingPlaylist, setEditingPlaylist] = useState<{ id: string; name: string } | null>(null);
+
+  useEffect(() => {
+    localStorage.setItem('ynotv:expandedPlaylists', JSON.stringify(expandedPlaylists));
+  }, [expandedPlaylists]);
+
+  const handleTogglePlaylist = (playlistId: string) => {
+    setExpandedPlaylists(prev => ({ ...prev, [playlistId]: !prev[playlistId] }));
+  };
+
+  const handleCreatePlaylist = () => {
+    showPrompt(
+      'New Custom Playlist',
+      'Enter a name for the new playlist:',
+      async (name) => {
+        if (name.trim()) {
+          const { createPlaylist } = await import('../services/playlist-editor');
+          const id = await createPlaylist(name.trim());
+          setExpandedPlaylists(prev => ({ ...prev, [id]: true }));
+          setEditingPlaylist({ id, name: name.trim() });
+        }
+      },
+      undefined,
+      'Playlist name...',
+      '',
+      'Create',
+      'Cancel'
+    );
+  };
+
+  const handleDeletePlaylist = (playlistId: string) => {
+    showConfirm(
+      'Delete Playlist',
+      'Are you sure you want to delete this custom playlist? This cannot be undone.',
+      async () => {
+        const { deletePlaylist } = await import('../services/playlist-editor');
+        await deletePlaylist(playlistId);
+        if (selectedCategoryId?.startsWith('__plcat_') || 
+            selectedCategoryId?.startsWith('__plindiv_')) {
+          onSelectCategory(null);
+        }
+      }
+    );
+  };
+
+  const handlePlaylistContextMenu = (e: React.MouseEvent, playlistId: string, playlistName: string) => {
+    e.preventDefault();
+    setPlaylistContextMenu({ x: e.clientX, y: e.clientY, playlistId, playlistName });
+  };
+
   // Source Context Menu additions
   const [sourceContextMenu, setSourceContextMenu] = useState<{ x: number, y: number, sourceId: string, sourceName: string } | null>(null);
   const [managingCategorySource, setManagingCategorySource] = useState<{ id: string, name: string } | null>(null);
@@ -373,6 +479,170 @@ export function CategoryStrip({ selectedCategoryId, onSelectCategory, visible, o
   const customGroups = useLiveQuery(
     () => db.customGroups.orderBy('display_order').toArray()
   );
+
+  // Load all custom playlists ordered by display_order
+  const customPlaylists = useLiveQuery(
+    () => db.customPlaylists.orderBy('display_order').toArray(),
+    [],
+    [],
+    0,
+    'custom_playlists'
+  );
+
+  // Load all playlist category links
+  const allPlaylistCategoryLinks = useLiveQuery(
+    () => db.playlistCategoryLinks.toArray(),
+    [],
+    [],
+    0,
+    'playlist_category_links'
+  );
+
+  // Load all playlist individual channel counts
+  const allPlaylistIndividualCounts = useLiveQuery(
+    async () => {
+      const all = await db.playlistIndividualChannels.toArray();
+      const counts = new Map<string, number>();
+      for (const item of all) {
+        counts.set(item.playlist_id, (counts.get(item.playlist_id) || 0) + 1);
+      }
+      return counts;
+    },
+    [],
+    new Map(),
+    0,
+    'playlist_individual_channels'
+  );
+
+  interface SidebarSourceItem {
+    id: string;
+    type: 'real' | 'playlist';
+    name: string;
+    count: number;
+    realGroup?: typeof filteredGroupedCategories[0];
+    playlistGroup?: CustomPlaylist;
+  }
+
+  // Drag state for sidebar sources
+  const dragFromIdx = useRef<number | null>(null);
+  const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
+  const scrollableRef = useRef<HTMLDivElement>(null);
+
+  // Load unified sidebar order from preference
+  const sidebarOrderPref = useLiveQuery(
+    () => db.prefs.get('sidebar_sources_order'),
+    []
+  );
+
+  const sidebarSourcesOrder = useMemo(() => {
+    if (!sidebarOrderPref?.value) return null;
+    try {
+      return JSON.parse(sidebarOrderPref.value) as string[];
+    } catch {
+      return null;
+    }
+  }, [sidebarOrderPref]);
+
+  // Combine real sources and custom playlists
+  const combinedSources = useMemo(() => {
+    const list: SidebarSourceItem[] = [];
+    
+    // Add real sources
+    for (const group of filteredGroupedCategories) {
+      list.push({
+        id: group.sourceId,
+        type: 'real',
+        name: sources[group.sourceId] || 'Loading...',
+        count: group.categories.reduce((s, cat) => s + cat.channelCount, 0),
+        realGroup: group
+      });
+    }
+    
+    // Add custom playlists
+    if (customPlaylists) {
+      for (const playlist of customPlaylists) {
+        const playlistLinks = (allPlaylistCategoryLinks || [])
+          .filter(l => l.playlist_id === playlist.playlist_id);
+        const individualCount = allPlaylistIndividualCounts?.get(playlist.playlist_id) || 0;
+        const totalCount = playlistLinks.length + (individualCount > 0 ? 1 : 0);
+        
+        list.push({
+          id: `playlist:${playlist.playlist_id}`,
+          type: 'playlist',
+          name: playlist.name,
+          count: totalCount,
+          playlistGroup: playlist
+        });
+      }
+    }
+    
+    // Sort according to sidebarSourcesOrder if it exists
+    if (sidebarSourcesOrder) {
+      const orderMap = new Map(sidebarSourcesOrder.map((id, index) => [id, index]));
+      list.sort((a, b) => {
+        const orderA = orderMap.has(a.id) ? orderMap.get(a.id)! : Number.MAX_SAFE_INTEGER;
+        const orderB = orderMap.has(b.id) ? orderMap.get(b.id)! : Number.MAX_SAFE_INTEGER;
+        if (orderA !== orderB) return orderA - orderB;
+        return a.name.localeCompare(b.name);
+      });
+    }
+    
+    return list;
+  }, [filteredGroupedCategories, sources, customPlaylists, allPlaylistCategoryLinks, allPlaylistIndividualCounts, sidebarSourcesOrder]);
+
+  const getSourceIndexFromClientY = (clientY: number): number => {
+    if (!scrollableRef.current) return 0;
+    const children = Array.from(scrollableRef.current.children) as HTMLElement[];
+    const groupElements = children.filter(c => c.classList.contains('category-source-group'));
+    for (let i = 0; i < groupElements.length; i++) {
+      const rect = groupElements[i].getBoundingClientRect();
+      if (clientY < rect.top + rect.height / 2) return i;
+    }
+    return Math.max(0, groupElements.length - 1);
+  };
+
+  const handleSidebarPointerDown = (e: React.PointerEvent, index: number) => {
+    dragFromIdx.current = index;
+    setDragOverIdx(index);
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+  };
+
+  const handleSidebarPointerMove = (e: React.PointerEvent) => {
+    if (dragFromIdx.current === null) return;
+    const currentOver = getSourceIndexFromClientY(e.clientY);
+    if (currentOver !== dragOverIdx) {
+      setDragOverIdx(currentOver);
+    }
+  };
+
+  const handleSidebarPointerUp = useCallback(async (e: React.PointerEvent) => {
+    if (dragFromIdx.current === null) return;
+    const from = dragFromIdx.current;
+    const to = getSourceIndexFromClientY(e.clientY);
+    dragFromIdx.current = null;
+    setDragOverIdx(null);
+    
+    if (from === to) return;
+
+    const next = [...combinedSources];
+    const [moved] = next.splice(from, 1);
+    next.splice(to, 0, moved);
+
+    const orderedIds = next.map(item => item.id);
+    try {
+      await db.prefs.put({
+        key: 'sidebar_sources_order',
+        value: JSON.stringify(orderedIds)
+      });
+    } catch (err) {
+      console.error('Failed to save sidebar source order:', err);
+    }
+  }, [combinedSources]);
+
+  const handleSidebarPointerCancel = () => {
+    dragFromIdx.current = null;
+    setDragOverIdx(null);
+  };
 
   const handleCreateGroup = () => {
     showPrompt(
@@ -683,47 +953,151 @@ export function CategoryStrip({ selectedCategoryId, onSelectCategory, visible, o
 
       </div>
 
-      <div className="category-strip-scrollable">
-        {/* Grouped Category list */}
-        {filteredGroupedCategories.map((group) => {
-          const isExpanded = expandedSources[group.sourceId] || searchQuery.trim().length > 0;
-          return (
-          <div key={group.sourceId} className={`category-source-group ${isExpanded ? 'is-expanded' : ''}`}>
-            <button
-              className="category-source-header"
-              onClick={() => toggleSource(group.sourceId)}
-              onContextMenu={(e) => handleSourceContextMenu(e, group.sourceId, sources[group.sourceId] || 'Source')}
-            >
-              <div className="source-header-left">
-                <ChevronIcon expanded={isExpanded} />
-                <div className="source-name-container">
-                  <ScrollingText className="source-name">{sources[group.sourceId] || 'Loading...'}</ScrollingText>
-                </div>
-              </div>
-              <span className="source-count">
-                {group.categories.reduce((s, cat) => s + cat.channelCount, 0)}
-              </span>
-            </button>
-
-            {isExpanded && (
-              <div className="category-source-content">
-                {group.categories.map((category) => (
-                  <button
-                    key={category.category_id}
-                    className={`category-item nested ${selectedCategoryId === category.category_id ? 'selected' : ''}`}
-                    onClick={() => onSelectCategory(category.category_id)}
-                    onContextMenu={(e) => handleCategoryContextMenu(e, category.category_id, category.alias || category.category_name, group.sourceId, sources[group.sourceId] || 'Source')}
+      <div 
+        className="category-strip-scrollable"
+        ref={scrollableRef}
+        onPointerMove={handleSidebarPointerMove}
+        onPointerUp={handleSidebarPointerUp}
+        onPointerCancel={handleSidebarPointerCancel}
+      >
+        {combinedSources.map((item, index) => {
+          const isDragging = dragFromIdx.current === index;
+          const isDragOver = dragOverIdx === index && dragFromIdx.current !== null && dragFromIdx.current !== index;
+          
+          if (item.type === 'real' && item.realGroup) {
+            const group = item.realGroup;
+            const isExpanded = expandedSources[group.sourceId] || searchQuery.trim().length > 0;
+            return (
+              <div 
+                key={group.sourceId} 
+                className={`category-source-group${isDragging ? ' dragging' : ''}${isDragOver ? ' drag-over' : ''} ${isExpanded ? 'is-expanded' : ''}`}
+              >
+                <div className="category-source-header-wrapper">
+                  <span
+                    className="sidebar-drag-handle"
+                    style={{ touchAction: 'none' }}
+                    onPointerDown={e => handleSidebarPointerDown(e, index)}
+                    title="Drag to reorder source"
                   >
-                    <ScrollingText className="category-name">{category.alias || category.category_name}</ScrollingText>
-                    <span className="category-count">{category.channelCount}</span>
+                    ⋮⋮
+                  </span>
+                  <button
+                    className="category-source-header"
+                    onClick={() => toggleSource(group.sourceId)}
+                    onContextMenu={(e) => handleSourceContextMenu(e, group.sourceId, sources[group.sourceId] || 'Source')}
+                  >
+                    <div className="source-header-left">
+                      <ChevronIcon expanded={isExpanded} />
+                      <div className="source-name-container">
+                        <ScrollingText className="source-name">{sources[group.sourceId] || 'Loading...'}</ScrollingText>
+                      </div>
+                    </div>
+                    <span className="source-count">{item.count}</span>
                   </button>
-                ))}
-              </div>
-            )}
-          </div>
-        )})}
+                </div>
 
-        {filteredGroupedCategories.length === 0 && (
+                {isExpanded && (
+                  <div className="category-source-content">
+                    {group.categories.map((category) => (
+                      <button
+                        key={category.category_id}
+                        className={`category-item nested ${selectedCategoryId === category.category_id ? 'selected' : ''}`}
+                        onClick={() => onSelectCategory(category.category_id)}
+                        onContextMenu={(e) => handleCategoryContextMenu(e, category.category_id, category.alias || category.category_name, group.sourceId, sources[group.sourceId] || 'Source')}
+                      >
+                        <ScrollingText className="category-name">{category.alias || category.category_name}</ScrollingText>
+                        <span className="category-count">{category.channelCount}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          } else if (item.type === 'playlist' && item.playlistGroup) {
+            const playlist = item.playlistGroup;
+            const isExpanded = !!expandedPlaylists[playlist.playlist_id];
+            const playlistLinks = (allPlaylistCategoryLinks || [])
+              .filter(l => l.playlist_id === playlist.playlist_id)
+              .sort((a, b) => a.display_order - b.display_order);
+            const individualCount = allPlaylistIndividualCounts?.get(playlist.playlist_id) || 0;
+
+            return (
+              <div 
+                key={playlist.playlist_id} 
+                className={`category-source-group playlist-source-group${isDragging ? ' dragging' : ''}${isDragOver ? ' drag-over' : ''} ${isExpanded ? 'is-expanded' : ''}`}
+              >
+                <div className="category-source-header-wrapper">
+                  <span
+                    className="sidebar-drag-handle"
+                    style={{ touchAction: 'none' }}
+                    onPointerDown={e => handleSidebarPointerDown(e, index)}
+                    title="Drag to reorder playlist"
+                  >
+                    ⋮⋮
+                  </span>
+                  <button
+                    className="category-source-header playlist-source-header"
+                    onClick={() => handleTogglePlaylist(playlist.playlist_id)}
+                    onContextMenu={(e) => handlePlaylistContextMenu(e, playlist.playlist_id, playlist.name)}
+                  >
+                    <div className="source-header-left">
+                      <ChevronIcon expanded={isExpanded} />
+                      <div className="source-name-container">
+                        <ScrollingText className="source-name">{playlist.name}</ScrollingText>
+                      </div>
+                    </div>
+                    <span className="source-count">{item.count}</span>
+                  </button>
+                </div>
+
+                {isExpanded && (
+                  <div className="category-source-content">
+                    {playlistLinks.map(link => (
+                      <PlaylistCategoryLinkItem
+                        key={link.id}
+                        link={link}
+                        selectedCategoryId={selectedCategoryId}
+                        onSelectCategory={onSelectCategory}
+                      />
+                    ))}
+
+                    {individualCount > 0 && (
+                      <button
+                        className={`category-item nested playlist-indiv-item ${
+                          selectedCategoryId === `__plindiv_${playlist.playlist_id}` ? 'selected' : ''
+                        }`}
+                        onClick={() => onSelectCategory(`__plindiv_${playlist.playlist_id}`)}
+                      >
+                        <ScrollingText className="category-name">Individual Channels</ScrollingText>
+                        <span className="category-count">{individualCount}</span>
+                      </button>
+                    )}
+
+                    {playlistLinks.length === 0 && individualCount === 0 && (
+                      <div className="playlist-empty-hint">
+                        <span>Empty playlist</span>
+                        <button 
+                          className="playlist-edit-link"
+                          onClick={() => setEditingPlaylist({ id: playlist.playlist_id, name: playlist.name })}
+                        >
+                          Edit Playlist
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          }
+          return null;
+        })}
+
+        {/* Button to create a new playlist (shown at bottom of scrollable list) */}
+        <button className="create-playlist-btn" onClick={handleCreatePlaylist}>
+          <span>＋ New Playlist</span>
+        </button>
+
+        {filteredGroupedCategories.length === 0 && (!customPlaylists || customPlaylists.length === 0) && (
           <div className="category-empty">
             <p>No categories yet</p>
             <p className="hint">Add a source in Settings</p>
@@ -797,6 +1171,94 @@ export function CategoryStrip({ selectedCategoryId, onSelectCategory, visible, o
             }
           }}
           onEditEpg={(id, name) => setEpgEditorSource({ id, name })}
+        />
+      )}
+
+      {/* Playlist Context Menu */}
+      {playlistContextMenu && (
+        <div
+          className="context-menu"
+          style={{
+            position: 'fixed',
+            top: playlistContextMenu.y,
+            left: playlistContextMenu.x,
+            zIndex: 2000,
+            background: 'var(--bg-secondary)',
+            border: '1px solid var(--surface-border)',
+            borderRadius: '6px',
+            padding: '4px',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.5)'
+          }}
+        >
+          <div
+            onClick={() => {
+              setEditingPlaylist({ id: playlistContextMenu.playlistId, name: playlistContextMenu.playlistName });
+              setPlaylistContextMenu(null);
+            }}
+            style={{ padding: '8px 12px', cursor: 'pointer', color: 'var(--text-primary)' }}
+          >
+            ✏️ Edit Contents
+          </div>
+          <div
+            onClick={async () => {
+              try {
+                const { generateM3uForPlaylist } = await import('../services/playlist-export');
+                const content = await generateM3uForPlaylist(playlistContextMenu.playlistId);
+                const result = await window.storage.saveM3UFile(content, playlistContextMenu.playlistName);
+                if (result.success) {
+                  alert('Playlist exported successfully!');
+                }
+              } catch (err) {
+                console.error('[CategoryStrip] M3U export failed:', err);
+                alert('Export failed: ' + String(err));
+              }
+              setPlaylistContextMenu(null);
+            }}
+            style={{ padding: '8px 12px', cursor: 'pointer', color: 'var(--text-primary)' }}
+          >
+            📤 Export .m3u
+          </div>
+          <div
+            onClick={() => {
+              showPrompt(
+                'Rename Playlist',
+                'Enter a new name:',
+                async (newName) => {
+                  if (newName.trim()) {
+                    const { renamePlaylist } = await import('../services/playlist-editor');
+                    await renamePlaylist(playlistContextMenu.playlistId, newName.trim());
+                  }
+                },
+                undefined, 'New name...', playlistContextMenu.playlistName, 'Rename', 'Cancel'
+              );
+              setPlaylistContextMenu(null);
+            }}
+            style={{ padding: '8px 12px', cursor: 'pointer', color: 'var(--text-primary)' }}
+          >
+            📝 Rename
+          </div>
+          <div
+            onClick={() => {
+              handleDeletePlaylist(playlistContextMenu.playlistId);
+              setPlaylistContextMenu(null);
+            }}
+            style={{ padding: '8px 12px', cursor: 'pointer', color: 'var(--status-live)' }}
+          >
+            🗑️ Delete
+          </div>
+          <div
+            style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', zIndex: -1 }}
+            onClick={() => setPlaylistContextMenu(null)}
+          />
+        </div>
+      )}
+
+      {/* Playlist Editor Modal */}
+      {editingPlaylist && (
+        <PlaylistEditorModal
+          playlistId={editingPlaylist.id}
+          playlistName={editingPlaylist.name}
+          onClose={() => setEditingPlaylist(null)}
         />
       )}
 

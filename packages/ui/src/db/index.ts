@@ -256,6 +256,34 @@ export interface FailoverGroupMember {
   priority: number;      // 0 = primary, 1 = first backup, etc.
 }
 
+// Custom Playlist — appears as a source-like entry in the sidebar
+export interface CustomPlaylist {
+  playlist_id: string;   // UUID primary key
+  name: string;          // User-defined playlist name (shown as the "source" name)
+  display_order: number; // Ordering among playlists in the sidebar
+  created_at: number;    // Unix timestamp ms
+}
+
+// Playlist Category Link — a live reference to a source category
+export interface PlaylistCategoryLink {
+  id?: number;           // Auto-increment PK
+  playlist_id: string;   // FK → custom_playlists.playlist_id ON DELETE CASCADE
+  source_id: string;     // FK → sources (Tauri Store)
+  category_id: string;   // FK → categories.category_id (soft reference)
+  custom_name?: string;  // Optional user override for the category display name
+  display_order: number; // Ordering of category blocks within the playlist
+  added_at: number;      // Unix timestamp ms
+}
+
+// Playlist Individual Channel — a single channel added to the playlist's "Individual Channels" section
+export interface PlaylistIndividualChannel {
+  id?: number;           // Auto-increment PK
+  playlist_id: string;   // FK → custom_playlists.playlist_id ON DELETE CASCADE
+  stream_id: string;     // FK → channels.stream_id ON DELETE CASCADE
+  display_order: number; // Ordering within the "Individual Channels" section
+  added_at: number;      // Unix timestamp ms
+}
+
 // EPG Channel Override — persistent overrides for a channel's EPG identity
 export interface EpgChannelOverride {
   stream_id: string;          // PK – FK to channels.stream_id
@@ -332,6 +360,9 @@ class YnotvDatabase extends SqliteDatabase {
   episodeHistory: SqliteTable<EpisodeWatchHistory, number>;
   failoverGroups: SqliteTable<FailoverGroup, string>;
   failoverGroupMembers: SqliteTable<FailoverGroupMember, number>;
+  customPlaylists: SqliteTable<CustomPlaylist, string>;
+  playlistCategoryLinks: SqliteTable<PlaylistCategoryLink, number>;
+  playlistIndividualChannels: SqliteTable<PlaylistIndividualChannel, number>;
 
 
   constructor() {
@@ -362,6 +393,9 @@ class YnotvDatabase extends SqliteDatabase {
     this.episodeHistory = new SqliteTable('episode_history', 'id', this.dbPromise);
     this.failoverGroups = new SqliteTable('failover_groups', 'group_id', this.dbPromise);
     this.failoverGroupMembers = new SqliteTable('failover_group_members', 'id', this.dbPromise);
+    this.customPlaylists = new SqliteTable('custom_playlists', 'playlist_id', this.dbPromise);
+    this.playlistCategoryLinks = new SqliteTable('playlist_category_links', 'id', this.dbPromise);
+    this.playlistIndividualChannels = new SqliteTable('playlist_individual_channels', 'id', this.dbPromise);
 
     // Initialize Schema (Async) - Chain to DB promise to ensure tables exist before usage
     const rawPromise = this.dbPromise;
@@ -394,6 +428,9 @@ class YnotvDatabase extends SqliteDatabase {
     this.episodeHistory.updateDbPromise(this.dbPromise);
     this.failoverGroups.updateDbPromise(this.dbPromise);
     this.failoverGroupMembers.updateDbPromise(this.dbPromise);
+    this.customPlaylists.updateDbPromise(this.dbPromise);
+    this.playlistCategoryLinks.updateDbPromise(this.dbPromise);
+    this.playlistIndividualChannels.updateDbPromise(this.dbPromise);
   }
 
   async initSchema(dbInstance?: Database) {
@@ -443,7 +480,7 @@ class YnotvDatabase extends SqliteDatabase {
     // Each version block runs exactly ONCE. To add new columns in the future,
     // increment DB_VERSION and add a new case (do NOT modify existing cases).
     // ─────────────────────────────────────────────────────────────────────────
-    const DB_VERSION = 12;
+    const DB_VERSION = 13;
     const versionResult = await db.select('PRAGMA user_version') as Array<{ user_version: number }>;
     const currentVersion = versionResult[0]?.user_version ?? 0;
 
@@ -549,6 +586,11 @@ class YnotvDatabase extends SqliteDatabase {
           try { await db.execute(`ALTER TABLE ${table} ADD COLUMN ${col} ${type}`); } catch { /* already exists */ }
         };
         await addColumn('channels', 'xtream_stream_id', 'TEXT');
+      }
+
+      if (currentVersion < 13) {
+        // v13: Custom Playlists
+        console.log('[DB] v13 migration: Adding custom_playlists tables');
       }
 
       if (currentVersion < 2) {
@@ -906,6 +948,40 @@ class YnotvDatabase extends SqliteDatabase {
 
     await db.execute(`CREATE INDEX IF NOT EXISTS idx_failover_members_stream
       ON failover_group_members(stream_id)`);
+
+    // Custom Playlists
+    await db.execute(`CREATE TABLE IF NOT EXISTS custom_playlists (
+      playlist_id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      display_order INTEGER DEFAULT 0,
+      created_at INTEGER NOT NULL
+    )`);
+    await db.execute(`CREATE INDEX IF NOT EXISTS idx_custom_playlists_order ON custom_playlists(display_order)`);
+
+    await db.execute(`CREATE TABLE IF NOT EXISTS playlist_category_links (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      playlist_id TEXT NOT NULL,
+      source_id TEXT NOT NULL,
+      category_id TEXT NOT NULL,
+      custom_name TEXT,
+      display_order INTEGER DEFAULT 0,
+      added_at INTEGER NOT NULL,
+      FOREIGN KEY (playlist_id) REFERENCES custom_playlists(playlist_id) ON DELETE CASCADE
+    )`);
+    await db.execute(`CREATE INDEX IF NOT EXISTS idx_playlist_category_links_playlist ON playlist_category_links(playlist_id)`);
+    await db.execute(`CREATE INDEX IF NOT EXISTS idx_playlist_category_links_order ON playlist_category_links(playlist_id, display_order)`);
+
+    await db.execute(`CREATE TABLE IF NOT EXISTS playlist_individual_channels (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      playlist_id TEXT NOT NULL,
+      stream_id TEXT NOT NULL,
+      display_order INTEGER DEFAULT 0,
+      added_at INTEGER NOT NULL,
+      FOREIGN KEY (playlist_id) REFERENCES custom_playlists(playlist_id) ON DELETE CASCADE,
+      FOREIGN KEY (stream_id) REFERENCES channels(stream_id) ON DELETE CASCADE
+    )`);
+    await db.execute(`CREATE INDEX IF NOT EXISTS idx_playlist_individual_channels_playlist ON playlist_individual_channels(playlist_id)`);
+    await db.execute(`CREATE UNIQUE INDEX IF NOT EXISTS idx_playlist_individual_channels_unique ON playlist_individual_channels(playlist_id, stream_id)`);
 
     // Migration: Add missing columns for optimized bulk operations (VOD sync fix)
     // These columns were added after initial schema creation for faster bulk upserts

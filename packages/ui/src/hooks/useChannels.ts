@@ -301,6 +301,38 @@ export function useChannels(categoryId: string | null, sortOrder: 'alphabetical'
           return (a.alias || a.name).localeCompare(b.alias || b.name);
         });
         orderingIsFixed = true;
+      } else if (categoryId && categoryId.startsWith('__plcat_')) {
+        const linkId = parseInt(categoryId.replace('__plcat_', ''), 10);
+        if (isNaN(linkId)) {
+          results = [];
+        } else {
+          const link = await db.playlistCategoryLinks.get(linkId);
+          if (!link) {
+            results = [];
+          } else {
+            results = await db.channels.whereRaw(
+              `source_id = ? AND EXISTS (SELECT 1 FROM json_each(category_ids) WHERE value = ?) AND (enabled IS NULL OR enabled NOT IN (0, '0', 'false'))`,
+              [link.source_id, link.category_id]
+            ).toArray();
+          }
+        }
+      } else if (categoryId && categoryId.startsWith('__plindiv_')) {
+        const playlistId = categoryId.replace('__plindiv_', '');
+        const mappings = await db.playlistIndividualChannels
+          .where('playlist_id').equals(playlistId)
+          .sortBy('display_order');
+
+        const streamIds = mappings.map(m => m.stream_id);
+        if (streamIds.length === 0) {
+          results = [];
+        } else {
+          const channels = await db.channels.where('stream_id').anyOf(streamIds).toArray();
+          const channelMap = new Map(channels.map(ch => [ch.stream_id, ch]));
+          results = mappings
+            .map(m => channelMap.get(m.stream_id))
+            .filter((ch): ch is StoredChannel => ch !== undefined);
+        }
+        orderingIsFixed = true;
       } else if (!categoryId) {
         // All Channels view
         if (enabledSourceIds) {
