@@ -1,4 +1,13 @@
-import { db, type StoredChannel, type StoredCategory, type CustomGroup, type CustomGroupChannel } from '../db';
+import {
+    db,
+    type StoredChannel,
+    type StoredCategory,
+    type CustomGroup,
+    type CustomGroupChannel,
+    type CustomPlaylist,
+    type PlaylistCategoryLink,
+    type PlaylistIndividualChannel
+} from '../db';
 import type { Source } from '@ynotv/core';
 import type { AppSettings } from '../types/app';
 import { Bridge } from '../services/tauri-bridge';
@@ -149,9 +158,13 @@ export interface ExportData {
     userPrefs: Array<{ key: string; value: string }>;
     stremioAddons?: any;
     stremioWatchHistory?: any;
+    // v6 additions (Playlist Editor data)
+    customPlaylists?: CustomPlaylist[];
+    playlistCategoryLinks?: PlaylistCategoryLink[];
+    playlistIndividualChannels?: PlaylistIndividualChannel[];
 }
 
-const EXPORT_VERSION = 5;
+const EXPORT_VERSION = 6;
 
 /**
  * Export all application data to a JSON file
@@ -403,6 +416,11 @@ export async function exportAllData(): Promise<{ success: boolean; filePath?: st
             console.warn('[Export] Failed to parse stremio-watch-history from localStorage:', e);
         }
 
+        // 13. Get Playlist Editor data
+        const customPlaylists = await db.customPlaylists.toArray();
+        const playlistCategoryLinks = await db.playlistCategoryLinks.toArray();
+        const playlistIndividualChannels = await db.playlistIndividualChannels.toArray();
+
         const exportData: ExportData = {
             version: EXPORT_VERSION,
             timestamp: new Date().toISOString(),
@@ -424,7 +442,10 @@ export async function exportAllData(): Promise<{ success: boolean; filePath?: st
             episodeHistory,
             userPrefs,
             stremioAddons,
-            stremioWatchHistory
+            stremioWatchHistory,
+            customPlaylists,
+            playlistCategoryLinks,
+            playlistIndividualChannels
         };
 
         const fileName = `ynotv-backup-${new Date().toISOString().split('T')[0]}.json`;
@@ -460,6 +481,11 @@ export async function importAllData(): Promise<{ success: boolean; error?: strin
         if (!data.version || !data.sources || !data.settings) {
             throw new Error('Invalid backup file format');
         }
+
+        // Note: We no longer use PRAGMA foreign_keys = OFF here.
+        // tauri-plugin-sql v2 uses sqlx 0.8 which enables foreign_keys = ON
+        // per-connection in the pool, so a single PRAGMA call is unreliable.
+        // FK constraints have been removed from import-affected tables (see v17 migration).
 
         // 2. Restore Settings
         await window.storage.updateSettings(data.settings);
@@ -500,278 +526,436 @@ export async function importAllData(): Promise<{ success: boolean; error?: strin
             db.vodHistory, db.episodeHistory, db.prefs,
             db.sourcesMeta, db.programs, db.epgChannels,
             db.vodMovies, db.vodSeries, db.vodEpisodes,
-            db.vodCategories, db.channelMetadata
+            db.vodCategories, db.channelMetadata,
+            db.customPlaylists, db.playlistCategoryLinks, db.playlistIndividualChannels
         ], async () => {
+            const restoreStep = async (name: string, action: () => Promise<void>) => {
+                console.log(`[Import] Starting: ${name}...`);
+                try {
+                    await action();
+                    console.log(`[Import] Success: ${name}`);
+                } catch (e) {
+                    console.error(`[Import] FAILURE: ${name}. Error:`, e);
+                    throw new Error(`Restoring ${name} failed: ${e instanceof Error ? e.message : String(e)}`);
+                }
+            };
+
             // Clear existing data (both configurations and cache tables)
-            await db.channels.clear();
-            await db.categories.clear();
-            await db.watchlist.clear();
-            await db.epgChannelOverrides.clear();
-            await db.epgProgramOverrides.clear();
-            await db.dvrSchedules.clear();
-            await db.dvrRecordings.clear();
-            await db.dvrSettings.clear();
-            await db.failoverGroups.clear();
-            await db.failoverGroupMembers.clear();
-            await db.vodHistory.clear();
-            await db.episodeHistory.clear();
-            await db.prefs.clear();
-            await db.sourcesMeta.clear();
-            await db.programs.clear();
-            await db.epgChannels.clear();
-            await db.vodMovies.clear();
-            await db.vodSeries.clear();
-            await db.vodEpisodes.clear();
-            await db.vodCategories.clear();
-            await db.channelMetadata.clear();
-
-            // Restore Favorites stubs
-            if (data.favorites && data.favorites.length > 0) {
-                const favoriteStubs = data.favorites.map(fav => ({
-                    stream_id: fav.streamId,
-                    source_id: fav.sourceId,
-                    name: (fav as any).name ?? 'Unknown', // Placeholder, will be overwritten by sync
-                    category_ids: [],
-                    is_favorite: true
-                } as unknown as StoredChannel));
-
-                await db.channels.bulkAdd(favoriteStubs);
-            }
-
-            // Restore Category Preference stubs (including filter words and alias)
-            if (data.categoryPreferences && data.categoryPreferences.length > 0) {
-                const catStubs = data.categoryPreferences.map(pref => ({
-                    category_id: pref.categoryId,
-                    source_id: pref.sourceId,
-                    category_name: (pref as any).name ?? 'Unknown', // Placeholder
-                    enabled: pref.enabled,
-                    display_order: pref.displayOrder,
-                    filter_words: pref.filterWords,
-                    alias: pref.alias
-                } as StoredCategory));
-
-                await db.categories.bulkAdd(catStubs);
-            }
-
-            // Restore VOD Category Preference stubs
-            if (data.vodCategoryPreferences && data.vodCategoryPreferences.length > 0) {
-                const vodCatStubs = data.vodCategoryPreferences.map(pref => ({
-                    category_id: pref.categoryId,
-                    source_id: pref.sourceId,
-                    name: (pref as any).name ?? 'Unknown', // Placeholder
-                    type: (pref as any).type ?? 'movie',
-                    enabled: pref.enabled,
-                    display_order: pref.displayOrder
-                } as any));
-
-                await db.vodCategories.bulkAdd(vodCatStubs);
-            }
-
-            // Restore Channel Preference stubs (enabled/disabled status and alias)
-            if (data.channelPreferences && data.channelPreferences.length > 0) {
-                const channelStubs = data.channelPreferences.map(pref => ({
-                    stream_id: pref.streamId,
-                    source_id: pref.sourceId,
-                    name: (pref as any).name ?? 'Unknown', // Placeholder, will be overwritten by sync
-                    category_ids: [],
-                    enabled: pref.enabled,
-                    alias: pref.alias
-                } as unknown as StoredChannel));
-
-                await db.channels.bulkAdd(channelStubs);
-            }
-
-            // Restore Watchlist
-            if (data.watchlist && data.watchlist.length > 0) {
-                const watchlistItems = data.watchlist.map(w => ({
-                    id: w.id,
-                    program_id: w.programId,
-                    channel_id: w.channelId,
-                    channel_name: w.channelName,
-                    program_title: w.programTitle,
-                    description: w.description,
-                    start_time: w.startTime,
-                    end_time: w.endTime,
-                    source_id: w.sourceId,
-                    added_at: w.addedAt,
-                    reminder_enabled: w.reminderEnabled,
-                    reminder_minutes: w.reminderMinutes,
-                    autoswitch_enabled: w.autoswitchEnabled,
-                    autoswitch_seconds_before: w.autoswitchSecondsBefore,
-                    reminder_shown: w.reminderShown,
-                    autoswitch_triggered: w.autoswitchTriggered
-                }));
-                await db.watchlist.bulkAdd(watchlistItems);
-            }
-
-            // Restore EPG Channel Overrides
-            if (data.epgChannelOverrides && data.epgChannelOverrides.length > 0) {
-                const overrides = data.epgChannelOverrides.map(o => ({
-                    stream_id: o.streamId,
-                    epg_channel_id: o.epgChannelId,
-                    stream_icon: o.streamIcon,
-                    timeshift_hours: o.timeshiftHours
-                }));
-                await db.epgChannelOverrides.bulkAdd(overrides);
-            }
-
-            // Restore EPG Program Overrides
-            if (data.epgProgramOverrides && data.epgProgramOverrides.length > 0) {
-                const overrides = data.epgProgramOverrides.map(o => ({
-                    id: o.id,
-                    stream_id: o.streamId,
-                    title: o.title,
-                    description: o.description,
-                    start: o.start,
-                    end: o.end,
-                    is_deleted: o.isDeleted,
-                    is_custom: o.isCustom
-                }));
-                await db.epgProgramOverrides.bulkAdd(overrides);
-            }
-
-            // Restore DVR Schedules
-            if (data.dvrSchedules && data.dvrSchedules.length > 0) {
-                const schedules = data.dvrSchedules.map(s => ({
-                    id: s.id,
-                    source_id: s.sourceId,
-                    channel_id: s.channelId,
-                    channel_name: s.channelName,
-                    program_title: s.programTitle,
-                    scheduled_start: s.scheduledStart,
-                    scheduled_end: s.scheduledEnd,
-                    start_padding_sec: s.startPaddingSec,
-                    end_padding_sec: s.endPaddingSec,
-                    status: s.status,
-                    series_match_title: s.seriesMatchTitle,
-                    recurrence: s.recurrence,
-                    created_at: s.createdAt,
-                    started_at: s.startedAt,
-                    stream_url: s.streamUrl
-                }));
-                await db.dvrSchedules.bulkAdd(schedules as any);
-            }
-
-            // Restore DVR Recordings
-            if (data.dvrRecordings && data.dvrRecordings.length > 0) {
-                const recordings = data.dvrRecordings.map(r => ({
-                    id: r.id,
-                    schedule_id: r.scheduleId,
-                    file_path: r.filePath,
-                    filename: r.filename,
-                    size_bytes: r.sizeBytes,
-                    channel_name: r.channelName,
-                    program_title: r.programTitle,
-                    scheduled_start: r.scheduledStart,
-                    scheduled_end: r.scheduledEnd,
-                    actual_start: r.actualStart,
-                    actual_end: r.actualEnd,
-                    duration_sec: r.durationSec,
-                    status: r.status,
-                    error_message: r.errorMessage,
-                    keep_until: r.keepUntil,
-                    auto_delete_policy: r.autoDeletePolicy,
-                    created_at: r.createdAt,
-                    thumbnail_path: r.thumbnailPath
-                }));
-                await db.dvrRecordings.bulkAdd(recordings as any);
-            }
-
-            // Restore DVR Settings
-            if (data.dvrSettings && data.dvrSettings.length > 0) {
-                await db.dvrSettings.bulkAdd(data.dvrSettings);
-            }
-
-            // Restore Failover Groups
-            if (data.failoverGroups && data.failoverGroups.length > 0) {
-                for (const group of data.failoverGroups) {
-                    await db.failoverGroups.add({
-                        group_id: group.groupId,
-                        name: group.name,
-                        created_at: group.createdAt
-                    });
-
-                    if (group.members && group.members.length > 0) {
-                        const members = group.members.map(m => ({
-                            id: m.id,
-                            group_id: group.groupId,
-                            stream_id: m.streamId,
-                            priority: m.priority
-                        }));
-                        await db.failoverGroupMembers.bulkAdd(members);
+            // MUST clear child/dependent tables first to avoid SQLite FOREIGN KEY constraint failures!
+            await restoreStep('Clear Databases', async () => {
+                // Drop any leftover backup tables from failed migrations to prevent FOREIGN KEY constraint issues on delete/clear.
+                const oldBackupTables = [
+                    '_old_dvr_schedules_v17',
+                    '_old_dvr_recordings_v17',
+                    '_old_custom_group_channels_v17',
+                    '_old_failover_group_members_v17',
+                    'old_playlist_individual_channels_v16',
+                    'old_playlist_individual_channels',
+                    'old_playlist_category_links'
+                ];
+                for (const table of oldBackupTables) {
+                    try {
+                        await db.execute(`DROP TABLE IF EXISTS ${table}`);
+                    } catch (e) {
+                        console.warn(`[Import] Failed to drop clean-up table ${table}:`, e);
                     }
                 }
-            }
 
-            // Restore VOD Watch History
-            if (data.vodHistory && data.vodHistory.length > 0) {
-                const history = data.vodHistory.map(h => ({
-                    id: h.id,
-                    media_id: h.mediaId,
-                    media_type: h.mediaType,
-                    source_id: h.sourceId,
-                    title: h.title,
-                    watched_at: h.watchedAt,
-                    progress_seconds: h.progressSeconds,
-                    total_duration: h.totalDuration,
-                    poster_url: h.posterUrl,
-                    season_num: h.seasonNum,
-                    episode_num: h.episodeNum,
-                    episode_title: h.episodeTitle
-                }));
-                await db.vodHistory.bulkAdd(history);
-            }
+                const tablesToClear = [
+                    // 1. Child/dependent tables first
+                    { name: 'customGroupChannels', table: db.customGroupChannels },
+                    { name: 'failoverGroupMembers', table: db.failoverGroupMembers },
+                    { name: 'playlistIndividualChannels', table: db.playlistIndividualChannels },
+                    { name: 'playlistCategoryLinks', table: db.playlistCategoryLinks },
+                    { name: 'dvrRecordings', table: db.dvrRecordings },
+                    { name: 'dvrSchedules', table: db.dvrSchedules },
+                    { name: 'watchlist', table: db.watchlist },
+                    { name: 'epgChannelOverrides', table: db.epgChannelOverrides },
+                    { name: 'epgProgramOverrides', table: db.epgProgramOverrides },
+                    { name: 'programs', table: db.programs },
+                    { name: 'channelMetadata', table: db.channelMetadata },
+                    { name: 'vodEpisodes', table: db.vodEpisodes },
 
-            // Restore Episode Watch History
-            if (data.episodeHistory && data.episodeHistory.length > 0) {
-                const history = data.episodeHistory.map(h => ({
-                    id: h.id,
-                    episode_id: h.episodeId,
-                    series_id: h.seriesId,
-                    source_id: h.sourceId,
-                    season_num: h.seasonNum,
-                    episode_num: h.episodeNum,
-                    title: h.title,
-                    watched_at: h.watchedAt,
-                    progress_seconds: h.progressSeconds,
-                    total_duration: h.totalDuration,
-                    completed: h.completed
-                }));
-                await db.episodeHistory.bulkAdd(history);
-            }
+                    // 2. Parent tables
+                    { name: 'customGroups', table: db.customGroups },
+                    { name: 'failoverGroups', table: db.failoverGroups },
+                    { name: 'customPlaylists', table: db.customPlaylists },
+                    { name: 'vodSeries', table: db.vodSeries },
+                    { name: 'vodMovies', table: db.vodMovies },
+                    { name: 'vodCategories', table: db.vodCategories },
+                    { name: 'categories', table: db.categories },
+                    { name: 'channels', table: db.channels },
 
-            // Restore User Prefs
-            if (data.userPrefs && data.userPrefs.length > 0) {
-                await db.prefs.bulkAdd(data.userPrefs);
-            }
+                    // 3. Root tables and independent/config tables
+                    { name: 'sourcesMeta', table: db.sourcesMeta },
+                    { name: 'dvrSettings', table: db.dvrSettings },
+                    { name: 'vodHistory', table: db.vodHistory },
+                    { name: 'episodeHistory', table: db.episodeHistory },
+                    { name: 'prefs', table: db.prefs },
+                    { name: 'epgChannels', table: db.epgChannels }
+                ];
+
+                for (const t of tablesToClear) {
+                    try {
+                        await t.table.clear();
+                    } catch (err) {
+                        console.error(`[Import] Failed to clear table: ${t.name}. Error:`, err);
+                        throw new Error(`Failed to clear table "${t.name}": ${err instanceof Error ? err.message : String(err)}`);
+                    }
+                }
+            });
+
+            await restoreStep('Channel Stubs', async () => {
+                // Collect and merge all channel stubs to prevent FOREIGN KEY constraint failures
+                const channelStubsMap = new Map<string, StoredChannel>();
+
+                // 1. Add Favorites stubs
+                if (data.favorites && data.favorites.length > 0) {
+                    for (const fav of data.favorites) {
+                        channelStubsMap.set(fav.streamId, {
+                            stream_id: fav.streamId,
+                            source_id: fav.sourceId,
+                            name: (fav as any).name ?? 'Unknown',
+                            category_ids: [],
+                            is_favorite: true
+                        } as unknown as StoredChannel);
+                    }
+                }
+
+                // 2. Add Channel Preferences stubs (enabled/disabled status and alias)
+                if (data.channelPreferences && data.channelPreferences.length > 0) {
+                    for (const pref of data.channelPreferences) {
+                        const existing = channelStubsMap.get(pref.streamId);
+                        channelStubsMap.set(pref.streamId, {
+                            stream_id: pref.streamId,
+                            source_id: pref.sourceId,
+                            name: (pref as any).name ?? existing?.name ?? 'Unknown',
+                            category_ids: [],
+                            is_favorite: existing?.is_favorite ?? false,
+                            enabled: pref.enabled,
+                            alias: pref.alias
+                        } as unknown as StoredChannel);
+                    }
+                }
+
+                // 3. Add placeholders for any other referenced stream_ids to satisfy SQLite foreign keys
+                const referencedStreamIds = new Set<string>();
+                const streamIdToSource = new Map<string, string>();
+
+                if (data.playlistIndividualChannels) {
+                    for (const ch of data.playlistIndividualChannels) {
+                        referencedStreamIds.add(ch.stream_id);
+                    }
+                }
+                if (data.customGroups) {
+                    for (const g of data.customGroups) {
+                        if (g.channels) {
+                            for (const streamId of g.channels) {
+                                referencedStreamIds.add(streamId);
+                            }
+                        }
+                    }
+                }
+                if (data.failoverGroups) {
+                    for (const g of data.failoverGroups) {
+                        if (g.members) {
+                            for (const m of g.members) {
+                                referencedStreamIds.add(m.streamId);
+                            }
+                        }
+                    }
+                }
+                if (data.watchlist) {
+                    for (const w of data.watchlist) {
+                        referencedStreamIds.add(w.channelId);
+                        if (w.sourceId) streamIdToSource.set(w.channelId, w.sourceId);
+                    }
+                }
+                if (data.dvrSchedules) {
+                    for (const s of data.dvrSchedules) {
+                        referencedStreamIds.add(s.channelId);
+                        if (s.sourceId) streamIdToSource.set(s.channelId, s.sourceId);
+                    }
+                }
+
+                for (const streamId of referencedStreamIds) {
+                    if (!channelStubsMap.has(streamId)) {
+                        // Find or fallback source_id
+                        const sourceId = streamIdToSource.get(streamId) || 'unknown';
+                        channelStubsMap.set(streamId, {
+                            stream_id: streamId,
+                            source_id: sourceId,
+                            name: 'Unknown Placeholder',
+                            category_ids: [],
+                            enabled: true
+                        } as unknown as StoredChannel);
+                    }
+                }
+
+                // Bulk add all channel stubs
+                if (channelStubsMap.size > 0) {
+                    await db.channels.bulkAdd(Array.from(channelStubsMap.values()));
+                }
+            });
+
+            await restoreStep('Category Preferences', async () => {
+                if (data.categoryPreferences && data.categoryPreferences.length > 0) {
+                    const catStubs = data.categoryPreferences.map(pref => ({
+                        category_id: pref.categoryId,
+                        source_id: pref.sourceId,
+                        category_name: (pref as any).name ?? 'Unknown', // Placeholder
+                        enabled: pref.enabled,
+                        display_order: pref.displayOrder,
+                        filter_words: pref.filterWords,
+                        alias: pref.alias
+                    } as StoredCategory));
+
+                    await db.categories.bulkAdd(catStubs);
+                }
+            });
+
+            await restoreStep('VOD Category Preferences', async () => {
+                if (data.vodCategoryPreferences && data.vodCategoryPreferences.length > 0) {
+                    const vodCatStubs = data.vodCategoryPreferences.map(pref => ({
+                        category_id: pref.categoryId,
+                        source_id: pref.sourceId,
+                        name: (pref as any).name ?? 'Unknown', // Placeholder
+                        type: (pref as any).type ?? 'movie',
+                        enabled: pref.enabled,
+                        display_order: pref.displayOrder
+                    } as any));
+
+                    await db.vodCategories.bulkAdd(vodCatStubs);
+                }
+            });
+
+            await restoreStep('Watchlist', async () => {
+                if (data.watchlist && data.watchlist.length > 0) {
+                    const watchlistItems = data.watchlist.map(w => ({
+                        id: w.id,
+                        program_id: w.programId,
+                        channel_id: w.channelId,
+                        channel_name: w.channelName,
+                        program_title: w.programTitle,
+                        description: w.description,
+                        start_time: w.startTime,
+                        end_time: w.endTime,
+                        source_id: w.sourceId,
+                        added_at: w.addedAt,
+                        reminder_enabled: w.reminderEnabled,
+                        reminder_minutes: w.reminderMinutes,
+                        autoswitch_enabled: w.autoswitchEnabled,
+                        autoswitch_seconds_before: w.autoswitchSecondsBefore,
+                        reminder_shown: w.reminderShown,
+                        autoswitch_triggered: w.autoswitchTriggered
+                    }));
+                    await db.watchlist.bulkAdd(watchlistItems);
+                }
+            });
+
+            await restoreStep('EPG Channel Overrides', async () => {
+                if (data.epgChannelOverrides && data.epgChannelOverrides.length > 0) {
+                    const overrides = data.epgChannelOverrides.map(o => ({
+                        stream_id: o.streamId,
+                        epg_channel_id: o.epgChannelId,
+                        stream_icon: o.streamIcon,
+                        timeshift_hours: o.timeshiftHours
+                    }));
+                    await db.epgChannelOverrides.bulkAdd(overrides);
+                }
+            });
+
+            await restoreStep('EPG Program Overrides', async () => {
+                if (data.epgProgramOverrides && data.epgProgramOverrides.length > 0) {
+                    const overrides = data.epgProgramOverrides.map(o => ({
+                        id: o.id,
+                        stream_id: o.streamId,
+                        title: o.title,
+                        description: o.description,
+                        start: o.start,
+                        end: o.end,
+                        is_deleted: o.isDeleted,
+                        is_custom: o.isCustom
+                    }));
+                    await db.epgProgramOverrides.bulkAdd(overrides);
+                }
+            });
+
+            await restoreStep('DVR Schedules', async () => {
+                if (data.dvrSchedules && data.dvrSchedules.length > 0) {
+                    const schedules = data.dvrSchedules.map(s => ({
+                        id: s.id,
+                        source_id: s.sourceId,
+                        channel_id: s.channelId,
+                        channel_name: s.channelName,
+                        program_title: s.programTitle,
+                        scheduled_start: s.scheduledStart,
+                        scheduled_end: s.scheduledEnd,
+                        start_padding_sec: s.startPaddingSec,
+                        end_padding_sec: s.endPaddingSec,
+                        status: s.status,
+                        series_match_title: s.seriesMatchTitle,
+                        recurrence: s.recurrence,
+                        created_at: s.createdAt,
+                        started_at: s.startedAt,
+                        stream_url: s.streamUrl
+                    }));
+                    await db.dvrSchedules.bulkAdd(schedules as any);
+                }
+            });
+
+            await restoreStep('DVR Recordings', async () => {
+                if (data.dvrRecordings && data.dvrRecordings.length > 0) {
+                    const recordings = data.dvrRecordings.map(r => ({
+                        id: r.id,
+                        schedule_id: r.scheduleId,
+                        file_path: r.filePath,
+                        filename: r.filename,
+                        size_bytes: r.sizeBytes,
+                        channel_name: r.channelName,
+                        program_title: r.programTitle,
+                        scheduled_start: r.scheduledStart,
+                        scheduled_end: r.scheduledEnd,
+                        actual_start: r.actualStart,
+                        actual_end: r.actualEnd,
+                        duration_sec: r.durationSec,
+                        status: r.status,
+                        error_message: r.errorMessage,
+                        keep_until: r.keepUntil,
+                        auto_delete_policy: r.autoDeletePolicy,
+                        created_at: r.createdAt,
+                        thumbnail_path: r.thumbnailPath
+                    }));
+                    await db.dvrRecordings.bulkAdd(recordings as any);
+                }
+            });
+
+            await restoreStep('DVR Settings', async () => {
+                if (data.dvrSettings && data.dvrSettings.length > 0) {
+                    await db.dvrSettings.bulkAdd(data.dvrSettings);
+                }
+            });
+
+            await restoreStep('Failover Groups', async () => {
+                if (data.failoverGroups && data.failoverGroups.length > 0) {
+                    for (const group of data.failoverGroups) {
+                        await db.failoverGroups.add({
+                            group_id: group.groupId,
+                            name: group.name,
+                            created_at: group.createdAt
+                        });
+
+                        if (group.members && group.members.length > 0) {
+                            const members = group.members.map(m => ({
+                                id: m.id,
+                                group_id: group.groupId,
+                                stream_id: m.streamId,
+                                priority: m.priority
+                            }));
+                            await db.failoverGroupMembers.bulkAdd(members);
+                        }
+                    }
+                }
+            });
+
+            await restoreStep('VOD Watch History', async () => {
+                if (data.vodHistory && data.vodHistory.length > 0) {
+                    const history = data.vodHistory.map(h => ({
+                        id: h.id,
+                        media_id: h.mediaId,
+                        media_type: h.mediaType,
+                        source_id: h.sourceId,
+                        title: h.title,
+                        watched_at: h.watchedAt,
+                        progress_seconds: h.progressSeconds,
+                        total_duration: h.totalDuration,
+                        poster_url: h.posterUrl,
+                        season_num: h.seasonNum,
+                        episode_num: h.episodeNum,
+                        episode_title: h.episodeTitle
+                    }));
+                    await db.vodHistory.bulkAdd(history);
+                }
+            });
+
+            await restoreStep('Episode Watch History', async () => {
+                if (data.episodeHistory && data.episodeHistory.length > 0) {
+                    const history = data.episodeHistory.map(h => ({
+                        id: h.id,
+                        episode_id: h.episodeId,
+                        series_id: h.seriesId,
+                        source_id: h.sourceId,
+                        season_num: h.seasonNum,
+                        episode_num: h.episodeNum,
+                        title: h.title,
+                        watched_at: h.watchedAt,
+                        progress_seconds: h.progressSeconds,
+                        total_duration: h.totalDuration,
+                        completed: h.completed
+                    }));
+                    await db.episodeHistory.bulkAdd(history);
+                }
+            });
+
+            await restoreStep('User Prefs', async () => {
+                if (data.userPrefs && data.userPrefs.length > 0) {
+                    await db.prefs.bulkAdd(data.userPrefs);
+                }
+            });
+
+            await restoreStep('Custom Playlists', async () => {
+                if (data.customPlaylists && data.customPlaylists.length > 0) {
+                    await db.customPlaylists.bulkAdd(data.customPlaylists);
+                }
+            });
+
+            await restoreStep('Playlist Category Links', async () => {
+                if (data.playlistCategoryLinks && data.playlistCategoryLinks.length > 0) {
+                    await db.playlistCategoryLinks.bulkAdd(data.playlistCategoryLinks);
+                }
+            });
+
+            await restoreStep('Playlist Individual Channels', async () => {
+                if (data.playlistIndividualChannels && data.playlistIndividualChannels.length > 0) {
+                    await db.playlistIndividualChannels.bulkAdd(data.playlistIndividualChannels);
+                }
+            });
         });
 
         // 5. Restore Custom Groups (separate transaction to keep original pattern)
         if (data.customGroups && data.customGroups.length > 0) {
-            await db.transaction('rw', [db.customGroups, db.customGroupChannels], async () => {
-                await db.customGroups.clear();
-                await db.customGroupChannels.clear();
+            try {
+                console.log('[Import] Starting: Custom Groups...');
+                await db.transaction('rw', [db.customGroups, db.customGroupChannels], async () => {
+                    // MUST clear child customGroupChannels before parent customGroups to avoid FK failures
+                    await db.customGroupChannels.clear();
+                    await db.customGroups.clear();
 
-                for (const group of data.customGroups!) {
-                    await db.customGroups.add({
-                        group_id: group.groupId,
-                        name: group.name,
-                        display_order: group.displayOrder,
-                        created_at: Date.now()
-                    });
-
-                    if (group.channels && group.channels.length > 0) {
-                        const now = Date.now();
-                        const groupChannels: CustomGroupChannel[] = group.channels.map((streamId, index) => ({
+                    for (const group of data.customGroups!) {
+                        await db.customGroups.add({
                             group_id: group.groupId,
-                            stream_id: streamId,
-                            display_order: index,
-                            added_at: now
-                        }));
-                        await db.customGroupChannels.bulkAdd(groupChannels);
+                            name: group.name,
+                            display_order: group.displayOrder,
+                            created_at: Date.now()
+                        });
+
+                        if (group.channels && group.channels.length > 0) {
+                            const now = Date.now();
+                            const groupChannels: CustomGroupChannel[] = group.channels.map((streamId, index) => ({
+                                group_id: group.groupId,
+                                stream_id: streamId,
+                                display_order: index,
+                                added_at: now
+                            }));
+                            await db.customGroupChannels.bulkAdd(groupChannels);
+                        }
                     }
-                }
-            });
+                });
+                console.log('[Import] Success: Custom Groups');
+            } catch (e) {
+                console.error('[Import] FAILURE: Custom Groups. Error:', e);
+                throw new Error(`Restoring Custom Groups failed: ${e instanceof Error ? e.message : String(e)}`);
+            }
         }
 
         return { success: true };

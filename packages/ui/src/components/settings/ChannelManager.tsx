@@ -3,13 +3,6 @@ import { createPortal } from 'react-dom';
 import { useLiveQuery } from '../../hooks/useSqliteLiveQuery';
 import { db, type StoredChannel, updateChannelsBatch } from '../../db';
 import { normalizeBoolean } from '../../utils/db-helpers';
-import {
-  listFailoverGroups,
-  createFailoverGroup,
-  addChannelToFailoverGroup,
-  removeChannelFromFailoverGroup,
-  getFailoverGroupForChannel,
-} from '../../services/failover-groups';
 import './ChannelManager.css';
 
 interface ChannelManagerProps {
@@ -32,99 +25,14 @@ export function ChannelManager({ categoryId, categoryName, sourceId, onClose, on
     const [showFilterPanel, setShowFilterPanel] = useState(false);
     const isSavingRef = useRef(false);
 
-    // Failover context menu state
-    const [failoverMenu, setFailoverMenu] = useState<{
-      channel: StoredChannel;
-      x: number;
-      y: number;
-    } | null>(null);
-    const [failoverGroups, setFailoverGroups] = useState<Array<{ group_id: string; name: string }>>([]);
-    const [failoverGroupForChannel, setFailoverGroupForChannel] = useState<{ groupId: string; groupName: string; priority: number } | null>(null);
-    const [showFailoverCreate, setShowFailoverCreate] = useState(false);
-    const [newFailoverGroupName, setNewFailoverGroupName] = useState('');
+
 
     // Container-level pointer drag for reorder (same pattern as CategoryManager)
     const dragFromIdx = useRef<number | null>(null);
     const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
     const listRef = useRef<HTMLDivElement>(null);
 
-    const openFailoverMenu = useCallback(async (channel: StoredChannel, e: React.MouseEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
-      const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-      const MENU_WIDTH = 260;
-      const MENU_HEIGHT_EST = 180;
-      // Anchor to the button: align menu right edge with button right edge
-      let x = rect.right - MENU_WIDTH;
-      // Clamp so it doesn't go off the left or right of the viewport
-      x = Math.max(8, Math.min(x, window.innerWidth - MENU_WIDTH - 8));
-      // Place below the button; if not enough room, place above
-      let y = rect.bottom + 4;
-      if (y + MENU_HEIGHT_EST > window.innerHeight - 8) {
-        y = rect.top - MENU_HEIGHT_EST - 4;
-      }
-      y = Math.max(8, y);
-      setFailoverMenu({ channel, x, y });
-      setShowFailoverCreate(false);
-      setNewFailoverGroupName('');
-      try {
-        const groups = await listFailoverGroups();
-        setFailoverGroups(groups.map(g => ({ group_id: g.group_id, name: g.name })));
-        const membership = await getFailoverGroupForChannel(channel.stream_id);
-        setFailoverGroupForChannel(membership);
-      } catch (err) {
-        console.error('[ChannelManager] Failed to load failover data:', err);
-      }
-    }, []);
 
-    const closeFailoverMenu = useCallback(() => {
-      setFailoverMenu(null);
-      setShowFailoverCreate(false);
-      setNewFailoverGroupName('');
-    }, []);
-
-    const handleAddToFailoverGroup = useCallback(async (groupId: string) => {
-      if (!failoverMenu) return;
-      try {
-        await addChannelToFailoverGroup(groupId, failoverMenu.channel.stream_id);
-        const membership = await getFailoverGroupForChannel(failoverMenu.channel.stream_id);
-        setFailoverGroupForChannel(membership);
-        // Refresh groups to update counts
-        const groups = await listFailoverGroups();
-        setFailoverGroups(groups.map(g => ({ group_id: g.group_id, name: g.name })));
-      } catch (err: any) {
-        alert(err?.message || 'Failed to add channel to group');
-      }
-    }, [failoverMenu]);
-
-    const handleRemoveFromFailoverGroup = useCallback(async () => {
-      if (!failoverMenu) return;
-      try {
-        await removeChannelFromFailoverGroup(failoverMenu.channel.stream_id);
-        setFailoverGroupForChannel(null);
-        const groups = await listFailoverGroups();
-        setFailoverGroups(groups.map(g => ({ group_id: g.group_id, name: g.name })));
-      } catch (err) {
-        console.error('[ChannelManager] Failed to remove from group:', err);
-      }
-    }, [failoverMenu]);
-
-    const handleCreateFailoverGroup = useCallback(async () => {
-      const name = newFailoverGroupName.trim();
-      if (!name || !failoverMenu) return;
-      try {
-        const groupId = await createFailoverGroup(name);
-        await addChannelToFailoverGroup(groupId, failoverMenu.channel.stream_id);
-        const groups = await listFailoverGroups();
-        setFailoverGroups(groups.map(g => ({ group_id: g.group_id, name: g.name })));
-        const membership = await getFailoverGroupForChannel(failoverMenu.channel.stream_id);
-        setFailoverGroupForChannel(membership);
-        setShowFailoverCreate(false);
-        setNewFailoverGroupName('');
-      } catch (err: any) {
-        alert(err?.message || 'Failed to create group');
-      }
-    }, [failoverMenu, newFailoverGroupName]);
 
     const getIndexFromClientY = (clientY: number): number => {
         if (!listRef.current) return 0;
@@ -179,10 +87,26 @@ export function ChannelManager({ categoryId, categoryName, sourceId, onClose, on
 
     // Load manual mappings from playlist_individual_channels
     const manualMappings = useLiveQuery(
-        () => db.playlistIndividualChannels
-            .whereRaw('playlist_id = ? AND parent_category_id = ?', [targetPlaylistId, targetParentId])
-            .sortBy('display_order'),
-        [targetPlaylistId, targetParentId],
+        async () => {
+            const current = await db.playlistIndividualChannels
+                .whereRaw('playlist_id = ? AND parent_category_id = ?', [targetPlaylistId, targetParentId])
+                .sortBy('display_order');
+            
+            if (current && current.length > 0) {
+                return current;
+            }
+
+            if (isLink && categoryLink) {
+                const targetPlaylist = categoryLink.source_id;
+                const targetParent = categoryLink.category_id;
+                return db.playlistIndividualChannels
+                    .whereRaw('playlist_id = ? AND parent_category_id = ?', [targetPlaylist, targetParent])
+                    .sortBy('display_order');
+            }
+
+            return [];
+        },
+        [targetPlaylistId, targetParentId, isLink, categoryLink],
         []
     );
 
@@ -534,104 +458,14 @@ export function ChannelManager({ categoryId, categoryName, sourceId, onClose, on
                                             )}
                                         </span>
                                     </label>
-                                    <button
-                                        className="channel-failover-btn"
-                                        onClick={e => openFailoverMenu(ch, e)}
-                                        title="Add to failover group"
-                                    >
-                                        🔄
-                                    </button>
+
                                 </div>
                             );
                         })
                     )}
                 </div>
 
-                {/* Failover context menu */}
-                {failoverMenu && (
-                    <>
-                        <div className="failover-menu-backdrop" onClick={closeFailoverMenu} />
-                        <div
-                            className="failover-menu-popover"
-                            style={{ left: failoverMenu.x, top: failoverMenu.y }}
-                        >
-                            <div className="failover-menu-header">
-                                <span className="failover-menu-title">{failoverMenu.channel.name}</span>
-                                <button className="failover-menu-close" onClick={closeFailoverMenu}>✕</button>
-                            </div>
 
-                            {failoverGroupForChannel ? (
-                                <div className="failover-menu-current">
-                                    <span>In group: <strong>{failoverGroupForChannel.groupName}</strong></span>
-                                    <span className="failover-menu-priority">
-                                        {failoverGroupForChannel.priority === 0 ? 'Primary' : `Backup ${failoverGroupForChannel.priority}`}
-                                    </span>
-                                    <button
-                                        className="failover-menu-remove"
-                                        onClick={handleRemoveFromFailoverGroup}
-                                    >
-                                        Remove from group
-                                    </button>
-                                </div>
-                            ) : (
-                                <div className="failover-menu-section">
-                                    <span className="failover-menu-label">Add to group</span>
-                                    {failoverGroups.length === 0 ? (
-                                        <div className="failover-menu-empty">No failover groups yet.</div>
-                                    ) : (
-                                        <div className="failover-menu-groups">
-                                            {failoverGroups.map(g => (
-                                                <button
-                                                    key={g.group_id}
-                                                    className="failover-menu-group-btn"
-                                                    onClick={() => handleAddToFailoverGroup(g.group_id)}
-                                                >
-                                                    {g.name}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-
-                            {!failoverGroupForChannel && (
-                                <div className="failover-menu-section">
-                                    {!showFailoverCreate ? (
-                                        <button
-                                            className="failover-menu-create-btn"
-                                            onClick={() => setShowFailoverCreate(true)}
-                                        >
-                                            + Create new group
-                                        </button>
-                                    ) : (
-                                        <div className="failover-menu-create-form">
-                                            <input
-                                                type="text"
-                                                placeholder="Group name"
-                                                value={newFailoverGroupName}
-                                                onChange={e => setNewFailoverGroupName(e.target.value)}
-                                                onKeyDown={e => e.key === 'Enter' && handleCreateFailoverGroup()}
-                                                autoFocus
-                                            />
-                                            <button
-                                                onClick={handleCreateFailoverGroup}
-                                                disabled={!newFailoverGroupName.trim()}
-                                            >
-                                                Create
-                                            </button>
-                                            <button
-                                                className="cancel-btn"
-                                                onClick={() => { setShowFailoverCreate(false); setNewFailoverGroupName(''); }}
-                                            >
-                                                Cancel
-                                            </button>
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-                        </div>
-                    </>
-                )}
 
                 <div className="channel-manager-footer">
                     <button className="cancel-btn" onClick={onClose}>Cancel</button>

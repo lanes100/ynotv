@@ -1,3 +1,8 @@
+.playlist-editor-backdrop,
+.playlist-editor-backdrop * {
+    box-sizing: border-box;
+}
+
 .playlist-editor-backdrop {
     position: fixed;
     top: 0;
@@ -1342,4 +1347,13 @@
     display: flex;
     align-items: center;
     gap: 6px;
+}
+
+.ple-tree-add-btn:disabled,
+.ple-add-indiv-btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+    background: transparent !important;
+    border-color: rgba(255, 255, 255, 0.05) !important;
+    color: rgba(255, 255, 255, 0.3) !important;
 }

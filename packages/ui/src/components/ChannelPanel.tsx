@@ -661,10 +661,45 @@ export function ChannelPanel({
   const currentCategory = categoryId
     ? categories.find((c) => c.category_id === categoryId)
     : null;
-  const categoryName = currentCategory?.category_name ?? 'All Channels';
 
-  // Get source ID from current category
-  const sourceId = currentCategory?.source_id ?? '';
+  // Resolve custom/linked category if applicable
+  const playlistCatLink = useLiveQuery(
+    async () => {
+      if (!categoryId || !categoryId.startsWith('__plcat_')) return null;
+      const linkId = parseInt(categoryId.replace('__plcat_', ''), 10);
+      if (isNaN(linkId)) return null;
+      try {
+        const link = await db.playlistCategoryLinks.get(linkId);
+        if (!link) return null;
+        
+        let name = link.custom_name;
+        if (!name) {
+          const origCat = await db.categories.get(link.category_id);
+          name = origCat?.alias || origCat?.category_name || link.category_id;
+        }
+        return {
+          ...link,
+          displayName: name
+        };
+      } catch (err) {
+        console.warn('[ChannelPanel] Failed to fetch playlist category link:', err);
+        return null;
+      }
+    },
+    [categoryId],
+    null,
+    0,
+    'playlist_category_links'
+  );
+
+  const categoryName = playlistCatLink
+    ? (playlistCatLink.displayName ?? 'Linked Category')
+    : (currentCategory?.category_name ?? 'All Channels');
+
+  // Get source ID from current category or playlist link
+  const sourceId = playlistCatLink
+    ? playlistCatLink.playlist_id
+    : (currentCategory?.source_id ?? '');
 
   // Load current EPG offset and keep it in sync with Settings
   useEffect(() => {
@@ -686,8 +721,13 @@ export function ChannelPanel({
 
   // Handle opening channel manager
   const handleManageChannels = useCallback(() => {
-    if (categoryId && sourceId && !categoryId.startsWith('__')) {
-      setManagingCategory({ id: categoryId, name: categoryName, sourceId });
+    if (categoryId && sourceId) {
+      if (categoryId.startsWith('__plcat_')) {
+        const linkId = categoryId.replace('__plcat_', '');
+        setManagingCategory({ id: `link:${linkId}`, name: categoryName, sourceId });
+      } else if (!categoryId.startsWith('__')) {
+        setManagingCategory({ id: categoryId, name: categoryName, sourceId });
+      }
     }
   }, [categoryId, categoryName, sourceId]);
 
@@ -752,7 +792,8 @@ export function ChannelPanel({
   }, []);
 
   // Check if we can manage channels (not for virtual categories like favorites/recent)
-  const canManageChannels = categoryId && !categoryId.startsWith('__') && sourceId;
+  const isPlaylistCatLink = categoryId && categoryId.startsWith('__plcat_');
+  const canManageChannels = categoryId && (!categoryId.startsWith('__') || isPlaylistCatLink) && sourceId;
 
   // Check if current category is a custom group and get its name using live query
   // This ensures the Manage button appears immediately when a custom group is created
@@ -1865,37 +1906,41 @@ export function ChannelPanel({
                     </button>
                     {!isCustomGroup && (
                       <>
-                        <button
-                          className="guide-refresh-source-btn"
-                          onClick={handleRefreshSource}
-                          disabled={syncingSourceId === sourceId}
-                          title="Refresh source data"
-                        >
-                          {syncingSourceId === sourceId ? (
-                            <>
-                              <span className="sync-spinner">⟳</span>
-                              {syncStatusMsg || 'Refreshing...'}
-                            </>
-                          ) : (
-                            <>
-                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
-                              </svg>
-                              Refresh Source
-                            </>
-                          )}
-                        </button>
-                        <button
-                          className="guide-epg-shift-btn"
-                          onClick={() => setShowEpgShiftModal(true)}
-                          title="Adjust EPG time offset"
-                        >
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <circle cx="12" cy="12" r="10"/>
-                            <polyline points="12 6 12 12 16 14"/>
-                          </svg>
-                          {currentEpgOffset === 0 ? 'EPG Shift' : `Shift ${currentEpgOffset > 0 ? '+' : ''}${currentEpgOffset}h`}
-                        </button>
+                        {!sourceId?.startsWith('playlist:') && (
+                          <button
+                            className="guide-refresh-source-btn"
+                            onClick={handleRefreshSource}
+                            disabled={syncingSourceId === sourceId}
+                            title="Refresh source data"
+                          >
+                            {syncingSourceId === sourceId ? (
+                              <>
+                                <span className="sync-spinner">⟳</span>
+                                {syncStatusMsg || 'Refreshing...'}
+                              </>
+                            ) : (
+                              <>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                  <path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
+                                </svg>
+                                Refresh Source
+                              </>
+                            )}
+                          </button>
+                        )}
+                        {!sourceId?.startsWith('playlist:') && (
+                          <button
+                            className="guide-epg-shift-btn"
+                            onClick={() => setShowEpgShiftModal(true)}
+                            title="Adjust EPG time offset"
+                          >
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <circle cx="12" cy="12" r="10"/>
+                              <polyline points="12 6 12 12 16 14"/>
+                            </svg>
+                            {currentEpgOffset === 0 ? 'EPG Shift' : `Shift ${currentEpgOffset > 0 ? '+' : ''}${currentEpgOffset}h`}
+                          </button>
+                        )}
                         <button
                           className="guide-epg-shift-btn"
                           onClick={() => setShowPlaylistListModal(true)}

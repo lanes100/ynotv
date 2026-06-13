@@ -316,9 +316,15 @@ export function useChannels(categoryId: string | null, sortOrder: 'alphabetical'
             ).toArray();
 
             // Fetch manually added individual channels for this category link
-            const manualMappings = await db.playlistIndividualChannels
+            let manualMappings = await db.playlistIndividualChannels
               .whereRaw('playlist_id = ? AND parent_category_id = ?', [link.playlist_id, `link:${link.id}`])
               .toArray();
+            if (manualMappings.length === 0) {
+              // Fallback inheritance: load mappings from target category
+              manualMappings = await db.playlistIndividualChannels
+                .whereRaw('playlist_id = ? AND parent_category_id = ?', [link.source_id, link.category_id])
+                .toArray();
+            }
             if (manualMappings.length > 0) {
               const streamIds = manualMappings.map(m => m.stream_id);
               const manualChannels = await db.channels.where('stream_id').anyOf(streamIds).toArray();

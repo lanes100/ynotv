@@ -481,7 +481,7 @@ class YnotvDatabase extends SqliteDatabase {
     // Each version block runs exactly ONCE. To add new columns in the future,
     // increment DB_VERSION and add a new case (do NOT modify existing cases).
     // ─────────────────────────────────────────────────────────────────────────
-    const DB_VERSION = 15;
+    const DB_VERSION = 17;
     const versionResult = await db.select('PRAGMA user_version') as Array<{ user_version: number }>;
     const currentVersion = versionResult[0]?.user_version ?? 0;
 
@@ -648,6 +648,143 @@ class YnotvDatabase extends SqliteDatabase {
           await db.execute('ALTER TABLE playlist_individual_channels ADD COLUMN parent_category_id TEXT');
         } catch (e) {
           console.error('[DB] Failed to add parent_category_id column:', e);
+        }
+      }
+
+      if (currentVersion < 16) {
+        // v16: Remove FOREIGN KEY constraint on stream_id from playlist_individual_channels.
+        // The FK is unreliable during import because PRAGMA foreign_keys is per-connection
+        // and the Tauri SQL plugin uses connection pooling. Making it a soft reference is
+        // consistent with how playlist_category_links works.
+        console.log('[DB] v16 migration: Removing stream_id FK from playlist_individual_channels');
+        try {
+          await db.execute('ALTER TABLE playlist_individual_channels RENAME TO old_playlist_individual_channels_v16');
+          await db.execute(`CREATE TABLE playlist_individual_channels (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            playlist_id TEXT NOT NULL,
+            stream_id TEXT NOT NULL,
+            parent_category_id TEXT,
+            display_order INTEGER DEFAULT 0,
+            added_at INTEGER NOT NULL
+          )`);
+          await db.execute('INSERT INTO playlist_individual_channels (id, playlist_id, stream_id, parent_category_id, display_order, added_at) SELECT id, playlist_id, stream_id, parent_category_id, display_order, added_at FROM old_playlist_individual_channels_v16');
+          await db.execute('DROP TABLE old_playlist_individual_channels_v16');
+          await db.execute(`CREATE INDEX IF NOT EXISTS idx_playlist_individual_channels_playlist ON playlist_individual_channels(playlist_id)`);
+          await db.execute(`CREATE UNIQUE INDEX IF NOT EXISTS idx_playlist_individual_channels_unique ON playlist_individual_channels(playlist_id, stream_id)`);
+        } catch (e) {
+          console.error('[DB] Failed to remove stream_id FK from playlist_individual_channels:', e);
+        }
+      }
+
+      if (currentVersion < 17) {
+        // v17: Remove FOREIGN KEY constraints from dvr_schedules, dvr_recordings,
+        // custom_group_channels, and failover_group_members.
+        //
+        // Root cause: tauri-plugin-sql v2 uses sqlx 0.8 which enables
+        // PRAGMA foreign_keys = ON by default on EVERY connection in the pool.
+        // Import code calls PRAGMA foreign_keys = OFF, but that only affects
+        // ONE pool connection — bulkAdd uses other connections that still have
+        // FKs enforced, causing (code: 787) FOREIGN KEY constraint failed.
+        //
+        // Removing FKs from these tables is the reliable fix. ON DELETE CASCADE
+        // is replaced by app-level cleanup (delete child rows when deleting parent).
+        console.log('[DB] v17 migration: Removing FK constraints from import-affected tables');
+
+        // dvr_schedules: remove FK on source_id → sourcesMeta, channel_id → channels
+        try {
+          await db.execute('ALTER TABLE dvr_schedules RENAME TO _old_dvr_schedules_v17');
+          await db.execute(`CREATE TABLE dvr_schedules (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            source_id TEXT NOT NULL,
+            channel_id TEXT NOT NULL,
+            channel_name TEXT NOT NULL,
+            program_title TEXT NOT NULL,
+            scheduled_start INTEGER NOT NULL,
+            scheduled_end INTEGER NOT NULL,
+            start_padding_sec INTEGER DEFAULT 60,
+            end_padding_sec INTEGER DEFAULT 300,
+            status TEXT NOT NULL DEFAULT 'scheduled',
+            series_match_title TEXT,
+            recurrence TEXT,
+            created_at INTEGER NOT NULL,
+            started_at INTEGER,
+            stream_url TEXT
+          )`);
+          await db.execute('INSERT INTO dvr_schedules (id,source_id,channel_id,channel_name,program_title,scheduled_start,scheduled_end,start_padding_sec,end_padding_sec,status,series_match_title,recurrence,created_at,started_at,stream_url) SELECT id,source_id,channel_id,channel_name,program_title,scheduled_start,scheduled_end,start_padding_sec,end_padding_sec,status,series_match_title,recurrence,created_at,started_at,NULL FROM _old_dvr_schedules_v17');
+          await db.execute('DROP TABLE _old_dvr_schedules_v17');
+          await db.execute(`CREATE INDEX IF NOT EXISTS idx_dvr_schedules_status ON dvr_schedules(status)`);
+          await db.execute(`CREATE INDEX IF NOT EXISTS idx_dvr_schedules_time ON dvr_schedules(scheduled_start, scheduled_end)`);
+          await db.execute(`CREATE INDEX IF NOT EXISTS idx_dvr_schedules_source ON dvr_schedules(source_id)`);
+        } catch (e) {
+          console.error('[DB] v17: Failed to migrate dvr_schedules:', e);
+        }
+
+        // dvr_recordings: remove FK on schedule_id → dvr_schedules
+        try {
+          await db.execute('ALTER TABLE dvr_recordings RENAME TO _old_dvr_recordings_v17');
+          await db.execute(`CREATE TABLE dvr_recordings (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            schedule_id INTEGER,
+            file_path TEXT NOT NULL UNIQUE,
+            filename TEXT NOT NULL,
+            size_bytes INTEGER,
+            channel_name TEXT NOT NULL,
+            program_title TEXT NOT NULL,
+            scheduled_start INTEGER,
+            scheduled_end INTEGER,
+            actual_start INTEGER NOT NULL,
+            actual_end INTEGER,
+            duration_sec INTEGER,
+            status TEXT NOT NULL DEFAULT 'recording',
+            error_message TEXT,
+            keep_until INTEGER,
+            auto_delete_policy TEXT DEFAULT 'space_needed',
+            created_at INTEGER NOT NULL,
+            thumbnail_path TEXT
+          )`);
+          await db.execute('INSERT INTO dvr_recordings (id,schedule_id,file_path,filename,size_bytes,channel_name,program_title,scheduled_start,scheduled_end,actual_start,actual_end,duration_sec,status,error_message,keep_until,auto_delete_policy,created_at,thumbnail_path) SELECT id,schedule_id,file_path,filename,size_bytes,channel_name,program_title,scheduled_start,scheduled_end,actual_start,actual_end,duration_sec,status,error_message,keep_until,auto_delete_policy,created_at,NULL FROM _old_dvr_recordings_v17');
+          await db.execute('DROP TABLE _old_dvr_recordings_v17');
+          await db.execute(`CREATE INDEX IF NOT EXISTS idx_dvr_recordings_schedule ON dvr_recordings(schedule_id)`);
+          await db.execute(`CREATE INDEX IF NOT EXISTS idx_dvr_recordings_status ON dvr_recordings(status)`);
+          await db.execute(`CREATE INDEX IF NOT EXISTS idx_dvr_recordings_keep ON dvr_recordings(keep_until)`);
+        } catch (e) {
+          console.error('[DB] v17: Failed to migrate dvr_recordings:', e);
+        }
+
+        // custom_group_channels: remove FK on group_id → custom_groups, stream_id → channels
+        try {
+          await db.execute('ALTER TABLE custom_group_channels RENAME TO _old_custom_group_channels_v17');
+          await db.execute(`CREATE TABLE custom_group_channels (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            group_id TEXT NOT NULL,
+            stream_id TEXT NOT NULL,
+            display_order INTEGER,
+            added_at INTEGER
+          )`);
+          await db.execute('INSERT INTO custom_group_channels SELECT * FROM _old_custom_group_channels_v17');
+          await db.execute('DROP TABLE _old_custom_group_channels_v17');
+          await db.execute(`CREATE INDEX IF NOT EXISTS idx_custom_group_channels_group ON custom_group_channels(group_id)`);
+          await db.execute(`CREATE INDEX IF NOT EXISTS idx_custom_group_channels_stream ON custom_group_channels(stream_id)`);
+          await db.execute(`CREATE INDEX IF NOT EXISTS idx_custom_group_channels_order ON custom_group_channels(group_id, display_order)`);
+        } catch (e) {
+          console.error('[DB] v17: Failed to migrate custom_group_channels:', e);
+        }
+
+        // failover_group_members: remove FK on group_id → failover_groups, stream_id → channels
+        try {
+          await db.execute('ALTER TABLE failover_group_members RENAME TO _old_failover_group_members_v17');
+          await db.execute(`CREATE TABLE failover_group_members (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            group_id TEXT NOT NULL,
+            stream_id TEXT NOT NULL UNIQUE,
+            priority INTEGER NOT NULL DEFAULT 0
+          )`);
+          await db.execute('INSERT INTO failover_group_members SELECT * FROM _old_failover_group_members_v17');
+          await db.execute('DROP TABLE _old_failover_group_members_v17');
+          await db.execute(`CREATE INDEX IF NOT EXISTS idx_failover_members_group ON failover_group_members(group_id, priority)`);
+          await db.execute(`CREATE INDEX IF NOT EXISTS idx_failover_members_stream ON failover_group_members(stream_id)`);
+        } catch (e) {
+          console.error('[DB] v17: Failed to migrate failover_group_members:', e);
         }
       }
 
@@ -885,7 +1022,7 @@ class YnotvDatabase extends SqliteDatabase {
       )`);
     await db.execute(`CREATE INDEX IF NOT EXISTS idx_metadata_source ON channelMetadata(source_id)`);
 
-    // DVR Schedules
+    // DVR Schedules (no FK constraints — see v17 migration note)
     await db.execute(`CREATE TABLE IF NOT EXISTS dvr_schedules (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       source_id TEXT NOT NULL,
@@ -901,14 +1038,13 @@ class YnotvDatabase extends SqliteDatabase {
       recurrence TEXT,
       created_at INTEGER NOT NULL,
       started_at INTEGER,
-      FOREIGN KEY (source_id) REFERENCES sourcesMeta(source_id),
-      FOREIGN KEY (channel_id) REFERENCES channels(stream_id)
+      stream_url TEXT
     )`);
     await db.execute(`CREATE INDEX IF NOT EXISTS idx_dvr_schedules_status ON dvr_schedules(status)`);
     await db.execute(`CREATE INDEX IF NOT EXISTS idx_dvr_schedules_time ON dvr_schedules(scheduled_start, scheduled_end)`);
     await db.execute(`CREATE INDEX IF NOT EXISTS idx_dvr_schedules_source ON dvr_schedules(source_id)`);
 
-    // DVR Recordings
+    // DVR Recordings (no FK constraints — see v17 migration note)
     await db.execute(`CREATE TABLE IF NOT EXISTS dvr_recordings (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       schedule_id INTEGER,
@@ -927,7 +1063,7 @@ class YnotvDatabase extends SqliteDatabase {
       keep_until INTEGER,
       auto_delete_policy TEXT DEFAULT 'space_needed',
       created_at INTEGER NOT NULL,
-      FOREIGN KEY (schedule_id) REFERENCES dvr_schedules(id) ON DELETE SET NULL
+      thumbnail_path TEXT
     )`);
     await db.execute(`CREATE INDEX IF NOT EXISTS idx_dvr_recordings_schedule ON dvr_recordings(schedule_id)`);
     await db.execute(`CREATE INDEX IF NOT EXISTS idx_dvr_recordings_status ON dvr_recordings(status)`);
@@ -971,15 +1107,13 @@ class YnotvDatabase extends SqliteDatabase {
       )`);
     await db.execute(`CREATE INDEX IF NOT EXISTS idx_custom_groups_order ON custom_groups(display_order)`);
 
-    // Custom Group Channels
+    // Custom Group Channels (no FK constraints — see v17 migration note)
     await db.execute(`CREATE TABLE IF NOT EXISTS custom_group_channels (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         group_id TEXT NOT NULL,
         stream_id TEXT NOT NULL,
         display_order INTEGER,
-        added_at INTEGER,
-        FOREIGN KEY (group_id) REFERENCES custom_groups(group_id) ON DELETE CASCADE,
-        FOREIGN KEY (stream_id) REFERENCES channels(stream_id) ON DELETE CASCADE
+        added_at INTEGER
       )`);
     await db.execute(`CREATE INDEX IF NOT EXISTS idx_custom_group_channels_group ON custom_group_channels(group_id)`);
     await db.execute(`CREATE INDEX IF NOT EXISTS idx_custom_group_channels_stream ON custom_group_channels(stream_id)`);
@@ -992,13 +1126,12 @@ class YnotvDatabase extends SqliteDatabase {
       created_at INTEGER NOT NULL
     )`);
 
+    // Failover Group Members (no FK constraints — see v17 migration note)
     await db.execute(`CREATE TABLE IF NOT EXISTS failover_group_members (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       group_id TEXT NOT NULL,
       stream_id TEXT NOT NULL UNIQUE,
-      priority INTEGER NOT NULL DEFAULT 0,
-      FOREIGN KEY (group_id) REFERENCES failover_groups(group_id) ON DELETE CASCADE,
-      FOREIGN KEY (stream_id) REFERENCES channels(stream_id) ON DELETE CASCADE
+      priority INTEGER NOT NULL DEFAULT 0
     )`);
 
     await db.execute(`CREATE INDEX IF NOT EXISTS idx_failover_members_group
@@ -1034,8 +1167,7 @@ class YnotvDatabase extends SqliteDatabase {
       stream_id TEXT NOT NULL,
       parent_category_id TEXT,
       display_order INTEGER DEFAULT 0,
-      added_at INTEGER NOT NULL,
-      FOREIGN KEY (stream_id) REFERENCES channels(stream_id) ON DELETE CASCADE
+      added_at INTEGER NOT NULL
     )`);
     await db.execute(`CREATE INDEX IF NOT EXISTS idx_playlist_individual_channels_playlist ON playlist_individual_channels(playlist_id)`);
     await db.execute(`CREATE UNIQUE INDEX IF NOT EXISTS idx_playlist_individual_channels_unique ON playlist_individual_channels(playlist_id, stream_id)`);
@@ -1206,6 +1338,23 @@ class YnotvDatabase extends SqliteDatabase {
     `);
 
     // ──────────────────────────────────────────────────────────────────────────
+    // Clean up any old backup tables from failed migrations to prevent FOREIGN KEY constraint issues on delete/clear.
+    const oldBackupTables = [
+      '_old_dvr_schedules_v17',
+      '_old_dvr_recordings_v17',
+      '_old_custom_group_channels_v17',
+      '_old_failover_group_members_v17',
+      'old_playlist_individual_channels_v16',
+      'old_playlist_individual_channels',
+      'old_playlist_category_links'
+    ];
+    for (const table of oldBackupTables) {
+      try {
+        await db.execute(`DROP TABLE IF EXISTS ${table}`);
+      } catch (e) {
+        console.warn(`[DB] Failed to drop clean-up table ${table}:`, e);
+      }
+    }
 
     console.log('[DB] Schema initialization complete');
   }

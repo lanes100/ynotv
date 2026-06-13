@@ -186,10 +186,26 @@ function CategoryBlockCard({
   // Load manual channels reactively
   const parentCategoryId = block.type === 'native' ? block.id : `link:${block.linkId}`;
   const manualMappings = useLiveQuery(
-    () => db.playlistIndividualChannels
-      .whereRaw('playlist_id = ? AND parent_category_id = ?', [playlistId, parentCategoryId])
-      .sortBy('display_order'),
-    [playlistId, parentCategoryId],
+    async () => {
+      const current = await db.playlistIndividualChannels
+        .whereRaw('playlist_id = ? AND parent_category_id = ?', [playlistId, parentCategoryId])
+        .sortBy('display_order');
+      
+      if (current && current.length > 0) {
+        return current;
+      }
+
+      if (block.type === 'link' && block.link) {
+        const targetPlaylist = block.link.source_id;
+        const targetParent = block.link.category_id;
+        return db.playlistIndividualChannels
+          .whereRaw('playlist_id = ? AND parent_category_id = ?', [targetPlaylist, targetParent])
+          .sortBy('display_order');
+      }
+
+      return [];
+    },
+    [playlistId, parentCategoryId, block],
     []
   );
 
@@ -506,18 +522,42 @@ async function sortChannelsLikeLiveTV(sourceId: string, categoryId: string, chan
     }
   }
 
-  const manualMappings = await db.playlistIndividualChannels
+  let manualMappings = await db.playlistIndividualChannels
     .whereRaw('playlist_id = ? AND parent_category_id = ?', [targetPlaylistId, targetParentId])
     .toArray();
 
+  // Fallback inheritance for linked category if no custom mappings exist
+  if (manualMappings.length === 0 && categoryId.startsWith('link:')) {
+    const linkId = parseInt(categoryId.replace('link:', ''), 10);
+    const categoryLink = await db.playlistCategoryLinks.get(linkId);
+    if (categoryLink) {
+      const targetPlaylist = categoryLink.source_id;
+      const targetParent = categoryLink.category_id;
+      manualMappings = await db.playlistIndividualChannels
+        .whereRaw('playlist_id = ? AND parent_category_id = ?', [targetPlaylist, targetParent])
+        .toArray();
+    }
+  }
+
+  let resolvedChannels = [...channels];
+
   if (manualMappings.length > 0) {
-    const manualMap = new Map(manualMappings.map(m => [m.stream_id, m.display_order]));
     const manualStreamIds = new Set(manualMappings.map(m => m.stream_id));
-    const orderedManual = channels
+    const existingStreamIds = new Set(channels.map(c => c.stream_id));
+
+    // Resolve any manual channels that are missing from the input dynamic channels array
+    const missingIds = Array.from(manualStreamIds).filter(id => !existingStreamIds.has(id));
+    if (missingIds.length > 0) {
+      const missingChans = await db.channels.where('stream_id').anyOf(missingIds).toArray();
+      resolvedChannels.push(...missingChans);
+    }
+
+    const manualMap = new Map(manualMappings.map(m => [m.stream_id, m.display_order]));
+    const orderedManual = resolvedChannels
       .filter(ch => manualStreamIds.has(ch.stream_id))
       .sort((a, b) => (manualMap.get(a.stream_id) ?? 0) - (manualMap.get(b.stream_id) ?? 0));
     
-    const remaining = channels.filter(ch => !manualStreamIds.has(ch.stream_id));
+    const remaining = resolvedChannels.filter(ch => !manualStreamIds.has(ch.stream_id));
     remaining.sort((a, b) => {
       if (a.display_order != null && b.display_order != null) return a.display_order - b.display_order;
       if (a.display_order != null) return -1;
@@ -531,7 +571,7 @@ async function sortChannelsLikeLiveTV(sourceId: string, categoryId: string, chan
   }
 
   // No manual mappings - sort by display_order, then provider_order, then name
-  const sorted = [...channels];
+  const sorted = [...resolvedChannels];
   sorted.sort((a, b) => {
     if (a.display_order != null && b.display_order != null) return a.display_order - b.display_order;
     if (a.display_order != null) return -1;
@@ -928,11 +968,11 @@ export function PlaylistEditorModal({ playlistId, playlistName, onClose }: Playl
   };
 
   const handleAddChannel = async (streamId: string) => {
-    if (markedCategoryId) {
-      await addChannelToCategory(playlistId, markedCategoryId, streamId);
-    } else {
-      await addIndividualChannelToPlaylist(playlistId, streamId);
+    if (!markedCategoryId) {
+      showError('Target Category Required', 'Please select a target category in the right panel first.');
+      return;
     }
+    await addChannelToCategory(playlistId, markedCategoryId, streamId);
   };
 
   // Right panel drag-reorder categories
@@ -1220,7 +1260,8 @@ export function PlaylistEditorModal({ playlistId, playlistName, onClose }: Playl
                                               <button
                                                 className="ple-tree-add-btn"
                                                 onClick={() => handleAddChannel(ch.stream_id)}
-                                                title={markedCategoryId ? "Add channel to target category" : "Add channel to playlist"}
+                                                disabled={!markedCategoryId}
+                                                title={markedCategoryId ? "Add channel to target category" : "Please select a target category first"}
                                               >
                                                 <PlusIcon size={14} />
                                               </button>
@@ -1329,7 +1370,8 @@ export function PlaylistEditorModal({ playlistId, playlistName, onClose }: Playl
                                                   <button
                                                     className="ple-add-indiv-btn"
                                                     onClick={() => handleAddChannel(ch.stream_id)}
-                                                    title={markedCategoryId ? "Add channel to target category" : "Add channel"}
+                                                    disabled={!markedCategoryId}
+                                                    title={markedCategoryId ? "Add channel to target category" : "Please select a target category first"}
                                                   >
                                                     <PlusIcon size={14} />
                                                   </button>

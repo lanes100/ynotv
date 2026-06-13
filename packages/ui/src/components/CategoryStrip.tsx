@@ -246,9 +246,14 @@ function PlaylistCategoryLinkItem({
         ).toArray();
         count += rows.length;
       }
-      const manualCount = await db.playlistIndividualChannels
+      let manualCount = await db.playlistIndividualChannels
         .whereRaw('playlist_id = ? AND parent_category_id = ?', [link.playlist_id, `link:${link.id}`])
         .count();
+      if (manualCount === 0) {
+        manualCount = await db.playlistIndividualChannels
+          .whereRaw('playlist_id = ? AND parent_category_id = ?', [link.source_id, link.category_id])
+          .count();
+      }
       return count + manualCount;
     },
     [link.source_id, link.category_id, link.playlist_id, link.id, channelCount],
@@ -566,6 +571,7 @@ export function CategoryStrip({ selectedCategoryId, onSelectCategory, visible, o
   const manualCategoryChannelCounts = useLiveQuery(
     async () => {
       const all = await db.playlistIndividualChannels.toArray();
+      const links = await db.playlistCategoryLinks.toArray();
       const counts = new Map<string, number>();
       for (const item of all) {
         if (item.parent_category_id) {
@@ -573,12 +579,21 @@ export function CategoryStrip({ selectedCategoryId, onSelectCategory, visible, o
           counts.set(key, (counts.get(key) || 0) + 1);
         }
       }
+      // Add inherited counts for links that do not have custom overrides
+      for (const link of links) {
+        const linkKey = `${link.playlist_id}:link:${link.id}`;
+        if (!counts.has(linkKey) || counts.get(linkKey) === 0) {
+          const targetKey = `${link.source_id}:${link.category_id}`;
+          const targetCount = counts.get(targetKey) || 0;
+          if (targetCount > 0) {
+            counts.set(linkKey, targetCount);
+          }
+        }
+      }
       return counts;
     },
     [],
-    new Map<string, number>(),
-    0,
-    'playlist_individual_channels'
+    new Map<string, number>()
   );
 
   interface SidebarSourceItem {
