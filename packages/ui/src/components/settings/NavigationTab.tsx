@@ -21,6 +21,8 @@ const NAV_ITEMS = [
   { id: 'dvr', label: 'DVR' },
   { id: 'sports', label: 'Sports' },
   { id: 'stremio', label: 'Strem' },
+  { id: 'calendar', label: 'Calendar' },
+  { id: 'cast', label: 'Cast' },
 ];
 
 export function NavigationTab({

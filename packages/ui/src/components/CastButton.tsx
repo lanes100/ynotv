@@ -24,9 +24,10 @@ interface CastStatus {
 interface CastButtonProps {
   castEnabled: boolean;
   onCastCurrentStream?: () => void;
+  onCastEnabledChange?: (enabled: boolean) => void;
 }
 
-export function CastButton({ castEnabled, onCastCurrentStream }: CastButtonProps) {
+export function CastButton({ castEnabled, onCastCurrentStream, onCastEnabledChange }: CastButtonProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [devices, setDevices] = useState<DiscoveredDevice[]>([]);
   const [status, setStatus] = useState<CastStatus>({
@@ -169,7 +170,15 @@ export function CastButton({ castEnabled, onCastCurrentStream }: CastButtonProps
                 </svg>
               </div>
               <h3>Google Cast Disabled</h3>
-              <p>Enable Google Cast in Settings to cast content to your devices.</p>
+              <p>Enable Google Cast to cast content to your devices.</p>
+              <div className="cast-enable-dialog-warning">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                  <line x1="12" y1="9" x2="12" y2="13" />
+                  <line x1="12" y1="17" x2="12.01" y2="17" />
+                </svg>
+                <span>Enabling may prompt the OS for local network and firewall permissions to discover Cast devices on your network.</span>
+              </div>
               <div className="cast-enable-dialog-actions">
                 <button
                   className="cast-enable-dialog-cancel"
@@ -178,14 +187,13 @@ export function CastButton({ castEnabled, onCastCurrentStream }: CastButtonProps
                   Cancel
                 </button>
                 <button
-                  className="cast-enable-dialog-settings"
+                  className="cast-enable-dialog-confirm"
                   onClick={() => {
                     setShowEnableDialog(false);
-                    const event = new CustomEvent('open-settings', { detail: { tab: 'playback', subTab: 'cast' } });
-                    window.dispatchEvent(event);
+                    onCastEnabledChange?.(true);
                   }}
                 >
-                  Open Settings
+                  Enable
                 </button>
               </div>
             </div>
