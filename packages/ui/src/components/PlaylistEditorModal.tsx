@@ -12,9 +12,9 @@ import {
   addMultipleIndividualChannelsToPlaylist,
   addChannelToCategory,
   removeChannelFromCategory,
-  reorderCategoryChannels,
   addCustomCategoryToPlaylist,
 } from '../services/playlist-editor';
+import { useModal } from './Modal';
 import './PlaylistEditorModal.css';
 
 interface PlaylistEditorModalProps {
@@ -43,6 +43,66 @@ interface BrowseSource {
 const EyeIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="14" height="14" fill="currentColor" style={{ display: 'block' }}>
     <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
+  </svg>
+);
+
+const PlaylistIcon = ({ size = 16 }: { size?: number }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width={size} height={size} fill="currentColor" style={{ display: 'inline-block', verticalAlign: 'middle' }}>
+    <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 10H7v-2h10v2zm0-4H7V7h10v2zm0 8H7v-2h10v2z"/>
+  </svg>
+);
+
+const EditIcon = ({ size = 14 }: { size?: number }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width={size} height={size} fill="currentColor" style={{ display: 'inline-block', verticalAlign: 'middle' }}>
+    <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+  </svg>
+);
+
+const FolderIcon = ({ size = 16 }: { size?: number }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width={size} height={size} fill="currentColor" style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '6px' }}>
+    <path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/>
+  </svg>
+);
+
+const TargetIcon = ({ size = 14 }: { size?: number }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width={size} height={size} fill="currentColor" style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '6px' }}>
+    <path d="M12 2C6.49 2 2 6.49 2 12s4.49 10 10 10 10-4.49 10-10S17.51 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-13c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5zm0 8c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3z"/>
+  </svg>
+);
+
+const LockIcon = ({ size = 12 }: { size?: number }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width={size} height={size} fill="currentColor" style={{ display: 'inline-block', verticalAlign: 'middle' }}>
+    <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/>
+  </svg>
+);
+
+const TvIcon = ({ size = 16, style }: { size?: number; style?: React.CSSProperties }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width={size} height={size} fill="currentColor" style={{ display: 'block', ...style }}>
+    <path d="M21 3H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h5v2h8v-2h5c1.1 0 1.99-.9 1.99-2L23 5c0-1.1-.9-2-2-2zm0 14H3V5h18v12z"/>
+  </svg>
+);
+
+const PlusIcon = ({ size = 14 }: { size?: number }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width={size} height={size} fill="currentColor" style={{ display: 'inline-block', verticalAlign: 'middle' }}>
+    <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+  </svg>
+);
+
+const ExportIcon = ({ size = 14 }: { size?: number }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width={size} height={size} fill="currentColor" style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '6px' }}>
+    <path d="M19 12v7H5v-7H3v7c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-7h-2zm-6-4.67V17h-2V7.33L8.41 9.92 7 8.5l5-5 5 5-1.41 1.42L13 7.33z"/>
+  </svg>
+);
+
+const MovieIcon = ({ size = 16 }: { size?: number }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width={size} height={size} fill="currentColor" style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '6px' }}>
+    <path d="M18 4l2 4h-3l-2-4h-2l2 4h-3l-2-4H8l2 4H7L5 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4h-4z"/>
+  </svg>
+);
+
+const CloseIcon = ({ size = 12 }: { size?: number }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width={size} height={size} fill="currentColor" style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '4px' }}>
+    <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
   </svg>
 );
 
@@ -84,25 +144,7 @@ function CategoryBlockCard({
   const [renamingName, setRenamingName] = useState(block.name);
   const renameInputRef = useRef<HTMLInputElement>(null);
 
-  // Filter words local state
-  const [filterWordsText, setFilterWordsText] = useState<string>(
-    block.type === 'native' ? (block.category.filter_words || []).join(', ') : ''
-  );
 
-  useEffect(() => {
-    if (block.type === 'native') {
-      setFilterWordsText((block.category.filter_words || []).join(', '));
-    }
-  }, [block.category?.filter_words, block.type]);
-
-  const handleSaveFilterWords = async () => {
-    if (block.type !== 'native') return;
-    const words = filterWordsText
-      .split(',')
-      .map((w: string) => w.trim())
-      .filter(Boolean);
-    await db.categories.update(block.category.category_id, { filter_words: words });
-  };
 
   // Toggle category enabled state in right panel
   const toggleCategoryEnabled = async () => {
@@ -186,15 +228,22 @@ function CategoryBlockCard({
   }, [dynamicChannels, manualMappings, manualChannels]);
 
   const startRename = () => {
-    if (block.type !== 'link') return;
-    setRenamingName(block.link.custom_name || block.name);
+    if (block.type === 'link') {
+      setRenamingName(block.link.custom_name || block.name);
+    } else {
+      setRenamingName(block.category.alias || block.category.category_name);
+    }
     setIsRenaming(true);
     setTimeout(() => renameInputRef.current?.focus(), 50);
   };
 
   const handleSaveRename = async () => {
     const trimmed = renamingName.trim();
-    await renameCategoryLink(block.linkId, trimmed || null);
+    if (block.type === 'link') {
+      await renameCategoryLink(block.linkId, trimmed || null);
+    } else {
+      await db.categories.update(block.category.category_id, { alias: trimmed || undefined });
+    }
     setIsRenaming(false);
   };
 
@@ -317,14 +366,17 @@ function CategoryBlockCard({
           ) : (
             <div className="ple-block-title-row">
               <span
-                className={`ple-block-title${block.type === 'link' ? ' link' : ''}`}
+                className="ple-block-title"
                 onClick={startRename}
-                title={block.type === 'link' ? "Click to rename category block" : undefined}
+                title="Click to rename category"
               >
-                📂 {block.name} {block.type === 'link' && block.link.source_id !== 'custom' && '✏️'}
+                <FolderIcon /> {block.name} <EditIcon />
               </span>
               {block.type === 'link' && block.link.custom_name && block.link.source_id !== 'custom' && (
                 <span className="ple-original-title-hint">(orig: {block.link.category_id})</span>
+              )}
+              {block.type === 'native' && block.category.alias && (
+                <span className="ple-original-title-hint">(orig: {block.category.category_name})</span>
               )}
             </div>
           )}
@@ -355,7 +407,7 @@ function CategoryBlockCard({
           }}
           title={isMarked ? "Active target category for channel additions (Click to unmark)" : "Mark as target category for channel additions"}
         >
-          {isMarked ? '🎯 Target Active' : '🎯 Target'}
+          <TargetIcon size={12} /> {isMarked ? 'Target Active' : 'Target'}
         </button>
 
         {block.type === 'link' && onRemove && (
@@ -365,25 +417,6 @@ function CategoryBlockCard({
 
       {isExpanded && (
         <div className="ple-block-expanded-content">
-          {block.type === 'native' && (
-            <div className="ple-filter-words-section">
-              <span className="ple-filter-words-label">Filter Words:</span>
-              <input
-                type="text"
-                className="ple-filter-words-input"
-                placeholder="e.g. 4k, fhd, 50fps (comma-separated)"
-                value={filterWordsText}
-                onChange={e => setFilterWordsText(e.target.value)}
-                onBlur={handleSaveFilterWords}
-                onKeyDown={e => {
-                  if (e.key === 'Enter') {
-                    handleSaveFilterWords();
-                    (e.target as HTMLInputElement).blur();
-                  }
-                }}
-              />
-            </div>
-          )}
 
           <div className="ple-nested-section">
             {combinedChannels.length === 0 ? (
@@ -423,7 +456,7 @@ function CategoryBlockCard({
                       {ch.stream_icon ? (
                         <img src={ch.stream_icon} className="ple-nested-ch-logo" alt="" />
                       ) : (
-                        <span className="ple-nested-ch-logo-placeholder">📺</span>
+                        <span className="ple-nested-ch-logo-placeholder"><TvIcon size={14} style={{ opacity: 0.6 }} /></span>
                       )}
                       <span className="ple-nested-ch-name">
                         {ch.name} {!ch.isManualAddition && <span className="ple-dynamic-badge">dynamic</span>}
@@ -447,7 +480,7 @@ function CategoryBlockCard({
                           title="Remove custom channel"
                         >✕</button>
                       ) : (
-                        <span className="ple-read-only-badge" title="Dynamic channel (read-only)">🔒</span>
+                        <span className="ple-read-only-badge" title="Dynamic channel (read-only)"><LockIcon /></span>
                       )}
                     </div>
                   );
@@ -512,6 +545,7 @@ async function sortChannelsLikeLiveTV(sourceId: string, categoryId: string, chan
 }
 
 export function PlaylistEditorModal({ playlistId, playlistName, onClose }: PlaylistEditorModalProps) {
+  const { showPrompt, showSuccess, showError, ModalComponent } = useModal();
   const [sources, setSources] = useState<BrowseSource[]>([]);
   const [expandedSources, setExpandedSources] = useState<Record<string, boolean>>({});
   const [sourceCategories, setSourceCategories] = useState<Record<string, StoredCategory[]>>({});
@@ -662,7 +696,7 @@ export function PlaylistEditorModal({ playlistId, playlistName, onClose }: Playl
         .filter(p => p.playlist_id !== playlistId)
         .map(p => ({
           id: `playlist:${p.playlist_id}`,
-          name: `📋 Playlist: ${p.name}`,
+          name: p.name,
           isCustomPlaylist: true
         }));
 
@@ -1022,11 +1056,11 @@ export function PlaylistEditorModal({ playlistId, playlistName, onClose }: Playl
       const content = await generateM3uForPlaylist(playlistId);
       const result = await window.storage.saveM3UFile(content, currentName);
       if (result.success) {
-        alert('Playlist exported successfully!');
+        showSuccess('Export Playlist', 'Playlist exported successfully!');
       }
     } catch (e) {
       console.error('Failed to export playlist:', e);
-      alert('Export failed: ' + String(e));
+      showError('Export Playlist', 'Export failed: ' + String(e));
     }
   };
 
@@ -1038,7 +1072,7 @@ export function PlaylistEditorModal({ playlistId, playlistName, onClose }: Playl
         {/* Header */}
         <div className="playlist-editor-header">
           <div className="ple-header-left">
-            <span className="ple-header-icon">📋</span>
+            <span className="ple-header-icon"><PlaylistIcon size={20} /></span>
             {isEditingName && isCustomPlaylist ? (
               <input
                 ref={nameInputRef}
@@ -1060,7 +1094,7 @@ export function PlaylistEditorModal({ playlistId, playlistName, onClose }: Playl
                 onClick={() => isCustomPlaylist && setIsEditingName(true)}
                 title={isCustomPlaylist ? "Click to rename" : undefined}
               >
-                {currentName} {isCustomPlaylist && '✏️'}
+                {currentName} {isCustomPlaylist && <EditIcon />}
               </h2>
             )}
           </div>
@@ -1073,8 +1107,8 @@ export function PlaylistEditorModal({ playlistId, playlistName, onClose }: Playl
               />
               Show Hidden
             </label>
-            <button className="ple-export-btn" onClick={handleExport}>📤 Export .m3u</button>
-            <button className="ple-close-btn" onClick={onClose}>✕ Close</button>
+            <button className="ple-export-btn" onClick={handleExport}><ExportIcon />Export .m3u</button>
+            <button className="ple-close-btn" onClick={onClose}><CloseIcon />Close</button>
           </div>
         </div>
 
@@ -1168,7 +1202,7 @@ export function PlaylistEditorModal({ playlistId, playlistName, onClose }: Playl
                                               {ch.stream_icon ? (
                                                 <img src={ch.stream_icon} className="ple-tree-ch-logo" alt="" />
                                               ) : (
-                                                <span className="ple-tree-ch-logo-placeholder">📺</span>
+                                                <span className="ple-tree-ch-logo-placeholder"><TvIcon size={14} style={{ opacity: 0.6 }} /></span>
                                               )}
                                               <span className="ple-tree-ch-name">{ch.name}</span>
                                             </div>
@@ -1188,7 +1222,7 @@ export function PlaylistEditorModal({ playlistId, playlistName, onClose }: Playl
                                                 onClick={() => handleAddChannel(ch.stream_id)}
                                                 title={markedCategoryId ? "Add channel to target category" : "Add channel to playlist"}
                                               >
-                                                ＋
+                                                <PlusIcon size={14} />
                                               </button>
                                             </div>
                                           </div>
@@ -1216,7 +1250,8 @@ export function PlaylistEditorModal({ playlistId, playlistName, onClose }: Playl
                       <div key={source.id} className={`ple-source-block${isExpanded ? ' expanded' : ''}`}>
                         <button className="ple-source-header" onClick={() => handleToggleSource(source.id)}>
                           <span className="ple-chevron">{isExpanded ? '▼' : '▶'}</span>
-                          <span className="ple-source-name">{source.name}</span>
+                          {source.isCustomPlaylist ? <PlaylistIcon size={14} /> : <FolderIcon size={14} />}
+                          <span className="ple-source-name" style={{ marginLeft: '6px' }}>{source.name}</span>
                         </button>
 
                         {isExpanded && (
@@ -1262,7 +1297,7 @@ export function PlaylistEditorModal({ playlistId, playlistName, onClose }: Playl
                                           onClick={() => handleAddCategory(source.id, cat.category_id)}
                                           title="Add category link to playlist"
                                         >
-                                          ＋ Category
+                                          <PlusIcon size={12} /> Category
                                         </button>
                                       </div>
                                     </div>
@@ -1296,7 +1331,7 @@ export function PlaylistEditorModal({ playlistId, playlistName, onClose }: Playl
                                                     onClick={() => handleAddChannel(ch.stream_id)}
                                                     title={markedCategoryId ? "Add channel to target category" : "Add channel"}
                                                   >
-                                                    ＋
+                                                    <PlusIcon size={14} />
                                                   </button>
                                                 </div>
                                               </div>
@@ -1326,23 +1361,30 @@ export function PlaylistEditorModal({ playlistId, playlistName, onClose }: Playl
                 <h3>Playlist Contents</h3>
                 <button
                   className="ple-add-custom-cat-btn"
-                  onClick={async () => {
-                    const name = window.prompt("Enter custom category name:");
-                    if (name && name.trim()) {
-                      await addCustomCategoryToPlaylist(playlistId, name.trim());
-                    }
+                  onClick={() => {
+                    showPrompt(
+                      'Create Custom Category',
+                      'Enter custom category name:',
+                      async (name) => {
+                        if (name && name.trim()) {
+                          await addCustomCategoryToPlaylist(playlistId, name.trim());
+                        }
+                      },
+                      undefined,
+                      'Category name...'
+                    );
                   }}
                 >
-                  ＋ Custom Category
+                  <PlusIcon size={12} /> Custom Category
                 </button>
               </div>
-              <span className="ple-meta-hint">Drag handle ⋮⋮ to reorder. Click 🎯 Target to mark a category for left-panel additions.</span>
+              <span className="ple-meta-hint">Drag handle ⋮⋮ to reorder. Click Target to mark a category for left-panel additions.</span>
             </div>
 
             <div className="ple-panel-content">
               {(!combinedBlocks || combinedBlocks.length === 0) && (!individualChannels || individualChannels.length === 0) ? (
                 <div className="ple-right-empty">
-                  <span className="ple-empty-icon">📋</span>
+                  <span className="ple-empty-icon"><PlaylistIcon size={48} /></span>
                   <h4>Playlist is Empty</h4>
                   <p>Add source categories or individual channels from the left panel to build your custom playlist.</p>
                 </div>
@@ -1387,7 +1429,7 @@ export function PlaylistEditorModal({ playlistId, playlistName, onClose }: Playl
                   {individualChannels && individualChannels.length > 0 && visibleIndivCount > 0 && (
                     <div className="ple-indiv-section">
                       <div className="ple-indiv-header">
-                        <h4>🎬 Individual Channels ({visibleIndivCount})</h4>
+                        <h4><MovieIcon size={16} /> Individual Channels ({visibleIndivCount})</h4>
                       </div>
 
                       <div
@@ -1423,7 +1465,7 @@ export function PlaylistEditorModal({ playlistId, playlistName, onClose }: Playl
                                 {ch.stream_icon ? (
                                   <img src={ch.stream_icon} className="ple-indiv-ch-logo" alt="" />
                                 ) : (
-                                  <span className="ple-indiv-ch-logo-placeholder">📺</span>
+                                  <span className="ple-indiv-ch-logo-placeholder"><TvIcon size={14} style={{ opacity: 0.6 }} /></span>
                                 )}
                                 <div className="ple-indiv-ch-meta">
                                   <span className="ple-indiv-ch-name">{ch.name}</span>
@@ -1461,6 +1503,7 @@ export function PlaylistEditorModal({ playlistId, playlistName, onClose }: Playl
           </div>
         </div>
       </div>
+      <ModalComponent />
     </div>
   );
 }

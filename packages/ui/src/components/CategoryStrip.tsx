@@ -1268,29 +1268,31 @@ export function CategoryStrip({ selectedCategoryId, onSelectCategory, visible, o
       {/* Playlist Context Menu */}
       {playlistContextMenu && (
         <div
-          className="context-menu"
+          className="program-context-menu"
           style={{
             position: 'fixed',
-            top: playlistContextMenu.y,
             left: playlistContextMenu.x,
-            zIndex: 2000,
-            background: 'var(--bg-secondary)',
-            border: '1px solid var(--surface-border)',
-            borderRadius: '6px',
-            padding: '4px',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.5)'
+            top: playlistContextMenu.y + 220 > window.innerHeight 
+              ? Math.max(10, playlistContextMenu.y - 220) 
+              : playlistContextMenu.y,
+            zIndex: 10000,
+            minWidth: '240px'
           }}
         >
+          <div className="context-menu-header">
+            {playlistContextMenu.playlistName}
+          </div>
           <div
+            className="context-menu-item"
             onClick={() => {
               setEditingPlaylist({ id: playlistContextMenu.playlistId, name: playlistContextMenu.playlistName });
               setPlaylistContextMenu(null);
             }}
-            style={{ padding: '8px 12px', cursor: 'pointer', color: 'var(--text-primary)' }}
           >
             ✏️ Edit Contents
           </div>
           <div
+            className="context-menu-item"
             onClick={async () => {
               try {
                 const { generateM3uForPlaylist } = await import('../services/playlist-export');
@@ -1305,11 +1307,11 @@ export function CategoryStrip({ selectedCategoryId, onSelectCategory, visible, o
               }
               setPlaylistContextMenu(null);
             }}
-            style={{ padding: '8px 12px', cursor: 'pointer', color: 'var(--text-primary)' }}
           >
             📤 Export .m3u
           </div>
           <div
+            className="context-menu-item"
             onClick={() => {
               showPrompt(
                 'Rename Playlist',
@@ -1324,16 +1326,16 @@ export function CategoryStrip({ selectedCategoryId, onSelectCategory, visible, o
               );
               setPlaylistContextMenu(null);
             }}
-            style={{ padding: '8px 12px', cursor: 'pointer', color: 'var(--text-primary)' }}
           >
             📝 Rename
           </div>
           <div
+            className="context-menu-item"
             onClick={() => {
               handleDeletePlaylist(playlistContextMenu.playlistId);
               setPlaylistContextMenu(null);
             }}
-            style={{ padding: '8px 12px', cursor: 'pointer', color: 'var(--status-live)' }}
+            style={{ color: 'var(--status-live)' }}
           >
             🗑️ Delete
           </div>

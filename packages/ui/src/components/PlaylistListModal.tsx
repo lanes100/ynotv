@@ -9,13 +9,57 @@ import {
   revertRealSourceToDefault,
 } from '../services/playlist-editor';
 import { PlaylistEditorModal } from './PlaylistEditorModal';
+import { useModal } from './Modal';
 import './PlaylistListModal.css';
+
+const PlaylistIcon = ({ size = 16 }: { size?: number }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width={size} height={size} fill="currentColor" style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '6px' }}>
+    <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 10H7v-2h10v2zm0-4H7V7h10v2zm0 8H7v-2h10v2z"/>
+  </svg>
+);
+
+const PlusIcon = ({ size = 14 }: { size?: number }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width={size} height={size} fill="currentColor" style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '4px' }}>
+    <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+  </svg>
+);
+
+const EditIcon = ({ size = 12 }: { size?: number }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width={size} height={size} fill="currentColor" style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '4px' }}>
+    <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+  </svg>
+);
+
+const RevertIcon = ({ size = 12 }: { size?: number }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width={size} height={size} fill="currentColor" style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '4px' }}>
+    <path d="M12 5V2L8 6l4 4V7c3.31 0 6 2.69 6 6 0 2.97-2.17 5.43-5 5.91v2.02c3.95-.49 7-3.85 7-8.22 0-4.42-3.58-8-8-8zm-6 8c0-2.97 2.17-5.43 5-5.91V5.07c-3.95.49-7 3.85-7 8.22 0 4.42 3.58 8 8 8v-3c-3.31 0-6-2.69-6-6z"/>
+  </svg>
+);
+
+const RenameIcon = ({ size = 12 }: { size?: number }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width={size} height={size} fill="currentColor" style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '4px' }}>
+    <path d="M3 10h11v2H3zm0-4h11v2H3zm0 8h7v2H3zm12.01-1.89l.71-.71a.996.996 0 0 1 1.41 0l.71.71c.39.39.39 1.02 0 1.41l-.71.71-2.12-2.12zm-.71.71L9 14.25V17h2.75l5.37-5.37-2.13-2.12z"/>
+  </svg>
+);
+
+const ExportIcon = ({ size = 12 }: { size?: number }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width={size} height={size} fill="currentColor" style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '4px' }}>
+    <path d="M19 12v7H5v-7H3v7c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-7h-2zm-6-4.67V17h-2V7.33L8.41 9.92 7 8.5l5-5 5 5-1.41 1.42L13 7.33z"/>
+  </svg>
+);
+
+const TrashIcon = ({ size = 14 }: { size?: number }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width={size} height={size} fill="currentColor" style={{ display: 'inline-block', verticalAlign: 'middle' }}>
+    <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+  </svg>
+);
 
 interface PlaylistListModalProps {
   onClose: () => void;
 }
 
 export function PlaylistListModal({ onClose }: PlaylistListModalProps) {
+  const { showConfirm, showError, ModalComponent } = useModal();
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState('');
@@ -241,17 +285,19 @@ export function PlaylistListModal({ onClose }: PlaylistListModalProps) {
     }
   };
 
-  const handleRevert = async (sourceId: string, sourceName: string) => {
-    const confirm = window.confirm(
-      `Are you sure you want to revert "${sourceName}" to its default state? This will remove all custom-added categories/channels and reset category ordering.`
+  const handleRevert = (sourceId: string, sourceName: string) => {
+    showConfirm(
+      'Revert Source to Default',
+      `Are you sure you want to revert "${sourceName}" to its default state? This will remove all custom-added categories/channels and reset category ordering.`,
+      async () => {
+        try {
+          await revertRealSourceToDefault(sourceId);
+        } catch (e) {
+          console.error('Failed to revert source to default:', e);
+          showError('Revert Source', 'Failed to revert: ' + String(e));
+        }
+      }
     );
-    if (!confirm) return;
-    try {
-      await revertRealSourceToDefault(sourceId);
-    } catch (e) {
-      console.error('Failed to revert source to default:', e);
-      alert('Failed to revert: ' + String(e));
-    }
   };
 
   const startEdit = (playlist: CustomPlaylist) => {
@@ -304,7 +350,7 @@ export function PlaylistListModal({ onClose }: PlaylistListModalProps) {
       <div className="playlist-list-overlay" onClick={onClose}>
         <div className="playlist-list-modal" onClick={e => e.stopPropagation()}>
           <div className="playlist-list-header">
-            <h2>📋 Custom Playlists</h2>
+            <h2><PlaylistIcon size={18} />Custom Playlists</h2>
             <button className="close-btn" onClick={onClose}>✕</button>
           </div>
 
@@ -312,7 +358,7 @@ export function PlaylistListModal({ onClose }: PlaylistListModalProps) {
             <div className="playlist-list-toolbar">
               {!creating ? (
                 <button className="pll-create-btn" onClick={() => setCreating(true)}>
-                  <span>＋</span> Create New Playlist
+                  <PlusIcon size={12} /> Create New Playlist
                 </button>
               ) : (
                 <div className="pll-create-row">
@@ -387,14 +433,14 @@ export function PlaylistListModal({ onClose }: PlaylistListModalProps) {
                               onClick={() => setEditingPlaylist({ id: item.id, name: item.name })}
                               title="Edit Contents"
                             >
-                              ✏️ Content
+                              <EditIcon size={12} />Content
                             </button>
                             <button
                               className="pll-action-btn pll-danger"
                               onClick={() => handleRevert(item.id, item.name)}
                               title="Revert to Default"
                             >
-                              🔄 Revert
+                              <RevertIcon size={12} />Revert
                             </button>
                             <span className="pll-readonly-label">Manage in Settings</span>
                           </div>
@@ -442,16 +488,16 @@ export function PlaylistListModal({ onClose }: PlaylistListModalProps) {
                             </div>
 
                             <div className="pll-item-actions">
-                              <button className="pll-action-btn" onClick={() => setEditingPlaylist({ id: plId, name: playlist.name })} title="Edit Contents">✏️ Content</button>
-                              <button className="pll-action-btn" onClick={() => startEdit(playlist)} title="Rename">📝 Rename</button>
-                              <button className="pll-action-btn" onClick={() => handleExport(playlist)} title="Export .m3u">📤 Export</button>
+                              <button className="pll-action-btn" onClick={() => setEditingPlaylist({ id: plId, name: playlist.name })} title="Edit Contents"><EditIcon size={12} />Content</button>
+                              <button className="pll-action-btn" onClick={() => startEdit(playlist)} title="Rename"><RenameIcon size={12} />Rename</button>
+                              <button className="pll-action-btn" onClick={() => handleExport(playlist)} title="Export .m3u"><ExportIcon size={12} />Export</button>
                               {deleteConfirmId === plId ? (
                                 <>
                                   <button className="pll-action-btn pll-confirm" onClick={() => handleDelete(plId)} title="Confirm delete">✓</button>
                                   <button className="pll-action-btn" onClick={() => setDeleteConfirmId(null)} title="Cancel">✕</button>
                                 </>
                               ) : (
-                                <button className="pll-action-btn pll-danger" onClick={() => setDeleteConfirmId(plId)} title="Delete">🗑️</button>
+                                <button className="pll-action-btn pll-danger" onClick={() => setDeleteConfirmId(plId)} title="Delete"><TrashIcon size={14} /></button>
                               )}
                             </div>
                           </div>
@@ -478,6 +524,7 @@ export function PlaylistListModal({ onClose }: PlaylistListModalProps) {
           onClose={() => setEditingPlaylist(null)}
         />
       )}
+      <ModalComponent />
     </>
   );
 }
