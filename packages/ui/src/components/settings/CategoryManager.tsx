@@ -14,7 +14,10 @@ interface CategoryManagerProps {
 }
 
 export function CategoryManager({ sourceId, sourceName, onClose, onChange }: CategoryManagerProps) {
-    const [categories, setCategories] = useState<StoredCategory[]>([]);
+    const [categories, setCategories] = useState<Array<
+        | { type: 'native'; id: string; name: string; enabled: boolean; displayOrder: number; category: StoredCategory }
+        | { type: 'link'; id: string; linkId: number; name: string; enabled: boolean; displayOrder: number; link: any }
+    >>([]);
     const [isDirty, setIsDirty] = useState(false);
     const [hideUnselected, setHideUnselected] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
@@ -38,47 +41,97 @@ export function CategoryManager({ sourceId, sourceName, onClose, onChange }: Cat
         return Math.max(0, children.length - 1);
     };
 
+    const targetPlaylistId = sourceId.startsWith('playlist:') ? sourceId.replace('playlist:', '') : sourceId;
+
     // Load categories for this source
     const dbCategories = useLiveQuery(
-        () => db.categories.where('source_id').equals(sourceId).toArray()
+        () => db.categories.where('source_id').equals(targetPlaylistId).toArray(),
+        [targetPlaylistId],
+        []
     );
+
+    // Load category links for this source
+    const categoryLinks = useLiveQuery(
+        () => db.playlistCategoryLinks.where('playlist_id').equals(targetPlaylistId).sortBy('display_order'),
+        [targetPlaylistId],
+        []
+    );
+
+    // Resolve name details for link categories
+    const [dbCategoriesMap, setDbCategoriesMap] = useState<Record<string, StoredCategory>>({});
+    useEffect(() => {
+        if (!categoryLinks || categoryLinks.length === 0) return;
+        const ids = categoryLinks.map(l => l.category_id);
+        db.categories.where('category_id').anyOf(ids).toArray().then(cats => {
+            const map = cats.reduce((acc: Record<string, StoredCategory>, cat) => {
+                acc[cat.category_id] = cat;
+                return acc;
+            }, {});
+            setDbCategoriesMap(map);
+        });
+    }, [categoryLinks]);
 
     // Initialize categories from database (but not while saving)
     useEffect(() => {
         if (dbCategories && !isSavingRef.current) {
-            let sorted: StoredCategory[];
-            if (categorySortOrder === 'alphabetical') {
-                // Sort alphabetically when that mode is selected
-                sorted = [...dbCategories].sort((a, b) =>
-                    a.category_name.localeCompare(b.category_name)
-                );
-            } else {
-                // Default: sort by display_order if available, otherwise by category_name
-                sorted = [...dbCategories].sort((a, b) => {
-                    if (a.display_order !== undefined && b.display_order !== undefined) {
-                        return a.display_order - b.display_order;
-                    }
-                    if (a.display_order !== undefined) return -1;
-                    if (b.display_order !== undefined) return 1;
-                    return a.category_name.localeCompare(b.category_name);
+            const list: Array<
+                | { type: 'native'; id: string; name: string; enabled: boolean; displayOrder: number; category: StoredCategory }
+                | { type: 'link'; id: string; linkId: number; name: string; enabled: boolean; displayOrder: number; link: any }
+            > = [];
+
+            // Add native categories
+            for (const cat of dbCategories) {
+                list.push({
+                    type: 'native',
+                    id: cat.category_id,
+                    name: cat.alias || cat.category_name,
+                    enabled: cat.enabled !== false,
+                    displayOrder: cat.display_order ?? 9999,
+                    category: cat,
                 });
             }
 
-            // Set display_order if not set (use sorted index)
-            const categoriesWithOrder = sorted.map((cat, idx) => ({
-                ...cat,
-                display_order: cat.display_order ?? idx,
-                enabled: cat.enabled !== false, // Default to true
+            // Add custom category links
+            for (const link of categoryLinks || []) {
+                if (link.id === undefined) continue;
+                const cat = dbCategoriesMap[link.category_id];
+                const resolvedName = cat?.alias || cat?.category_name || link.category_id;
+                list.push({
+                    type: 'link',
+                    id: `link:${link.id}`,
+                    linkId: link.id,
+                    name: link.custom_name || resolvedName,
+                    enabled: true, // category links are always active
+                    displayOrder: link.display_order ?? 9999,
+                    link,
+                });
+            }
+
+            // Sort
+            if (categorySortOrder === 'alphabetical') {
+                list.sort((a, b) => a.name.localeCompare(b.name));
+            } else {
+                list.sort((a, b) => {
+                    if (a.displayOrder !== b.displayOrder) return a.displayOrder - b.displayOrder;
+                    return a.name.localeCompare(b.name);
+                });
+            }
+
+            // Set final displayOrder based on sorted index
+            const normalized = list.map((item, idx) => ({
+                ...item,
+                displayOrder: idx,
             }));
-            setCategories(categoriesWithOrder);
+
+            setCategories(normalized);
             setIsDirty(false);
         }
-    }, [dbCategories, categorySortOrder]);
+    }, [dbCategories, categoryLinks, dbCategoriesMap, categorySortOrder]);
 
     // Toggle enable/disable
-    const toggleCategory = useCallback((categoryId: string) => {
+    const toggleCategory = useCallback((id: string) => {
         setCategories(cats => cats.map(cat =>
-            cat.category_id === categoryId ? { ...cat, enabled: !cat.enabled } : cat
+            cat.id === id ? { ...cat, enabled: !cat.enabled } : cat
         ));
         setIsDirty(true);
     }, []);
@@ -89,8 +142,7 @@ export function CategoryManager({ sourceId, sourceName, onClose, onChange }: Cat
         setCategories(cats => {
             const newCats = [...cats];
             [newCats[index - 1], newCats[index]] = [newCats[index], newCats[index - 1]];
-            // Update display_order for all
-            return newCats.map((cat, idx) => ({ ...cat, display_order: idx }));
+            return newCats.map((cat, idx) => ({ ...cat, displayOrder: idx }));
         });
         setIsDirty(true);
     }, []);
@@ -101,14 +153,21 @@ export function CategoryManager({ sourceId, sourceName, onClose, onChange }: Cat
             if (index === cats.length - 1) return cats;
             const newCats = [...cats];
             [newCats[index], newCats[index + 1]] = [newCats[index + 1], newCats[index]];
-            // Update display_order for all
-            return newCats.map((cat, idx) => ({ ...cat, display_order: idx }));
+            return newCats.map((cat, idx) => ({ ...cat, displayOrder: idx }));
         });
         setIsDirty(true);
     }, []);
 
-    // Pointer-event drag handlers — attached to the CONTAINER, not individual items
-    // This avoids the pointer-capture trap where captured events only reach the handle element
+    // Delete custom categories / category links
+    const handleDeleteLink = useCallback(async (linkId: number) => {
+        const confirm = window.confirm("Are you sure you want to delete this category link?");
+        if (!confirm) return;
+        const { removeCategoryFromPlaylist } = await import('../../services/playlist-editor');
+        await removeCategoryFromPlaylist(linkId);
+        if (onChange) onChange();
+    }, [onChange]);
+
+    // Pointer-event drag handlers — attached to the CONTAINER
     const handleHandlePointerDown = useCallback((e: React.PointerEvent, index: number) => {
         if (e.button !== 0) return;
         (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
@@ -134,7 +193,7 @@ export function CategoryManager({ sourceId, sourceName, onClose, onChange }: Cat
             const newCats = [...cats];
             const [removed] = newCats.splice(from, 1);
             newCats.splice(to, 0, removed);
-            return newCats.map((cat, idx) => ({ ...cat, display_order: idx }));
+            return newCats.map((cat, idx) => ({ ...cat, displayOrder: idx }));
         });
         setIsDirty(true);
     }, []);
@@ -148,8 +207,8 @@ export function CategoryManager({ sourceId, sourceName, onClose, onChange }: Cat
     const handleSelectAll = useCallback(() => {
         setCategories(cats => cats.map(cat => {
             const isVisible = (!hideUnselected || cat.enabled !== false) && 
-                              (!searchQuery.trim() || cat.category_name.toLowerCase().includes(searchQuery.toLowerCase()));
-            if (isVisible) {
+                              (!searchQuery.trim() || cat.name.toLowerCase().includes(searchQuery.toLowerCase()));
+            if (isVisible && cat.type === 'native') {
                 return { ...cat, enabled: true };
             }
             return cat;
@@ -161,8 +220,8 @@ export function CategoryManager({ sourceId, sourceName, onClose, onChange }: Cat
     const handleSelectNone = useCallback(() => {
         setCategories(cats => cats.map(cat => {
             const isVisible = (!hideUnselected || cat.enabled !== false) && 
-                              (!searchQuery.trim() || cat.category_name.toLowerCase().includes(searchQuery.toLowerCase()));
-            if (isVisible) {
+                              (!searchQuery.trim() || cat.name.toLowerCase().includes(searchQuery.toLowerCase()));
+            if (isVisible && cat.type === 'native') {
                 return { ...cat, enabled: false };
             }
             return cat;
@@ -173,29 +232,31 @@ export function CategoryManager({ sourceId, sourceName, onClose, onChange }: Cat
     // Save changes
     const handleSave = useCallback(async () => {
         try {
-            // Mark that we're saving to prevent useEffect from resetting state
             isSavingRef.current = true;
 
-            // Save category toggles and display order using targeted batch updates.
-            // Avoids REPLACE INTO which can wipe filter_words and trigger FK cascades.
-            const updates = categories.map((cat, i) => ({
-                categoryId: cat.category_id,
-                enabled: cat.enabled ?? true,
-                displayOrder: i,
-            }));
+            // Save native categories in batch
+            const nativeUpdates = categories
+                .filter(cat => cat.type === 'native')
+                .map(cat => ({
+                    categoryId: cat.id,
+                    enabled: cat.enabled,
+                    displayOrder: cat.displayOrder,
+                }));
 
-            if (updates.length > 0) {
-                await updateCategoriesBatch(updates);
+            if (nativeUpdates.length > 0) {
+                await updateCategoriesBatch(nativeUpdates);
             }
 
-            // Wait for database to commit
+            // Save custom links updates in database
+            const linkItems = categories.filter(cat => cat.type === 'link');
+            for (const item of linkItems) {
+                await db.playlistCategoryLinks.update(item.linkId, {
+                    display_order: item.displayOrder,
+                });
+            }
+
             await new Promise(resolve => setTimeout(resolve, 300));
-
-            // Trigger UI refresh
-            if (onChange) {
-                await onChange();
-            }
-
+            if (onChange) await onChange();
             onClose();
         } catch (err) {
             console.error('[CategoryManager] Failed to save:', err);
@@ -214,7 +275,7 @@ export function CategoryManager({ sourceId, sourceName, onClose, onChange }: Cat
 
         if (searchQuery.trim()) {
             const query = searchQuery.toLowerCase();
-            filtered = filtered.filter(c => c.category_name.toLowerCase().includes(query));
+            filtered = filtered.filter(c => c.name.toLowerCase().includes(query));
         }
 
         return filtered;
@@ -267,7 +328,7 @@ export function CategoryManager({ sourceId, sourceName, onClose, onChange }: Cat
                     onPointerCancel={handleContainerPointerCancel}
                 >
                     {visibleCategories.map((cat) => {
-                        const index = categories.findIndex(c => c.category_id === cat.category_id);
+                        const index = categories.findIndex(c => c.id === cat.id);
                         const isDragging = dragFromIdx.current === index;
                         const isDragOver = dragOverIdx === index && dragFromIdx.current !== null && dragFromIdx.current !== index;
 
@@ -275,7 +336,7 @@ export function CategoryManager({ sourceId, sourceName, onClose, onChange }: Cat
 
                         return (
                             <div
-                                key={cat.category_id}
+                                key={cat.id}
                                 className={`category-item ${!isAlphabetical && isDragging ? 'dragging' : ''} ${!isAlphabetical && isDragOver ? 'drag-over' : ''}`}
                             >
                                 {!isAlphabetical && (
@@ -288,22 +349,50 @@ export function CategoryManager({ sourceId, sourceName, onClose, onChange }: Cat
                                     </span>
                                 )}
 
-                                <label className="category-checkbox">
-                                    <input
-                                        type="checkbox"
-                                        checked={cat.enabled}
-                                        onChange={() => toggleCategory(cat.category_id)}
-                                    />
-                                    <span className="category-name">{cat.category_name}</span>
-                                </label>
+                                {cat.type === 'native' ? (
+                                    <label className="category-checkbox">
+                                        <input
+                                            type="checkbox"
+                                            checked={cat.enabled}
+                                            onChange={() => toggleCategory(cat.id)}
+                                        />
+                                        <span className="category-name">{cat.name}</span>
+                                    </label>
+                                ) : (
+                                    <div className="category-checkbox">
+                                        <span className="category-name" style={{ marginLeft: '24px' }}>
+                                            🔗 {cat.name}
+                                        </span>
+                                    </div>
+                                )}
 
-                                <button
-                                    className="manage-channels-btn"
-                                    onClick={() => setManagingCategory({ id: cat.category_id, name: cat.category_name })}
-                                    title="Manage channels in this category"
-                                >
-                                    📺 Channels
-                                </button>
+                                <div className="category-actions-row" style={{ display: 'flex', alignItems: 'center' }}>
+                                    <button
+                                        className="manage-channels-btn"
+                                        onClick={() => setManagingCategory({ id: cat.id, name: cat.name })}
+                                        title="Manage channels in this category"
+                                    >
+                                        📺 Channels
+                                    </button>
+                                    {cat.type === 'link' && (
+                                        <button
+                                            className="category-delete-btn"
+                                            onClick={() => handleDeleteLink(cat.linkId)}
+                                            title="Remove category link"
+                                            style={{
+                                                background: 'transparent',
+                                                border: 'none',
+                                                color: '#ff4b4b',
+                                                cursor: 'pointer',
+                                                fontSize: '1rem',
+                                                marginLeft: '8px',
+                                                padding: '4px'
+                                            }}
+                                        >
+                                            ✕
+                                        </button>
+                                    )}
+                                </div>
 
                                 {!isAlphabetical && (
                                     <div className="category-reorder">

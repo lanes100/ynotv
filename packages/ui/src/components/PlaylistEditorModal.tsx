@@ -40,6 +40,18 @@ interface BrowseSource {
   isCustomPlaylist?: boolean;
 }
 
+const EyeIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="14" height="14" fill="currentColor" style={{ display: 'block' }}>
+    <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
+  </svg>
+);
+
+const EyeSlashIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="14" height="14" fill="currentColor" style={{ display: 'block' }}>
+    <path d="M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.82l2.92 2.92c1.51-1.39 2.7-3.13 3.44-5.04-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46C3.08 8.3 1.78 10.02 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm4.47-2.3c-.22 0-.44.03-.65.08l1.65 1.65c.05-.21.08-.43.08-.65 0-1.66-1.34-3-3-3z"/>
+  </svg>
+);
+
 interface CategoryBlockCardProps {
   playlistId: string;
   block: any;
@@ -51,6 +63,7 @@ interface CategoryBlockCardProps {
   onMark: () => void;
   onPointerDown: (e: React.PointerEvent, index: number) => void;
   onRemove?: () => void;
+  showHidden: boolean;
 }
 
 function CategoryBlockCard({
@@ -64,33 +77,71 @@ function CategoryBlockCard({
   onMark,
   onPointerDown,
   onRemove,
+  showHidden,
 }: CategoryBlockCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isRenaming, setIsRenaming] = useState(false);
   const [renamingName, setRenamingName] = useState(block.name);
   const renameInputRef = useRef<HTMLInputElement>(null);
 
-  // Load dynamic channels
-  const [dynamicChannels, setDynamicChannels] = useState<StoredChannel[]>([]);
-  useEffect(() => {
-    const sourceId = block.type === 'native' ? block.category.source_id : block.link.source_id;
-    const categoryId = block.type === 'native' ? block.category.category_id : block.link.category_id;
-    
-    if (sourceId === 'custom') {
-      setDynamicChannels([]);
-      return;
-    }
-    
-    db.channels.whereRaw(
-      `source_id = ? AND EXISTS (SELECT 1 FROM json_each(category_ids) WHERE value = ?) AND (enabled IS NULL OR enabled NOT IN (0, '0', 'false'))`,
-      [sourceId, categoryId]
-    ).toArray().then(chans => {
-      chans.sort((a, b) => a.name.localeCompare(b.name));
-      setDynamicChannels(chans);
-    });
-  }, [block]);
+  // Filter words local state
+  const [filterWordsText, setFilterWordsText] = useState<string>(
+    block.type === 'native' ? (block.category.filter_words || []).join(', ') : ''
+  );
 
-  // Load manual channels
+  useEffect(() => {
+    if (block.type === 'native') {
+      setFilterWordsText((block.category.filter_words || []).join(', '));
+    }
+  }, [block.category?.filter_words, block.type]);
+
+  const handleSaveFilterWords = async () => {
+    if (block.type !== 'native') return;
+    const words = filterWordsText
+      .split(',')
+      .map((w: string) => w.trim())
+      .filter(Boolean);
+    await db.categories.update(block.category.category_id, { filter_words: words });
+  };
+
+  // Toggle category enabled state in right panel
+  const toggleCategoryEnabled = async () => {
+    if (block.type !== 'native') return;
+    const newEnabled = block.category.enabled === false;
+    await db.categories.update(block.category.category_id, { enabled: newEnabled });
+  };
+
+  // Load dynamic channels reactively (without enabled query filter)
+  const sourceId = block.type === 'native' ? block.category.source_id : block.link.source_id;
+  const categoryId = block.type === 'native' ? block.category.category_id : block.link.category_id;
+
+  const dynamicChannels = useLiveQuery(
+    async () => {
+      if (sourceId === 'custom') {
+        return [];
+      }
+      const chans = await db.channels.whereRaw(
+        `source_id = ? AND EXISTS (SELECT 1 FROM json_each(category_ids) WHERE value = ?)`,
+        [sourceId, categoryId]
+      ).toArray();
+
+      // Legacy Sort Order fallback:
+      chans.sort((a, b) => {
+        if (a.display_order != null && b.display_order != null) return a.display_order - b.display_order;
+        if (a.display_order != null) return -1;
+        if (b.display_order != null) return 1;
+        if (a.provider_order != null && b.provider_order != null) return a.provider_order - b.provider_order;
+        if (a.provider_order != null) return -1;
+        if (b.provider_order != null) return 1;
+        return a.name.localeCompare(b.name);
+      });
+      return chans;
+    },
+    [sourceId, categoryId],
+    []
+  );
+
+  // Load manual channels reactively
   const parentCategoryId = block.type === 'native' ? block.id : `link:${block.linkId}`;
   const manualMappings = useLiveQuery(
     () => db.playlistIndividualChannels
@@ -100,21 +151,21 @@ function CategoryBlockCard({
     []
   );
 
-  const [manualChannels, setManualChannels] = useState<StoredChannel[]>([]);
-  useEffect(() => {
-    if (!manualMappings || manualMappings.length === 0) {
-      setManualChannels([]);
-      return;
-    }
-    const ids = manualMappings.map(m => m.stream_id);
-    db.channels.where('stream_id').anyOf(ids).toArray().then(channels => {
+  const manualChannels = useLiveQuery(
+    async () => {
+      if (!manualMappings || manualMappings.length === 0) {
+        return [];
+      }
+      const ids = manualMappings.map(m => m.stream_id);
+      const channels = await db.channels.where('stream_id').anyOf(ids).toArray();
       const channelMap = new Map(channels.map(ch => [ch.stream_id, ch]));
-      const resolved = manualMappings
+      return manualMappings
         .map(m => channelMap.get(m.stream_id))
         .filter((ch): ch is StoredChannel => ch !== undefined);
-      setManualChannels(resolved);
-    });
-  }, [manualMappings]);
+    },
+    [manualMappings],
+    []
+  );
 
   // Merge dynamic and manual channels into a single integrated list
   const combinedChannels = React.useMemo(() => {
@@ -122,12 +173,12 @@ function CategoryBlockCard({
     const resolvedManual = (manualMappings || [])
       .sort((a, b) => a.display_order - b.display_order)
       .map(m => {
-        const ch = manualChannels.find(c => c.stream_id === m.stream_id);
+        const ch = (manualChannels || []).find(c => c.stream_id === m.stream_id);
         return ch ? { ...ch, isManualAddition: true } : null;
       })
       .filter(Boolean) as Array<StoredChannel & { isManualAddition: boolean }>;
 
-    const remainingDynamic = dynamicChannels
+    const remainingDynamic = (dynamicChannels || [])
       .filter(ch => !manualStreamIds.has(ch.stream_id))
       .map(ch => ({ ...ch, isManualAddition: false }));
 
@@ -157,9 +208,15 @@ function CategoryBlockCard({
     const children = Array.from(manualListRef.current.children) as HTMLElement[];
     for (let i = 0; i < children.length; i++) {
       const rect = children[i].getBoundingClientRect();
-      if (clientY < rect.top + rect.height / 2) return i;
+      if (clientY < rect.top + rect.height / 2) {
+        return parseInt(children[i].getAttribute('data-index') || '0', 10);
+      }
     }
-    return Math.max(0, children.length - 1);
+    if (children.length > 0) {
+      const lastIdx = parseInt(children[children.length - 1].getAttribute('data-index') || '0', 10);
+      return lastIdx + 1;
+    }
+    return 0;
   };
 
   const handleManualPointerDown = useCallback((e: React.PointerEvent, idx: number) => {
@@ -197,7 +254,7 @@ function CategoryBlockCard({
       const now = Date.now();
       for (let i = 0; i < next.length; i++) {
         const ch = next[i];
-        await db.playlistIndividualChannels.add({
+        await db.playlistIndividualChannels.put({
           playlist_id: playlistId,
           stream_id: ch.stream_id,
           parent_category_id: parentCategoryId,
@@ -215,12 +272,22 @@ function CategoryBlockCard({
     setDragOverIdx(null);
   }, []);
 
+  // Hide if not showing hidden and category is native + disabled
+  if (block.type === 'native' && block.category.enabled === false && !showHidden) {
+    return null;
+  }
+
   const srcName = block.type === 'link' 
     ? (block.link.source_id === 'custom' ? 'Custom Category' : (sources.find(s => s.id === block.link.source_id)?.name || 'Source')) 
     : '';
 
+  const visibleChannelsCount = combinedChannels.filter(c => showHidden || c.enabled !== false).length;
+
   return (
-    <div className={`ple-block-card-wrapper${isDragging ? ' dragging' : ''}${isDragOver ? ' drag-over' : ''}${isMarked ? ' marked' : ''}`}>
+    <div 
+      className={`ple-block-card-wrapper${isDragging ? ' dragging' : ''}${isDragOver ? ' drag-over' : ''}${isMarked ? ' marked' : ''}${block.type === 'native' && block.category.enabled === false ? ' ple-hidden-item' : ''}`}
+      data-index={index}
+    >
       <div className="ple-block-card">
         <button className="ple-block-expand-btn" onClick={() => setIsExpanded(!isExpanded)}>
           <span className="ple-chevron-small">{isExpanded ? '▼' : '▶'}</span>
@@ -263,9 +330,22 @@ function CategoryBlockCard({
           )}
           <span className="ple-block-sub">
             {block.type === 'link' ? `${srcName} · ` : ''}
-            {combinedChannels.length} channels
+            {visibleChannelsCount} channels
           </span>
         </div>
+
+        {block.type === 'native' && (
+          <button
+            className={`ple-visibility-btn${block.category.enabled === false ? ' hidden-item' : ''}`}
+            onClick={(e) => {
+              e.stopPropagation();
+              toggleCategoryEnabled();
+            }}
+            title={block.category.enabled === false ? "Show category" : "Hide category"}
+          >
+            {block.category.enabled === false ? <EyeSlashIcon /> : <EyeIcon />}
+          </button>
+        )}
 
         <button
           className={`ple-block-target-btn${isMarked ? ' marked' : ''}`}
@@ -285,6 +365,26 @@ function CategoryBlockCard({
 
       {isExpanded && (
         <div className="ple-block-expanded-content">
+          {block.type === 'native' && (
+            <div className="ple-filter-words-section">
+              <span className="ple-filter-words-label">Filter Words:</span>
+              <input
+                type="text"
+                className="ple-filter-words-input"
+                placeholder="e.g. 4k, fhd, 50fps (comma-separated)"
+                value={filterWordsText}
+                onChange={e => setFilterWordsText(e.target.value)}
+                onBlur={handleSaveFilterWords}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') {
+                    handleSaveFilterWords();
+                    (e.target as HTMLInputElement).blur();
+                  }
+                }}
+              />
+            </div>
+          )}
+
           <div className="ple-nested-section">
             {combinedChannels.length === 0 ? (
               <div className="ple-empty-hint">Category is empty. Mark it as the target and click ＋ Channel in the left panel to insert.</div>
@@ -299,10 +399,21 @@ function CategoryBlockCard({
                 {combinedChannels.map((ch, idx) => {
                   const isChDragging = dragFromIdx.current === idx;
                   const isChDragOver = dragOverIdx === idx && dragFromIdx.current !== null && dragFromIdx.current !== idx;
+                  
+                  if (ch.enabled === false && !showHidden) {
+                    return null;
+                  }
+
+                  const toggleChannelEnabled = async () => {
+                    const newEnabled = ch.enabled === false;
+                    await db.channels.update(ch.stream_id, { enabled: newEnabled });
+                  };
+
                   return (
                     <div
                       key={ch.stream_id}
-                      className={`ple-nested-channel-row reorderable${isChDragging ? ' dragging' : ''}${isChDragOver ? ' drag-over' : ''}`}
+                      className={`ple-nested-channel-row reorderable${isChDragging ? ' dragging' : ''}${isChDragOver ? ' drag-over' : ''}${ch.enabled === false ? ' ple-hidden-item' : ''}`}
+                      data-index={idx}
                     >
                       <span
                         className="ple-block-drag-handle"
@@ -317,6 +428,18 @@ function CategoryBlockCard({
                       <span className="ple-nested-ch-name">
                         {ch.name} {!ch.isManualAddition && <span className="ple-dynamic-badge">dynamic</span>}
                       </span>
+                      
+                      <button
+                        className={`ple-visibility-btn${ch.enabled === false ? ' hidden-item' : ''}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleChannelEnabled();
+                        }}
+                        title={ch.enabled === false ? "Show channel" : "Hide channel"}
+                      >
+                        {ch.enabled === false ? <EyeSlashIcon /> : <EyeIcon />}
+                      </button>
+
                       {ch.isManualAddition ? (
                         <button
                           className="ple-remove-btn"
@@ -338,6 +461,56 @@ function CategoryBlockCard({
   );
 }
 
+async function sortChannelsLikeLiveTV(sourceId: string, categoryId: string, channels: StoredChannel[]): Promise<StoredChannel[]> {
+  let targetPlaylistId = sourceId;
+  let targetParentId = categoryId;
+  
+  if (sourceId.startsWith('playlist:')) {
+    targetPlaylistId = sourceId.replace('playlist:', '');
+    if (categoryId.startsWith('link:')) {
+      const linkId = parseInt(categoryId.replace('link:', ''), 10);
+      targetParentId = `link:${linkId}`;
+    }
+  }
+
+  const manualMappings = await db.playlistIndividualChannels
+    .whereRaw('playlist_id = ? AND parent_category_id = ?', [targetPlaylistId, targetParentId])
+    .toArray();
+
+  if (manualMappings.length > 0) {
+    const manualMap = new Map(manualMappings.map(m => [m.stream_id, m.display_order]));
+    const manualStreamIds = new Set(manualMappings.map(m => m.stream_id));
+    const orderedManual = channels
+      .filter(ch => manualStreamIds.has(ch.stream_id))
+      .sort((a, b) => (manualMap.get(a.stream_id) ?? 0) - (manualMap.get(b.stream_id) ?? 0));
+    
+    const remaining = channels.filter(ch => !manualStreamIds.has(ch.stream_id));
+    remaining.sort((a, b) => {
+      if (a.display_order != null && b.display_order != null) return a.display_order - b.display_order;
+      if (a.display_order != null) return -1;
+      if (b.display_order != null) return 1;
+      if (a.provider_order != null && b.provider_order != null) return a.provider_order - b.provider_order;
+      if (a.provider_order != null) return -1;
+      if (b.provider_order != null) return 1;
+      return a.name.localeCompare(b.name);
+    });
+    return [...orderedManual, ...remaining];
+  }
+
+  // No manual mappings - sort by display_order, then provider_order, then name
+  const sorted = [...channels];
+  sorted.sort((a, b) => {
+    if (a.display_order != null && b.display_order != null) return a.display_order - b.display_order;
+    if (a.display_order != null) return -1;
+    if (b.display_order != null) return 1;
+    if (a.provider_order != null && b.provider_order != null) return a.provider_order - b.provider_order;
+    if (a.provider_order != null) return -1;
+    if (b.provider_order != null) return 1;
+    return a.name.localeCompare(b.name);
+  });
+  return sorted;
+}
+
 export function PlaylistEditorModal({ playlistId, playlistName, onClose }: PlaylistEditorModalProps) {
   const [sources, setSources] = useState<BrowseSource[]>([]);
   const [expandedSources, setExpandedSources] = useState<Record<string, boolean>>({});
@@ -347,6 +520,9 @@ export function PlaylistEditorModal({ playlistId, playlistName, onClose }: Playl
 
   // Target marking state
   const [markedCategoryId, setMarkedCategoryId] = useState<string | null>(null);
+
+  // Global show hidden state
+  const [showHidden, setShowHidden] = useState(false);
 
   // Live query all categories to construct names map for tree-view search
   const allCategories = useLiveQuery(
@@ -362,6 +538,39 @@ export function PlaylistEditorModal({ playlistId, playlistName, onClose }: Playl
     }
     return map;
   }, [allCategories]);
+
+  // Global channel visibility toggle
+  const toggleChannelEnabledGlobal = async (streamId: string, currentEnabled: boolean) => {
+    const newEnabled = !currentEnabled;
+    await db.channels.update(streamId, { enabled: newEnabled });
+    // Update searchResults inline
+    setSearchResults(prev => prev.map(ch => ch.stream_id === streamId ? { ...ch, enabled: newEnabled } : ch));
+    // Update categoryChannels inline
+    setCategoryChannels(prev => {
+      const next = { ...prev };
+      for (const key of Object.keys(next)) {
+        if (next[key].some(ch => ch.stream_id === streamId)) {
+          next[key] = next[key].map(ch => ch.stream_id === streamId ? { ...ch, enabled: newEnabled } : ch);
+        }
+      }
+      return next;
+    });
+  };
+
+  // Global category visibility toggle
+  const toggleCategoryEnabledGlobal = async (sourceId: string, categoryId: string, currentEnabled: boolean) => {
+    const newEnabled = !currentEnabled;
+    await db.categories.update(categoryId, { enabled: newEnabled });
+    // Update sourceCategories inline
+    setSourceCategories(prev => {
+      const cats = prev[sourceId];
+      if (!cats) return prev;
+      return {
+        ...prev,
+        [sourceId]: cats.map(c => c.category_id === categoryId ? { ...c, enabled: newEnabled } : c)
+      };
+    });
+  };
 
   // Search
   const [searchQuery, setSearchQuery] = useState('');
@@ -562,7 +771,12 @@ export function PlaylistEditorModal({ playlistId, playlistName, onClose }: Playl
           .where('source_id')
           .equals(sourceId)
           .toArray();
-        cats.sort((a, b) => a.category_name.localeCompare(b.category_name));
+        cats.sort((a, b) => {
+          if (a.display_order != null && b.display_order != null) return a.display_order - b.display_order;
+          if (a.display_order != null) return -1;
+          if (b.display_order != null) return 1;
+          return a.category_name.localeCompare(b.category_name);
+        });
         setSourceCategories(prev => ({ ...prev, [sourceId]: cats }));
       }
     }
@@ -584,7 +798,7 @@ export function PlaylistEditorModal({ playlistId, playlistName, onClose }: Playl
           const link = await db.playlistCategoryLinks.get(linkId);
           if (link) {
             channels = await db.channels.whereRaw(
-              `source_id = ? AND EXISTS (SELECT 1 FROM json_each(category_ids) WHERE value = ?) AND (enabled IS NULL OR enabled NOT IN (0, '0', 'false'))`,
+              `source_id = ? AND EXISTS (SELECT 1 FROM json_each(category_ids) WHERE value = ?)`,
               [link.source_id, link.category_id]
             ).toArray();
           }
@@ -603,15 +817,15 @@ export function PlaylistEditorModal({ playlistId, playlistName, onClose }: Playl
           }
         }
 
-        channels.sort((a, b) => a.name.localeCompare(b.name));
-        setCategoryChannels(prev => ({ ...prev, [key]: channels }));
+        const sorted = await sortChannelsLikeLiveTV(sourceId, categoryId, channels);
+        setCategoryChannels(prev => ({ ...prev, [key]: sorted }));
       } else {
         const channels = await db.channels.whereRaw(
-          `source_id = ? AND EXISTS (SELECT 1 FROM json_each(category_ids) WHERE value = ?) AND (enabled IS NULL OR enabled NOT IN (0, '0', 'false'))`,
+          `source_id = ? AND EXISTS (SELECT 1 FROM json_each(category_ids) WHERE value = ?)`,
           [sourceId, categoryId]
         ).toArray();
-        channels.sort((a, b) => a.name.localeCompare(b.name));
-        setCategoryChannels(prev => ({ ...prev, [key]: channels }));
+        const sorted = await sortChannelsLikeLiveTV(sourceId, categoryId, channels);
+        setCategoryChannels(prev => ({ ...prev, [key]: sorted }));
       }
     }
   };
@@ -625,10 +839,10 @@ export function PlaylistEditorModal({ playlistId, playlistName, onClose }: Playl
     }
     setSearchLoading(true);
     const tid = setTimeout(async () => {
-      const results = await db.channels.whereRaw(
-        `LOWER(name) LIKE ? AND (enabled IS NULL OR enabled NOT IN (0, '0', 'false'))`,
-        [`%${searchQuery.toLowerCase()}%`]
-      ).toArray();
+      const results = showHidden
+        ? await db.channels.whereRaw(`LOWER(name) LIKE ?`, [`%${searchQuery.toLowerCase()}%`]).toArray()
+        : await db.channels.whereRaw(`LOWER(name) LIKE ? AND (enabled IS NULL OR enabled NOT IN (0, '0', 'false'))`, [`%${searchQuery.toLowerCase()}%`]).toArray();
+      
       const activeSourceIds = new Set(sources.filter(s => !s.isCustomPlaylist).map(s => s.id));
       const filtered = results.filter(ch => activeSourceIds.has(ch.source_id));
       filtered.sort((a, b) => a.name.localeCompare(b.name));
@@ -637,7 +851,7 @@ export function PlaylistEditorModal({ playlistId, playlistName, onClose }: Playl
     }, 400);
 
     return () => clearTimeout(tid);
-  }, [searchQuery, sources]);
+  }, [searchQuery, sources, showHidden]);
 
   // Playlist name editing
   const handleSaveName = async () => {
@@ -693,9 +907,15 @@ export function PlaylistEditorModal({ playlistId, playlistName, onClose }: Playl
     const children = Array.from(categoryListRef.current.children) as HTMLElement[];
     for (let i = 0; i < children.length; i++) {
       const rect = children[i].getBoundingClientRect();
-      if (clientY < rect.top + rect.height / 2) return i;
+      if (clientY < rect.top + rect.height / 2) {
+        return parseInt(children[i].getAttribute('data-index') || '0', 10);
+      }
     }
-    return Math.max(0, children.length - 1);
+    if (children.length > 0) {
+      const lastIdx = parseInt(children[children.length - 1].getAttribute('data-index') || '0', 10);
+      return lastIdx + 1;
+    }
+    return 0;
   };
 
   const handleCatPointerDown = useCallback((e: React.PointerEvent, index: number) => {
@@ -748,9 +968,15 @@ export function PlaylistEditorModal({ playlistId, playlistName, onClose }: Playl
     const children = Array.from(indivListRef.current.children) as HTMLElement[];
     for (let i = 0; i < children.length; i++) {
       const rect = children[i].getBoundingClientRect();
-      if (clientY < rect.top + rect.height / 2) return i;
+      if (clientY < rect.top + rect.height / 2) {
+        return parseInt(children[i].getAttribute('data-index') || '0', 10);
+      }
     }
-    return Math.max(0, children.length - 1);
+    if (children.length > 0) {
+      const lastIdx = parseInt(children[children.length - 1].getAttribute('data-index') || '0', 10);
+      return lastIdx + 1;
+    }
+    return 0;
   };
 
   const handleIndivPointerDown = useCallback((e: React.PointerEvent, index: number) => {
@@ -804,6 +1030,8 @@ export function PlaylistEditorModal({ playlistId, playlistName, onClose }: Playl
     }
   };
 
+  const visibleIndivCount = individualChannels.filter(c => showHidden || c.enabled !== false).length;
+
   return (
     <div className="playlist-editor-backdrop" onClick={onClose}>
       <div className="playlist-editor-modal" onClick={e => e.stopPropagation()}>
@@ -837,6 +1065,14 @@ export function PlaylistEditorModal({ playlistId, playlistName, onClose }: Playl
             )}
           </div>
           <div className="ple-header-right">
+            <label className="ple-show-hidden-label">
+              <input
+                type="checkbox"
+                checked={showHidden}
+                onChange={e => setShowHidden(e.target.checked)}
+              />
+              Show Hidden
+            </label>
             <button className="ple-export-btn" onClick={handleExport}>📤 Export .m3u</button>
             <button className="ple-close-btn" onClick={onClose}>✕ Close</button>
           </div>
@@ -915,16 +1151,19 @@ export function PlaylistEditorModal({ playlistId, playlistName, onClose }: Playl
                                     ? 'Uncategorized'
                                     : (categoryNamesMap.get(`${sourceId}:${catId}`) || catId);
 
+                                  const visibleChans = channels.filter(ch => showHidden || ch.enabled !== false);
+                                  if (visibleChans.length === 0) return null;
+
                                   return (
                                     <div key={catId} className="ple-tree-cat-node">
                                       <div className="ple-tree-cat-header">
                                         <span className="ple-tree-chevron-small">▼</span>
                                         <span className="ple-tree-cat-name">{categoryName}</span>
-                                        <span className="ple-tree-cat-count">{channels.length}</span>
+                                        <span className="ple-tree-cat-count">{visibleChans.length}</span>
                                       </div>
                                       <div className="ple-tree-cat-children">
-                                        {channels.map(ch => (
-                                          <div key={`${catId}:${ch.stream_id}`} className="ple-tree-channel-row">
+                                        {visibleChans.map(ch => (
+                                          <div key={`${catId}:${ch.stream_id}`} className={`ple-tree-channel-row${ch.enabled === false ? ' ple-hidden-item' : ''}`}>
                                             <div className="ple-tree-ch-info">
                                               {ch.stream_icon ? (
                                                 <img src={ch.stream_icon} className="ple-tree-ch-logo" alt="" />
@@ -933,13 +1172,25 @@ export function PlaylistEditorModal({ playlistId, playlistName, onClose }: Playl
                                               )}
                                               <span className="ple-tree-ch-name">{ch.name}</span>
                                             </div>
-                                            <button
-                                              className="ple-tree-add-btn"
-                                              onClick={() => handleAddChannel(ch.stream_id)}
-                                              title={markedCategoryId ? "Add channel to target category" : "Add channel to playlist"}
-                                            >
-                                              ＋
-                                            </button>
+                                            <div className="ple-tree-ch-actions">
+                                              <button
+                                                className={`ple-visibility-btn${ch.enabled === false ? ' hidden-item' : ''}`}
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  toggleChannelEnabledGlobal(ch.stream_id, ch.enabled !== false);
+                                                }}
+                                                title={ch.enabled === false ? "Show channel" : "Hide channel"}
+                                              >
+                                                {ch.enabled === false ? <EyeSlashIcon /> : <EyeIcon />}
+                                              </button>
+                                              <button
+                                                className="ple-tree-add-btn"
+                                                onClick={() => handleAddChannel(ch.stream_id)}
+                                                title={markedCategoryId ? "Add channel to target category" : "Add channel to playlist"}
+                                              >
+                                                ＋
+                                              </button>
+                                            </div>
                                           </div>
                                         ))}
                                       </div>
@@ -979,8 +1230,12 @@ export function PlaylistEditorModal({ playlistId, playlistName, onClose }: Playl
                                 const channels = categoryChannels[catKey] || [];
                                 const displayName = cat.alias || cat.category_name;
 
+                                if (cat.enabled === false && !showHidden) {
+                                  return null;
+                                }
+
                                 return (
-                                  <div key={cat.category_id} className="ple-cat-block">
+                                  <div key={cat.category_id} className={`ple-cat-block${cat.enabled === false ? ' ple-hidden-item' : ''}`}>
                                     <div className="ple-cat-header">
                                       <button
                                         className="ple-cat-toggle"
@@ -989,13 +1244,27 @@ export function PlaylistEditorModal({ playlistId, playlistName, onClose }: Playl
                                         <span className="ple-chevron-small">{isCatExpanded ? '▼' : '▶'}</span>
                                         <span className="ple-cat-name">{displayName}</span>
                                       </button>
-                                      <button
-                                        className="ple-add-btn"
-                                        onClick={() => handleAddCategory(source.id, cat.category_id)}
-                                        title="Add category link to playlist"
-                                      >
-                                        ＋ Category
-                                      </button>
+                                      <div className="ple-cat-ch-actions">
+                                        {source.id !== 'custom' && !source.id.startsWith('playlist:') && (
+                                          <button
+                                            className={`ple-visibility-btn${cat.enabled === false ? ' hidden-item' : ''}`}
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              toggleCategoryEnabledGlobal(source.id, cat.category_id, cat.enabled !== false);
+                                            }}
+                                            title={cat.enabled === false ? "Show category" : "Hide category"}
+                                          >
+                                            {cat.enabled === false ? <EyeSlashIcon /> : <EyeIcon />}
+                                          </button>
+                                        )}
+                                        <button
+                                          className="ple-add-btn"
+                                          onClick={() => handleAddCategory(source.id, cat.category_id)}
+                                          title="Add category link to playlist"
+                                        >
+                                          ＋ Category
+                                        </button>
+                                      </div>
                                     </div>
 
                                     {isCatExpanded && (
@@ -1003,18 +1272,36 @@ export function PlaylistEditorModal({ playlistId, playlistName, onClose }: Playl
                                         {channels.length === 0 ? (
                                           <div className="ple-empty-hint">No channels.</div>
                                         ) : (
-                                          channels.map(ch => (
-                                            <div key={ch.stream_id} className="ple-cat-channel-row">
-                                              <span className="ple-cat-ch-name">{ch.name}</span>
-                                              <button
-                                                className="ple-add-indiv-btn"
-                                                onClick={() => handleAddChannel(ch.stream_id)}
-                                                title={markedCategoryId ? "Add channel to target category" : "Add channel"}
-                                              >
-                                                ＋
-                                              </button>
-                                            </div>
-                                          ))
+                                          channels.map(ch => {
+                                            if (ch.enabled === false && !showHidden) {
+                                              return null;
+                                            }
+
+                                            return (
+                                              <div key={ch.stream_id} className={`ple-cat-channel-row${ch.enabled === false ? ' ple-hidden-item' : ''}`}>
+                                                <span className="ple-cat-ch-name">{ch.name}</span>
+                                                <div className="ple-cat-ch-actions">
+                                                  <button
+                                                    className={`ple-visibility-btn${ch.enabled === false ? ' hidden-item' : ''}`}
+                                                    onClick={(e) => {
+                                                      e.stopPropagation();
+                                                      toggleChannelEnabledGlobal(ch.stream_id, ch.enabled !== false);
+                                                    }}
+                                                    title={ch.enabled === false ? "Show channel" : "Hide channel"}
+                                                  >
+                                                    {ch.enabled === false ? <EyeSlashIcon /> : <EyeIcon />}
+                                                  </button>
+                                                  <button
+                                                    className="ple-add-indiv-btn"
+                                                    onClick={() => handleAddChannel(ch.stream_id)}
+                                                    title={markedCategoryId ? "Add channel to target category" : "Add channel"}
+                                                  >
+                                                    ＋
+                                                  </button>
+                                                </div>
+                                              </div>
+                                            );
+                                          })
                                         )}
                                       </div>
                                     )}
@@ -1089,6 +1376,7 @@ export function PlaylistEditorModal({ playlistId, playlistName, onClose }: Playl
                             onMark={() => setMarkedCategoryId(prev => prev === blockId ? null : blockId)}
                             onPointerDown={handleCatPointerDown}
                             onRemove={block.type === 'link' ? () => removeCategoryFromPlaylist(block.linkId) : undefined}
+                            showHidden={showHidden}
                           />
                         );
                       })}
@@ -1096,10 +1384,10 @@ export function PlaylistEditorModal({ playlistId, playlistName, onClose }: Playl
                   )}
 
                   {/* Individual Channels Section */}
-                  {individualChannels && individualChannels.length > 0 && (
+                  {individualChannels && individualChannels.length > 0 && visibleIndivCount > 0 && (
                     <div className="ple-indiv-section">
                       <div className="ple-indiv-header">
-                        <h4>🎬 Individual Channels ({individualChannels.length})</h4>
+                        <h4>🎬 Individual Channels ({visibleIndivCount})</h4>
                       </div>
 
                       <div
@@ -1112,12 +1400,18 @@ export function PlaylistEditorModal({ playlistId, playlistName, onClose }: Playl
                         {individualChannels.map((ch, index) => {
                           const isDragging = dragFromIndivIdx.current === index;
                           const isDragOver = dragOverIndivIdx === index && dragFromIndivIdx.current !== null && dragFromIndivIdx.current !== index;
+                          
+                          if (ch.enabled === false && !showHidden) {
+                            return null;
+                          }
+
                           const srcName = sources.find(s => s.id === ch.source_id)?.name || 'Source';
 
                           return (
                             <div
                               key={ch.stream_id}
-                              className={`ple-indiv-card${isDragging ? ' dragging' : ''}${isDragOver ? ' drag-over' : ''}`}
+                              className={`ple-indiv-card${isDragging ? ' dragging' : ''}${isDragOver ? ' drag-over' : ''}${ch.enabled === false ? ' ple-hidden-item' : ''}`}
+                              data-index={index}
                             >
                               <span
                                 className="ple-block-drag-handle"
@@ -1136,6 +1430,17 @@ export function PlaylistEditorModal({ playlistId, playlistName, onClose }: Playl
                                   <span className="ple-indiv-ch-sub">{srcName}</span>
                                 </div>
                               </div>
+
+                              <button
+                                className={`ple-visibility-btn${ch.enabled === false ? ' hidden-item' : ''}`}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  toggleChannelEnabledGlobal(ch.stream_id, ch.enabled !== false);
+                                }}
+                                title={ch.enabled === false ? "Show channel" : "Hide channel"}
+                              >
+                                {ch.enabled === false ? <EyeSlashIcon /> : <EyeIcon />}
+                              </button>
 
                               <button
                                 className="ple-remove-btn"

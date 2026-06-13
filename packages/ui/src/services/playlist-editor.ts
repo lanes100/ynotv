@@ -211,7 +211,7 @@ export async function addChannelToCategory(
     .toArray();
   const maxOrder = all.length > 0 ? Math.max(...all.map(c => c.display_order)) : -1;
 
-  await db.playlistIndividualChannels.add({
+  await db.playlistIndividualChannels.put({
     playlist_id: playlistId,
     stream_id: streamId,
     parent_category_id: parentCategoryId,

@@ -149,53 +149,112 @@ export function ChannelManager({ categoryId, categoryName, sourceId, onClose, on
         applyFontSize();
     }, []);
 
-    // Load channels for this source and filter by category
-    const dbChannels = useLiveQuery(
+    const targetPlaylistId = sourceId.startsWith('playlist:') ? sourceId.replace('playlist:', '') : sourceId;
+    const isLink = categoryId.startsWith('link:');
+    const linkId = isLink ? parseInt(categoryId.replace('link:', ''), 10) : null;
+
+    // Load category link details if category is a link
+    const categoryLink = useLiveQuery(
+        () => linkId !== null ? db.playlistCategoryLinks.get(linkId) : Promise.resolve(null),
+        [linkId]
+    );
+
+    // Resolve where the channels come from
+    const targetSourceId = categoryLink ? categoryLink.source_id : (isLink ? null : targetPlaylistId);
+    const targetCategoryId = categoryLink ? categoryLink.category_id : (isLink ? null : categoryId);
+    const targetParentId = categoryId;
+
+    // Load dynamic channels in the category
+    const dynamicChannels = useLiveQuery(
         async () => {
-            const allChannels = await db.channels.where('source_id').equals(sourceId).toArray();
-            return allChannels.filter(ch => ch.category_ids?.includes(categoryId));
-        }
+            if (!targetSourceId || !targetCategoryId) return [];
+            return db.channels.whereRaw(
+                `source_id = ? AND EXISTS (SELECT 1 FROM json_each(category_ids) WHERE value = ?)`,
+                [targetSourceId, targetCategoryId]
+            ).toArray();
+        },
+        [targetSourceId, targetCategoryId],
+        []
+    );
+
+    // Load manual mappings from playlist_individual_channels
+    const manualMappings = useLiveQuery(
+        () => db.playlistIndividualChannels
+            .whereRaw('playlist_id = ? AND parent_category_id = ?', [targetPlaylistId, targetParentId])
+            .sortBy('display_order'),
+        [targetPlaylistId, targetParentId],
+        []
+    );
+
+    // Load manual channel metadata
+    const manualChannels = useLiveQuery(
+        async () => {
+            if (!manualMappings || manualMappings.length === 0) return [];
+            const ids = manualMappings.map(m => m.stream_id);
+            const chans = await db.channels.where('stream_id').anyOf(ids).toArray();
+            const channelMap = new Map(chans.map(ch => [ch.stream_id, ch]));
+            return manualMappings
+                .map(m => channelMap.get(m.stream_id))
+                .filter((ch): ch is StoredChannel => ch !== undefined);
+        },
+        [manualMappings],
+        []
     );
 
     // Load category data including filter words
     useEffect(() => {
         async function loadCategoryData() {
+            if (isLink) return; // linked categories don't support filter words locally
             const category = await db.categories.get(categoryId);
             if (category?.filter_words) {
                 setFilterWords(category.filter_words);
             }
         }
         loadCategoryData();
-    }, [categoryId]);
+    }, [categoryId, isLink]);
 
     // Initialize channels from database (but not while saving)
     useEffect(() => {
-        if (dbChannels && !isSavingRef.current) {
-            const sorted = [...dbChannels].sort((a, b) => {
-                // If any channel has a manually saved display_order, use that
+        if (dynamicChannels && manualMappings && manualChannels && !isSavingRef.current) {
+            // Wait for category link to resolve if it is a link category
+            if (isLink && !categoryLink) return;
+
+            const manualStreamIds = new Set(manualMappings.map(m => m.stream_id));
+            const manualMap = new Map(manualMappings.map(m => [m.stream_id, m.display_order]));
+
+            // Sort manual channels by display order in overlay table
+            const orderedManual = manualChannels
+                .filter(ch => manualStreamIds.has(ch.stream_id))
+                .sort((a, b) => (manualMap.get(a.stream_id) ?? 0) - (manualMap.get(b.stream_id) ?? 0));
+
+            // Sort dynamic channels using legacy fallback order
+            const remainingDynamic = dynamicChannels.filter(ch => !manualStreamIds.has(ch.stream_id));
+            remainingDynamic.sort((a, b) => {
                 if (a.display_order != null && b.display_order != null) return a.display_order - b.display_order;
                 if (a.display_order != null) return -1;
                 if (b.display_order != null) return 1;
-                // Fall back to the sort order preference
+                
+                // Fall back to preferred sortOrder
                 if (sortOrder === 'number') {
                     const numA = a.channel_num;
                     const numB = b.channel_num;
-                    // Match EPG behavior from useChannels.ts
                     if (numA !== undefined && numB !== undefined) return numA - numB;
-                    if (numA !== undefined) return -1; // a has number → comes first
-                    if (numB !== undefined) return 1;  // b has number → comes first
+                    if (numA !== undefined) return -1;
+                    if (numB !== undefined) return 1;
                 }
 
                 return a.name.localeCompare(b.name);
             });
-            const channelsWithEnabled = sorted.map((ch) => ({
+
+            const combined = [...orderedManual, ...remainingDynamic].map(ch => ({
                 ...ch,
                 enabled: ch.enabled !== false,
             }));
-            setChannels(channelsWithEnabled);
+
+            setChannels(combined);
             setIsDirty(false);
         }
-    }, [dbChannels, sortOrder]);
+    }, [dynamicChannels, manualMappings, manualChannels, categoryLink, isLink, sortOrder]);
 
     // Toggle enable/disable
     const toggleChannel = useCallback((channelId: string) => {
@@ -286,26 +345,43 @@ export function ChannelManager({ categoryId, categoryName, sourceId, onClose, on
     }, []);
 
     // Save changes
+    // Save changes
     const handleSave = useCallback(async () => {
         try {
             isSavingRef.current = true;
 
-            // 1. Bulk update channels (enabled + display_order) in a single SQL statement.
-            // Avoids REPLACE INTO which deletes the row first and cascades into
-            // failover_group_members, wiping out failover group memberships.
-            const channelUpdates = channels.map((ch, i) => ({
+            // 1. Bulk update channels (enabled state) in channels table
+            const channelVisibilityUpdates = channels.map(ch => ({
                 streamId: ch.stream_id,
                 enabled: ch.enabled !== false,
-                displayOrder: i,
             }));
-            if (channelUpdates.length > 0) {
-                await updateChannelsBatch(channelUpdates);
+            if (channelVisibilityUpdates.length > 0) {
+                await updateChannelsBatch(channelVisibilityUpdates);
+            }
+
+            // 2. Write custom display orders to playlist_individual_channels if dirty
+            if (isDirty) {
+                await db.playlistIndividualChannels
+                    .whereRaw('playlist_id = ? AND parent_category_id = ?', [targetPlaylistId, targetParentId])
+                    .delete();
+
+                for (let i = 0; i < channels.length; i++) {
+                    await db.playlistIndividualChannels.put({
+                        playlist_id: targetPlaylistId,
+                        parent_category_id: targetParentId,
+                        stream_id: channels[i].stream_id,
+                        display_order: i,
+                        added_at: Date.now()
+                    });
+                }
             }
 
             // 3. Perform atomic operation for category filter words
-            await db.categories.update(categoryId, {
-                filter_words: filterWords
-            });
+            if (!isLink) {
+                await db.categories.update(categoryId, {
+                    filter_words: filterWords
+                });
+            }
 
             await new Promise(resolve => setTimeout(resolve, 300));
             if (onChange) await onChange();
@@ -316,7 +392,7 @@ export function ChannelManager({ categoryId, categoryName, sourceId, onClose, on
         } finally {
             isSavingRef.current = false;
         }
-    }, [channels, filterWords, categoryId, onChange, onClose]);
+    }, [channels, filterWords, categoryId, targetPlaylistId, targetParentId, isDirty, isLink, onChange, onClose]);
 
     // Get visible channels based on filter and search
     const visibleChannels = useMemo(() => {
@@ -363,13 +439,17 @@ export function ChannelManager({ categoryId, categoryName, sourceId, onClose, on
                     >
                         {hideDisabled ? '👁 Show All' : '👁‍🗨 Hide Disabled'}
                     </button>
-                    <div className="divider-vertical"></div>
-                    <button
-                        onClick={() => setShowFilterPanel(!showFilterPanel)}
-                        className={showFilterPanel ? 'active-toggle' : ''}
-                    >
-                        🔤 Filter Words
-                    </button>
+                    {!isLink && (
+                        <>
+                            <div className="divider-vertical"></div>
+                            <button
+                                onClick={() => setShowFilterPanel(!showFilterPanel)}
+                                className={showFilterPanel ? 'active-toggle' : ''}
+                            >
+                                🔤 Filter Words
+                            </button>
+                        </>
+                    )}
                 </div>
 
                 {/* Filter Words Panel */}

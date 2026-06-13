@@ -1237,3 +1237,109 @@
     border-color: #00d4ff;
     color: #00d4ff;
 }
+
+/* ── Visibility Toggles & Show Hidden ── */
+.ple-visibility-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-secondary, #b3b3b3);
+    cursor: pointer;
+    padding: 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+
+.ple-visibility-btn:hover {
+    color: var(--accent-primary, #00d4ff);
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.ple-visibility-btn.hidden-item {
+    color: #ff5252;
+}
+
+.ple-visibility-btn.hidden-item:hover {
+    color: #ff8686;
+    background: rgba(255, 82, 82, 0.1);
+}
+
+.ple-hidden-item {
+    opacity: 0.45;
+    filter: grayscale(40%);
+}
+
+.ple-show-hidden-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.82rem;
+    color: var(--text-primary, #ffffff);
+    cursor: pointer;
+    user-select: none;
+    padding: 6px 12px;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    transition: all 0.2s ease;
+}
+
+.ple-show-hidden-label:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: var(--accent-primary, #00d4ff);
+}
+
+.ple-show-hidden-label input[type="checkbox"] {
+    accent-color: var(--accent-primary, #00d4ff);
+    cursor: pointer;
+    width: 14px;
+    height: 14px;
+    margin: 0;
+}
+
+/* ── Filter Words Section ── */
+.ple-filter-words-section {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 6px;
+    padding: 8px 12px;
+    margin-bottom: 8px;
+}
+
+.ple-filter-words-label {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--text-secondary, #b3b3b3);
+    white-space: nowrap;
+}
+
+.ple-filter-words-input {
+    flex: 1;
+    background: rgba(0, 0, 0, 0.35);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: #fff;
+    border-radius: 4px;
+    padding: 4px 10px;
+    font-size: 0.8rem;
+    outline: none;
+    font-family: inherit;
+    transition: all 0.2s ease;
+}
+
+.ple-filter-words-input:focus {
+    border-color: var(--accent-primary, #00d4ff);
+    background: rgba(0, 0, 0, 0.5);
+    box-shadow: 0 0 0 2px rgba(0, 212, 255, 0.12);
+}
+
+.ple-tree-ch-actions,
+.ple-cat-ch-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
