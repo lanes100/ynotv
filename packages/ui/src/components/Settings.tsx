@@ -33,6 +33,8 @@ interface SettingsProps {
   onThemeChange?: (theme: ThemeId) => void;
   initialTab?: SettingsTabId;
   editSourceId?: string | null;
+  pendingSubTabFromParent?: string | null;
+  onConsumePendingSubTab?: () => void;
   channelInfoOverlayEnabled?: boolean;
   onChannelInfoOverlayChange?: (enabled: boolean) => void;
   channelInfoOverlayFontSize?: number;
@@ -72,6 +74,8 @@ export function Settings({
   onThemeChange,
   initialTab = 'sources',
   editSourceId = null,
+  pendingSubTabFromParent,
+  onConsumePendingSubTab,
   channelInfoOverlayEnabled: channelInfoOverlayEnabledProp,
   onChannelInfoOverlayChange,
   channelInfoOverlayFontSize: channelInfoOverlayFontSizeProp,
@@ -106,6 +110,14 @@ export function Settings({
   const [activeTab, setActiveTab] = useState<SettingsTabId>(initialTab);
   const [pendingSubTab, setPendingSubTab] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Sync pending sub-tab from parent (e.g., navigating from Cast button)
+  useEffect(() => {
+    if (pendingSubTabFromParent) {
+      setPendingSubTab(pendingSubTabFromParent);
+      onConsumePendingSubTab?.();
+    }
+  }, [pendingSubTabFromParent, onConsumePendingSubTab]);
   const [searchResults, setSearchResults] = useState<SettingsSearchResult[]>([]);
   const searchRef = useRef<HTMLDivElement>(null);
   const [sources, setSources] = useState<Source[]>([]);
@@ -1519,7 +1531,7 @@ export function Settings({
       case 'playback':
         return (
           <PlaybackTab
-            initialSubTab={pendingSubTab as 'mpv' | 'reconnect' | 'cast' | 'popout' | 'skipintro' | undefined}
+            initialSubTab={(pendingSubTabFromParent || pendingSubTab) as 'mpv' | 'reconnect' | 'cast' | 'popout' | 'skipintro' | undefined}
             mpvParams={mpvParams}
             mpvDisableWhitelist={mpvDisableWhitelist}
             onMpvParamsChange={handleMpvParamsChange}

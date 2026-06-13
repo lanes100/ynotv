@@ -703,6 +703,8 @@ function App() {
     settingsTab,
     editSourceId,
     showSettingsPopup,
+    pendingSettingsSubTab,
+    setPendingSettingsSubTab,
     categoriesOpen,
     searchQuery,
     debouncedSearchQuery,
@@ -3099,6 +3101,8 @@ function App() {
           showHoverDetails={showHoverDetails}
           onShowHoverDetailsChange={handleShowHoverDetailsChange}
           initialTab={settingsTab}
+          pendingSubTabFromParent={pendingSettingsSubTab}
+          onConsumePendingSubTab={() => setPendingSettingsSubTab(null)}
           editSourceId={editSourceId}
           onClose={() => {
             if (showSettingsPopup) {

@@ -13,6 +13,8 @@ export interface NavigationState {
   settingsTab: SettingsTabId;
   editSourceId: string | null;
   showSettingsPopup: boolean;
+  pendingSettingsSubTab: string | null;
+  setPendingSettingsSubTab: (subTab: string | null | ((prev: string | null) => string | null)) => void;
 
   // Categories state
   categoriesOpen: boolean;
@@ -63,6 +65,7 @@ export function useNavigation(options: UseNavigationOptions): NavigationState {
   const [settingsTab, setSettingsTab] = useState<SettingsTabId>('sources');
   const [editSourceId, setEditSourceId] = useState<string | null>(null);
   const [showSettingsPopup, setShowSettingsPopup] = useState(false);
+  const [pendingSettingsSubTab, setPendingSettingsSubTab] = useState<string | null>(null);
 
   // Categories state
   const [categoriesOpen, setCategoriesOpen] = useState(false);
@@ -102,10 +105,13 @@ export function useNavigation(options: UseNavigationOptions): NavigationState {
   // Listen for open-settings custom event (from TV Calendar, etc.)
   useEffect(() => {
     const handleOpenSettings = (e: Event) => {
-      const customEvent = e as CustomEvent<{ tab?: SettingsTabId }>;
+      const customEvent = e as CustomEvent<{ tab?: SettingsTabId; subTab?: string }>;
       console.log('[useNavigation] Received open-settings event:', customEvent.detail);
       if (customEvent.detail?.tab) {
         setSettingsTab(customEvent.detail.tab);
+      }
+      if (customEvent.detail?.subTab) {
+        setPendingSettingsSubTab(customEvent.detail.subTab);
       }
       // Open as popup if in main layout, otherwise as full view
       if (multiviewLayoutRef.current === 'main') {
@@ -182,6 +188,8 @@ export function useNavigation(options: UseNavigationOptions): NavigationState {
     settingsTab,
     editSourceId,
     showSettingsPopup,
+    pendingSettingsSubTab,
+    setPendingSettingsSubTab,
     categoriesOpen,
     searchQuery,
     debouncedSearchQuery,

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import './CastButton.css';
@@ -39,6 +40,7 @@ export function CastButton({ castEnabled, onCastCurrentStream }: CastButtonProps
   });
   const [connectingId, setConnectingId] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [showEnableDialog, setShowEnableDialog] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -128,7 +130,71 @@ export function CastButton({ castEnabled, onCastCurrentStream }: CastButtonProps
     }
   };
 
-  if (!castEnabled) return null;
+  if (!castEnabled) {
+    return (
+      <div className="cast-button-container" ref={containerRef}>
+        <button
+          className="title-bar-cast-btn disabled"
+          onClick={() => setShowEnableDialog(true)}
+          title="Google Cast (disabled)"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="cast-icon"
+          >
+            <path d="M2 17a5 5 0 0 1 5 5" />
+            <path d="M2 13a9 9 0 0 1 9 9" />
+            <path d="M2 9a13 13 0 0 1 13 13" />
+            <path d="M2 5h18a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-6" />
+            <line x1="2" y1="20" x2="2.01" y2="20" />
+          </svg>
+        </button>
+
+        {showEnableDialog && createPortal(
+          <div className="cast-enable-dialog-overlay" onClick={() => setShowEnableDialog(false)}>
+            <div className="cast-enable-dialog" onClick={(e) => e.stopPropagation()}>
+              <div className="cast-enable-dialog-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M2 5h18a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-6" />
+                  <path d="M2 17a5 5 0 0 1 5 5" />
+                  <path d="M2 13a9 9 0 0 1 9 9" />
+                  <path d="M2 9a13 13 0 0 1 13 13" />
+                  <line x1="2" y1="20" x2="2.01" y2="20" />
+                </svg>
+              </div>
+              <h3>Google Cast Disabled</h3>
+              <p>Enable Google Cast in Settings to cast content to your devices.</p>
+              <div className="cast-enable-dialog-actions">
+                <button
+                  className="cast-enable-dialog-cancel"
+                  onClick={() => setShowEnableDialog(false)}
+                >
+                  Cancel
+                </button>
+                <button
+                  className="cast-enable-dialog-settings"
+                  onClick={() => {
+                    setShowEnableDialog(false);
+                    const event = new CustomEvent('open-settings', { detail: { tab: 'playback', subTab: 'cast' } });
+                    window.dispatchEvent(event);
+                  }}
+                >
+                  Open Settings
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="cast-button-container" ref={containerRef}>
@@ -147,7 +213,6 @@ export function CastButton({ castEnabled, onCastCurrentStream }: CastButtonProps
           strokeLinejoin="round"
           className="cast-icon"
         >
-          {/* Base Cast Icon Paths */}
           <path d="M2 17a5 5 0 0 1 5 5" className="cast-wave-line-1" />
           <path d="M2 13a9 9 0 0 1 9 9" className="cast-wave-line-2" />
           <path d="M2 9a13 13 0 0 1 13 13" className="cast-wave-line-3" />
