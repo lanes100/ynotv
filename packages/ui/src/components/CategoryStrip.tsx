@@ -217,41 +217,54 @@ function PlaylistCategoryLinkItem({
   link,
   selectedCategoryId,
   onSelectCategory,
+  displayName,
+  channelCount,
 }: {
   link: PlaylistCategoryLink;
   selectedCategoryId: string | null;
   onSelectCategory: (id: string | null) => void;
+  displayName?: string;
+  channelCount?: number;
 }) {
   const virtualId = `__plcat_${link.id}`;
   
-  // Live lookup of category name
+  // Live lookup of category name (bypassed if precomputed)
   const category = useLiveQuery(
-    () => db.categories.get(link.category_id),
-    [link.category_id]
+    () => displayName !== undefined ? null : db.categories.get(link.category_id),
+    [link.category_id, displayName]
   );
 
-  // Live count of channels in this category
-  const channelCount = useLiveQuery(
+  // Live count of channels in this category (bypassed if precomputed)
+  const queryChannelCount = useLiveQuery(
     async () => {
-      const rows = await db.channels.whereRaw(
-        `source_id = ? AND EXISTS (SELECT 1 FROM json_each(category_ids) WHERE value = ?) AND (enabled IS NULL OR enabled NOT IN (0, '0', 'false'))`,
-        [link.source_id, link.category_id]
-      ).toArray();
-      return rows.length;
+      if (channelCount !== undefined) return channelCount;
+      let count = 0;
+      if (link.source_id !== 'custom') {
+        const rows = await db.channels.whereRaw(
+          `source_id = ? AND EXISTS (SELECT 1 FROM json_each(category_ids) WHERE value = ?) AND (enabled IS NULL OR enabled NOT IN (0, '0', 'false'))`,
+          [link.source_id, link.category_id]
+        ).toArray();
+        count += rows.length;
+      }
+      const manualCount = await db.playlistIndividualChannels
+        .whereRaw('playlist_id = ? AND parent_category_id = ?', [link.playlist_id, `link:${link.id}`])
+        .count();
+      return count + manualCount;
     },
-    [link.source_id, link.category_id],
+    [link.source_id, link.category_id, link.playlist_id, link.id, channelCount],
     0
   );
 
-  const displayName = link.custom_name || category?.alias || category?.category_name || link.category_id;
+  const finalName = displayName !== undefined ? displayName : (link.custom_name || category?.alias || category?.category_name || link.category_id);
+  const finalCount = channelCount !== undefined ? channelCount : (queryChannelCount ?? 0);
 
   return (
     <button
       className={`category-item nested playlist-cat-item ${selectedCategoryId === virtualId ? 'selected' : ''}`}
       onClick={() => onSelectCategory(virtualId)}
     >
-      <ScrollingText className="category-name">{displayName}</ScrollingText>
-      <span className="category-count">{channelCount ?? 0}</span>
+      <ScrollingText className="category-name">{finalName}</ScrollingText>
+      <span className="category-count">{finalCount}</span>
     </button>
   );
 }
@@ -498,8 +511,43 @@ export function CategoryStrip({ selectedCategoryId, onSelectCategory, visible, o
     'playlist_category_links'
   );
 
-  // Load all playlist individual channel counts
-  const allPlaylistIndividualCounts = useLiveQuery(
+  // Load all categories for link name mapping
+  const allCategoriesList = useLiveQuery(
+    () => db.categories.toArray(),
+    [],
+    []
+  );
+
+  const categoryNamesMap = useMemo(() => {
+    const map = new Map<string, string>();
+    if (allCategoriesList) {
+      for (const cat of allCategoriesList) {
+        map.set(cat.category_id, cat.alias || cat.category_name);
+      }
+    }
+    return map;
+  }, [allCategoriesList]);
+
+  // Load flat playlist individual channel counts (where parent_category_id is NULL)
+  const flatPlaylistIndividualCounts = useLiveQuery(
+    async () => {
+      const all = await db.playlistIndividualChannels.toArray();
+      const counts = new Map<string, number>();
+      for (const item of all) {
+        if (!item.parent_category_id) {
+          counts.set(item.playlist_id, (counts.get(item.playlist_id) || 0) + 1);
+        }
+      }
+      return counts;
+    },
+    [],
+    new Map(),
+    0,
+    'playlist_individual_channels'
+  );
+
+  // Load total playlist individual channel counts (all of them)
+  const totalPlaylistIndividualCounts = useLiveQuery(
     async () => {
       const all = await db.playlistIndividualChannels.toArray();
       const counts = new Map<string, number>();
@@ -514,6 +562,25 @@ export function CategoryStrip({ selectedCategoryId, onSelectCategory, visible, o
     'playlist_individual_channels'
   );
 
+  // Load manual nested channel counts grouped by parent_category_id
+  const manualCategoryChannelCounts = useLiveQuery(
+    async () => {
+      const all = await db.playlistIndividualChannels.toArray();
+      const counts = new Map<string, number>();
+      for (const item of all) {
+        if (item.parent_category_id) {
+          const key = `${item.playlist_id}:${item.parent_category_id}`;
+          counts.set(key, (counts.get(key) || 0) + 1);
+        }
+      }
+      return counts;
+    },
+    [],
+    new Map<string, number>(),
+    0,
+    'playlist_individual_channels'
+  );
+
   interface SidebarSourceItem {
     id: string;
     type: 'real' | 'playlist';
@@ -522,11 +589,6 @@ export function CategoryStrip({ selectedCategoryId, onSelectCategory, visible, o
     realGroup?: typeof filteredGroupedCategories[0];
     playlistGroup?: CustomPlaylist;
   }
-
-  // Drag state for sidebar sources
-  const dragFromIdx = useRef<number | null>(null);
-  const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
-  const scrollableRef = useRef<HTMLDivElement>(null);
 
   // Load unified sidebar order from preference
   const sidebarOrderPref = useLiveQuery(
@@ -543,17 +605,37 @@ export function CategoryStrip({ selectedCategoryId, onSelectCategory, visible, o
     }
   }, [sidebarOrderPref]);
 
-  // Combine real sources and custom playlists
+  const categoryChannelCounts = useMemo(() => {
+    const catCounts = new Map<string, number>();
+    if (!filteredGroupedCategories) return catCounts;
+    for (const g of filteredGroupedCategories) {
+      for (const cat of g.categories) {
+        catCounts.set(cat.category_id, cat.channelCount);
+      }
+    }
+    return catCounts;
+  }, [filteredGroupedCategories]);
+
   const combinedSources = useMemo(() => {
     const list: SidebarSourceItem[] = [];
     
     // Add real sources
     for (const group of filteredGroupedCategories) {
+      const customLinks = (allPlaylistCategoryLinks || [])
+        .filter(l => l.playlist_id === group.sourceId);
+      const individualCount = totalPlaylistIndividualCounts?.get(group.sourceId) || 0;
+      
+      let count = group.categories.reduce((s, cat) => s + cat.channelCount, 0);
+      for (const link of customLinks) {
+        count += categoryChannelCounts.get(link.category_id) || 0;
+      }
+      count += individualCount;
+
       list.push({
         id: group.sourceId,
         type: 'real',
         name: sources[group.sourceId] || 'Loading...',
-        count: group.categories.reduce((s, cat) => s + cat.channelCount, 0),
+        count,
         realGroup: group
       });
     }
@@ -563,7 +645,7 @@ export function CategoryStrip({ selectedCategoryId, onSelectCategory, visible, o
       for (const playlist of customPlaylists) {
         const playlistLinks = (allPlaylistCategoryLinks || [])
           .filter(l => l.playlist_id === playlist.playlist_id);
-        const individualCount = allPlaylistIndividualCounts?.get(playlist.playlist_id) || 0;
+        const individualCount = flatPlaylistIndividualCounts?.get(playlist.playlist_id) || 0;
         const totalCount = playlistLinks.length + (individualCount > 0 ? 1 : 0);
         
         list.push({
@@ -588,61 +670,7 @@ export function CategoryStrip({ selectedCategoryId, onSelectCategory, visible, o
     }
     
     return list;
-  }, [filteredGroupedCategories, sources, customPlaylists, allPlaylistCategoryLinks, allPlaylistIndividualCounts, sidebarSourcesOrder]);
-
-  const getSourceIndexFromClientY = (clientY: number): number => {
-    if (!scrollableRef.current) return 0;
-    const children = Array.from(scrollableRef.current.children) as HTMLElement[];
-    const groupElements = children.filter(c => c.classList.contains('category-source-group'));
-    for (let i = 0; i < groupElements.length; i++) {
-      const rect = groupElements[i].getBoundingClientRect();
-      if (clientY < rect.top + rect.height / 2) return i;
-    }
-    return Math.max(0, groupElements.length - 1);
-  };
-
-  const handleSidebarPointerDown = (e: React.PointerEvent, index: number) => {
-    dragFromIdx.current = index;
-    setDragOverIdx(index);
-    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-  };
-
-  const handleSidebarPointerMove = (e: React.PointerEvent) => {
-    if (dragFromIdx.current === null) return;
-    const currentOver = getSourceIndexFromClientY(e.clientY);
-    if (currentOver !== dragOverIdx) {
-      setDragOverIdx(currentOver);
-    }
-  };
-
-  const handleSidebarPointerUp = useCallback(async (e: React.PointerEvent) => {
-    if (dragFromIdx.current === null) return;
-    const from = dragFromIdx.current;
-    const to = getSourceIndexFromClientY(e.clientY);
-    dragFromIdx.current = null;
-    setDragOverIdx(null);
-    
-    if (from === to) return;
-
-    const next = [...combinedSources];
-    const [moved] = next.splice(from, 1);
-    next.splice(to, 0, moved);
-
-    const orderedIds = next.map(item => item.id);
-    try {
-      await db.prefs.put({
-        key: 'sidebar_sources_order',
-        value: JSON.stringify(orderedIds)
-      });
-    } catch (err) {
-      console.error('Failed to save sidebar source order:', err);
-    }
-  }, [combinedSources]);
-
-  const handleSidebarPointerCancel = () => {
-    dragFromIdx.current = null;
-    setDragOverIdx(null);
-  };
+  }, [filteredGroupedCategories, sources, customPlaylists, allPlaylistCategoryLinks, flatPlaylistIndividualCounts, totalPlaylistIndividualCounts, sidebarSourcesOrder, categoryChannelCounts]);
 
   const handleCreateGroup = () => {
     showPrompt(
@@ -953,62 +981,127 @@ export function CategoryStrip({ selectedCategoryId, onSelectCategory, visible, o
 
       </div>
 
-      <div 
-        className="category-strip-scrollable"
-        ref={scrollableRef}
-        onPointerMove={handleSidebarPointerMove}
-        onPointerUp={handleSidebarPointerUp}
-        onPointerCancel={handleSidebarPointerCancel}
-      >
+      <div className="category-strip-scrollable">
         {combinedSources.map((item, index) => {
-          const isDragging = dragFromIdx.current === index;
-          const isDragOver = dragOverIdx === index && dragFromIdx.current !== null && dragFromIdx.current !== index;
-          
           if (item.type === 'real' && item.realGroup) {
             const group = item.realGroup;
             const isExpanded = expandedSources[group.sourceId] || searchQuery.trim().length > 0;
             return (
               <div 
                 key={group.sourceId} 
-                className={`category-source-group${isDragging ? ' dragging' : ''}${isDragOver ? ' drag-over' : ''} ${isExpanded ? 'is-expanded' : ''}`}
+                className={`category-source-group ${isExpanded ? 'is-expanded' : ''}`}
               >
-                <div className="category-source-header-wrapper">
-                  <span
-                    className="sidebar-drag-handle"
-                    style={{ touchAction: 'none' }}
-                    onPointerDown={e => handleSidebarPointerDown(e, index)}
-                    title="Drag to reorder source"
-                  >
-                    ⋮⋮
-                  </span>
-                  <button
-                    className="category-source-header"
-                    onClick={() => toggleSource(group.sourceId)}
-                    onContextMenu={(e) => handleSourceContextMenu(e, group.sourceId, sources[group.sourceId] || 'Source')}
-                  >
-                    <div className="source-header-left">
-                      <ChevronIcon expanded={isExpanded} />
-                      <div className="source-name-container">
-                        <ScrollingText className="source-name">{sources[group.sourceId] || 'Loading...'}</ScrollingText>
-                      </div>
+                <button
+                  className="category-source-header"
+                  onClick={() => toggleSource(group.sourceId)}
+                  onContextMenu={(e) => handleSourceContextMenu(e, group.sourceId, sources[group.sourceId] || 'Source')}
+                >
+                  <div className="source-header-left">
+                    <ChevronIcon expanded={isExpanded} />
+                    <div className="source-name-container">
+                      <ScrollingText className="source-name">{sources[group.sourceId] || 'Loading...'}</ScrollingText>
                     </div>
-                    <span className="source-count">{item.count}</span>
-                  </button>
-                </div>
+                  </div>
+                  <span className="source-count">{item.count}</span>
+                </button>
 
                 {isExpanded && (
                   <div className="category-source-content">
-                    {group.categories.map((category) => (
-                      <button
-                        key={category.category_id}
-                        className={`category-item nested ${selectedCategoryId === category.category_id ? 'selected' : ''}`}
-                        onClick={() => onSelectCategory(category.category_id)}
-                        onContextMenu={(e) => handleCategoryContextMenu(e, category.category_id, category.alias || category.category_name, group.sourceId, sources[group.sourceId] || 'Source')}
-                      >
-                        <ScrollingText className="category-name">{category.alias || category.category_name}</ScrollingText>
-                        <span className="category-count">{category.channelCount}</span>
-                      </button>
-                    ))}
+                    {(() => {
+                      interface UnifiedSidebarCat {
+                        id: string;
+                        type: 'native' | 'link';
+                        name: string;
+                        count: number;
+                        displayOrder: number;
+                        nativeCat?: typeof group.categories[0];
+                        customLink?: PlaylistCategoryLink;
+                      }
+                      
+                      const list: UnifiedSidebarCat[] = [];
+                      
+                      // Add native categories
+                      for (const cat of group.categories) {
+                        const manualCount = manualCategoryChannelCounts?.get(`${group.sourceId}:${cat.category_id}`) || 0;
+                        list.push({
+                          id: cat.category_id,
+                          type: 'native',
+                          name: cat.alias || cat.category_name,
+                          count: cat.channelCount + manualCount,
+                          displayOrder: cat.display_order ?? 0,
+                          nativeCat: cat
+                        });
+                      }
+                      
+                      // Add custom links
+                      const customLinks = (allPlaylistCategoryLinks || [])
+                        .filter(l => l.playlist_id === group.sourceId);
+                      for (const link of customLinks) {
+                        const nativeCount = categoryChannelCounts.get(link.category_id) || 0;
+                        const manualCount = manualCategoryChannelCounts?.get(`${group.sourceId}:link:${link.id}`) || 0;
+                        list.push({
+                          id: `link:${link.id}`,
+                          type: 'link',
+                          name: link.custom_name || (categoryNamesMap.get(link.category_id) || link.category_id),
+                          count: nativeCount + manualCount,
+                          displayOrder: link.display_order ?? 0,
+                          customLink: link
+                        });
+                      }
+                      
+                      // Sort by displayOrder, then alphabetically by name
+                      list.sort((a, b) => {
+                        if (a.displayOrder !== b.displayOrder) return a.displayOrder - b.displayOrder;
+                        return a.name.localeCompare(b.name);
+                      });
+                      
+                      const individualCount = flatPlaylistIndividualCounts?.get(group.sourceId) || 0;
+                      
+                      return (
+                        <>
+                          {list.map(catItem => {
+                            if (catItem.type === 'native' && catItem.nativeCat) {
+                              const category = catItem.nativeCat;
+                              return (
+                                <button
+                                  key={category.category_id}
+                                  className={`category-item nested ${selectedCategoryId === category.category_id ? 'selected' : ''}`}
+                                  onClick={() => onSelectCategory(category.category_id)}
+                                  onContextMenu={(e) => handleCategoryContextMenu(e, category.category_id, category.alias || category.category_name, group.sourceId, sources[group.sourceId] || 'Source')}
+                                >
+                                  <ScrollingText className="category-name">{category.alias || category.category_name}</ScrollingText>
+                                  <span className="category-count">{catItem.count}</span>
+                                </button>
+                              );
+                            } else if (catItem.type === 'link' && catItem.customLink) {
+                              return (
+                                <PlaylistCategoryLinkItem
+                                  key={catItem.id}
+                                  link={catItem.customLink}
+                                  selectedCategoryId={selectedCategoryId}
+                                  onSelectCategory={onSelectCategory}
+                                  displayName={catItem.name}
+                                  channelCount={catItem.count}
+                                />
+                              );
+                            }
+                            return null;
+                          })}
+                          
+                          {individualCount > 0 && (
+                            <button
+                              className={`category-item nested playlist-indiv-item ${
+                                selectedCategoryId === `__plindiv_${group.sourceId}` ? 'selected' : ''
+                              }`}
+                              onClick={() => onSelectCategory(`__plindiv_${group.sourceId}`)}
+                            >
+                              <ScrollingText className="category-name">Individual Channels</ScrollingText>
+                              <span className="category-count">{individualCount}</span>
+                            </button>
+                          )}
+                        </>
+                      );
+                    })()}
                   </div>
                 )}
               </div>
@@ -1019,47 +1112,45 @@ export function CategoryStrip({ selectedCategoryId, onSelectCategory, visible, o
             const playlistLinks = (allPlaylistCategoryLinks || [])
               .filter(l => l.playlist_id === playlist.playlist_id)
               .sort((a, b) => a.display_order - b.display_order);
-            const individualCount = allPlaylistIndividualCounts?.get(playlist.playlist_id) || 0;
+            const individualCount = flatPlaylistIndividualCounts?.get(playlist.playlist_id) || 0;
 
             return (
               <div 
                 key={playlist.playlist_id} 
-                className={`category-source-group playlist-source-group${isDragging ? ' dragging' : ''}${isDragOver ? ' drag-over' : ''} ${isExpanded ? 'is-expanded' : ''}`}
+                className={`category-source-group playlist-source-group ${isExpanded ? 'is-expanded' : ''}`}
               >
-                <div className="category-source-header-wrapper">
-                  <span
-                    className="sidebar-drag-handle"
-                    style={{ touchAction: 'none' }}
-                    onPointerDown={e => handleSidebarPointerDown(e, index)}
-                    title="Drag to reorder playlist"
-                  >
-                    ⋮⋮
-                  </span>
-                  <button
-                    className="category-source-header playlist-source-header"
-                    onClick={() => handleTogglePlaylist(playlist.playlist_id)}
-                    onContextMenu={(e) => handlePlaylistContextMenu(e, playlist.playlist_id, playlist.name)}
-                  >
-                    <div className="source-header-left">
-                      <ChevronIcon expanded={isExpanded} />
-                      <div className="source-name-container">
-                        <ScrollingText className="source-name">{playlist.name}</ScrollingText>
-                      </div>
+                <button
+                  className="category-source-header playlist-source-header"
+                  onClick={() => handleTogglePlaylist(playlist.playlist_id)}
+                  onContextMenu={(e) => handlePlaylistContextMenu(e, playlist.playlist_id, playlist.name)}
+                >
+                  <div className="source-header-left">
+                    <ChevronIcon expanded={isExpanded} />
+                    <div className="source-name-container">
+                      <ScrollingText className="source-name">{playlist.name}</ScrollingText>
                     </div>
-                    <span className="source-count">{item.count}</span>
-                  </button>
-                </div>
+                  </div>
+                  <span className="source-count">{item.count}</span>
+                </button>
 
                 {isExpanded && (
                   <div className="category-source-content">
-                    {playlistLinks.map(link => (
-                      <PlaylistCategoryLinkItem
-                        key={link.id}
-                        link={link}
-                        selectedCategoryId={selectedCategoryId}
-                        onSelectCategory={onSelectCategory}
-                      />
-                    ))}
+                    {playlistLinks.map(link => {
+                      const nativeCount = categoryChannelCounts.get(link.category_id) || 0;
+                      const manualCount = manualCategoryChannelCounts?.get(`${playlist.playlist_id}:link:${link.id}`) || 0;
+                      const count = nativeCount + manualCount;
+                      const name = link.custom_name || (categoryNamesMap.get(link.category_id) || link.category_id);
+                      return (
+                        <PlaylistCategoryLinkItem
+                          key={link.id}
+                          link={link}
+                          selectedCategoryId={selectedCategoryId}
+                          onSelectCategory={onSelectCategory}
+                          displayName={name}
+                          channelCount={count}
+                        />
+                      );
+                    })}
 
                     {individualCount > 0 && (
                       <button

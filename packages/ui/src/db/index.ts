@@ -280,7 +280,8 @@ export interface PlaylistIndividualChannel {
   id?: number;           // Auto-increment PK
   playlist_id: string;   // FK → custom_playlists.playlist_id ON DELETE CASCADE
   stream_id: string;     // FK → channels.stream_id ON DELETE CASCADE
-  display_order: number; // Ordering within the "Individual Channels" section
+  parent_category_id?: string; // ID of the category block this channel is added to (if any)
+  display_order: number; // Ordering within the section/category block
   added_at: number;      // Unix timestamp ms
 }
 
@@ -480,7 +481,7 @@ class YnotvDatabase extends SqliteDatabase {
     // Each version block runs exactly ONCE. To add new columns in the future,
     // increment DB_VERSION and add a new case (do NOT modify existing cases).
     // ─────────────────────────────────────────────────────────────────────────
-    const DB_VERSION = 13;
+    const DB_VERSION = 15;
     const versionResult = await db.select('PRAGMA user_version') as Array<{ user_version: number }>;
     const currentVersion = versionResult[0]?.user_version ?? 0;
 
@@ -591,6 +592,63 @@ class YnotvDatabase extends SqliteDatabase {
       if (currentVersion < 13) {
         // v13: Custom Playlists
         console.log('[DB] v13 migration: Adding custom_playlists tables');
+      }
+
+      if (currentVersion < 14) {
+        // v14: Remove custom_playlists foreign key constraints on playlist_id to allow real sources to act as custom destination playlists
+        console.log('[DB] v14 migration: Removing playlist_id foreign key constraint from playlist_category_links and playlist_individual_channels');
+        try {
+          await db.execute('ALTER TABLE playlist_category_links RENAME TO old_playlist_category_links');
+          await db.execute(`CREATE TABLE playlist_category_links (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            playlist_id TEXT NOT NULL,
+            source_id TEXT NOT NULL,
+            category_id TEXT NOT NULL,
+            custom_name TEXT,
+            display_order INTEGER DEFAULT 0,
+            added_at INTEGER NOT NULL
+          )`);
+          await db.execute('INSERT INTO playlist_category_links (id, playlist_id, source_id, category_id, custom_name, display_order, added_at) SELECT id, playlist_id, source_id, category_id, custom_name, display_order, added_at FROM old_playlist_category_links');
+          await db.execute('DROP TABLE old_playlist_category_links');
+        } catch (e) {
+          console.error('[DB] Failed to migrate playlist_category_links:', e);
+        }
+
+        try {
+          await db.execute('ALTER TABLE playlist_individual_channels RENAME TO old_playlist_individual_channels');
+          await db.execute(`CREATE TABLE playlist_individual_channels (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            playlist_id TEXT NOT NULL,
+            stream_id TEXT NOT NULL,
+            display_order INTEGER DEFAULT 0,
+            added_at INTEGER NOT NULL,
+            FOREIGN KEY (stream_id) REFERENCES channels(stream_id) ON DELETE CASCADE
+          )`);
+          await db.execute('INSERT INTO playlist_individual_channels (id, playlist_id, stream_id, display_order, added_at) SELECT id, playlist_id, stream_id, display_order, added_at FROM old_playlist_individual_channels');
+          await db.execute('DROP TABLE old_playlist_individual_channels');
+        } catch (e) {
+          console.error('[DB] Failed to migrate playlist_individual_channels:', e);
+        }
+
+        // Recreate indexes
+        try {
+          await db.execute(`CREATE INDEX IF NOT EXISTS idx_playlist_category_links_playlist ON playlist_category_links(playlist_id)`);
+          await db.execute(`CREATE INDEX IF NOT EXISTS idx_playlist_category_links_order ON playlist_category_links(playlist_id, display_order)`);
+          await db.execute(`CREATE INDEX IF NOT EXISTS idx_playlist_individual_channels_playlist ON playlist_individual_channels(playlist_id)`);
+          await db.execute(`CREATE UNIQUE INDEX IF NOT EXISTS idx_playlist_individual_channels_unique ON playlist_individual_channels(playlist_id, stream_id)`);
+        } catch (e) {
+          console.error('[DB] Failed to recreate indexes:', e);
+        }
+      }
+
+      if (currentVersion < 15) {
+        // v15: Add parent_category_id column to playlist_individual_channels
+        console.log('[DB] v15 migration: Adding parent_category_id column to playlist_individual_channels');
+        try {
+          await db.execute('ALTER TABLE playlist_individual_channels ADD COLUMN parent_category_id TEXT');
+        } catch (e) {
+          console.error('[DB] Failed to add parent_category_id column:', e);
+        }
       }
 
       if (currentVersion < 2) {
@@ -965,8 +1023,7 @@ class YnotvDatabase extends SqliteDatabase {
       category_id TEXT NOT NULL,
       custom_name TEXT,
       display_order INTEGER DEFAULT 0,
-      added_at INTEGER NOT NULL,
-      FOREIGN KEY (playlist_id) REFERENCES custom_playlists(playlist_id) ON DELETE CASCADE
+      added_at INTEGER NOT NULL
     )`);
     await db.execute(`CREATE INDEX IF NOT EXISTS idx_playlist_category_links_playlist ON playlist_category_links(playlist_id)`);
     await db.execute(`CREATE INDEX IF NOT EXISTS idx_playlist_category_links_order ON playlist_category_links(playlist_id, display_order)`);
@@ -975,9 +1032,9 @@ class YnotvDatabase extends SqliteDatabase {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       playlist_id TEXT NOT NULL,
       stream_id TEXT NOT NULL,
+      parent_category_id TEXT,
       display_order INTEGER DEFAULT 0,
       added_at INTEGER NOT NULL,
-      FOREIGN KEY (playlist_id) REFERENCES custom_playlists(playlist_id) ON DELETE CASCADE,
       FOREIGN KEY (stream_id) REFERENCES channels(stream_id) ON DELETE CASCADE
     )`);
     await db.execute(`CREATE INDEX IF NOT EXISTS idx_playlist_individual_channels_playlist ON playlist_individual_channels(playlist_id)`);

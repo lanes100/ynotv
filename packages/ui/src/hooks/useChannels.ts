@@ -314,6 +314,25 @@ export function useChannels(categoryId: string | null, sortOrder: 'alphabetical'
               `source_id = ? AND EXISTS (SELECT 1 FROM json_each(category_ids) WHERE value = ?) AND (enabled IS NULL OR enabled NOT IN (0, '0', 'false'))`,
               [link.source_id, link.category_id]
             ).toArray();
+
+            // Fetch manually added individual channels for this category link
+            const manualMappings = await db.playlistIndividualChannels
+              .whereRaw('playlist_id = ? AND parent_category_id = ?', [link.playlist_id, `link:${link.id}`])
+              .toArray();
+            if (manualMappings.length > 0) {
+              const streamIds = manualMappings.map(m => m.stream_id);
+              const manualChannels = await db.channels.where('stream_id').anyOf(streamIds).toArray();
+              const manualMap = new Map(manualChannels.map(ch => [ch.stream_id, ch]));
+              const orderedManual = manualMappings
+                .sort((a, b) => a.display_order - b.display_order)
+                .map(m => manualMap.get(m.stream_id))
+                .filter((ch): ch is StoredChannel => ch !== undefined);
+
+              const manualStreamIds = new Set(manualMappings.map(m => m.stream_id));
+              const remainingDynamic = results.filter(ch => !manualStreamIds.has(ch.stream_id));
+              results = [...orderedManual, ...remainingDynamic];
+              orderingIsFixed = true;
+            }
           }
         }
       } else if (categoryId && categoryId.startsWith('__plindiv_')) {
@@ -368,10 +387,33 @@ export function useChannels(categoryId: string | null, sortOrder: 'alphabetical'
           orderingIsFixed = true; // order comes from customGroupChannels.display_order
         } else {
           // Channels in this category - uses index
-          results = await db.channels.where('category_ids').equals(categoryId).toArray();
-          // Still need to filter by enabled source if result contains mixed sources (unlikely for category)
-          if (enabledSourceIds) {
-            results = results.filter(ch => enabledSourceIds.has(ch.source_id));
+          const category = await db.categories.get(categoryId);
+          if (category) {
+            results = await db.channels.where('category_ids').equals(categoryId).toArray();
+            if (enabledSourceIds) {
+              results = results.filter(ch => enabledSourceIds.has(ch.source_id));
+            }
+
+            // Fetch manually added individual channels for this native category
+            const manualMappings = await db.playlistIndividualChannels
+              .whereRaw('playlist_id = ? AND parent_category_id = ?', [category.source_id, categoryId])
+              .toArray();
+            if (manualMappings.length > 0) {
+              const streamIds = manualMappings.map(m => m.stream_id);
+              const manualChannels = await db.channels.where('stream_id').anyOf(streamIds).toArray();
+              const manualMap = new Map(manualChannels.map(ch => [ch.stream_id, ch]));
+              const orderedManual = manualMappings
+                .sort((a, b) => a.display_order - b.display_order)
+                .map(m => manualMap.get(m.stream_id))
+                .filter((ch): ch is StoredChannel => ch !== undefined);
+
+              const manualStreamIds = new Set(manualMappings.map(m => m.stream_id));
+              const remainingDynamic = results.filter(ch => !manualStreamIds.has(ch.stream_id));
+              results = [...orderedManual, ...remainingDynamic];
+              orderingIsFixed = true;
+            }
+          } else {
+            results = [];
           }
         }
       }
@@ -484,10 +526,8 @@ export function useChannels(categoryId: string | null, sortOrder: 'alphabetical'
     [categoryId, sortOrder, enabledSourceKey, options?.skip],
     undefined, // defaultResult  
     15000, // staleTime: 15 seconds - instant switching between recently viewed categories
-    // For custom groups (non-virtual, non-standard categories), watch all tables
-    // because channels come from customGroupChannels table, not channels table
-    // For standard categories, only watch channels table for efficiency
-    categoryId && !categoryId.startsWith('__') && categoryId.match(/^[0-9a-f-]{36}$/i) ? undefined : 'channels'
+    // Watch all tables to capture updates to links, manual additions, and ordering when viewing a category
+    categoryId ? undefined : 'channels'
   );
   return channels ?? [];
 }

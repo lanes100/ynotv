@@ -5,12 +5,15 @@ import {
   addCategoryToPlaylist,
   removeCategoryFromPlaylist,
   renameCategoryLink,
-  reorderPlaylistCategories,
   addIndividualChannelToPlaylist,
   removeIndividualChannelFromPlaylist,
   reorderPlaylistIndividualChannels,
   renamePlaylist,
   addMultipleIndividualChannelsToPlaylist,
+  addChannelToCategory,
+  removeChannelFromCategory,
+  reorderCategoryChannels,
+  addCustomCategoryToPlaylist,
 } from '../services/playlist-editor';
 import './PlaylistEditorModal.css';
 
@@ -20,12 +23,320 @@ interface PlaylistEditorModalProps {
   onClose: () => void;
 }
 
+function parseCategoryIds(raw: string | string[] | number[] | undefined): string[] {
+  if (!raw) return [];
+  if (Array.isArray(raw)) return raw.map(String);
+  try {
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) return parsed.map(String);
+  } catch { /* not JSON */ }
+  if (typeof raw === 'string') return raw.split(',').map(s => s.trim()).filter(Boolean);
+  return [String(raw)];
+}
+
 interface BrowseSource {
   id: string;
   name: string;
   isCustomPlaylist?: boolean;
 }
 
+interface CategoryBlockCardProps {
+  playlistId: string;
+  block: any;
+  sources: BrowseSource[];
+  index: number;
+  isDragging: boolean;
+  isDragOver: boolean;
+  isMarked: boolean;
+  onMark: () => void;
+  onPointerDown: (e: React.PointerEvent, index: number) => void;
+  onRemove?: () => void;
+}
+
+function CategoryBlockCard({
+  playlistId,
+  block,
+  sources,
+  index,
+  isDragging,
+  isDragOver,
+  isMarked,
+  onMark,
+  onPointerDown,
+  onRemove,
+}: CategoryBlockCardProps) {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [isRenaming, setIsRenaming] = useState(false);
+  const [renamingName, setRenamingName] = useState(block.name);
+  const renameInputRef = useRef<HTMLInputElement>(null);
+
+  // Load dynamic channels
+  const [dynamicChannels, setDynamicChannels] = useState<StoredChannel[]>([]);
+  useEffect(() => {
+    const sourceId = block.type === 'native' ? block.category.source_id : block.link.source_id;
+    const categoryId = block.type === 'native' ? block.category.category_id : block.link.category_id;
+    
+    if (sourceId === 'custom') {
+      setDynamicChannels([]);
+      return;
+    }
+    
+    db.channels.whereRaw(
+      `source_id = ? AND EXISTS (SELECT 1 FROM json_each(category_ids) WHERE value = ?) AND (enabled IS NULL OR enabled NOT IN (0, '0', 'false'))`,
+      [sourceId, categoryId]
+    ).toArray().then(chans => {
+      chans.sort((a, b) => a.name.localeCompare(b.name));
+      setDynamicChannels(chans);
+    });
+  }, [block]);
+
+  // Load manual channels
+  const parentCategoryId = block.type === 'native' ? block.id : `link:${block.linkId}`;
+  const manualMappings = useLiveQuery(
+    () => db.playlistIndividualChannels
+      .whereRaw('playlist_id = ? AND parent_category_id = ?', [playlistId, parentCategoryId])
+      .sortBy('display_order'),
+    [playlistId, parentCategoryId],
+    []
+  );
+
+  const [manualChannels, setManualChannels] = useState<StoredChannel[]>([]);
+  useEffect(() => {
+    if (!manualMappings || manualMappings.length === 0) {
+      setManualChannels([]);
+      return;
+    }
+    const ids = manualMappings.map(m => m.stream_id);
+    db.channels.where('stream_id').anyOf(ids).toArray().then(channels => {
+      const channelMap = new Map(channels.map(ch => [ch.stream_id, ch]));
+      const resolved = manualMappings
+        .map(m => channelMap.get(m.stream_id))
+        .filter((ch): ch is StoredChannel => ch !== undefined);
+      setManualChannels(resolved);
+    });
+  }, [manualMappings]);
+
+  // Merge dynamic and manual channels into a single integrated list
+  const combinedChannels = React.useMemo(() => {
+    const manualStreamIds = new Set((manualMappings || []).map(m => m.stream_id));
+    const resolvedManual = (manualMappings || [])
+      .sort((a, b) => a.display_order - b.display_order)
+      .map(m => {
+        const ch = manualChannels.find(c => c.stream_id === m.stream_id);
+        return ch ? { ...ch, isManualAddition: true } : null;
+      })
+      .filter(Boolean) as Array<StoredChannel & { isManualAddition: boolean }>;
+
+    const remainingDynamic = dynamicChannels
+      .filter(ch => !manualStreamIds.has(ch.stream_id))
+      .map(ch => ({ ...ch, isManualAddition: false }));
+
+    return [...resolvedManual, ...remainingDynamic];
+  }, [dynamicChannels, manualMappings, manualChannels]);
+
+  const startRename = () => {
+    if (block.type !== 'link') return;
+    setRenamingName(block.link.custom_name || block.name);
+    setIsRenaming(true);
+    setTimeout(() => renameInputRef.current?.focus(), 50);
+  };
+
+  const handleSaveRename = async () => {
+    const trimmed = renamingName.trim();
+    await renameCategoryLink(block.linkId, trimmed || null);
+    setIsRenaming(false);
+  };
+
+  // Drag and drop within integrated channel list
+  const manualListRef = useRef<HTMLDivElement>(null);
+  const dragFromIdx = useRef<number | null>(null);
+  const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
+
+  const getManualIndexFromClientY = (clientY: number): number => {
+    if (!manualListRef.current) return 0;
+    const children = Array.from(manualListRef.current.children) as HTMLElement[];
+    for (let i = 0; i < children.length; i++) {
+      const rect = children[i].getBoundingClientRect();
+      if (clientY < rect.top + rect.height / 2) return i;
+    }
+    return Math.max(0, children.length - 1);
+  };
+
+  const handleManualPointerDown = useCallback((e: React.PointerEvent, idx: number) => {
+    if (e.button !== 0) return;
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    dragFromIdx.current = idx;
+    setDragOverIdx(idx);
+  }, []);
+
+  const handleManualPointerMove = useCallback((e: React.PointerEvent) => {
+    if (dragFromIdx.current === null) return;
+    e.preventDefault();
+    setDragOverIdx(getManualIndexFromClientY(e.clientY));
+  }, []);
+
+  const handleManualPointerUp = useCallback(async (e: React.PointerEvent) => {
+    if (dragFromIdx.current === null) return;
+    const from = dragFromIdx.current;
+    const to = getManualIndexFromClientY(e.clientY);
+    dragFromIdx.current = null;
+    setDragOverIdx(null);
+    if (from === to || !combinedChannels) return;
+
+    const next = [...combinedChannels];
+    const [moved] = next.splice(from, 1);
+    next.splice(to, 0, moved);
+
+    try {
+      // Clear existing order records for this category
+      await db.playlistIndividualChannels
+        .whereRaw('playlist_id = ? AND parent_category_id = ?', [playlistId, parentCategoryId])
+        .delete();
+
+      // Write records for all channels sequentially to define the custom order
+      const now = Date.now();
+      for (let i = 0; i < next.length; i++) {
+        const ch = next[i];
+        await db.playlistIndividualChannels.add({
+          playlist_id: playlistId,
+          stream_id: ch.stream_id,
+          parent_category_id: parentCategoryId,
+          display_order: i,
+          added_at: now
+        });
+      }
+    } catch (err) {
+      console.error('Failed to reorder category channels:', err);
+    }
+  }, [combinedChannels, playlistId, parentCategoryId]);
+
+  const handleManualPointerCancel = useCallback(() => {
+    dragFromIdx.current = null;
+    setDragOverIdx(null);
+  }, []);
+
+  const srcName = block.type === 'link' 
+    ? (block.link.source_id === 'custom' ? 'Custom Category' : (sources.find(s => s.id === block.link.source_id)?.name || 'Source')) 
+    : '';
+
+  return (
+    <div className={`ple-block-card-wrapper${isDragging ? ' dragging' : ''}${isDragOver ? ' drag-over' : ''}${isMarked ? ' marked' : ''}`}>
+      <div className="ple-block-card">
+        <button className="ple-block-expand-btn" onClick={() => setIsExpanded(!isExpanded)}>
+          <span className="ple-chevron-small">{isExpanded ? '▼' : '▶'}</span>
+        </button>
+
+        <span
+          className="ple-block-drag-handle"
+          style={{ touchAction: 'none' }}
+          onPointerDown={e => onPointerDown(e, index)}
+        >⋮⋮</span>
+
+        <div className="ple-block-info">
+          {isRenaming ? (
+            <div className="ple-inline-rename">
+              <input
+                ref={renameInputRef}
+                className="ple-rename-input"
+                value={renamingName}
+                onChange={e => setRenamingName(e.target.value)}
+                onBlur={handleSaveRename}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') handleSaveRename();
+                  if (e.key === 'Escape') setIsRenaming(false);
+                }}
+              />
+            </div>
+          ) : (
+            <div className="ple-block-title-row">
+              <span
+                className={`ple-block-title${block.type === 'link' ? ' link' : ''}`}
+                onClick={startRename}
+                title={block.type === 'link' ? "Click to rename category block" : undefined}
+              >
+                📂 {block.name} {block.type === 'link' && block.link.source_id !== 'custom' && '✏️'}
+              </span>
+              {block.type === 'link' && block.link.custom_name && block.link.source_id !== 'custom' && (
+                <span className="ple-original-title-hint">(orig: {block.link.category_id})</span>
+              )}
+            </div>
+          )}
+          <span className="ple-block-sub">
+            {block.type === 'link' ? `${srcName} · ` : ''}
+            {combinedChannels.length} channels
+          </span>
+        </div>
+
+        <button
+          className={`ple-block-target-btn${isMarked ? ' marked' : ''}`}
+          onClick={(e) => {
+            e.stopPropagation();
+            onMark();
+          }}
+          title={isMarked ? "Active target category for channel additions (Click to unmark)" : "Mark as target category for channel additions"}
+        >
+          {isMarked ? '🎯 Target Active' : '🎯 Target'}
+        </button>
+
+        {block.type === 'link' && onRemove && (
+          <button className="ple-remove-btn" onClick={onRemove} title="Remove category link">✕</button>
+        )}
+      </div>
+
+      {isExpanded && (
+        <div className="ple-block-expanded-content">
+          <div className="ple-nested-section">
+            {combinedChannels.length === 0 ? (
+              <div className="ple-empty-hint">Category is empty. Mark it as the target and click ＋ Channel in the left panel to insert.</div>
+            ) : (
+              <div
+                className="ple-nested-channels-list reorderable"
+                ref={manualListRef}
+                onPointerMove={handleManualPointerMove}
+                onPointerUp={handleManualPointerUp}
+                onPointerCancel={handleManualPointerCancel}
+              >
+                {combinedChannels.map((ch, idx) => {
+                  const isChDragging = dragFromIdx.current === idx;
+                  const isChDragOver = dragOverIdx === idx && dragFromIdx.current !== null && dragFromIdx.current !== idx;
+                  return (
+                    <div
+                      key={ch.stream_id}
+                      className={`ple-nested-channel-row reorderable${isChDragging ? ' dragging' : ''}${isChDragOver ? ' drag-over' : ''}`}
+                    >
+                      <span
+                        className="ple-block-drag-handle"
+                        style={{ touchAction: 'none' }}
+                        onPointerDown={e => handleManualPointerDown(e, idx)}
+                      >⋮⋮</span>
+                      {ch.stream_icon ? (
+                        <img src={ch.stream_icon} className="ple-nested-ch-logo" alt="" />
+                      ) : (
+                        <span className="ple-nested-ch-logo-placeholder">📺</span>
+                      )}
+                      <span className="ple-nested-ch-name">
+                        {ch.name} {!ch.isManualAddition && <span className="ple-dynamic-badge">dynamic</span>}
+                      </span>
+                      {ch.isManualAddition ? (
+                        <button
+                          className="ple-remove-btn"
+                          onClick={() => removeChannelFromCategory(playlistId, parentCategoryId, ch.stream_id)}
+                          title="Remove custom channel"
+                        >✕</button>
+                      ) : (
+                        <span className="ple-read-only-badge" title="Dynamic channel (read-only)">🔒</span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function PlaylistEditorModal({ playlistId, playlistName, onClose }: PlaylistEditorModalProps) {
   const [sources, setSources] = useState<BrowseSource[]>([]);
@@ -33,7 +344,25 @@ export function PlaylistEditorModal({ playlistId, playlistName, onClose }: Playl
   const [sourceCategories, setSourceCategories] = useState<Record<string, StoredCategory[]>>({});
   const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
   const [categoryChannels, setCategoryChannels] = useState<Record<string, StoredChannel[]>>({});
-  
+
+  // Target marking state
+  const [markedCategoryId, setMarkedCategoryId] = useState<string | null>(null);
+
+  // Live query all categories to construct names map for tree-view search
+  const allCategories = useLiveQuery(
+    () => db.categories.toArray(),
+    [],
+    []
+  );
+
+  const categoryNamesMap = React.useMemo(() => {
+    const map = new Map<string, string>();
+    for (const cat of allCategories || []) {
+      map.set(`${cat.source_id}:${cat.category_id}`, cat.alias || cat.category_name);
+    }
+    return map;
+  }, [allCategories]);
+
   // Search
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<StoredChannel[]>([]);
@@ -42,12 +371,8 @@ export function PlaylistEditorModal({ playlistId, playlistName, onClose }: Playl
   // Playlist name editing
   const [currentName, setCurrentName] = useState(playlistName);
   const [isEditingName, setIsEditingName] = useState(false);
+  const [isCustomPlaylist, setIsCustomPlaylist] = useState(false);
   const nameInputRef = useRef<HTMLInputElement>(null);
-
-  // Category renaming inline state
-  const [renamingLinkId, setRenamingLinkId] = useState<number | null>(null);
-  const [renamingName, setRenamingName] = useState('');
-  const renameInputRef = useRef<HTMLInputElement>(null);
 
   // Drag-and-drop lists pointer refs
   const categoryListRef = useRef<HTMLDivElement>(null);
@@ -57,6 +382,18 @@ export function PlaylistEditorModal({ playlistId, playlistName, onClose }: Playl
   const indivListRef = useRef<HTMLDivElement>(null);
   const dragFromIndivIdx = useRef<number | null>(null);
   const [dragOverIndivIdx, setDragOverIndivIdx] = useState<number | null>(null);
+
+  // Live query native categories (for real sources)
+  const nativeCategories = useLiveQuery(
+    () => {
+      if (!isCustomPlaylist) {
+        return db.categories.where('source_id').equals(playlistId).toArray();
+      }
+      return Promise.resolve([] as StoredCategory[]);
+    },
+    [playlistId, isCustomPlaylist],
+    []
+  );
 
   // Live query playlist category links
   const categoryLinks = useLiveQuery(
@@ -72,22 +409,27 @@ export function PlaylistEditorModal({ playlistId, playlistName, onClose }: Playl
     []
   );
 
-  // Resolve individual channel metadata
+  // Filter individual mappings to only those that are not in a category
+  const flatIndividualMappings = React.useMemo(() => {
+    return (individualMappings || []).filter(m => !m.parent_category_id);
+  }, [individualMappings]);
+
+  // Resolve flat individual channel metadata
   const [individualChannels, setIndividualChannels] = useState<StoredChannel[]>([]);
   useEffect(() => {
-    if (!individualMappings || individualMappings.length === 0) {
+    if (!flatIndividualMappings || flatIndividualMappings.length === 0) {
       setIndividualChannels([]);
       return;
     }
-    const ids = individualMappings.map(m => m.stream_id);
+    const ids = flatIndividualMappings.map(m => m.stream_id);
     db.channels.where('stream_id').anyOf(ids).toArray().then(channels => {
       const channelMap = new Map(channels.map(ch => [ch.stream_id, ch]));
-      const resolved = individualMappings
+      const resolved = flatIndividualMappings
         .map(m => channelMap.get(m.stream_id))
         .filter((ch): ch is StoredChannel => ch !== undefined);
       setIndividualChannels(resolved);
     });
-  }, [individualMappings]);
+  }, [flatIndividualMappings]);
 
   // Load enabled sources on mount
   useEffect(() => {
@@ -101,9 +443,12 @@ export function PlaylistEditorModal({ playlistId, playlistName, onClose }: Playl
             .map(s => ({ id: s.id, name: s.name }));
         }
       }
-      
+
       // Fetch all custom playlists except the current one
       const playlists = await db.customPlaylists.toArray();
+      const isCustom = playlists.some(p => p.playlist_id === playlistId);
+      setIsCustomPlaylist(isCustom);
+
       const virtualSources: BrowseSource[] = playlists
         .filter(p => p.playlist_id !== playlistId)
         .map(p => ({
@@ -111,10 +456,10 @@ export function PlaylistEditorModal({ playlistId, playlistName, onClose }: Playl
           name: `📋 Playlist: ${p.name}`,
           isCustomPlaylist: true
         }));
-        
+
       setSources([...realSources, ...virtualSources]);
     };
-    
+
     loadSources();
   }, [playlistId]);
 
@@ -132,42 +477,62 @@ export function PlaylistEditorModal({ playlistId, playlistName, onClose }: Playl
     });
   }, [categoryLinks]);
 
-  // Count channels inside category links live
-  const [linkChannelCounts, setLinkChannelCounts] = useState<Record<number, number>>({});
-  useEffect(() => {
-    if (!categoryLinks || categoryLinks.length === 0) return;
-    const fetchCounts = async () => {
-      const counts: Record<number, number> = {};
-      for (const link of categoryLinks) {
-        if (link.id === undefined) continue;
-        const rows = await db.channels.whereRaw(
-          `source_id = ? AND EXISTS (SELECT 1 FROM json_each(category_ids) WHERE value = ?) AND (enabled IS NULL OR enabled NOT IN (0, '0', 'false'))`,
-          [link.source_id, link.category_id]
-        ).toArray();
-        counts[link.id] = rows.length;
-      }
-      setLinkChannelCounts(counts);
-    };
-    fetchCounts();
-  }, [categoryLinks]);
+  // Compute unified list of blocks (native categories + custom links)
+  const combinedBlocks = React.useMemo(() => {
+    const list: Array<
+      | { type: 'native'; id: string; name: string; displayOrder: number; category: StoredCategory }
+      | { type: 'link'; id: string; linkId: number; name: string; displayOrder: number; link: PlaylistCategoryLink }
+    > = [];
+
+    // Add native categories
+    for (const cat of nativeCategories || []) {
+      list.push({
+        type: 'native',
+        id: cat.category_id,
+        name: cat.alias || cat.category_name,
+        displayOrder: cat.display_order ?? 0,
+        category: cat,
+      });
+    }
+
+    // Add category links
+    for (const link of categoryLinks || []) {
+      if (link.id === undefined) continue;
+      const cat = dbCategories[link.category_id];
+      const resolvedName = cat?.alias || cat?.category_name || link.category_id;
+      list.push({
+        type: 'link',
+        id: `link:${link.id}`,
+        linkId: link.id,
+        name: link.custom_name || resolvedName,
+        displayOrder: link.display_order ?? 0,
+        link,
+      });
+    }
+
+    // Sort by displayOrder, then alphabetically by name
+    list.sort((a, b) => {
+      if (a.displayOrder !== b.displayOrder) return a.displayOrder - b.displayOrder;
+      return a.name.localeCompare(b.name);
+    });
+
+    return list;
+  }, [nativeCategories, categoryLinks, dbCategories]);
 
   // Expand source -> load categories
   const handleToggleSource = async (sourceId: string) => {
     const isExpanded = !expandedSources[sourceId];
     setExpandedSources(prev => ({ ...prev, [sourceId]: isExpanded }));
-    
+
     if (isExpanded && !sourceCategories[sourceId]) {
       if (sourceId.startsWith('playlist:')) {
-        // It's a custom playlist!
         const plId = sourceId.replace('playlist:', '');
-        
-        // Find all category links in this playlist
+
         const links = await db.playlistCategoryLinks
           .where('playlist_id')
           .equals(plId)
           .sortBy('display_order');
-          
-        // Map these links to StoredCategory format
+
         const linkCategories = links.map(link => ({
           category_id: `link:${link.id}`,
           source_id: sourceId,
@@ -175,13 +540,12 @@ export function PlaylistEditorModal({ playlistId, playlistName, onClose }: Playl
           alias: undefined,
           enabled: true
         }));
-        
-        // Check if there are individual channels in this playlist
+
         const indivCount = await db.playlistIndividualChannels
           .where('playlist_id')
           .equals(plId)
           .count();
-          
+
         if (indivCount > 0) {
           linkCategories.push({
             category_id: `indiv:${plId}`,
@@ -191,14 +555,13 @@ export function PlaylistEditorModal({ playlistId, playlistName, onClose }: Playl
             enabled: true
           });
         }
-        
+
         setSourceCategories(prev => ({ ...prev, [sourceId]: linkCategories }));
       } else {
         const cats = await db.categories
           .where('source_id')
           .equals(sourceId)
           .toArray();
-        // Sort alphabetically
         cats.sort((a, b) => a.category_name.localeCompare(b.category_name));
         setSourceCategories(prev => ({ ...prev, [sourceId]: cats }));
       }
@@ -215,7 +578,7 @@ export function PlaylistEditorModal({ playlistId, playlistName, onClose }: Playl
       if (sourceId.startsWith('playlist:')) {
         const plId = sourceId.replace('playlist:', '');
         let channels: StoredChannel[] = [];
-        
+
         if (categoryId.startsWith('link:')) {
           const linkId = parseInt(categoryId.replace('link:', ''), 10);
           const link = await db.playlistCategoryLinks.get(linkId);
@@ -239,7 +602,7 @@ export function PlaylistEditorModal({ playlistId, playlistName, onClose }: Playl
               .filter((ch): ch is StoredChannel => ch !== undefined);
           }
         }
-        
+
         channels.sort((a, b) => a.name.localeCompare(b.name));
         setCategoryChannels(prev => ({ ...prev, [key]: channels }));
       } else {
@@ -266,7 +629,6 @@ export function PlaylistEditorModal({ playlistId, playlistName, onClose }: Playl
         `LOWER(name) LIKE ? AND (enabled IS NULL OR enabled NOT IN (0, '0', 'false'))`,
         [`%${searchQuery.toLowerCase()}%`]
       ).toArray();
-      // Filter out disabled sources
       const activeSourceIds = new Set(sources.filter(s => !s.isCustomPlaylist).map(s => s.id));
       const filtered = results.filter(ch => activeSourceIds.has(ch.source_id));
       filtered.sort((a, b) => a.name.localeCompare(b.name));
@@ -291,22 +653,6 @@ export function PlaylistEditorModal({ playlistId, playlistName, onClose }: Playl
       nameInputRef.current?.focus();
     }
   }, [isEditingName]);
-
-  // Category renaming inline
-  const startRenameCategory = (link: PlaylistCategoryLink) => {
-    if (link.id === undefined) return;
-    const cat = dbCategories[link.category_id];
-    const originalName = cat?.alias || cat?.category_name || link.category_id;
-    setRenamingLinkId(link.id);
-    setRenamingName(link.custom_name || originalName);
-    setTimeout(() => renameInputRef.current?.focus(), 50);
-  };
-
-  const handleSaveCategoryName = async (linkId: number) => {
-    const trimmed = renamingName.trim();
-    await renameCategoryLink(linkId, trimmed || null);
-    setRenamingLinkId(null);
-  };
 
   // Left panel actions
   const handleAddCategory = async (sourceId: string, categoryId: string) => {
@@ -334,7 +680,11 @@ export function PlaylistEditorModal({ playlistId, playlistName, onClose }: Playl
   };
 
   const handleAddChannel = async (streamId: string) => {
-    await addIndividualChannelToPlaylist(playlistId, streamId);
+    if (markedCategoryId) {
+      await addChannelToCategory(playlistId, markedCategoryId, streamId);
+    } else {
+      await addIndividualChannelToPlaylist(playlistId, streamId);
+    }
   };
 
   // Right panel drag-reorder categories
@@ -367,18 +717,25 @@ export function PlaylistEditorModal({ playlistId, playlistName, onClose }: Playl
     const to = getCatIndexFromClientY(e.clientY);
     dragFromCatIdx.current = null;
     setDragOverCatIdx(null);
-    if (from === to || !categoryLinks) return;
+    if (from === to || !combinedBlocks) return;
 
-    const next = [...categoryLinks];
+    const next = [...combinedBlocks];
     const [moved] = next.splice(from, 1);
     next.splice(to, 0, moved);
 
     try {
-      await reorderPlaylistCategories(playlistId, next.map(l => l.id as number));
+      for (let i = 0; i < next.length; i++) {
+        const block = next[i];
+        if (block.type === 'native') {
+          await db.categories.update(block.id, { display_order: i });
+        } else if (block.type === 'link') {
+          await db.playlistCategoryLinks.update(block.linkId, { display_order: i });
+        }
+      }
     } catch (err) {
       console.error('Failed to reorder playlist categories:', err);
     }
-  }, [categoryLinks, playlistId]);
+  }, [combinedBlocks]);
 
   const handleCatPointerCancel = useCallback(() => {
     dragFromCatIdx.current = null;
@@ -415,9 +772,9 @@ export function PlaylistEditorModal({ playlistId, playlistName, onClose }: Playl
     const to = getIndivIndexFromClientY(e.clientY);
     dragFromIndivIdx.current = null;
     setDragOverIndivIdx(null);
-    if (from === to || !individualMappings) return;
+    if (from === to || !flatIndividualMappings) return;
 
-    const next = [...individualMappings];
+    const next = [...flatIndividualMappings];
     const [moved] = next.splice(from, 1);
     next.splice(to, 0, moved);
 
@@ -426,7 +783,7 @@ export function PlaylistEditorModal({ playlistId, playlistName, onClose }: Playl
     } catch (err) {
       console.error('Failed to reorder individual channels:', err);
     }
-  }, [individualMappings, playlistId]);
+  }, [flatIndividualMappings, playlistId]);
 
   const handleIndivPointerCancel = useCallback(() => {
     dragFromIndivIdx.current = null;
@@ -450,12 +807,11 @@ export function PlaylistEditorModal({ playlistId, playlistName, onClose }: Playl
   return (
     <div className="playlist-editor-backdrop" onClick={onClose}>
       <div className="playlist-editor-modal" onClick={e => e.stopPropagation()}>
-        
         {/* Header */}
         <div className="playlist-editor-header">
           <div className="ple-header-left">
             <span className="ple-header-icon">📋</span>
-            {isEditingName ? (
+            {isEditingName && isCustomPlaylist ? (
               <input
                 ref={nameInputRef}
                 className="ple-name-input"
@@ -471,8 +827,12 @@ export function PlaylistEditorModal({ playlistId, playlistName, onClose }: Playl
                 }}
               />
             ) : (
-              <h2 className="ple-name-title" onClick={() => setIsEditingName(true)} title="Click to rename">
-                {currentName} ✏️
+              <h2
+                className={`ple-name-title${!isCustomPlaylist ? ' readonly' : ''}`}
+                onClick={() => isCustomPlaylist && setIsEditingName(true)}
+                title={isCustomPlaylist ? "Click to rename" : undefined}
+              >
+                {currentName} {isCustomPlaylist && '✏️'}
               </h2>
             )}
           </div>
@@ -484,7 +844,6 @@ export function PlaylistEditorModal({ playlistId, playlistName, onClose }: Playl
 
         {/* Workspace Panels */}
         <div className="playlist-editor-workspace">
-          
           {/* Left Panel: Source Browser */}
           <div className="playlist-editor-left">
             <div className="ple-panel-header">
@@ -511,33 +870,89 @@ export function PlaylistEditorModal({ playlistId, playlistName, onClose }: Playl
                     <div className="ple-loading-hint">Searching…</div>
                   ) : searchResults.length === 0 ? (
                     <div className="ple-empty-hint">No matching channels found.</div>
-                  ) : (
-                    searchResults.map(ch => {
-                      const srcName = sources.find(s => s.id === ch.source_id)?.name || 'Source';
-                      return (
-                        <div key={ch.stream_id} className="ple-channel-row">
-                          <div className="ple-ch-info">
-                            {ch.stream_icon ? (
-                              <img src={ch.stream_icon} className="ple-ch-logo" alt="" />
-                            ) : (
-                              <span className="ple-ch-logo-placeholder">📺</span>
-                            )}
-                            <div className="ple-ch-meta">
-                              <span className="ple-ch-name">{ch.name}</span>
-                              <span className="ple-ch-source">{srcName}</span>
+                  ) : (() => {
+                    // Group searchResults by source, then by category
+                    const sourceMap = new Map<string, Map<string, StoredChannel[]>>();
+                    for (const ch of searchResults) {
+                      const sourceId = ch.source_id;
+                      if (!sourceMap.has(sourceId)) {
+                        sourceMap.set(sourceId, new Map<string, StoredChannel[]>());
+                      }
+                      const catMap = sourceMap.get(sourceId)!;
+
+                      const catIds = parseCategoryIds(ch.category_ids);
+                      if (catIds.length === 0) {
+                        const uncategorizedKey = 'uncategorized';
+                        if (!catMap.has(uncategorizedKey)) {
+                          catMap.set(uncategorizedKey, []);
+                        }
+                        catMap.get(uncategorizedKey)!.push(ch);
+                      } else {
+                        for (const catId of catIds) {
+                          if (!catMap.has(catId)) {
+                            catMap.set(catId, []);
+                          }
+                          catMap.get(catId)!.push(ch);
+                        }
+                      }
+                    }
+
+                    return (
+                      <div className="ple-tree-root">
+                        {Array.from(sourceMap.entries()).map(([sourceId, categoriesMap]) => {
+                          const sourceObj = sources.find(s => s.id === sourceId);
+                          const sourceName = sourceObj ? sourceObj.name : 'Unknown Source';
+
+                          return (
+                            <div key={sourceId} className="ple-tree-source-node">
+                              <div className="ple-tree-source-header">
+                                <span className="ple-tree-chevron">▼</span>
+                                <span className="ple-tree-source-name">{sourceName}</span>
+                              </div>
+                              <div className="ple-tree-source-children">
+                                {Array.from(categoriesMap.entries()).map(([catId, channels]) => {
+                                  const categoryName = catId === 'uncategorized'
+                                    ? 'Uncategorized'
+                                    : (categoryNamesMap.get(`${sourceId}:${catId}`) || catId);
+
+                                  return (
+                                    <div key={catId} className="ple-tree-cat-node">
+                                      <div className="ple-tree-cat-header">
+                                        <span className="ple-tree-chevron-small">▼</span>
+                                        <span className="ple-tree-cat-name">{categoryName}</span>
+                                        <span className="ple-tree-cat-count">{channels.length}</span>
+                                      </div>
+                                      <div className="ple-tree-cat-children">
+                                        {channels.map(ch => (
+                                          <div key={`${catId}:${ch.stream_id}`} className="ple-tree-channel-row">
+                                            <div className="ple-tree-ch-info">
+                                              {ch.stream_icon ? (
+                                                <img src={ch.stream_icon} className="ple-tree-ch-logo" alt="" />
+                                              ) : (
+                                                <span className="ple-tree-ch-logo-placeholder">📺</span>
+                                              )}
+                                              <span className="ple-tree-ch-name">{ch.name}</span>
+                                            </div>
+                                            <button
+                                              className="ple-tree-add-btn"
+                                              onClick={() => handleAddChannel(ch.stream_id)}
+                                              title={markedCategoryId ? "Add channel to target category" : "Add channel to playlist"}
+                                            >
+                                              ＋
+                                            </button>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
                             </div>
-                          </div>
-                          <button
-                            className="ple-add-btn"
-                            onClick={() => handleAddChannel(ch.stream_id)}
-                            title="Add channel to playlist"
-                          >
-                            ＋ Channel
-                          </button>
-                        </div>
-                      );
-                    })
-                  )}
+                          );
+                        })}
+                      </div>
+                    );
+                  })()}
                 </div>
               ) : (
                 // Browse View
@@ -552,7 +967,7 @@ export function PlaylistEditorModal({ playlistId, playlistName, onClose }: Playl
                           <span className="ple-chevron">{isExpanded ? '▼' : '▶'}</span>
                           <span className="ple-source-name">{source.name}</span>
                         </button>
-                        
+
                         {isExpanded && (
                           <div className="ple-source-categories">
                             {cats.length === 0 ? (
@@ -594,7 +1009,7 @@ export function PlaylistEditorModal({ playlistId, playlistName, onClose }: Playl
                                               <button
                                                 className="ple-add-indiv-btn"
                                                 onClick={() => handleAddChannel(ch.stream_id)}
-                                                title="Add channel"
+                                                title={markedCategoryId ? "Add channel to target category" : "Add channel"}
                                               >
                                                 ＋
                                               </button>
@@ -619,13 +1034,26 @@ export function PlaylistEditorModal({ playlistId, playlistName, onClose }: Playl
 
           {/* Right Panel: Playlist Contents */}
           <div className="playlist-editor-right">
-            <div className="ple-panel-header">
-              <h3>Playlist Contents</h3>
-              <span className="ple-meta-hint">Drag handle ⋮⋮ to reorder. Categories sync automatically.</span>
+            <div className="ple-panel-header ple-right-panel-header">
+              <div className="ple-right-header-title-row">
+                <h3>Playlist Contents</h3>
+                <button
+                  className="ple-add-custom-cat-btn"
+                  onClick={async () => {
+                    const name = window.prompt("Enter custom category name:");
+                    if (name && name.trim()) {
+                      await addCustomCategoryToPlaylist(playlistId, name.trim());
+                    }
+                  }}
+                >
+                  ＋ Custom Category
+                </button>
+              </div>
+              <span className="ple-meta-hint">Drag handle ⋮⋮ to reorder. Click 🎯 Target to mark a category for left-panel additions.</span>
             </div>
 
             <div className="ple-panel-content">
-              {(!categoryLinks || categoryLinks.length === 0) && (!individualMappings || individualMappings.length === 0) ? (
+              {(!combinedBlocks || combinedBlocks.length === 0) && (!individualChannels || individualChannels.length === 0) ? (
                 <div className="ple-right-empty">
                   <span className="ple-empty-icon">📋</span>
                   <h4>Playlist is Empty</h4>
@@ -633,8 +1061,8 @@ export function PlaylistEditorModal({ playlistId, playlistName, onClose }: Playl
                 </div>
               ) : (
                 <div className="ple-contents-list">
-                  {/* Category Links drag-reorder container */}
-                  {categoryLinks && categoryLinks.length > 0 && (
+                  {/* Category Blocks drag-reorder container */}
+                  {combinedBlocks && combinedBlocks.length > 0 && (
                     <div
                       className="ple-section-category-links"
                       ref={categoryListRef}
@@ -642,65 +1070,26 @@ export function PlaylistEditorModal({ playlistId, playlistName, onClose }: Playl
                       onPointerUp={handleCatPointerUp}
                       onPointerCancel={handleCatPointerCancel}
                     >
-                      {categoryLinks.map((link, index) => {
+                      {combinedBlocks.map((block, index) => {
                         const isDragging = dragFromCatIdx.current === index;
                         const isDragOver = dragOverCatIdx === index && dragFromCatIdx.current !== null && dragFromCatIdx.current !== index;
-                        const cat = dbCategories[link.category_id];
-                        const srcName = sources.find(s => s.id === link.source_id)?.name || 'Source';
-                        
-                        const resolvedCatName = cat?.alias || cat?.category_name || link.category_id;
-                        const blockTitle = link.custom_name || resolvedCatName;
-                        const channelCount = linkChannelCounts[link.id as number] ?? 0;
+                        const blockId = block.type === 'native' ? block.id : `link:${block.linkId}`;
+                        const isMarked = markedCategoryId === blockId;
 
                         return (
-                          <div
-                            key={link.id}
-                            className={`ple-block-card${isDragging ? ' dragging' : ''}${isDragOver ? ' drag-over' : ''}`}
-                          >
-                            <span
-                              className="ple-block-drag-handle"
-                              style={{ touchAction: 'none' }}
-                              onPointerDown={e => handleCatPointerDown(e, index)}
-                            >⋮⋮</span>
-
-                            <div className="ple-block-info">
-                              {renamingLinkId === link.id ? (
-                                <div className="ple-inline-rename">
-                                  <input
-                                    ref={renameInputRef}
-                                    className="ple-rename-input"
-                                    value={renamingName}
-                                    onChange={e => setRenamingName(e.target.value)}
-                                    onBlur={() => handleSaveCategoryName(link.id as number)}
-                                    onKeyDown={e => {
-                                      if (e.key === 'Enter') handleSaveCategoryName(link.id as number);
-                                      if (e.key === 'Escape') setRenamingLinkId(null);
-                                    }}
-                                  />
-                                </div>
-                              ) : (
-                                <div className="ple-block-title-row">
-                                  <span className="ple-block-title" onClick={() => startRenameCategory(link)} title="Click to rename category block">
-                                    📂 {blockTitle} ✏️
-                                  </span>
-                                  {link.custom_name && (
-                                    <span className="ple-original-title-hint">(orig: {resolvedCatName})</span>
-                                  )}
-                                </div>
-                              )}
-                              <span className="ple-block-sub">
-                                {srcName} · {channelCount} channels link
-                              </span>
-                            </div>
-
-                            <button
-                              className="ple-remove-btn"
-                              onClick={() => removeCategoryFromPlaylist(link.id as number)}
-                              title="Remove category"
-                            >
-                              ✕
-                            </button>
-                          </div>
+                          <CategoryBlockCard
+                            key={block.id}
+                            playlistId={playlistId}
+                            block={block}
+                            sources={sources}
+                            index={index}
+                            isDragging={isDragging}
+                            isDragOver={isDragOver}
+                            isMarked={isMarked}
+                            onMark={() => setMarkedCategoryId(prev => prev === blockId ? null : blockId)}
+                            onPointerDown={handleCatPointerDown}
+                            onRemove={block.type === 'link' ? () => removeCategoryFromPlaylist(block.linkId) : undefined}
+                          />
                         );
                       })}
                     </div>
@@ -765,9 +1154,7 @@ export function PlaylistEditorModal({ playlistId, playlistName, onClose }: Playl
               )}
             </div>
           </div>
-
         </div>
-
       </div>
     </div>
   );

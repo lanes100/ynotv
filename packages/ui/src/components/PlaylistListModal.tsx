@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useLiveQuery } from '../hooks/useSqliteLiveQuery';
 import { db, type CustomPlaylist } from '../db';
 import {
@@ -6,6 +6,7 @@ import {
   deletePlaylist,
   renamePlaylist,
   reorderPlaylists,
+  revertRealSourceToDefault,
 } from '../services/playlist-editor';
 import { PlaylistEditorModal } from './PlaylistEditorModal';
 import './PlaylistListModal.css';
@@ -66,6 +67,79 @@ export function PlaylistListModal({ onClose }: PlaylistListModalProps) {
     new Map<string, number>()
   );
 
+  // Load enabled real sources
+  const [realSources, setRealSources] = useState<Array<{ id: string; name: string }>>([]);
+  useEffect(() => {
+    if (window.storage) {
+      window.storage.getSources().then(res => {
+        if (res.success && res.data) {
+          setRealSources(res.data.filter(s => s.enabled !== false).map(s => ({ id: s.id, name: s.name })));
+        }
+      });
+    }
+  }, []);
+
+  // Load unified sidebar order preference
+  const sidebarOrderPref = useLiveQuery(
+    () => db.prefs.get('sidebar_sources_order'),
+    []
+  );
+
+  const sidebarSourcesOrder = useMemo(() => {
+    if (!sidebarOrderPref?.value) return null;
+    try {
+      return JSON.parse(sidebarOrderPref.value) as string[];
+    } catch {
+      return null;
+    }
+  }, [sidebarOrderPref]);
+
+  interface ManagerItem {
+    id: string; // real source ID or 'playlist:uuid'
+    type: 'real' | 'playlist';
+    name: string;
+    playlistId?: string; // original UUID if playlist
+  }
+
+  // Combine real sources and custom playlists
+  const combinedItems = useMemo(() => {
+    const list: ManagerItem[] = [];
+    
+    // Add real sources
+    for (const src of realSources) {
+      list.push({
+        id: src.id,
+        type: 'real',
+        name: src.name
+      });
+    }
+    
+    // Add custom playlists
+    for (const playlist of playlists) {
+      list.push({
+        id: `playlist:${playlist.playlist_id}`,
+        type: 'playlist',
+        name: playlist.name,
+        playlistId: playlist.playlist_id
+      });
+    }
+    
+    // Sort according to sidebarSourcesOrder if it exists
+    if (sidebarSourcesOrder) {
+      const orderMap = new Map<string, number>(
+        sidebarSourcesOrder.map((id: string, index: number) => [id, index] as [string, number])
+      );
+      list.sort((a, b) => {
+        const orderA = orderMap.has(a.id) ? orderMap.get(a.id)! : Number.MAX_SAFE_INTEGER;
+        const orderB = orderMap.has(b.id) ? orderMap.get(b.id)! : Number.MAX_SAFE_INTEGER;
+        if (orderA !== orderB) return orderA - orderB;
+        return a.name.localeCompare(b.name);
+      });
+    }
+    
+    return list;
+  }, [realSources, playlists, sidebarSourcesOrder]);
+
   // Manage loading state
   useEffect(() => {
     if (playlists) {
@@ -115,18 +189,30 @@ export function PlaylistListModal({ onClose }: PlaylistListModalProps) {
     const to = getIndexFromClientY(e.clientY);
     dragFromIdx.current = null;
     setDragOverIdx(null);
-    if (from === to || !playlists) return;
+    if (from === to) return;
 
-    const next = [...playlists];
+    const next = [...combinedItems];
     const [moved] = next.splice(from, 1);
     next.splice(to, 0, moved);
 
+    const orderedIds = next.map(item => item.id);
     try {
-      await reorderPlaylists(next.map(p => p.playlist_id));
+      // 1. Save unified sidebar order preference
+      await db.prefs.put({
+        key: 'sidebar_sources_order',
+        value: JSON.stringify(orderedIds)
+      });
+      
+      // 2. Keep customPlaylists display_order sync'd for compatibility
+      const playlistsOnly = next.filter(item => item.type === 'playlist');
+      for (let i = 0; i < playlistsOnly.length; i++) {
+        const plId = playlistsOnly[i].playlistId!;
+        await db.customPlaylists.update(plId, { display_order: i });
+      }
     } catch (err) {
-      console.error('Failed to save playlist order:', err);
+      console.error('Failed to save sidebar source order:', err);
     }
-  }, [playlists]);
+  }, [combinedItems]);
 
   const handleContainerPointerCancel = useCallback(() => {
     dragFromIdx.current = null;
@@ -152,6 +238,19 @@ export function PlaylistListModal({ onClose }: PlaylistListModalProps) {
       setDeleteConfirmId(null);
     } catch (e) {
       console.error('Failed to delete playlist:', e);
+    }
+  };
+
+  const handleRevert = async (sourceId: string, sourceName: string) => {
+    const confirm = window.confirm(
+      `Are you sure you want to revert "${sourceName}" to its default state? This will remove all custom-added categories/channels and reset category ordering.`
+    );
+    if (!confirm) return;
+    try {
+      await revertRealSourceToDefault(sourceId);
+    } catch (e) {
+      console.error('Failed to revert source to default:', e);
+      alert('Failed to revert: ' + String(e));
     }
   };
 
@@ -238,10 +337,9 @@ export function PlaylistListModal({ onClose }: PlaylistListModalProps) {
 
             {loading ? (
               <div className="pll-empty">Loading…</div>
-            ) : playlists.length === 0 ? (
+            ) : combinedItems.length === 0 ? (
               <div className="pll-empty">
-                <p>No custom playlists yet.</p>
-                <p className="pll-hint">Create a playlist to group categories and channels into a custom sidebar source.</p>
+                <p>No custom playlists or media sources found.</p>
               </div>
             ) : (
               <div
@@ -251,30 +349,18 @@ export function PlaylistListModal({ onClose }: PlaylistListModalProps) {
                 onPointerUp={handleContainerPointerUp}
                 onPointerCancel={handleContainerPointerCancel}
               >
-                {playlists.map((playlist, index) => {
-                  const catCount = categoryLinkCounts?.get(playlist.playlist_id) || 0;
-                  const indivCount = individualCounts?.get(playlist.playlist_id) || 0;
+                {combinedItems.map((item: ManagerItem, index: number) => {
                   const isDragging = dragFromIdx.current === index;
                   const isDragOver = dragOverIdx === index && dragFromIdx.current !== null && dragFromIdx.current !== index;
-
-                  return (
-                    <div
-                      key={playlist.playlist_id}
-                      className={`pll-item${isDragging ? ' dragging' : ''}${isDragOver ? ' drag-over' : ''}`}
-                    >
-                      {editingId === playlist.playlist_id ? (
-                        <div className="pll-edit-row">
-                          <input
-                            ref={editNameInputRef}
-                            className="pll-edit-input"
-                            value={editName}
-                            onChange={e => setEditName(e.target.value)}
-                            onKeyDown={handleEditKey}
-                            onBlur={commitEdit}
-                          />
-                          <button className="pll-edit-ok" onClick={commitEdit}>✓</button>
-                        </div>
-                      ) : (
+                  
+                  if (item.type === 'real') {
+                    const catCount = categoryLinkCounts?.get(item.id) || 0;
+                    const indivCount = individualCounts?.get(item.id) || 0;
+                    return (
+                      <div
+                        key={item.id}
+                        className={`pll-item pll-real-source-item${isDragging ? ' dragging' : ''}${isDragOver ? ' drag-over' : ''}`}
+                      >
                         <div className="pll-item-main">
                           <span
                             className="pll-drag-handle"
@@ -282,30 +368,97 @@ export function PlaylistListModal({ onClose }: PlaylistListModalProps) {
                             onPointerDown={e => handleHandlePointerDown(e, index)}
                           >⋮⋮</span>
                           
-                          <div className="pll-item-info" onClick={() => setEditingPlaylist({ id: playlist.playlist_id, name: playlist.name })}>
-                            <span className="pll-item-name">{playlist.name}</span>
-                            <span className="pll-item-count">
-                              {catCount} category links · {indivCount} individual channels
+                          <div className="pll-item-info readonly">
+                            <span className="pll-item-name">{item.name}</span>
+                            <span className="pll-item-count source-type-badge">
+                              {catCount > 0 || indivCount > 0 ? (
+                                <span className="pll-custom-additions-badge">
+                                  +{catCount} category links · +{indivCount} individual channels
+                                </span>
+                              ) : (
+                                "Media Source"
+                              )}
                             </span>
                           </div>
-
+                          
                           <div className="pll-item-actions">
-                            <button className="pll-action-btn" onClick={() => setEditingPlaylist({ id: playlist.playlist_id, name: playlist.name })} title="Edit Contents">✏️ Content</button>
-                            <button className="pll-action-btn" onClick={() => startEdit(playlist)} title="Rename">📝 Rename</button>
-                            <button className="pll-action-btn" onClick={() => handleExport(playlist)} title="Export .m3u">📤 Export</button>
-                            {deleteConfirmId === playlist.playlist_id ? (
-                              <>
-                                <button className="pll-action-btn pll-confirm" onClick={() => handleDelete(playlist.playlist_id)} title="Confirm delete">✓</button>
-                                <button className="pll-action-btn" onClick={() => setDeleteConfirmId(null)} title="Cancel">✕</button>
-                              </>
-                            ) : (
-                              <button className="pll-action-btn pll-danger" onClick={() => setDeleteConfirmId(playlist.playlist_id)} title="Delete">🗑️</button>
-                            )}
+                            <button
+                              className="pll-action-btn"
+                              onClick={() => setEditingPlaylist({ id: item.id, name: item.name })}
+                              title="Edit Contents"
+                            >
+                              ✏️ Content
+                            </button>
+                            <button
+                              className="pll-action-btn pll-danger"
+                              onClick={() => handleRevert(item.id, item.name)}
+                              title="Revert to Default"
+                            >
+                              🔄 Revert
+                            </button>
+                            <span className="pll-readonly-label">Manage in Settings</span>
                           </div>
                         </div>
-                      )}
-                    </div>
-                  );
+                      </div>
+                    );
+                  } else {
+                    const plId = item.playlistId!;
+                    const catCount = categoryLinkCounts?.get(plId) || 0;
+                    const indivCount = individualCounts?.get(plId) || 0;
+                    const playlist = playlists.find(p => p.playlist_id === plId);
+                    
+                    if (!playlist) return null;
+
+                    return (
+                      <div
+                        key={plId}
+                        className={`pll-item${isDragging ? ' dragging' : ''}${isDragOver ? ' drag-over' : ''}`}
+                      >
+                        {editingId === plId ? (
+                          <div className="pll-edit-row">
+                            <input
+                              ref={editNameInputRef}
+                              className="pll-edit-input"
+                              value={editName}
+                              onChange={e => setEditName(e.target.value)}
+                              onKeyDown={handleEditKey}
+                              onBlur={commitEdit}
+                            />
+                            <button className="pll-edit-ok" onClick={commitEdit}>✓</button>
+                          </div>
+                        ) : (
+                          <div className="pll-item-main">
+                            <span
+                              className="pll-drag-handle"
+                              style={{ touchAction: 'none' }}
+                              onPointerDown={e => handleHandlePointerDown(e, index)}
+                            >⋮⋮</span>
+                            
+                            <div className="pll-item-info" onClick={() => setEditingPlaylist({ id: plId, name: playlist.name })}>
+                              <span className="pll-item-name">{playlist.name}</span>
+                              <span className="pll-item-count">
+                                {catCount} category links · {indivCount} individual channels
+                              </span>
+                            </div>
+
+                            <div className="pll-item-actions">
+                              <button className="pll-action-btn" onClick={() => setEditingPlaylist({ id: plId, name: playlist.name })} title="Edit Contents">✏️ Content</button>
+                              <button className="pll-action-btn" onClick={() => startEdit(playlist)} title="Rename">📝 Rename</button>
+                              <button className="pll-action-btn" onClick={() => handleExport(playlist)} title="Export .m3u">📤 Export</button>
+                              {deleteConfirmId === plId ? (
+                                <>
+                                  <button className="pll-action-btn pll-confirm" onClick={() => handleDelete(plId)} title="Confirm delete">✓</button>
+                                  <button className="pll-action-btn" onClick={() => setDeleteConfirmId(null)} title="Cancel">✕</button>
+                                </>
+                              ) : (
+                                <button className="pll-action-btn pll-danger" onClick={() => setDeleteConfirmId(plId)} title="Delete">🗑️</button>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  }
                 })}
               </div>
             )}

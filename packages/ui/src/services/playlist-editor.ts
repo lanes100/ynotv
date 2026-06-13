@@ -177,3 +177,99 @@ export async function reorderPlaylists(orderedPlaylistIds: string[]): Promise<vo
     await db.customPlaylists.update(orderedPlaylistIds[i], { display_order: i });
   }
 }
+
+// ── Revert Real Source To Default ─────────────────────────────────────────────
+
+export async function revertRealSourceToDefault(sourceId: string): Promise<void> {
+  // 1. Delete category links
+  await db.playlistCategoryLinks.where('playlist_id').equals(sourceId).delete();
+  
+  // 2. Delete individual channels
+  await db.playlistIndividualChannels.where('playlist_id').equals(sourceId).delete();
+  
+  // 3. Reset display_order of native categories to null
+  const nativeCategories = await db.categories.where('source_id').equals(sourceId).toArray();
+  for (const cat of nativeCategories) {
+    await db.categories.update(cat.category_id, { display_order: null as any });
+  }
+}
+
+// ── Category Channel Insertions ─────────────────────────────────────────────
+
+export async function addChannelToCategory(
+  playlistId: string,
+  parentCategoryId: string,
+  streamId: string
+): Promise<void> {
+  const existing = await db.playlistIndividualChannels
+    .whereRaw('playlist_id = ? AND stream_id = ? AND parent_category_id = ?', [playlistId, streamId, parentCategoryId])
+    .toArray();
+  if (existing.length > 0) return;
+
+  const all = await db.playlistIndividualChannels
+    .whereRaw('playlist_id = ? AND parent_category_id = ?', [playlistId, parentCategoryId])
+    .toArray();
+  const maxOrder = all.length > 0 ? Math.max(...all.map(c => c.display_order)) : -1;
+
+  await db.playlistIndividualChannels.add({
+    playlist_id: playlistId,
+    stream_id: streamId,
+    parent_category_id: parentCategoryId,
+    display_order: maxOrder + 1,
+    added_at: Date.now()
+  });
+}
+
+export async function removeChannelFromCategory(
+  playlistId: string,
+  parentCategoryId: string,
+  streamId: string
+): Promise<void> {
+  const all = await db.playlistIndividualChannels
+    .whereRaw('playlist_id = ? AND parent_category_id = ?', [playlistId, parentCategoryId])
+    .toArray();
+  const toDelete = all.filter(c => c.stream_id === streamId).map(c => c.id as number);
+  if (toDelete.length > 0) {
+    await db.playlistIndividualChannels.bulkDelete(toDelete);
+  }
+}
+
+export async function reorderCategoryChannels(
+  playlistId: string,
+  parentCategoryId: string,
+  orderedStreamIds: string[]
+): Promise<void> {
+  const items = await db.playlistIndividualChannels
+    .whereRaw('playlist_id = ? AND parent_category_id = ?', [playlistId, parentCategoryId])
+    .toArray();
+  const itemMap = new Map(items.map(i => [i.stream_id, i]));
+
+  for (let i = 0; i < orderedStreamIds.length; i++) {
+    const item = itemMap.get(orderedStreamIds[i]);
+    if (item && item.id !== undefined) {
+      await db.playlistIndividualChannels.update(item.id, { display_order: i });
+    }
+  }
+}
+
+export async function addCustomCategoryToPlaylist(
+  playlistId: string,
+  name: string
+): Promise<number> {
+  const existing_links = await db.playlistCategoryLinks
+    .where('playlist_id').equals(playlistId)
+    .toArray();
+  const maxOrder = existing_links.length > 0
+    ? Math.max(...existing_links.map(l => l.display_order))
+    : -1;
+
+  const id = await db.playlistCategoryLinks.add({
+    playlist_id: playlistId,
+    source_id: 'custom',
+    category_id: `custom:${crypto.randomUUID()}`,
+    custom_name: name,
+    display_order: maxOrder + 1,
+    added_at: Date.now()
+  });
+  return id as number;
+}
