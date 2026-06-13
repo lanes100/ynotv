@@ -7,11 +7,10 @@ import { useModal } from './Modal';
 import { addChannelsToGroup } from '../services/custom-groups';
 import { addChannelToFailoverGroup, createFailoverGroup } from '../services/failover-groups';
 import { addToRecentChannels } from '../utils/recentChannels';
-import { TVMazeSearchModal } from './TVMazeSearchModal';
 import { EpgEditorModal } from './EpgEditorModal';
 import './ProgramContextMenu.css'; // Reuse the same styles
 
-type MenuView = 'main' | 'quick' | 'custom' | 'group' | 'failover' | 'playlist_add';
+type MenuView = 'main' | 'quick' | 'custom' | 'group' | 'failover';
 
 interface ChannelContextMenuProps {
     channel: StoredChannel;
@@ -49,7 +48,6 @@ export function ChannelContextMenu({
     const [durationMinutes, setDurationMinutes] = useState(30);
     const [scheduling, setScheduling] = useState(false);
     const [adjustedPosition, setAdjustedPosition] = useState(position);
-    const [showTVMazeModal, setShowTVMazeModal] = useState(false);
     const [showEpgEditor, setShowEpgEditor] = useState(false);
     const [menuHidden, setMenuHidden] = useState(false);
     const { showSuccess, showError, showPrompt, showConfirm, showModal, ModalComponent } = useModal();
@@ -64,10 +62,6 @@ export function ChannelContextMenu({
     const [creatingFailoverGroup, setCreatingFailoverGroup] = useState(false);
     const [newFailoverGroupName, setNewFailoverGroupName] = useState('');
     const failoverNameInputRef = useRef<HTMLInputElement>(null);
-
-    // Playlist state
-    const [playlists, setPlaylists] = useState<any[]>([]);
-    const [addingToPlaylist, setAddingToPlaylist] = useState<string | null>(null);
 
     // Custom date/time state
     const now = new Date();
@@ -97,18 +91,6 @@ export function ChannelContextMenu({
             if (isMounted) setFailoverGroups(groups.sort((a, b) => a.name.localeCompare(b.name)));
         }).catch(() => {
             if (isMounted) setFailoverGroups([]);
-        });
-        return () => { isMounted = false; };
-    }, [currentView]);
-
-    // Load playlists when user opens the playlist submenu
-    useEffect(() => {
-        if (currentView !== 'playlist_add') return;
-        let isMounted = true;
-        db.customPlaylists.toArray().then(list => {
-            if (isMounted) setPlaylists(list.sort((a, b) => a.name.localeCompare(b.name)));
-        }).catch(() => {
-            if (isMounted) setPlaylists([]);
         });
         return () => { isMounted = false; };
     }, [currentView]);
@@ -697,52 +679,6 @@ export function ChannelContextMenu({
         );
     }
 
-    // ── ADD TO PLAYLIST VIEW ──
-    if (currentView === 'playlist_add') {
-        return createPortal(
-            <div
-                ref={menuRef}
-                className="program-context-menu"
-                style={getMenuStyle({ minWidth: '200px' })}
-            >
-                <div className="context-menu-header">
-                    Add to Playlist
-                </div>
-                <div className="context-menu-separator" />
-                {playlists.length === 0 && (
-                    <div style={{ padding: '10px 16px', opacity: 0.5, fontSize: '0.85rem' }}>
-                        No playlists yet
-                    </div>
-                )}
-                {playlists.map(playlist => (
-                    <div
-                        key={playlist.playlist_id}
-                        className="context-menu-item"
-                        onClick={async () => {
-                            setAddingToPlaylist(playlist.playlist_id);
-                            try {
-                                const { addIndividualChannelToPlaylist } = await import('../services/playlist-editor');
-                                await addIndividualChannelToPlaylist(playlist.playlist_id, channel.stream_id);
-                            } finally {
-                                setAddingToPlaylist(null);
-                                onClose();
-                            }
-                        }}
-                        style={{ opacity: addingToPlaylist === playlist.playlist_id ? 0.5 : 1 }}
-                    >
-                        {addingToPlaylist === playlist.playlist_id ? '⏳' : '📋'} {playlist.name}
-                    </div>
-                ))}
-                <div className="context-menu-separator" />
-                <div className="context-menu-item context-menu-item-secondary" onClick={() => setCurrentView('main')}>
-                    ← Back
-                </div>
-                <ModalComponent />
-            </div>,
-            document.body
-        );
-    }
-
     // ── QUICK RECORD VIEW ──
     if (currentView === 'quick') {
         return createPortal(
@@ -942,18 +878,10 @@ export function ChannelContextMenu({
             <div className="context-menu-item" onClick={() => setCurrentView('failover')}>
                 🔗 Add to Failover Group →
             </div>
-            <div className="context-menu-item" onClick={() => setCurrentView('playlist_add')}>
-                📋 Add to Playlist →
-            </div>
             <div className="context-menu-separator" />
             <div className="context-menu-item" onClick={handleCopyStreamUrl}>
                 🔗 Copy Stream URL
             </div>
-            <div className="context-menu-separator" />
-            <div className="context-menu-item" onClick={() => setShowTVMazeModal(true)}>
-                📺 Track Show
-            </div>
-            <div className="context-menu-separator" />
             <div className="context-menu-item" onClick={() => { setShowEpgEditor(true); }}>
                 ✏️ Edit EPG
             </div>
@@ -970,14 +898,6 @@ export function ChannelContextMenu({
                 Cancel
             </div>
             <ModalComponent />
-            {showTVMazeModal && (
-                <TVMazeSearchModal
-                    programTitle={channel.name}
-                    channelName={channel.name}
-                    channelId={channel.stream_id}
-                    onClose={() => setShowTVMazeModal(false)}
-                />
-            )}
         </div>,
         document.body
     );

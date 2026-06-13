@@ -16,6 +16,7 @@ import { SourceContextMenu } from './SourceContextMenu';
 import { CategoryContextMenu } from './CategoryContextMenu';
 import { FavoritesContextMenu } from './FavoritesContextMenu';
 import { RecentChannelsContextMenu } from './RecentChannelsContextMenu';
+import { PlaylistContextMenu } from './PlaylistContextMenu';
 import { EpgEditorModal } from './EpgEditorModal';
 import { clearRecentChannels } from '../utils/recentChannels';
 import './CategoryStrip.css';
@@ -1198,11 +1199,6 @@ export function CategoryStrip({ selectedCategoryId, onSelectCategory, visible, o
           return null;
         })}
 
-        {/* Button to create a new playlist (shown at bottom of scrollable list) */}
-        <button className="create-playlist-btn" onClick={handleCreatePlaylist}>
-          <span>＋ New Playlist</span>
-        </button>
-
         {filteredGroupedCategories.length === 0 && (!customPlaylists || customPlaylists.length === 0) && (
           <div className="category-empty">
             <p>No categories yet</p>
@@ -1282,83 +1278,44 @@ export function CategoryStrip({ selectedCategoryId, onSelectCategory, visible, o
 
       {/* Playlist Context Menu */}
       {playlistContextMenu && (
-        <div
-          className="program-context-menu"
-          style={{
-            position: 'fixed',
-            left: playlistContextMenu.x,
-            top: playlistContextMenu.y + 220 > window.innerHeight 
-              ? Math.max(10, playlistContextMenu.y - 220) 
-              : playlistContextMenu.y,
-            zIndex: 10000,
-            minWidth: '240px'
+        <PlaylistContextMenu
+          playlistId={playlistContextMenu.playlistId}
+          playlistName={playlistContextMenu.playlistName}
+          position={{ x: playlistContextMenu.x, y: playlistContextMenu.y }}
+          onClose={() => setPlaylistContextMenu(null)}
+          onEditContents={() => {
+            setEditingPlaylist({ id: playlistContextMenu.playlistId, name: playlistContextMenu.playlistName });
           }}
-        >
-          <div className="context-menu-header">
-            {playlistContextMenu.playlistName}
-          </div>
-          <div
-            className="context-menu-item"
-            onClick={() => {
-              setEditingPlaylist({ id: playlistContextMenu.playlistId, name: playlistContextMenu.playlistName });
-              setPlaylistContextMenu(null);
-            }}
-          >
-            ✏️ Edit Contents
-          </div>
-          <div
-            className="context-menu-item"
-            onClick={async () => {
-              try {
-                const { generateM3uForPlaylist } = await import('../services/playlist-export');
-                const content = await generateM3uForPlaylist(playlistContextMenu.playlistId);
-                const result = await window.storage.saveM3UFile(content, playlistContextMenu.playlistName);
-                if (result.success) {
-                  alert('Playlist exported successfully!');
-                }
-              } catch (err) {
-                console.error('[CategoryStrip] M3U export failed:', err);
-                alert('Export failed: ' + String(err));
+          onExportM3u={async () => {
+            try {
+              const { generateM3uForPlaylist } = await import('../services/playlist-export');
+              const content = await generateM3uForPlaylist(playlistContextMenu.playlistId);
+              const result = await window.storage.saveM3UFile(content, playlistContextMenu.playlistName);
+              if (result.success) {
+                alert('Playlist exported successfully!');
               }
-              setPlaylistContextMenu(null);
-            }}
-          >
-            📤 Export .m3u
-          </div>
-          <div
-            className="context-menu-item"
-            onClick={() => {
-              showPrompt(
-                'Rename Playlist',
-                'Enter a new name:',
-                async (newName) => {
-                  if (newName.trim()) {
-                    const { renamePlaylist } = await import('../services/playlist-editor');
-                    await renamePlaylist(playlistContextMenu.playlistId, newName.trim());
-                  }
-                },
-                undefined, 'New name...', playlistContextMenu.playlistName, 'Rename', 'Cancel'
-              );
-              setPlaylistContextMenu(null);
-            }}
-          >
-            📝 Rename
-          </div>
-          <div
-            className="context-menu-item"
-            onClick={() => {
-              handleDeletePlaylist(playlistContextMenu.playlistId);
-              setPlaylistContextMenu(null);
-            }}
-            style={{ color: 'var(--status-live)' }}
-          >
-            🗑️ Delete
-          </div>
-          <div
-            style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', zIndex: -1 }}
-            onClick={() => setPlaylistContextMenu(null)}
-          />
-        </div>
+            } catch (err) {
+              console.error('[CategoryStrip] M3U export failed:', err);
+              alert('Export failed: ' + String(err));
+            }
+          }}
+          onRename={() => {
+            showPrompt(
+              'Rename Playlist',
+              'Enter a new name:',
+              async (newName) => {
+                if (newName.trim()) {
+                  const { renamePlaylist } = await import('../services/playlist-editor');
+                  await renamePlaylist(playlistContextMenu.playlistId, newName.trim());
+                }
+              },
+              undefined, 'New name...', playlistContextMenu.playlistName, 'Rename', 'Cancel'
+            );
+          }}
+          onDelete={() => {
+            handleDeletePlaylist(playlistContextMenu.playlistId);
+          }}
+        />
       )}
 
       {/* Playlist Editor Modal */}

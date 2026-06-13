@@ -2,31 +2,31 @@ import { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
 import './ProgramContextMenu.css';
 
-interface SourceContextMenuProps {
-    sourceId: string;
-    sourceName: string;
+interface PlaylistContextMenuProps {
+    playlistId: string;
+    playlistName: string;
     position: { x: number; y: number };
     onClose: () => void;
-    onManageCategories?: (sourceId: string, sourceName: string) => void;
-    onManageVodCategories?: (sourceId: string, sourceName: string) => void;
-    onEditSource?: (sourceId: string) => void;
-    onEditEpg?: (sourceId: string, sourceName: string) => void;
+    onEditContents: () => void;
+    onExportM3u: () => void;
+    onRename: () => void;
+    onDelete: () => void;
 }
 
-export function SourceContextMenu({
-    sourceId,
-    sourceName,
+export function PlaylistContextMenu({
+    playlistId,
+    playlistName,
     position,
     onClose,
-    onManageCategories,
-    onManageVodCategories,
-    onEditSource,
-    onEditEpg,
-}: SourceContextMenuProps) {
+    onEditContents,
+    onExportM3u,
+    onRename,
+    onDelete,
+}: PlaylistContextMenuProps) {
     const menuRef = useRef<HTMLDivElement>(null);
     const [adjustedPosition, setAdjustedPosition] = useState(position);
 
-    // Dynamic Context Menu calculation
+    // Dynamic Position Adjustment (Flip upward if in bottom half)
     useLayoutEffect(() => {
         if (menuRef.current) {
             const menu = menuRef.current;
@@ -85,31 +85,54 @@ export function SourceContextMenu({
         <div
             ref={menuRef}
             className="program-context-menu"
-            style={{ left: `${adjustedPosition.x}px`, top: `${adjustedPosition.y}px` }}
+            style={{
+                position: 'fixed',
+                left: `${adjustedPosition.x}px`,
+                top: `${adjustedPosition.y}px`,
+                zIndex: 10000,
+                minWidth: '240px'
+            }}
         >
-            <div className="context-menu-header" style={{ padding: '8px 12px 4px', fontSize: '11px', opacity: 0.6, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                {sourceName}
+            <div className="context-menu-header" style={{ paddingLeft: '8px', paddingRight: '8px' }}>
+                {playlistName}
             </div>
-            {onManageCategories && (
-                <div className="context-menu-item" onClick={() => { onManageCategories(sourceId, sourceName); onClose(); }}>
-                    Manage Categories
-                </div>
-            )}
-            {onManageVodCategories && (
-                <div className="context-menu-item" onClick={() => { onManageVodCategories(sourceId, sourceName); onClose(); }}>
-                    Manage VOD Categories
-                </div>
-            )}
-            {onEditSource && (
-                <div className="context-menu-item" onClick={() => { onEditSource(sourceId); onClose(); }}>
-                    Edit Source
-                </div>
-            )}
-            {onEditEpg && (
-                <div className="context-menu-item" onClick={() => { onEditEpg(sourceId, sourceName); onClose(); }}>
-                    Edit EPG
-                </div>
-            )}
+            <div
+                className="context-menu-item"
+                onClick={() => {
+                    onEditContents();
+                    onClose();
+                }}
+            >
+                Edit Contents
+            </div>
+            <div
+                className="context-menu-item"
+                onClick={() => {
+                    onExportM3u();
+                    onClose();
+                }}
+            >
+                Export .m3u
+            </div>
+            <div
+                className="context-menu-item"
+                onClick={() => {
+                    onRename();
+                    onClose();
+                }}
+            >
+                Rename
+            </div>
+            <div
+                className="context-menu-item"
+                onClick={() => {
+                    onDelete();
+                    onClose();
+                }}
+                style={{ color: 'var(--status-live)' }}
+            >
+                Delete
+            </div>
         </div>,
         document.body
     );
