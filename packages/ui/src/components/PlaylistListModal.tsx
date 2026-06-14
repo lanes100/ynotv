@@ -59,7 +59,7 @@ interface PlaylistListModalProps {
 }
 
 export function PlaylistListModal({ onClose }: PlaylistListModalProps) {
-  const { showConfirm, showError, ModalComponent } = useModal();
+  const { showConfirm, showSuccess, showError, ModalComponent } = useModal();
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState('');
@@ -67,6 +67,7 @@ export function PlaylistListModal({ onClose }: PlaylistListModalProps) {
   const [editName, setEditName] = useState('');
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [editingPlaylist, setEditingPlaylist] = useState<{ id: string; name: string } | null>(null);
+  const [revertingId, setRevertingId] = useState<string | null>(null);
 
   const newNameInputRef = useRef<HTMLInputElement>(null);
   const editNameInputRef = useRef<HTMLInputElement>(null);
@@ -290,11 +291,28 @@ export function PlaylistListModal({ onClose }: PlaylistListModalProps) {
       'Revert Source to Default',
       `Are you sure you want to revert "${sourceName}" to its default state? This will remove all custom-added categories/channels and reset category ordering.`,
       async () => {
+        setRevertingId(sourceId);
         try {
           await revertRealSourceToDefault(sourceId);
+
+          // Trigger sync to restore default provider ordering
+          if (window.storage) {
+            const res = await window.storage.getSources();
+            if (res.success && res.data) {
+              const source = res.data.find(s => s.id === sourceId);
+              if (source) {
+                const { syncSource } = await import('../db/sync');
+                await syncSource(source);
+              }
+            }
+          }
+
+          showSuccess('Revert Source', `Successfully reverted "${sourceName}" to default.`);
         } catch (e) {
           console.error('Failed to revert source to default:', e);
           showError('Revert Source', 'Failed to revert: ' + String(e));
+        } finally {
+          setRevertingId(null);
         }
       }
     );
@@ -318,17 +336,17 @@ export function PlaylistListModal({ onClose }: PlaylistListModalProps) {
     setEditingId(null);
   };
 
-  const handleExport = async (playlist: CustomPlaylist) => {
+  const handleExport = async (id: string, name: string) => {
     try {
       const { generateM3uForPlaylist } = await import('../services/playlist-export');
-      const content = await generateM3uForPlaylist(playlist.playlist_id);
-      const result = await window.storage.saveM3UFile(content, playlist.name);
+      const content = await generateM3uForPlaylist(id);
+      const result = await window.storage.saveM3UFile(content, name);
       if (result.success) {
-        alert('Playlist exported successfully!');
+        showSuccess('Export Playlist', 'Playlist exported successfully!');
       }
     } catch (e) {
       console.error('Failed to export playlist:', e);
-      alert('Export failed: ' + String(e));
+      showError('Export Playlist', 'Export failed: ' + String(e));
     }
   };
 
@@ -439,10 +457,18 @@ export function PlaylistListModal({ onClose }: PlaylistListModalProps) {
                               className="pll-action-btn pll-danger"
                               onClick={() => handleRevert(item.id, item.name)}
                               title="Revert to Default"
+                              disabled={revertingId !== null}
                             >
-                              <RevertIcon size={12} />Revert
+                              <RevertIcon size={12} />
+                              {revertingId === item.id ? 'Reverting...' : 'Revert'}
                             </button>
-                            <span className="pll-readonly-label">Manage in Settings</span>
+                            <button
+                              className="pll-action-btn"
+                              onClick={() => handleExport(item.id, item.name)}
+                              title="Export .m3u"
+                            >
+                              <ExportIcon size={12} />Export
+                            </button>
                           </div>
                         </div>
                       </div>
@@ -490,7 +516,7 @@ export function PlaylistListModal({ onClose }: PlaylistListModalProps) {
                             <div className="pll-item-actions">
                               <button className="pll-action-btn" onClick={() => setEditingPlaylist({ id: plId, name: playlist.name })} title="Edit Contents"><EditIcon size={12} />Content</button>
                               <button className="pll-action-btn" onClick={() => startEdit(playlist)} title="Rename"><RenameIcon size={12} />Rename</button>
-                              <button className="pll-action-btn" onClick={() => handleExport(playlist)} title="Export .m3u"><ExportIcon size={12} />Export</button>
+                              <button className="pll-action-btn" onClick={() => handleExport(playlist.playlist_id, playlist.name)} title="Export .m3u"><ExportIcon size={12} />Export</button>
                               {deleteConfirmId === plId ? (
                                 <>
                                   <button className="pll-action-btn pll-confirm" onClick={() => handleDelete(plId)} title="Confirm delete">✓</button>

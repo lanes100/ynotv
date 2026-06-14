@@ -248,11 +248,15 @@ export function CategoryManager({ sourceId, sourceName, onClose, onChange }: Cat
             }
 
             // Save custom links updates in database
-            const linkItems = categories.filter(cat => cat.type === 'link');
-            for (const item of linkItems) {
-                await db.playlistCategoryLinks.update(item.linkId, {
-                    display_order: item.displayOrder,
-                });
+            const linkItems = categories
+                .filter(cat => cat.type === 'link')
+                .map(cat => ({
+                    ...cat.link,
+                    display_order: cat.displayOrder,
+                }));
+
+            if (linkItems.length > 0) {
+                await db.playlistCategoryLinks.bulkPut(linkItems);
             }
 
             await new Promise(resolve => setTimeout(resolve, 300));

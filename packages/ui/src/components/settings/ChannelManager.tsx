@@ -289,15 +289,14 @@ export function ChannelManager({ categoryId, categoryName, sourceId, onClose, on
                     .whereRaw('playlist_id = ? AND parent_category_id = ?', [targetPlaylistId, targetParentId])
                     .delete();
 
-                for (let i = 0; i < channels.length; i++) {
-                    await db.playlistIndividualChannels.put({
-                        playlist_id: targetPlaylistId,
-                        parent_category_id: targetParentId,
-                        stream_id: channels[i].stream_id,
-                        display_order: i,
-                        added_at: Date.now()
-                    });
-                }
+                const items = channels.map((ch, i) => ({
+                    playlist_id: targetPlaylistId,
+                    parent_category_id: targetParentId,
+                    stream_id: ch.stream_id,
+                    display_order: i,
+                    added_at: Date.now()
+                }));
+                await db.playlistIndividualChannels.bulkPut(items);
             }
 
             // 3. Perform atomic operation for category filter words

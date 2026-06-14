@@ -637,18 +637,8 @@
 /* ==========================================================================
    CUSTOM PLAYLISTS SIDEBAR STYLES
    ========================================================================== */
-.playlist-source-group {
-  border-left: 2px solid var(--accent-primary, #00d4ff);
-}
 
-.playlist-source-header {
-  border-top: 1px solid rgba(0, 212, 255, 0.1) !important;
-  background: rgba(0, 212, 255, 0.01) !important;
-}
 
-.playlist-source-header:hover {
-  background: rgba(0, 212, 255, 0.04) !important;
-}
 
 .playlist-cat-item {
   position: relative;

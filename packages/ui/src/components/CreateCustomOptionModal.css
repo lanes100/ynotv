@@ -1,0 +1,59 @@
+.cco-modal {
+    max-width: 440px !important;
+}
+
+.cco-tabs {
+    display: flex;
+    margin: 20px 24px 0 24px;
+    background: rgba(0, 0, 0, 0.25);
+    border-radius: 12px;
+    padding: 3px;
+    border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.cco-tab-btn {
+    flex: 1;
+    padding: 10px 14px;
+    border: none;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    border-radius: 10px;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    font-family: inherit;
+    text-align: center;
+}
+
+.cco-tab-btn:hover {
+    color: rgba(255, 255, 255, 0.85);
+}
+
+.cco-tab-btn.active {
+    background: var(--surface-hover, rgba(65, 65, 65, 0.9));
+    color: var(--accent-primary, #00d4ff);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.cco-body {
+    padding-top: 16px !important;
+}
+
+.cco-desc {
+    padding-left: 0 !important;
+    font-size: 0.88rem !important;
+    line-height: 1.45 !important;
+    color: rgba(255, 255, 255, 0.65) !important;
+}
+
+/* Disabled state styling for the primary action button in the footer */
+.modal-btn-primary:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    box-shadow: none !important;
+    transform: none !important;
+    background: rgba(255, 255, 255, 0.05) !important;
+    color: rgba(255, 255, 255, 0.3) !important;
+    border: 1px solid rgba(255, 255, 255, 0.05) !important;
+}

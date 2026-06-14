@@ -13,6 +13,7 @@ import {
   addChannelToCategory,
   removeChannelFromCategory,
   addCustomCategoryToPlaylist,
+  addChannelsToCategory,
 } from '../services/playlist-editor';
 import { useModal } from './Modal';
 import './PlaylistEditorModal.css';
@@ -227,12 +228,20 @@ function CategoryBlockCard({
 
   // Merge dynamic and manual channels into a single integrated list
   const combinedChannels = React.useMemo(() => {
+    const targetSourceId = block.type === 'native' ? block.category.source_id : block.link.source_id;
+    const targetCategoryId = block.type === 'native' ? block.category.category_id : block.link.category_id;
+    const dynamicStreamIds = new Set((dynamicChannels || []).map(ch => ch.stream_id));
+
     const manualStreamIds = new Set((manualMappings || []).map(m => m.stream_id));
     const resolvedManual = (manualMappings || [])
       .sort((a, b) => a.display_order - b.display_order)
       .map(m => {
         const ch = (manualChannels || []).find(c => c.stream_id === m.stream_id);
-        return ch ? { ...ch, isManualAddition: true } : null;
+        if (!ch) return null;
+
+        const isCustomCategory = targetSourceId === 'custom';
+        const isNative = !isCustomCategory && ch.source_id === targetSourceId && parseCategoryIds(ch.category_ids).includes(targetCategoryId);
+        return { ...ch, isManualAddition: !isNative };
       })
       .filter(Boolean) as Array<StoredChannel & { isManualAddition: boolean }>;
 
@@ -241,7 +250,7 @@ function CategoryBlockCard({
       .map(ch => ({ ...ch, isManualAddition: false }));
 
     return [...resolvedManual, ...remainingDynamic];
-  }, [dynamicChannels, manualMappings, manualChannels]);
+  }, [dynamicChannels, manualMappings, manualChannels, block]);
 
   const startRename = () => {
     if (block.type === 'link') {
@@ -975,6 +984,61 @@ export function PlaylistEditorModal({ playlistId, playlistName, onClose }: Playl
     await addChannelToCategory(playlistId, markedCategoryId, streamId);
   };
 
+  const handleCombineCategory = async (sourceId: string, categoryId: string) => {
+    if (!markedCategoryId) {
+      showError('Target Category Required', 'Please select a target category in the right panel first.');
+      return;
+    }
+
+    try {
+      let channels: StoredChannel[] = [];
+      if (sourceId.startsWith('playlist:')) {
+        const plId = sourceId.replace('playlist:', '');
+        if (categoryId.startsWith('link:')) {
+          const linkId = parseInt(categoryId.replace('link:', ''), 10);
+          const link = await db.playlistCategoryLinks.get(linkId);
+          if (link) {
+            channels = await db.channels.whereRaw(
+              `source_id = ? AND EXISTS (SELECT 1 FROM json_each(category_ids) WHERE value = ?)`,
+              [link.source_id, link.category_id]
+            ).toArray();
+          }
+        } else if (categoryId.startsWith('indiv:')) {
+          const mappings = await db.playlistIndividualChannels
+            .where('playlist_id')
+            .equals(plId)
+            .sortBy('display_order');
+          const streamIds = mappings.map(m => m.stream_id);
+          if (streamIds.length > 0) {
+            channels = await db.channels.where('stream_id').anyOf(streamIds).toArray();
+            const chMap = new Map(channels.map(ch => [ch.stream_id, ch]));
+            channels = streamIds
+              .map(id => chMap.get(id))
+              .filter((ch): ch is StoredChannel => ch !== undefined);
+          }
+        }
+      } else {
+        channels = await db.channels.whereRaw(
+          `source_id = ? AND EXISTS (SELECT 1 FROM json_each(category_ids) WHERE value = ?)`,
+          [sourceId, categoryId]
+        ).toArray();
+      }
+
+      const sorted = await sortChannelsLikeLiveTV(sourceId, categoryId, channels);
+      const streamIds = sorted.map(ch => ch.stream_id);
+
+      if (streamIds.length > 0) {
+        await addChannelsToCategory(playlistId, markedCategoryId, streamIds);
+        showSuccess('Category Combined', `Successfully combined ${streamIds.length} channels into the target category.`);
+      } else {
+        showError('No Channels', 'The source category does not contain any channels.');
+      }
+    } catch (err) {
+      console.error('Failed to combine category:', err);
+      showError('Combine Error', 'An error occurred while combining categories.');
+    }
+  };
+
   // Right panel drag-reorder categories
   const getCatIndexFromClientY = (clientY: number): number => {
     if (!categoryListRef.current) return 0;
@@ -1339,6 +1403,14 @@ export function PlaylistEditorModal({ playlistId, playlistName, onClose }: Playl
                                           title="Add category link to playlist"
                                         >
                                           <PlusIcon size={12} /> Category
+                                        </button>
+                                        <button
+                                          className="ple-add-btn"
+                                          onClick={() => handleCombineCategory(source.id, cat.category_id)}
+                                          disabled={!markedCategoryId}
+                                          title={markedCategoryId ? "Combine category channels into target category" : "Please select a target category first"}
+                                        >
+                                          <PlusIcon size={12} /> Combine
                                         </button>
                                       </div>
                                     </div>

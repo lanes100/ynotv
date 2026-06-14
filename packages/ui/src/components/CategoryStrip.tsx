@@ -10,6 +10,7 @@ import { normalizeBoolean } from '../utils/db-helpers';
 import { useModal } from './Modal';
 import { createCustomGroup, deleteCustomGroup } from '../services/custom-groups';
 import { CustomGroupManager } from './CustomGroupManager';
+import { CreateCustomOptionModal } from './CreateCustomOptionModal';
 import { CategoryManager } from './settings/CategoryManager';
 import { FavoriteManager } from './settings/FavoriteManager';
 import { SourceContextMenu } from './SourceContextMenu';
@@ -20,6 +21,17 @@ import { PlaylistContextMenu } from './PlaylistContextMenu';
 import { EpgEditorModal } from './EpgEditorModal';
 import { clearRecentChannels } from '../utils/recentChannels';
 import './CategoryStrip.css';
+
+function parseCategoryIds(raw: string | string[] | number[] | undefined): string[] {
+  if (!raw) return [];
+  if (Array.isArray(raw)) return raw.map(String);
+  try {
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) return parsed.map(String);
+  } catch { /* not JSON */ }
+  if (typeof raw === 'string') return raw.split(',').map(s => s.trim()).filter(Boolean);
+  return [String(raw)];
+}
 
 // Component that detects text overflow and only scrolls when necessary
 function ScrollingText({ children, className }: { children: React.ReactNode; className?: string }) {
@@ -390,6 +402,7 @@ export function CategoryStrip({ selectedCategoryId, onSelectCategory, visible, o
   const { showModal, showConfirm, showPrompt, ModalComponent } = useModal();
   const [managingGroup, setManagingGroup] = useState<{ id: string, name: string } | null>(null);
   const [contextMenu, setContextMenu] = useState<{ x: number, y: number, groupId: string } | null>(null);
+  const [isCreateOptionModalOpen, setIsCreateOptionModalOpen] = useState(false);
 
   // Custom Playlists states
   const [expandedPlaylists, setExpandedPlaylists] = useState<Record<string, boolean>>(() => {
@@ -573,11 +586,37 @@ export function CategoryStrip({ selectedCategoryId, onSelectCategory, visible, o
     async () => {
       const all = await db.playlistIndividualChannels.toArray();
       const links = await db.playlistCategoryLinks.toArray();
+      
+      const streamIds = all.map(item => item.stream_id);
+      const channels = streamIds.length > 0 ? await db.channels.where('stream_id').anyOf(streamIds).toArray() : [];
+      const channelMap = new Map(channels.map(ch => [ch.stream_id, ch]));
+
       const counts = new Map<string, number>();
       for (const item of all) {
         if (item.parent_category_id) {
-          const key = `${item.playlist_id}:${item.parent_category_id}`;
-          counts.set(key, (counts.get(key) || 0) + 1);
+          let targetSourceId: string | null = null;
+          let targetCategoryId: string | null = null;
+
+          if (item.parent_category_id.startsWith('link:')) {
+            const linkId = parseInt(item.parent_category_id.replace('link:', ''), 10);
+            const link = links.find(l => l.id === linkId);
+            if (link) {
+              targetSourceId = link.source_id;
+              targetCategoryId = link.category_id;
+            }
+          } else {
+            targetSourceId = item.playlist_id;
+            targetCategoryId = item.parent_category_id;
+          }
+
+          const ch = channelMap.get(item.stream_id);
+          const isCustomCategory = targetSourceId === 'custom';
+          const isNative = !isCustomCategory && targetSourceId && targetCategoryId && ch && ch.source_id === targetSourceId && parseCategoryIds(ch.category_ids).includes(targetCategoryId);
+
+          if (!isNative) {
+            const key = `${item.playlist_id}:${item.parent_category_id}`;
+            counts.set(key, (counts.get(key) || 0) + 1);
+          }
         }
       }
       // Add inherited counts for links that do not have custom overrides
@@ -774,6 +813,7 @@ export function CategoryStrip({ selectedCategoryId, onSelectCategory, visible, o
 
   // ── Drag-to-resize for category sidebar ───────────────────────────────────
   const isResizingCategory = useRef(false);
+  const isFirstLoad = useRef(true);
 
   const handleCategoryResizeMouseDown = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -826,6 +866,11 @@ export function CategoryStrip({ selectedCategoryId, onSelectCategory, visible, o
         setShowFavorites(settingsResult.data?.showFavorites ?? true);
         setShowWatchlist(settingsResult.data?.showWatchlist ?? true);
         setShowRecentlyViewed(settingsResult.data?.showRecentlyViewed ?? true);
+
+        if (collapseOnStartup && isFirstLoad.current) {
+          setExpandedPlaylists({});
+        }
+        isFirstLoad.current = false;
         
         const result = await window.storage.getSources();
         if (result.data) {
@@ -881,8 +926,8 @@ export function CategoryStrip({ selectedCategoryId, onSelectCategory, visible, o
           <div className="category-strip-actions">
             <button
               className="add-group-btn"
-              onClick={handleCreateGroup}
-              title="Create Custom Group"
+              onClick={() => setIsCreateOptionModalOpen(true)}
+              title="Create Custom Group / Playlist"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="12" y1="5" x2="12" y2="19"></line>
@@ -1208,6 +1253,20 @@ export function CategoryStrip({ selectedCategoryId, onSelectCategory, visible, o
       </div>
 
       <ModalComponent />
+
+      <CreateCustomOptionModal
+        isOpen={isCreateOptionModalOpen}
+        onClose={() => setIsCreateOptionModalOpen(false)}
+        onCreateGroup={async (name) => {
+          await createCustomGroup(name);
+        }}
+        onCreatePlaylist={async (name) => {
+          const { createPlaylist } = await import('../services/playlist-editor');
+          const id = await createPlaylist(name);
+          setExpandedPlaylists(prev => ({ ...prev, [id]: true }));
+          setEditingPlaylist({ id, name });
+        }}
+      />
 
       {managingGroup && (
         <CustomGroupManager

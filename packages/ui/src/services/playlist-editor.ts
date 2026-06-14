@@ -90,8 +90,14 @@ export async function reorderPlaylistCategories(
     })
     .filter(Boolean) as Array<{ id: number; displayOrder: number }>;
 
-  for (const u of updates) {
-    await db.playlistCategoryLinks.update(u.id, { display_order: u.displayOrder });
+  const bulkItems = updates
+    .map(u => {
+      const link = linkMap.get(u.id);
+      return link ? { ...link, display_order: u.displayOrder } : null;
+    })
+    .filter(Boolean) as PlaylistCategoryLink[];
+  if (bulkItems.length > 0) {
+    await db.playlistCategoryLinks.bulkPut(bulkItems);
   }
 }
 
@@ -162,19 +168,30 @@ export async function reorderPlaylistIndividualChannels(
     .toArray();
   const itemMap = new Map(items.map(i => [i.stream_id, i]));
 
-  for (let i = 0; i < orderedStreamIds.length; i++) {
-    const item = itemMap.get(orderedStreamIds[i]);
-    if (item && item.id !== undefined) {
-      await db.playlistIndividualChannels.update(item.id, { display_order: i });
-    }
+  const bulkItems = orderedStreamIds
+    .map((streamId, i) => {
+      const item = itemMap.get(streamId);
+      return item && item.id !== undefined ? { ...item, display_order: i } : null;
+    })
+    .filter(Boolean) as PlaylistIndividualChannel[];
+  if (bulkItems.length > 0) {
+    await db.playlistIndividualChannels.bulkPut(bulkItems);
   }
 }
 
 // ── Reorder Playlists in Sidebar ──────────────────────────────────────────────
 
 export async function reorderPlaylists(orderedPlaylistIds: string[]): Promise<void> {
-  for (let i = 0; i < orderedPlaylistIds.length; i++) {
-    await db.customPlaylists.update(orderedPlaylistIds[i], { display_order: i });
+  const playlists = await db.customPlaylists.where('playlist_id').anyOf(orderedPlaylistIds).toArray();
+  const playlistMap = new Map(playlists.map(p => [p.playlist_id, p]));
+  const bulkItems = orderedPlaylistIds
+    .map((id, i) => {
+      const playlist = playlistMap.get(id);
+      return playlist ? { ...playlist, display_order: i } : null;
+    })
+    .filter(Boolean) as CustomPlaylist[];
+  if (bulkItems.length > 0) {
+    await db.customPlaylists.bulkPut(bulkItems);
   }
 }
 
@@ -188,10 +205,13 @@ export async function revertRealSourceToDefault(sourceId: string): Promise<void>
   await db.playlistIndividualChannels.where('playlist_id').equals(sourceId).delete();
   
   // 3. Reset display_order of native categories to null
-  const nativeCategories = await db.categories.where('source_id').equals(sourceId).toArray();
-  for (const cat of nativeCategories) {
-    await db.categories.update(cat.category_id, { display_order: null as any });
-  }
+  const dbInstance = await (db as any).dbPromise;
+  await dbInstance.execute(
+    `UPDATE categories SET display_order = NULL WHERE source_id = $1`,
+    [sourceId]
+  );
+  const { dbEvents } = await import('../db/sqlite-adapter');
+  dbEvents.notify('categories', 'update');
 }
 
 // ── Category Channel Insertions ─────────────────────────────────────────────
@@ -244,11 +264,14 @@ export async function reorderCategoryChannels(
     .toArray();
   const itemMap = new Map(items.map(i => [i.stream_id, i]));
 
-  for (let i = 0; i < orderedStreamIds.length; i++) {
-    const item = itemMap.get(orderedStreamIds[i]);
-    if (item && item.id !== undefined) {
-      await db.playlistIndividualChannels.update(item.id, { display_order: i });
-    }
+  const bulkItems = orderedStreamIds
+    .map((streamId, i) => {
+      const item = itemMap.get(streamId);
+      return item && item.id !== undefined ? { ...item, display_order: i } : null;
+    })
+    .filter(Boolean) as PlaylistIndividualChannel[];
+  if (bulkItems.length > 0) {
+    await db.playlistIndividualChannels.bulkPut(bulkItems);
   }
 }
 
@@ -273,3 +296,32 @@ export async function addCustomCategoryToPlaylist(
   });
   return id as number;
 }
+
+export async function addChannelsToCategory(
+  playlistId: string,
+  parentCategoryId: string,
+  streamIds: string[]
+): Promise<void> {
+  if (streamIds.length === 0) return;
+
+  const existing = await db.playlistIndividualChannels
+    .whereRaw('playlist_id = ? AND parent_category_id = ?', [playlistId, parentCategoryId])
+    .toArray();
+  const existingStreamIds = new Set(existing.map(c => c.stream_id));
+
+  const toAdd = streamIds.filter(id => !existingStreamIds.has(id));
+  if (toAdd.length === 0) return;
+
+  const maxOrder = existing.length > 0 ? Math.max(...existing.map(c => c.display_order)) : -1;
+
+  const newItems = toAdd.map((streamId, index) => ({
+    playlist_id: playlistId,
+    stream_id: streamId,
+    parent_category_id: parentCategoryId,
+    display_order: maxOrder + 1 + index,
+    added_at: Date.now()
+  }));
+
+  await db.playlistIndividualChannels.bulkAdd(newItems);
+}
+

@@ -1350,7 +1350,8 @@
 }
 
 .ple-tree-add-btn:disabled,
-.ple-add-indiv-btn:disabled {
+.ple-add-indiv-btn:disabled,
+.ple-add-btn:disabled {
     opacity: 0.35;
     cursor: not-allowed;
     background: transparent !important;
