@@ -558,7 +558,7 @@ export function ChannelContextMenu({
                         onClick={() => handleAddToGroup(group.group_id, group.name)}
                         style={{ opacity: addingToGroup === group.group_id ? 0.5 : 1 }}
                     >
-                        {addingToGroup === group.group_id ? '⏳' : '📋'} {group.name}
+                        {group.name}
                     </div>
                 ))}
                 <div className="context-menu-separator" />
@@ -591,7 +591,7 @@ export function ChannelContextMenu({
                             setTimeout(() => failoverNameInputRef.current?.focus(), 50);
                         }}
                     >
-                        ➕ Create New Failover Group
+                        Create New Failover Group
                     </div>
                 ) : (
                     <div style={{ padding: '6px 12px', display: 'flex', gap: '6px', alignItems: 'center' }}>
@@ -666,7 +666,7 @@ export function ChannelContextMenu({
                         onClick={() => handleAddToFailoverGroup(group.group_id, group.name)}
                         style={{ opacity: addingToFailoverGroup === group.group_id ? 0.5 : 1 }}
                     >
-                        {addingToFailoverGroup === group.group_id ? '⏳' : '🔗'} {group.name}
+                        {group.name}
                     </div>
                 ))}
                 <div className="context-menu-separator" />
@@ -709,7 +709,7 @@ export function ChannelContextMenu({
                         onClick={handleConfirmQuickRecord}
                         disabled={scheduling}
                     >
-                        {scheduling ? '⏳ Starting...' : `📹 Record ${durationMinutes} min`}
+                        {scheduling ? 'Starting...' : `Record ${durationMinutes} min`}
                     </button>
                     <button className="context-menu-btn context-menu-btn-secondary" onClick={onClose} disabled={scheduling}>
                         Cancel
@@ -755,7 +755,7 @@ export function ChannelContextMenu({
                         onClick={handleConfirmCustomRecord}
                         disabled={scheduling}
                     >
-                        {scheduling ? '⏳ Scheduling...' : '📹 Schedule'}
+                        {scheduling ? 'Scheduling...' : 'Schedule'}
                     </button>
                     <button className="context-menu-btn context-menu-btn-secondary" onClick={onClose} disabled={scheduling}>
                         Cancel
@@ -830,7 +830,7 @@ export function ChannelContextMenu({
                             className="context-menu-item"
                             onClick={() => handleSendToSlot(slotId)}
                         >
-                            📺 Send to Viewer {slotId}
+                            Send to Viewer {slotId}
                         </div>
                     ))}
                     <div className="context-menu-separator" />
@@ -846,7 +846,7 @@ export function ChannelContextMenu({
                             onClose();
                         }}
                     >
-                        🖥️ Play in Popout
+                        Play in Popout
                     </div>
                     <div className="context-menu-separator" />
                 </>
@@ -860,38 +860,38 @@ export function ChannelContextMenu({
                             onClose();
                         }}
                     >
-                        ▶️ Send to External Player
+                        Send to External Player
                     </div>
                     <div className="context-menu-separator" />
                 </>
             )}
             <div className="context-menu-item" onClick={() => setCurrentView('custom')}>
-                📹 Record...
+                Record...
             </div>
             <div className="context-menu-item" onClick={() => setCurrentView('quick')}>
-                ⚡ Quick Record
+                Quick Record
             </div>
             <div className="context-menu-separator" />
             <div className="context-menu-item" onClick={() => setCurrentView('group')}>
-                📋 Add to Group →
+                Add to Group →
             </div>
             <div className="context-menu-item" onClick={() => setCurrentView('failover')}>
-                🔗 Add to Failover Group →
+                Add to Failover Group →
             </div>
             <div className="context-menu-separator" />
             <div className="context-menu-item" onClick={handleCopyStreamUrl}>
-                🔗 Copy Stream URL
+                Copy Stream URL
             </div>
             <div className="context-menu-item" onClick={() => { setShowEpgEditor(true); }}>
-                ✏️ Edit EPG
+                Edit EPG
             </div>
             <div className="context-menu-separator" />
             <div className="context-menu-item" onClick={handleRenameChannel}>
-                ✏️ Rename Channel
+                Rename Channel
             </div>
             <div className="context-menu-separator" />
             <div className="context-menu-item" onClick={handleHideChannel}>
-                👁‍🗨 Hide Channel
+                Hide Channel
             </div>
             <div className="context-menu-separator" />
             <div className="context-menu-item context-menu-item-secondary" onClick={onClose}>

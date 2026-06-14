@@ -133,7 +133,7 @@ export function CategoryContextMenu({
                         }}
                         style={{ opacity: addingToPlaylist === playlist.playlist_id ? 0.5 : 1 }}
                     >
-                        {addingToPlaylist === playlist.playlist_id ? '⏳' : '📋'} {playlist.name}
+                        {addingToPlaylist === playlist.playlist_id ? '⏳ ' : ''}{playlist.name}
                     </div>
                 ))}
                 <div className="context-menu-separator" />
@@ -156,21 +156,21 @@ export function CategoryContextMenu({
             </div>
             {onRenameCategory && (
                 <div className="context-menu-item" onClick={() => { onRenameCategory(categoryId, categoryName); onClose(); }}>
-                    ✏️ Rename Category
+                    Rename Category
                 </div>
             )}
             {onManageCategories && (
                 <div className="context-menu-item" onClick={() => { onManageCategories(sourceId, sourceName); onClose(); }}>
-                    📋 Manage Categories
+                    Manage Categories
                 </div>
             )}
             {onHideCategory && (
                 <div className="context-menu-item" onClick={() => { onHideCategory(categoryId); onClose(); }}>
-                    🚫 Hide Category
+                    Hide Category
                 </div>
             )}
             <div className="context-menu-item" onClick={() => setCurrentView('playlist_add')}>
-                📋 Add to Playlist →
+                Add to Playlist →
             </div>
         </div>,
         document.body
