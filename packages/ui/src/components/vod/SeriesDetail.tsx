@@ -215,6 +215,9 @@ export function SeriesDetail({ series, onClose, onPlayEpisode, apiKey, initialSe
   const { plot: lazyPlot, genre: lazyGenre, rating: lazyRating } = useLazyPlot(series, apiKey);
   const lazyCredits = useLazyCredits(series, apiKey);
 
+  // Get images - use TMDB backdrop if available, fallback to cover
+  const backdropUrl = tmdbBackdropUrl || series.cover;
+
   const handleCastNameClick = useCallback(async (name: string) => {
     if (!apiKey) return;
     try {
@@ -291,9 +294,11 @@ export function SeriesDetail({ series, onClose, onPlayEpisode, apiKey, initialSe
         seasonNum: episode.season_num,
         episodeNum: episode.episode_num,
         episodeId: episode.id,
+        backdropUrl: backdropUrl || undefined,
+        logoUrl: logoUrl || undefined,
       });
     },
-    [series, onPlayEpisode, lazyPlot, episodeProgress, episodeExtras]
+    [series, onPlayEpisode, lazyPlot, episodeProgress, episodeExtras, backdropUrl, logoUrl]
   );
 
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -305,9 +310,6 @@ export function SeriesDetail({ series, onClose, onPlayEpisode, apiKey, initialSe
       setTimeout(() => setCopiedId(null), 2000);
     }
   }, []);
-
-  // Get images - use TMDB backdrop if available, fallback to cover
-  const backdropUrl = tmdbBackdropUrl || series.cover;
 
   // Use clean title if available, otherwise fall back to name
   const displayTitle = series.title || series.name;

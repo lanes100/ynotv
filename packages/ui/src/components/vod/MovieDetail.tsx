@@ -21,7 +21,7 @@ import './MovieDetail.css';
 export interface MovieDetailProps {
   movie: StoredMovie;
   onClose: () => void;
-  onPlay?: (movie: StoredMovie, plot?: string | null) => void;
+  onPlay?: (movie: StoredMovie, plot?: string | null, backdropUrl?: string | null, logoUrl?: string | null) => void;
   apiKey?: string | null; // TMDB API key for lazy backdrop loading
   onCastClick?: (personId: number) => void;
 }
@@ -46,9 +46,12 @@ export function MovieDetail({ movie, onClose, onPlay, apiKey, onCastClick }: Mov
   // Lazy-load cast photos, logo, imdb_id
   const { cast, logoUrl, imdbId, loading: extrasLoading } = useLazyMovieExtras(movie, apiKey);
 
+  // Get images - use TMDB backdrop if available, fallback to stream_icon
+  const backdropUrl = tmdbBackdropUrl || movie.stream_icon;
+
   const handlePlay = useCallback(() => {
-    onPlay?.(movie, lazyPlot || movie.plot);
-  }, [movie, onPlay, lazyPlot]);
+    onPlay?.(movie, lazyPlot || movie.plot, backdropUrl, logoUrl);
+  }, [movie, onPlay, lazyPlot, backdropUrl, logoUrl]);
 
   const [copied, setCopied] = useState(false);
   const handleCopy = useCallback(() => {
@@ -111,9 +114,6 @@ export function MovieDetail({ movie, onClose, onPlay, apiKey, onCastClick }: Mov
       setDownloading(false);
     }
   }, [movie, startDownload, posterUrl]);
-
-  // Get images - use TMDB backdrop if available, fallback to stream_icon
-  const backdropUrl = tmdbBackdropUrl || movie.stream_icon;
 
   // Use clean title if available, otherwise fall back to name
   const displayTitle = movie.title || movie.name;

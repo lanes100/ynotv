@@ -936,3 +936,95 @@
   background: var(--border-color, #444);
   margin: 6px 8px;
 }
+
+/* ==========================================================================
+   Premium VOD & Stremio Loading Overlay
+   ========================================================================== */
+.vod-loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 9; /* Above video background (5) but below overlays/titlebar */
+  background: #060608;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  animation: vodFadeIn 0.3s ease-out;
+}
+
+.vod-loading-overlay__backdrop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.35;
+  filter: blur(20px) brightness(0.5);
+  transform: scale(1.1); /* Prevents blurred edges from showing black space */
+  z-index: 1;
+}
+
+.vod-loading-overlay__content {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  max-width: 80%;
+  padding: 24px;
+}
+
+.vod-loading-overlay__logo {
+  max-width: 420px;
+  max-height: 220px;
+  object-fit: contain;
+  animation: vodPulse 2.2s ease-in-out infinite;
+  margin-bottom: 24px;
+  filter: drop-shadow(0 8px 24px rgba(0, 0, 0, 0.6));
+}
+
+.vod-loading-overlay__title {
+  font-size: 3rem;
+  font-weight: 800;
+  color: #ffffff;
+  letter-spacing: -0.5px;
+  text-shadow: 0 4px 16px rgba(0, 0, 0, 0.7);
+  animation: vodPulse 2.2s ease-in-out infinite;
+  margin-bottom: 16px;
+}
+
+.vod-loading-overlay__subtitle {
+  font-size: 1.25rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.7);
+  letter-spacing: 0.5px;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+  animation: vodPulse 2.2s ease-in-out infinite;
+  animation-delay: 0.2s;
+}
+
+@keyframes vodFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes vodPulse {
+  0%, 100% {
+    opacity: 0.35;
+    transform: scale(0.98);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.02);
+  }
+}

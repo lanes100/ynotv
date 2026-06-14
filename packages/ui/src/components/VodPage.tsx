@@ -711,7 +711,7 @@ export function VodPage({ type, onPlay, onClose }: VodPageProps) {
         <MovieDetail
           movie={selectedItem as StoredMovie}
           onClose={handleCloseDetail}
-          onPlay={(movie, plot) => {
+          onPlay={(movie, plot, backdropUrl, logoUrl) => {
             // Record watch before playing
             void recordVodWatch(
               movie.stream_id,
@@ -728,6 +728,8 @@ export function VodPage({ type, onPlay, onClose }: VodPageProps) {
               type: 'movie',
               source_id: movie.source_id,
               mediaId: movie.stream_id,  // Add media ID for progress tracking
+              backdropUrl: backdropUrl || undefined,
+              logoUrl: logoUrl || undefined,
             });
           }}
           apiKey={tmdbApiKey}

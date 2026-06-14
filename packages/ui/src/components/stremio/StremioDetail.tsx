@@ -520,7 +520,12 @@ export function StremioDetail({ meta, onBack, onPlay, streamPickerMode, showStre
                 className="stremio-detail-action-btn"
                 onClick={() => {
                   window.dispatchEvent(new CustomEvent('ynotv:play-url', {
-                    detail: { url: effectiveTrailerUrl, title: `${meta.name} - Trailer` },
+                    detail: {
+                      url: effectiveTrailerUrl,
+                      title: `${meta.name} - Trailer`,
+                      backdropUrl: meta.background,
+                      logoUrl: meta.logo,
+                    },
                   }));
                 }}
               >

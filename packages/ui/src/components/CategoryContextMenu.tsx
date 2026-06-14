@@ -93,11 +93,44 @@ export function CategoryContextMenu({
     useEffect(() => {
         if (currentView !== 'playlist_add') return;
         let isMounted = true;
-        db.customPlaylists.toArray().then(list => {
-            if (isMounted) setPlaylists(list.sort((a, b) => a.name.localeCompare(b.name)));
-        }).catch(() => {
-            if (isMounted) setPlaylists([]);
-        });
+
+        const loadPlaylistsAndSources = async () => {
+            try {
+                const customList = await db.customPlaylists.toArray();
+                let realList: any[] = [];
+                if (window.storage) {
+                    const res = await window.storage.getSources();
+                    if (res.success && res.data) {
+                        realList = res.data
+                            .filter((s: any) => s.enabled !== false)
+                            .map((s: any) => ({
+                                playlist_id: s.id,
+                                name: s.name,
+                                isCustom: false
+                            }));
+                    }
+                }
+
+                if (!isMounted) return;
+
+                const mappedCustom = customList.map(item => ({
+                    playlist_id: item.playlist_id,
+                    name: item.name,
+                    isCustom: true
+                }));
+
+                const combined = [...mappedCustom, ...realList].sort((a, b) =>
+                    a.name.localeCompare(b.name)
+                );
+
+                setPlaylists(combined);
+            } catch (err) {
+                console.error("Failed to load playlists/sources:", err);
+                if (isMounted) setPlaylists([]);
+            }
+        };
+
+        loadPlaylistsAndSources();
         return () => { isMounted = false; };
     }, [currentView]);
 
@@ -106,7 +139,7 @@ export function CategoryContextMenu({
             <div
                 ref={menuRef}
                 className="program-context-menu"
-                style={{ left: `${adjustedPosition.x}px`, top: `${adjustedPosition.y}px`, minWidth: '200px' }}
+                style={{ left: `${adjustedPosition.x}px`, top: `${adjustedPosition.y}px`, minWidth: '220px' }}
             >
                 <div className="context-menu-header" style={{ padding: '8px 12px 4px', fontSize: '11px', opacity: 0.6, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                     Add Category to Playlist
@@ -131,9 +164,28 @@ export function CategoryContextMenu({
                                 onClose();
                             }
                         }}
-                        style={{ opacity: addingToPlaylist === playlist.playlist_id ? 0.5 : 1 }}
+                        style={{
+                            opacity: addingToPlaylist === playlist.playlist_id ? 0.5 : 1
+                        }}
                     >
-                        {addingToPlaylist === playlist.playlist_id ? '⏳ ' : ''}{playlist.name}
+                        <span>
+                            {addingToPlaylist === playlist.playlist_id ? '⏳ ' : ''}{playlist.name}
+                        </span>
+                        {!playlist.isCustom && (
+                            <span style={{
+                                fontSize: '9px',
+                                opacity: 0.6,
+                                border: '1px solid var(--text-secondary, #888)',
+                                borderRadius: '3px',
+                                padding: '1px 4px',
+                                marginLeft: 'auto',
+                                textTransform: 'uppercase',
+                                letterSpacing: '0.5px',
+                                flexShrink: 0
+                            }}>
+                                Source
+                            </span>
+                        )}
                     </div>
                 ))}
                 <div className="context-menu-separator" />

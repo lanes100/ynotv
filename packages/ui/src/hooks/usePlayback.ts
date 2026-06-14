@@ -245,6 +245,7 @@ export interface PlaybackState {
   // Playback info
   currentChannel: StoredChannel | null;
   vodInfo: VodPlayInfo | null;
+  vodLoadingInfo: VodPlayInfo | null;
   catchupInfo: {
     channelId: string;
     programTitle: string;
@@ -403,6 +404,7 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
   // Playback state
   const [currentChannel, setCurrentChannel] = useState<StoredChannel | null>(null);
   const [vodInfo, setVodInfo] = useState<VodPlayInfo | null>(null);
+  const [vodLoadingInfo, setVodLoadingInfo] = useState<VodPlayInfo | null>(null);
   const [catchupInfo, setCatchupInfo] = useState<{
     channelId: string;
     programTitle: string;
@@ -416,6 +418,19 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
 
   // Failover state for Live TV stream recovery
   const [failoverState, setFailoverState] = useState<FailoverState | null>(null);
+
+  // Clear loader overlay when playback starts or an error is encountered
+  const loaderLastPositionRef = useRef(position);
+  useEffect(() => {
+    if (vodLoadingInfo) {
+      if (error) {
+        setVodLoadingInfo(null);
+      } else if (position !== loaderLastPositionRef.current) {
+        setVodLoadingInfo(null);
+      }
+    }
+    loaderLastPositionRef.current = position;
+  }, [position, error, vodLoadingInfo]);
 
   // Configurable retry settings — loaded from storage, stored in refs so
   // they're always current inside interval callbacks without stale closures.
@@ -1735,24 +1750,31 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
     setError(null);
     setCatchupInfo(null);
     clearPendingSeeks();
+    setVodLoadingInfo(info);
 
     let resolved;
     let sourceData: { type?: string } | undefined;
     try {
       // Look up source type so we can decide whether to suppress HTTP errors
-      if (window.storage && info.source_id) {
-        const srcResult = await window.storage.getSource(info.source_id);
-        sourceData = srcResult?.data;
+      if (window.storage && info.source_id && info.source_id !== 'stremio' && info.source_id !== 'trailer') {
+        try {
+          const srcResult = await window.storage.getSource(info.source_id);
+          sourceData = srcResult?.data;
+        } catch (e) {
+          console.warn('[usePlayback] Failed to lookup source details:', e);
+        }
       }
       resolved = await resolvePlayUrl(info.source_id, info.url);
     } catch (err) {
       logError('Failed to resolve Source info:', err);
       setError('Failed to resolve stream URL');
+      setVodLoadingInfo(null);
       return;
     }
 
     if (resolved.url.startsWith('infoHash:')) {
       setError('Torrent playback requires TorrServer or a Debrid addon. Raw torrent streams cannot be played directly.');
+      setVodLoadingInfo(null);
       return;
     }
 
@@ -1771,6 +1793,7 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
     if (!result.success) {
       setIgnoreHttpErrors(false);
       setError(result.error ?? 'Failed to load stream');
+      setVodLoadingInfo(null);
     } else {
       const workingUrl = result.url;
       
@@ -2010,6 +2033,7 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
     setPlaying(false);
     setCurrentChannel(null);
     setVodInfo(null); // Clear vodInfo on stop
+    setVodLoadingInfo(null);
     setCatchupInfo(null);
     setError(null);
 
@@ -2101,6 +2125,7 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
     error,
     currentChannel,
     vodInfo,
+    vodLoadingInfo,
     catchupInfo,
     volumeDraggingRef,
     seekingRef,

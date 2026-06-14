@@ -416,6 +416,7 @@ function App() {
   const {
     currentChannel,
     vodInfo,
+    vodLoadingInfo,
     catchupInfo,
     isCatchup,
     retryState,
@@ -1471,6 +1472,8 @@ function App() {
           seasonNum: episodeVideo?.season,
           episodeNum: episodeVideo?.episode,
           episodeId: episodeVideo?.id,
+          backdropUrl: meta.background,
+          logoUrl: meta.logo,
         });
 
 
@@ -1536,7 +1539,7 @@ function App() {
   // ==========================================================================
   useEffect(() => {
     const handler = async (e: Event) => {
-      const { url, title } = (e as CustomEvent).detail;
+      const { url, title, backdropUrl, logoUrl } = (e as CustomEvent).detail;
       if (!url) return;
       const currentView = activeViewRef.current;
       if (currentView === 'movies' || currentView === 'series' || currentView === 'stremio' || currentView === 'dvr') {
@@ -1548,6 +1551,8 @@ function App() {
         title: title || '',
         type: 'movie',
         source_id: 'trailer',
+        backdropUrl,
+        logoUrl,
       });
     };
     window.addEventListener('ynotv:play-url', handler);
@@ -2282,6 +2287,41 @@ function App() {
         sourceView={playbackSourceView}
         onBack={handleStop}
       />
+      {/* Premium VOD & Stremio Loading Overlay */}
+      {vodLoadingInfo && (
+        <div className="vod-loading-overlay">
+          {vodLoadingInfo.backdropUrl && (
+            <img
+              className="vod-loading-overlay__backdrop"
+              src={vodLoadingInfo.backdropUrl}
+              alt=""
+              aria-hidden="true"
+            />
+          )}
+          <div className="vod-loading-overlay__content">
+            {vodLoadingInfo.logoUrl ? (
+              <img
+                className="vod-loading-overlay__logo"
+                src={vodLoadingInfo.logoUrl}
+                alt={vodLoadingInfo.title}
+              />
+            ) : (
+              <div className="vod-loading-overlay__title">
+                {vodLoadingInfo.title}
+              </div>
+            )}
+            {vodLoadingInfo.episodeInfo ? (
+              <div className="vod-loading-overlay__subtitle">
+                {vodLoadingInfo.episodeInfo}
+              </div>
+            ) : vodLoadingInfo.year ? (
+              <div className="vod-loading-overlay__subtitle">
+                {vodLoadingInfo.year}
+              </div>
+            ) : null}
+          </div>
+        </div>
+      )}
       {/* Custom title bar for frameless window */}
       <div className={`title-bar${showControls ? ' visible' : ''}`} data-tauri-drag-region>
         <div className="title-bar-left-group" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
