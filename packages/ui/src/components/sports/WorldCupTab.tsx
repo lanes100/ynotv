@@ -234,7 +234,7 @@ export function WorldCupTab({ onSearchChannels, onPlayChannel }: WorldCupTabProp
     const now = new Date();
     const live = matches.filter(m => m.status === 'live');
     const upcoming = matches.filter(m => m.status === 'scheduled').sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
-    const finished = matches.filter(m => m.status === 'finished');
+    const finished = matches.filter(m => m.status === 'finished').sort((a, b) => b.startTime.getTime() - a.startTime.getTime());
     
     // Find next match
     const nextMatch = upcoming[0] || null;

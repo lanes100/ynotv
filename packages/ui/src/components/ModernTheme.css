@@ -542,28 +542,7 @@
   color: white;
 }
 
-/* Modern Custom Playlist Group */
-.modern-ui .category-strip .playlist-source-group {
-  position: relative;
-}
 
-.modern-ui .category-strip .playlist-source-group::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: 3px;
-  height: 0;
-  background: var(--accent-primary, #00d4ff);
-  border-radius: 0 2px 2px 0;
-  transition: height 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 0 0 6px var(--accent-primary, #00d4ff);
-  z-index: 1;
-}
-
-.modern-ui .category-strip .playlist-source-group.is-expanded::before {
-  height: 100%;
-}
 
 /* Modern Section Divider - matches header border style */
 .modern-ui .section-divider {
