@@ -81,6 +81,8 @@ import { useDvrUrlResolver } from './hooks/useDvrUrlResolver';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { UpdateModal } from './components/UpdateModal';
 import { registerUpdateModal } from './services/updater';
+import { WhatsNewModal } from './components/WhatsNewModal/WhatsNewModal';
+import { getVersion } from '@tauri-apps/api/app';
 import { useLayoutPersistence, type LayoutMode } from './hooks/useLayoutPersistence';
 import { useMpvListeners } from './hooks/useMpvListeners';
 import { AdvancedSearchModal, type AdvancedSearchConfig } from './components/AdvancedSearchModal';
@@ -951,6 +953,12 @@ function App() {
   useEffect(() => {
     registerUpdateModal(setUpdateModalOpen);
   }, []);
+
+  // ==========================================================================
+  // What's New Modal State
+  // ==========================================================================
+  const [whatsNewModalOpen, setWhatsNewModalOpen] = useState(false);
+  const [appVersion, setAppVersion] = useState('');
 
   // ==========================================================================
   // Sports Preview State
@@ -2278,6 +2286,26 @@ function App() {
   }, []);
 
   // ==========================================================================
+  // Check for What's New (First launch / update)
+  // ==========================================================================
+  useEffect(() => {
+    const checkWhatsNew = async () => {
+      try {
+        const currentVersion = await getVersion();
+        setAppVersion(currentVersion);
+        const lastVersion = localStorage.getItem('ynotv_last_version');
+        if (!lastVersion || lastVersion !== currentVersion) {
+          setWhatsNewModalOpen(true);
+          localStorage.setItem('ynotv_last_version', currentVersion);
+        }
+      } catch (err) {
+        console.error('[App] Failed to check for What\'s New:', err);
+      }
+    };
+    checkWhatsNew();
+  }, []);
+
+  // ==========================================================================
   // Render
   // ==========================================================================
   return (
@@ -3436,6 +3464,13 @@ function App() {
       <UpdateModal
         isOpen={updateModalOpen}
         onClose={() => setUpdateModalOpen(false)}
+      />
+
+      {/* What's New Modal */}
+      <WhatsNewModal
+        isOpen={whatsNewModalOpen}
+        onClose={() => setWhatsNewModalOpen(false)}
+        version={appVersion}
       />
     </div>
   );
