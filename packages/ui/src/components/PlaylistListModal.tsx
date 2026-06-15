@@ -113,12 +113,12 @@ export function PlaylistListModal({ onClose }: PlaylistListModalProps) {
   );
 
   // Load enabled real sources
-  const [realSources, setRealSources] = useState<Array<{ id: string; name: string }>>([]);
+  const [realSources, setRealSources] = useState<Array<{ id: string; name: string; type: string }>>([]);
   useEffect(() => {
     if (window.storage) {
       window.storage.getSources().then(res => {
         if (res.success && res.data) {
-          setRealSources(res.data.filter(s => s.enabled !== false).map(s => ({ id: s.id, name: s.name })));
+          setRealSources(res.data.filter(s => s.enabled !== false).map(s => ({ id: s.id, name: s.name, type: s.type })));
         }
       });
     }
@@ -144,6 +144,7 @@ export function PlaylistListModal({ onClose }: PlaylistListModalProps) {
     type: 'real' | 'playlist';
     name: string;
     playlistId?: string; // original UUID if playlist
+    sourceType?: string;
   }
 
   // Combine real sources and custom playlists
@@ -155,7 +156,8 @@ export function PlaylistListModal({ onClose }: PlaylistListModalProps) {
       list.push({
         id: src.id,
         type: 'real',
-        name: src.name
+        name: src.name,
+        sourceType: src.type
       });
     }
     
@@ -462,13 +464,15 @@ export function PlaylistListModal({ onClose }: PlaylistListModalProps) {
                               <RevertIcon size={12} />
                               {revertingId === item.id ? 'Reverting...' : 'Revert'}
                             </button>
-                            <button
-                              className="pll-action-btn"
-                              onClick={() => handleExport(item.id, item.name)}
-                              title="Export .m3u"
-                            >
-                              <ExportIcon size={12} />Export
-                            </button>
+                            {item.sourceType !== 'stalker' && (
+                              <button
+                                className="pll-action-btn"
+                                onClick={() => handleExport(item.id, item.name)}
+                                title="Export .m3u"
+                              >
+                                <ExportIcon size={12} />Export
+                              </button>
+                            )}
                           </div>
                         </div>
                       </div>

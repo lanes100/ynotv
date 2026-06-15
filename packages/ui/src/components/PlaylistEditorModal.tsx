@@ -664,6 +664,7 @@ export function PlaylistEditorModal({ playlistId, playlistName, onClose }: Playl
   const [currentName, setCurrentName] = useState(playlistName);
   const [isEditingName, setIsEditingName] = useState(false);
   const [isCustomPlaylist, setIsCustomPlaylist] = useState(false);
+  const [sourceType, setSourceType] = useState<string | undefined>(undefined);
   const nameInputRef = useRef<HTMLInputElement>(null);
 
   // Drag-and-drop lists pointer refs
@@ -727,12 +728,17 @@ export function PlaylistEditorModal({ playlistId, playlistName, onClose }: Playl
   useEffect(() => {
     const loadSources = async () => {
       let realSources: BrowseSource[] = [];
+      let currentSourceType: string | undefined = undefined;
       if (window.storage) {
         const res = await window.storage.getSources();
         if (res.success && res.data) {
           realSources = res.data
             .filter(s => s.enabled !== false)
             .map(s => ({ id: s.id, name: s.name }));
+          const currentSource = res.data.find(s => s.id === playlistId);
+          if (currentSource) {
+            currentSourceType = currentSource.type;
+          }
         }
       }
 
@@ -740,6 +746,7 @@ export function PlaylistEditorModal({ playlistId, playlistName, onClose }: Playl
       const playlists = await db.customPlaylists.toArray();
       const isCustom = playlists.some(p => p.playlist_id === playlistId);
       setIsCustomPlaylist(isCustom);
+      setSourceType(currentSourceType);
 
       const virtualSources: BrowseSource[] = playlists
         .filter(p => p.playlist_id !== playlistId)
@@ -1211,7 +1218,9 @@ export function PlaylistEditorModal({ playlistId, playlistName, onClose }: Playl
               />
               Show Hidden
             </label>
-            <button className="ple-export-btn" onClick={handleExport}><ExportIcon />Export .m3u</button>
+            {sourceType !== 'stalker' && (
+              <button className="ple-export-btn" onClick={handleExport}><ExportIcon />Export .m3u</button>
+            )}
             <button className="ple-close-btn" onClick={onClose}><CloseIcon />Close</button>
           </div>
         </div>
