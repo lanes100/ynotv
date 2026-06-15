@@ -126,6 +126,13 @@ export function TmdbTab({
               </a>.
             </p>
 
+            <p className="section-description" style={{ marginBottom: '16px' }}>
+              Guide on getting a free TMDB API key with video:{' '}
+              <a href="https://duckkota.gitlab.io/guides/tmdb/" target="_blank" rel="noopener noreferrer" className="tmdb-link">
+                https://duckkota.gitlab.io/guides/tmdb/
+              </a>
+            </p>
+
             <div className="tmdb-form">
               <div className="form-group inline">
                 <label>Access Token</label>
