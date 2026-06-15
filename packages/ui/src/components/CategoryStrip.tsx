@@ -701,7 +701,14 @@ export function CategoryStrip({ selectedCategoryId, onSelectCategory, visible, o
         const playlistLinks = (allPlaylistCategoryLinks || [])
           .filter(l => l.playlist_id === playlist.playlist_id);
         const individualCount = flatPlaylistIndividualCounts?.get(playlist.playlist_id) || 0;
-        const totalCount = playlistLinks.length + (individualCount > 0 ? 1 : 0);
+        
+        let totalCount = 0;
+        for (const link of playlistLinks) {
+          const nativeCount = categoryChannelCounts.get(link.category_id) || 0;
+          const manualCount = manualCategoryChannelCounts?.get(`${playlist.playlist_id}:link:${link.id}`) || 0;
+          totalCount += nativeCount + manualCount;
+        }
+        totalCount += individualCount;
         
         list.push({
           id: `playlist:${playlist.playlist_id}`,
@@ -725,7 +732,7 @@ export function CategoryStrip({ selectedCategoryId, onSelectCategory, visible, o
     }
     
     return list;
-  }, [filteredGroupedCategories, sources, customPlaylists, allPlaylistCategoryLinks, flatPlaylistIndividualCounts, totalPlaylistIndividualCounts, sidebarSourcesOrder, categoryChannelCounts]);
+  }, [filteredGroupedCategories, sources, customPlaylists, allPlaylistCategoryLinks, flatPlaylistIndividualCounts, totalPlaylistIndividualCounts, sidebarSourcesOrder, categoryChannelCounts, manualCategoryChannelCounts]);
 
   const handleCreateGroup = () => {
     showPrompt(
