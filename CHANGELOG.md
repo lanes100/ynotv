@@ -1,5 +1,40 @@
 # Changelog
 
+## v2.1.0
+
+### Added
+
+- **Playlist Editor** - A full-featured playlist editor, access by pressing the Playlist Editor button in EPG. Has the following capabilities:
+  - Create a new custom playlist using categories and channels from any existing source by either the + button in the Categories sidebar, or using the Playlist Editor button.
+  - Merge categories from different sources into one another.
+  - Add individual channels from any source into any category.
+  - Create custom categories within any source and populate them with channels of your choice.
+- **Export to M3U** - Export M3U/XC/Custom playlist, including all modifications done such as disabled channels/categories, custom sort order, and edited EPG data, can be exported to an `.m3u` file. Access via the Playlist Editor and select `Export`.
+- **Convert recordings to MKV/MP4** - Live TV recordings can be converted to MKV or MP4 format manually, or automatically upon completion. Auto-conversion can be configured in Settings.
+- **Stremio account sync** - Sign in to your Stremio account directly in the app to sync your Watchlist, Watch Progress, and Add-ons. Two-way sync is supported. 
+- **Streaming network catalogs** - OTT catalogs for VOD and Stremio are now available, including Top 10 and genre-based collections. Requires a free TMDB API key configured under `Settings → Metadata`.
+- **Cast detail pages** - Cast members listed on Movies and Series detail pages are now clickable, opening a page displaying their other works. Available in both VOD and Stremio. Requires a free TMDB API key configured under `Settings → Metadata`.
+- **Global EPG channel count** - The Global EPG tab now displays both the number of programs added and the number of channels populated for each source it's linked to.
+- **Refreshed default Stremio badges** - The default badge styling for Stremio links has been updated with a new look.
+- **Reload button in the media bar** - The current stream can be reloaded directly from the media bar without leaving stream.
+- **Automatic download posters** - Cover art is now automatically added to entries in the Downloads section.
+- **VOD favourites** - Movies and Series in VOD can now be added to your favourites.
+- **Top navigation for Sports, DVR, and Calendar** - Sports, DVR, and Calendar have been moved from the sidebar to a top navigation bar for a cleaner layout.
+- **Bold font toggle for Live TV** - The font weight used for Categories and Channels in Live TV can be switched to bold under `Settings → Live TV → EPG`.
+- **Show/Hide Cast and Calendar buttons** - The Cast and Calendar buttons in the Title bar can be toggled under `Settings → Navigation`.
+- **Playback transition background** - When starting playback of a Movie or Series, a transition screen featuring the title and background art is now displayed.
+- **What's New Modal** - Added a What's New popup modal on fresh launch of a new version to display changes that were made, can also check changelogs in `Settings → About`
+
+### Fixed
+
+- **Managed Categories not persisting after cache clear** - Custom category configurations will now be retained when the cache is cleared.
+- **Import/Export not functioning correctly** - Resolved an issue affecting playlist import and export operations.
+- **Closed captions not appearing in Live TV** - Closed caption support for Live TV channels has been restored.
+- **New categories appearing out of sort order** - Newly created categories will now be inserted in the correct position according to the active sort order from source.
+- **Stremio search results not applying metadata on detail pages** - Additional metadata will now load correctly when viewing results from Stremio search results.
+- **Recent Results in WC2026** - Fixed recent results only showing first 5 results, and not most recent
+
+
 ## v2.0.3
 
 ### Added
