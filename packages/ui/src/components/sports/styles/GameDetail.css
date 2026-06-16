@@ -242,26 +242,32 @@
 /* Scrollbar Theming for GameDetail modal content areas */
 .game-detail-content::-webkit-scrollbar,
 .ufc-detail-content::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 .game-detail-content::-webkit-scrollbar-track,
 .ufc-detail-content::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.05);
+  background: transparent;
   border-radius: 4px;
 }
 
 .game-detail-content::-webkit-scrollbar-thumb,
 .ufc-detail-content::-webkit-scrollbar-thumb {
-  background: var(--accent-primary, #e50914);
+  background: var(--surface-hover, rgba(255, 255, 255, 0.15));
   border-radius: 4px;
+}
+
+.game-detail-modal:hover ::-webkit-scrollbar-thumb,
+.game-detail-content:hover::-webkit-scrollbar-thumb,
+.ufc-detail-content:hover::-webkit-scrollbar-thumb {
+  background: var(--accent-primary, rgba(0, 212, 255, 0.5));
 }
 
 .game-detail-content::-webkit-scrollbar-thumb:hover,
 .ufc-detail-content::-webkit-scrollbar-thumb:hover {
-  background: var(--accent-primary, #e50914);
-  filter: brightness(1.3);
+  background: var(--accent-primary, rgba(0, 212, 255, 0.5));
+  filter: brightness(1.2);
 }
 
 .game-detail-content::-webkit-scrollbar-corner,
@@ -272,7 +278,12 @@
 .game-detail-content,
 .ufc-detail-content {
   scrollbar-width: thin;
-  scrollbar-color: var(--accent-primary, #e50914) rgba(255, 255, 255, 0.05);
+  scrollbar-color: var(--surface-hover, rgba(255, 255, 255, 0.15)) transparent;
+}
+
+.game-detail-content:hover,
+.ufc-detail-content:hover {
+  scrollbar-color: var(--accent-primary, rgba(0, 212, 255, 0.5)) transparent;
 }
 
 /* Content */

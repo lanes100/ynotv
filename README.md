@@ -23,10 +23,10 @@ A feature-rich, open source IPTV player for Windows built on [Tauri v2](https://
 | EPG with preview | Play screen |
 | :-------------------------------------: | :--------------------------------------: |
 | ![EPG with preview](https://i.ibb.co/Q7FHXSwD/EPG.png) | ![Play screen](https://i.ibb.co/gCqPTFb/Playing.jpg) |
-| Channel Overlay | EPG Editor |
-| ![Channel Overlay](https://i.ibb.co/0RbyQDPQ/Channel-Overlay.jpg) | ![EPG Editor](https://i.ibb.co/kg2drZYn/EPGEditor.png) |
-| Watchlist Option with autoswitch | Calendar View |
-| ![Watchlist Option with autoswitch](https://i.ibb.co/YTQwhPV5/Watchlist.png) | ![Calendar View](https://i.ibb.co/fz9b7Pfq/Calendar.png) |
+| Playlist Editor | EPG Editor |
+| ![Playlist Editor](https://i.ibb.co/h1LfVMNG/playlisteditor.png) | ![EPG Editor](https://i.ibb.co/kg2drZYn/EPGEditor.png) |
+| Watchlist Option with autoswitch | Strem View |
+| ![Watchlist Option with autoswitch](https://i.ibb.co/YTQwhPV5/Watchlist.png) | ![Strem View](https://i.ibb.co/4nyYbYLC/ynotv-XJPd86-Vi-FJ.jpg) |
 | Sports View | Vod Page |
 | ![Sports View](https://i.ibb.co/yn5ZWb2F/Sports.png) | ![Vod Page](https://i.ibb.co/nsvmdbTp/Vod.jpg) |
 | Multiview Menu | PiP View |
@@ -41,12 +41,14 @@ A feature-rich, open source IPTV player for Windows built on [Tauri v2](https://
 ## Features
 
 - **M3U, Xtream Codes & Stalker Support** - multiple EPG sources supported
-- **Stremio Addons support** - Integrated stremio addons support
+- **Stremio Integration & Addons support** - Integrated optional stremio login to sync watchlist/addons or add addons directly
+- **Playlist Editor** - Create Custom playlist from your sources, move categories/channels from one into another
 - **Grid-style EPG** - with an integrated preview window
 - **Catchup & Cache Time Shift** - instant replays on supported channels
 - **Automatic Stream Fallback** - detects and switches away from stalled or dead streams
 - **Sports Tab** - real-time scores and detailed game stats with instant search to find channel
 - **Cast to TV** - Cast to any supported TV devices on your local network
+- **Export Playlist to M3U** - Export any modifications you've done into an .m3u
 - **Trakt integration** - Scrobble directly to your Trakt account
 - **Widget System** - Display live sports score in overlay
 - **VOD Support** - rich metadata via TMDB and RPDB with saved progress
@@ -271,6 +273,8 @@ ynoTV builds on the following open source projects and services:
 - [FFmpeg](https://ffmpeg.org) — recording and thumbnail generation
 - [TVMaze](https://www.tvmaze.com) — TV schedule and show metadata
 - [TMDB](https://www.themoviedb.org) — movie and series metadata
+- [Trakt.tv](https://app.trakt.tv/) - Scrobble support & catalogs
+- [Harbor](https://github.com/harborstremio/harbor) - Stremio integration and various features
 - [MY-1 Mac Stalker Player](https://github.com/Cyogenus/IPTV-MAC-STALKER-PLAYER-BY-MY-1) - Stalker integration
 
 ---

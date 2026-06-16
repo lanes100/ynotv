@@ -13,30 +13,43 @@
   overflow: hidden;
 }
 
-/* Scrollbar Styling */
+/* Scrollbar Styling - Matches Stremio scrollbar */
 .sports-hub ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 .sports-hub ::-webkit-scrollbar-track {
-  background: var(--surface-color, rgba(255, 255, 255, 0.05));
-  border-radius: 4px;
+  background: transparent;
 }
 
 .sports-hub ::-webkit-scrollbar-thumb {
   background: var(--surface-hover, rgba(255, 255, 255, 0.15));
   border-radius: 4px;
-  border: 1px solid var(--surface-border, transparent);
+}
+
+/* Light up when hovering over the container (e.g. cursor inside the app/Sports section) */
+.sports-hub:hover ::-webkit-scrollbar-thumb {
+  background: var(--accent-primary, rgba(0, 212, 255, 0.5));
 }
 
 .sports-hub ::-webkit-scrollbar-thumb:hover {
-  background: var(--surface-active, rgba(255, 255, 255, 0.25));
+  background: var(--accent-primary, rgba(0, 212, 255, 0.5));
+  filter: brightness(1.2);
 }
 
+.sports-hub ::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Firefox scrollbar */
 .sports-hub {
   scrollbar-width: thin;
-  scrollbar-color: var(--surface-hover, rgba(255, 255, 255, 0.15)) var(--surface-color, transparent);
+  scrollbar-color: var(--surface-hover, rgba(255, 255, 255, 0.15)) transparent;
+}
+
+.sports-hub:hover {
+  scrollbar-color: var(--accent-primary, rgba(0, 212, 255, 0.5)) transparent;
 }
 
 /* Sidebar */
