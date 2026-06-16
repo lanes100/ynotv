@@ -404,10 +404,10 @@ fn bulk_upsert_categories_inner(
             source_id = excluded.source_id,
             category_name = excluded.category_name,
             parent_id = excluded.parent_id,
-            enabled = COALESCE(excluded.enabled, categories.enabled),
-            display_order = COALESCE(excluded.display_order, categories.display_order),
+            enabled = COALESCE(categories.enabled, excluded.enabled),
+            display_order = COALESCE(categories.display_order, excluded.display_order),
             channel_count = excluded.channel_count,
-            filter_words = COALESCE(excluded.filter_words, categories.filter_words)",
+            filter_words = COALESCE(categories.filter_words, excluded.filter_words)",
     )?;
 
     let mut inserted = 0;
@@ -465,8 +465,8 @@ pub fn bulk_upsert_vod_categories(
             source_id = excluded.source_id,
             name = excluded.name,
             type = excluded.type,
-            enabled = COALESCE(excluded.enabled, vodCategories.enabled),
-            display_order = COALESCE(excluded.display_order, vodCategories.display_order)",
+            enabled = COALESCE(vodCategories.enabled, excluded.enabled),
+            display_order = COALESCE(vodCategories.display_order, excluded.display_order)",
     )?;
 
     let mut inserted = 0;

@@ -74,6 +74,7 @@ export function DataRefreshTab({
               }}
             >
               <option value={0}>Manual only</option>
+              <option value={1}>Every 1 hour</option>
               <option value={6}>Every 6 hours</option>
               <option value={12}>Every 12 hours</option>
               <option value={24}>Every 24 hours</option>
@@ -95,6 +96,7 @@ export function DataRefreshTab({
               <option value={0}>Manual only</option>
               <option value={0.0833333333}>Every 5 minutes</option>
               <option value={0.5}>Every 30 minutes</option>
+              <option value={1}>Every 1 hour</option>
               <option value={3}>Every 3 hours</option>
               <option value={6}>Every 6 hours</option>
               <option value={12}>Every 12 hours</option>
