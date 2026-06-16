@@ -1,6 +1,6 @@
 # Changelog
 
-## v2.1.0
+## v2.1.1
 
 ### Added
 
@@ -33,6 +33,7 @@
 - **New categories appearing out of sort order** - Newly created categories will now be inserted in the correct position according to the active sort order from source.
 - **Stremio search results not applying metadata on detail pages** - Additional metadata will now load correctly when viewing results from Stremio search results.
 - **Recent Results in WC2026** - Fixed recent results only showing first 5 results, and not most recent
+- **Fix Custom Catgory sort ortder** - Fixed user set custom category sort order -v2.1.1
 
 
 ## v2.0.3
