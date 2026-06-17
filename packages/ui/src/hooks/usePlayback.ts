@@ -524,8 +524,8 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
       return;
     }
 
-    // Only apply loading/buffering overlays to Live TV channels
-    if (!currentChannel || vodInfo || catchupInfo) {
+    // Only apply loading/buffering overlays to Live TV channels when not casting
+    if (!currentChannel || vodInfo || catchupInfo || Bridge.getIsCasting?.()) {
       if (loadingState !== 'idle') setLoadingState('idle');
       return;
     }
@@ -549,6 +549,9 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
   // Effect to check timeout (12s) when loading or buffering
   useEffect(() => {
     if (loadingState === 'idle') return;
+
+    // Reset the start timestamp whenever we enter a loading or buffering state
+    loadingStartedAtRef.current = Date.now();
 
     const interval = setInterval(() => {
       if (loadingStartedAtRef.current && Date.now() - loadingStartedAtRef.current > 12000) {
