@@ -2090,6 +2090,10 @@ function App() {
           }
           if (settingsResult.data.uiScale) {
             document.documentElement.style.setProperty('--app-zoom', String(settingsResult.data.uiScale / 100));
+            // Trigger EPG to re-measure availableWidth now that zoom is set.
+            // ChannelPanel's useEffect runs before this settings load completes,
+            // so it initially measures at zoom=1. This corrects it.
+            window.dispatchEvent(new Event('resize'));
           }
           // Load transparent guide overlay settings
           const loadedGuideHeight = settingsResult.data.transparentGuideHeight ?? 40;
