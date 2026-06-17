@@ -215,14 +215,9 @@ export function PlaybackTab({
       <div className="settings-tab-content">
         {activeSubTab === 'mpv' && (
           <div className="settings-section">
-            <div className="section-header">
-              <h3>Playback Settings</h3>
-            </div>
-            <p className="section-description">
-              Configure MPV player parameters for stream playback. Changes take effect on next channel load.
-            </p>
 
-            <div className="playback-section">
+
+            <div className="playback-section" style={{ marginTop: 0 }}>
               <div className="playback-label">
                 <span>MPV Parameters</span>
                 <small>
@@ -240,6 +235,22 @@ export function PlaybackTab({
                 rows={12}
                 spellCheck={false}
               />
+
+              <div className="playback-actions">
+                <button
+                  className="save-btn"
+                  onClick={handleSave}
+                  disabled={!hasChanges}
+                >
+                  {hasChanges ? 'Save Changes' : 'Saved'}
+                </button>
+                <button className="reset-btn" onClick={handleReset}>
+                  Reset to Defaults
+                </button>
+                <button className="clear-btn" onClick={handleClear}>
+                  Clear All
+                </button>
+              </div>
 
               <div className="playback-help">
                 <h4>Common Parameters</h4>
@@ -271,22 +282,6 @@ export function PlaybackTab({
                 </div>
               </div>
 
-              <div className="playback-actions">
-                <button
-                  className="save-btn"
-                  onClick={handleSave}
-                  disabled={!hasChanges}
-                >
-                  {hasChanges ? 'Save Changes' : 'Saved'}
-                </button>
-                <button className="reset-btn" onClick={handleReset}>
-                  Reset to Defaults
-                </button>
-                <button className="clear-btn" onClick={handleClear}>
-                  Clear All
-                </button>
-              </div>
-
                <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
                 <div className="timeshift-toggle-row" style={{ marginBottom: '12px' }}>
                   <div className="timeshift-toggle-info">
@@ -305,7 +300,7 @@ export function PlaybackTab({
                   </label>
                 </div>
 
-                <div className="timeshift-toggle-row" style={{ marginBottom: '12px', marginTop: '12px' }}>
+                <div className="timeshift-toggle-row" style={{ marginBottom: '12px', marginTop: '12px', borderBottom: 'none' }}>
                   <div className="timeshift-toggle-info">
                     <span className="timeshift-toggle-label">Show Channel Loading Screen</span>
                     <span className="timeshift-toggle-sub">
