@@ -39,12 +39,13 @@ function dpr() {
 /** Compute the target rect (in physical pixels) for the primary MPV slot */
 export function primaryRect(mode: LayoutMode, engineMode: MultiviewEngineMode = 'mpv'): { x: number; y: number; w: number; h: number } {
     const d = dpr();
+    const zoom = parseFloat(document.documentElement.style.getPropertyValue('--app-zoom')) || 1;
     const W = Math.round(window.innerWidth * d);
     const H = Math.round(window.innerHeight * d);
     const gap = Math.round(2 * d);
 
-    const titleBarH = engineMode === 'hls' ? 0 : Math.round(TITLE_BAR_HEIGHT * d);
-    const mediaBarH = (mode === '2x2' || mode === 'bigbottom' || mode === 'sbs') ? 0 : Math.round(MEDIA_BAR_HEIGHT * d);
+    const titleBarH = engineMode === 'hls' ? 0 : Math.round(TITLE_BAR_HEIGHT * zoom * d);
+    const mediaBarH = (mode === '2x2' || mode === 'bigbottom' || mode === 'sbs') ? 0 : Math.round(MEDIA_BAR_HEIGHT * zoom * d);
     const availableH = H - titleBarH - mediaBarH;
 
     switch (mode) {

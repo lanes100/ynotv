@@ -159,7 +159,16 @@ export function SportsHub({
       if (isSyncing) return;
       isSyncing = true;
 
-      const rect = previewRef.current.getBoundingClientRect();
+      const clientRect = previewRef.current.getBoundingClientRect();
+      const rect = {
+        left: clientRect.left,
+        top: clientRect.top,
+        right: clientRect.right,
+        bottom: clientRect.bottom,
+        width: clientRect.width,
+        height: clientRect.height,
+      };
+
       if (rect.width === 0 || rect.height === 0) {
         isSyncing = false;
         return;

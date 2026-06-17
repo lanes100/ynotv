@@ -65,6 +65,8 @@ interface UIState {
   setCategorySortOrder: (value: 'default' | 'alphabetical') => void;
   epgView: 'traditional' | 'alternate';
   setEpgView: (value: 'traditional' | 'alternate') => void;
+  epgVisibleHours: 'auto' | number;
+  setEpgVisibleHours: (value: 'auto' | number) => void;
 
   // Navigation tab visibility (shared reactive state)
   navHiddenTabs: string[];
@@ -159,6 +161,8 @@ export const useUIStore = create<UIState>((set) => ({
   setCategorySortOrder: (value) => set({ categorySortOrder: value }),
   epgView: 'traditional',
   setEpgView: (value) => set({ epgView: value }),
+  epgVisibleHours: 'auto',
+  setEpgVisibleHours: (value) => set({ epgVisibleHours: value }),
 
   // Navigation tab visibility
   navHiddenTabs: [],
@@ -283,6 +287,8 @@ export const useCategorySortOrder = () => useUIStore((s) => s.categorySortOrder)
 export const useSetCategorySortOrder = () => useUIStore((s) => s.setCategorySortOrder);
 export const useEpgView = () => useUIStore((s) => s.epgView);
 export const useSetEpgView = () => useUIStore((s) => s.setEpgView);
+export const useEpgVisibleHours = () => useUIStore((s) => s.epgVisibleHours);
+export const useSetEpgVisibleHours = () => useUIStore((s) => s.setEpgVisibleHours);
 
 // Sports Hub selectors
 export const useSportsSelectedTab = () => useUIStore((s) => s.sportsSelectedTab);

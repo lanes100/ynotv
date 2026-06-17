@@ -51,7 +51,8 @@ import {
   useChannelSortOrderMigrated,
   useSetCategorySortOrder,
   useEpgView,
-  useSetEpgView
+  useSetEpgView,
+  useSetEpgVisibleHours
 } from './stores/uiStore';
 import { getAdjacentEpisode, recordVodWatch, recordEpisodeWatch, getEpisodeProgress } from './db';
 import type { StoredChannel } from './db';
@@ -1161,6 +1162,7 @@ function App() {
   const setCategorySortOrder = useSetCategorySortOrder();
   const setEpgView = useSetEpgView();
   const epgView = useEpgView();
+  const setEpgVisibleHours = useSetEpgVisibleHours();
 
   const handleToggleEpgView = useCallback(() => {
     const nextView = epgView === 'traditional' ? 'alternate' : 'traditional';
@@ -2086,6 +2088,9 @@ function App() {
           if (settingsResult.data.epgBodyFontSize) {
             document.documentElement.style.setProperty('--epg-body-font-size', `${settingsResult.data.epgBodyFontSize}px`);
           }
+          if (settingsResult.data.uiScale) {
+            document.documentElement.style.setProperty('--app-zoom', String(settingsResult.data.uiScale / 100));
+          }
           // Load transparent guide overlay settings
           const loadedGuideHeight = settingsResult.data.transparentGuideHeight ?? 40;
           document.documentElement.style.setProperty('--transparent-guide-height', `${loadedGuideHeight}%`);
@@ -2109,6 +2114,10 @@ function App() {
           }
           if (settingsResult.data.epgView) {
             setEpgView(settingsResult.data.epgView as 'traditional' | 'alternate');
+          }
+          if (settingsResult.data.epgVisibleHours) {
+            const rawHours = settingsResult.data.epgVisibleHours;
+            setEpgVisibleHours(rawHours === 'auto' ? 'auto' : Number(rawHours));
           }
           // Apply modern UI setting (default to true if never set)
           const shouldEnableModernUi = settingsResult.data.modernUiEnabled ?? true;

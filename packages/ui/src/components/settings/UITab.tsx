@@ -10,6 +10,7 @@ interface UITabProps {
     modernUiEnabled?: boolean;
     collapseSourceCategoriesOnStartup?: boolean;
     overlayAutohideTimer?: number;
+    uiScale?: number;
   };
   onSettingsChange: (settings: {
     startupWidth?: number;
@@ -18,6 +19,7 @@ interface UITabProps {
     modernUiEnabled?: boolean;
     collapseSourceCategoriesOnStartup?: boolean;
     overlayAutohideTimer?: number;
+    uiScale?: number;
   }) => void;
 }
 
@@ -131,6 +133,20 @@ function WindowSizeSettings({ width, height, onChange }: { width: number; height
 }
 
 export function UITab({ settings, onSettingsChange }: UITabProps) {
+  const [localScale, setLocalScale] = useState(settings.uiScale ?? 100);
+  const [scaleStatus, setScaleStatus] = useState<'' | 'applied'>('');
+
+  // Keep localScale in sync if setting changes externally
+  useEffect(() => {
+    setLocalScale(settings.uiScale ?? 100);
+  }, [settings.uiScale]);
+
+  const handleApplyScale = () => {
+    onSettingsChange({ ...settings, uiScale: localScale });
+    setScaleStatus('applied');
+    setTimeout(() => setScaleStatus(''), 2000);
+  };
+
   return (
     <div className="settings-tab-content">
       {/* Modern UI Section */}
@@ -203,6 +219,54 @@ export function UITab({ settings, onSettingsChange }: UITabProps) {
               className="query-input"
               style={{ width: '80px', textAlign: 'center' }}
             />
+          </div>
+
+          {/* Application UI Scale */}
+          <div className="timeshift-toggle-row" style={{ alignItems: 'flex-start', gap: '1rem' }}>
+            <div className="timeshift-toggle-info" style={{ flex: 1 }}>
+              <span className="timeshift-toggle-label" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                Application UI Scale
+                <div className="epg-tooltip">
+                  <span className="epg-tooltip-icon">?</span>
+                  <div className="epg-tooltip-content">
+                    Adjust the overall scale of the application interface. Helpful for fitting more content on lower resolution displays (e.g., 80% or 90%) or making elements larger on high DPI displays.
+                  </div>
+                </div>
+              </span>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', width: '220px', alignItems: 'stretch' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                <input
+                  type="range"
+                  min="70"
+                  max="150"
+                  step="5"
+                  value={localScale}
+                  onChange={(e) => setLocalScale(parseInt(e.target.value) || 100)}
+                  style={{ flex: 1, cursor: 'pointer' }}
+                />
+                <span style={{ minWidth: '3.5rem', textAlign: 'right', color: 'rgba(255,255,255,0.8)', fontSize: '0.95rem' }}>
+                  {localScale}%
+                </span>
+              </div>
+              <button
+                className="sync-btn"
+                onClick={handleApplyScale}
+                style={{
+                  padding: '0.4rem 1.25rem',
+                  background: '#00d4ff',
+                  color: 'black',
+                  fontWeight: 600,
+                  fontSize: '0.85rem',
+                  alignSelf: 'flex-end',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer'
+                }}
+              >
+                {scaleStatus === 'applied' ? 'Applied!' : 'Apply Scale'}
+              </button>
+            </div>
           </div>
         </div>
       </div>

@@ -91,6 +91,8 @@ export interface AppSettings {
     startupHeight?: number;
     dontSaveWindowSizeOnClose?: boolean;
     overlayAutohideTimer?: number;
+    uiScale?: number;
+    epgVisibleHours?: 'auto' | number;
     rememberLastChannels?: boolean;
     savedLayoutState?: SavedLayoutState;
     startupView?: 'none' | 'guide' | 'movies' | 'series' | 'dvr' | 'sports' | 'calendar' | 'stremio';

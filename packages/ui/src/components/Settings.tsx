@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import type { Source } from '@ynotv/core';
-import { useEpgView, useSetEpgView, useUIStore } from '../stores/uiStore';
+import { useEpgView, useSetEpgView, useSetEpgVisibleHours, useUIStore } from '../stores/uiStore';
 import { SettingsSidebar, type SettingsTabId } from './settings/SettingsSidebar';
 import { searchSettings, type SettingsSearchResult } from './settings/SettingsSearchIndex';
 import { SourcesTab } from './settings/SourcesTab';
@@ -171,10 +171,12 @@ export function Settings({
     modernUiEnabled?: boolean;
     collapseSourceCategoriesOnStartup?: boolean;
     overlayAutohideTimer?: number;
+    uiScale?: number;
   }>({
     modernUiEnabled: true,
     collapseSourceCategoriesOnStartup: false,
     overlayAutohideTimer: 3,
+    uiScale: 100,
   });
 
   // Font size state (moved to LiveTV tab)
@@ -252,6 +254,8 @@ export function Settings({
   const [epgBodyFontSize, setEpgBodyFontSize] = useState(16);
   const epgView = useEpgView();
   const setEpgView = useSetEpgView();
+  const setEpgVisibleHours = useSetEpgVisibleHours();
+  const [epgVisibleHours, setEpgVisibleHoursState] = useState<'auto' | number>('auto');
   const [transparentGuideHeight, setTransparentGuideHeight] = useState(40);
   const [transparentGuideHideHeader, setTransparentGuideHideHeader] = useState(false);
   const [transparentGuideOverlayOpacity, setTransparentGuideOverlayOpacity] = useState(55);
@@ -448,6 +452,8 @@ export function Settings({
         collapseSourceCategoriesOnStartup?: boolean;
         modernUiEnabled?: boolean;
         overlayAutohideTimer?: number;
+        uiScale?: number;
+        epgVisibleHours?: 'auto' | number;
         epgTitleFontSize?: number;
         epgBodyFontSize?: number;
         channelInfoOverlayEnabled?: boolean;
@@ -566,6 +572,7 @@ export function Settings({
         modernUiEnabled: loadedModernUi,
         collapseSourceCategoriesOnStartup: settings.collapseSourceCategoriesOnStartup ?? false,
         overlayAutohideTimer: settings.overlayAutohideTimer ?? 3,
+        uiScale: settings.uiScale ?? 100,
       };
       setUiSettings(loadedUiSettings);
 
@@ -640,6 +647,12 @@ export function Settings({
 
       // Load EPG view layout setting
       setEpgView(settings.epgView ?? 'traditional');
+
+      // Load EPG visible hours setting
+      const rawEpgVisibleHours = settings.epgVisibleHours ?? 'auto';
+      const loadedEpgVisibleHours = rawEpgVisibleHours === 'auto' ? 'auto' : Number(rawEpgVisibleHours);
+      setEpgVisibleHoursState(loadedEpgVisibleHours);
+      setEpgVisibleHours(loadedEpgVisibleHours);
 
       // Load transparent guide overlay settings
       const loadedGuideHeight = settings.transparentGuideHeight ?? 40;
@@ -1037,6 +1050,14 @@ export function Settings({
     }
   };
 
+  const handleEpgVisibleHoursChange = async (hours: 'auto' | number) => {
+    setEpgVisibleHoursState(hours);
+    setEpgVisibleHours(hours);
+    if (window.storage) {
+      await window.storage.updateSettings({ epgVisibleHours: hours });
+    }
+  };
+
   const handleEpgTitleFontSizeChange = (size: number) => {
     setEpgTitleFontSize(size);
     document.documentElement.style.setProperty('--epg-title-font-size', `${size}px`);
@@ -1277,6 +1298,7 @@ export function Settings({
     modernUiEnabled?: boolean;
     collapseSourceCategoriesOnStartup?: boolean;
     overlayAutohideTimer?: number;
+    uiScale?: number;
   }) => {
     const updated = { ...uiSettings, ...newSettings };
     setUiSettings(updated);
@@ -1288,6 +1310,13 @@ export function Settings({
       } else {
         document.documentElement.classList.remove('modern-ui');
       }
+    }
+
+    if (newSettings.uiScale !== undefined) {
+      document.documentElement.style.setProperty('--app-zoom', String(newSettings.uiScale / 100));
+      // Dispatch a resize event so the EPG grid re-measures availableWidth using
+      // the updated zoom factor (getBoundingClientRect results change with zoom).
+      window.dispatchEvent(new Event('resize'));
     }
 
     if (newSettings.overlayAutohideTimer !== undefined && onOverlayAutohideTimerChange) {
@@ -1597,10 +1626,12 @@ export function Settings({
         );
       case 'livetv':
         return (
-          <LiveTVTab
+           <LiveTVTab
             initialSubTab={pendingSubTab as 'epg' | 'font-size' | 'sort-order' | 'search' | 'live-view' | 'widgets' | undefined}
             epgDarkenCurrent={epgDarkenCurrent}
             onEpgDarkenCurrentChange={handleEpgDarkenCurrentChange}
+            epgVisibleHours={epgVisibleHours}
+            onEpgVisibleHoursChange={handleEpgVisibleHoursChange}
             epgBoldChannelNames={epgBoldChannelNames}
             onEpgBoldChannelNamesChange={handleEpgBoldChannelNamesChange}
             epgBoldTopCategories={epgBoldTopCategories}

@@ -14,7 +14,7 @@ import { CustomGroupManager } from './CustomGroupManager';
 import { FailoverGroupListModal } from './FailoverGroupListModal';
 import { PlaylistListModal } from './PlaylistListModal';
 
-import { useChannelSortOrder, useEpgView } from '../stores/uiStore';
+import { useChannelSortOrder, useEpgView, useEpgVisibleHours } from '../stores/uiStore';
 import { NowPlayingBar } from './NowPlayingBar';
 import type { StoredChannel, StoredProgram, WatchlistItem } from '../db';
 import { db } from '../db';
@@ -234,6 +234,7 @@ export function ChannelPanel({
   guideTransparent = false,
 }: ChannelPanelProps) {
   const epgView = useEpgView();
+  const epgVisibleHours = useEpgVisibleHours();
 
   useEffect(() => {
     if (error) console.log('[ChannelPanel] Received error prop:', error);
@@ -430,9 +431,28 @@ export function ChannelPanel({
 
   // Measure available width - only recalculate on actual window resize
   // Category toggles just clip visually (CSS flex handles it)
+  //
+  // NOTE: getBoundingClientRect() returns post-zoom (visual) pixels, but CSS
+  // `left`/`width` inside .app use pre-zoom (layout) pixels. We must divide by
+  // --app-zoom so that availableWidth is always in layout pixels, matching how
+  // program blocks and time-markers are positioned.
   useEffect(() => {
     const container = gridContainerRef.current;
     if (!container) return;
+
+    const getZoom = () =>
+      parseFloat(document.documentElement.style.getPropertyValue('--app-zoom')) || 1;
+
+    const measureWidth = () => {
+      if (!gridContainerRef.current) return;
+      const zoom = getZoom();
+      // getBoundingClientRect gives visual (post-zoom) px; divide by zoom to
+      // convert back to layout px so it matches channelColumnWidth and the CSS
+      // coordinate space used by program/time-marker positioning.
+      const visualWidth = gridContainerRef.current.getBoundingClientRect().width;
+      const width = (visualWidth / zoom) - channelColumnWidthRef.current;
+      setAvailableWidth(Math.max(width, 200));
+    };
 
     let rafId: number | null = null;
 
@@ -443,14 +463,13 @@ export function ChannelPanel({
       const currentWindowWidth = window.innerWidth;
       const isWindowResize = currentWindowWidth !== lastWindowWidth.current;
 
-        if (isWindowResize) {
+      if (isWindowResize) {
         // Actual window resize - recalculate program positions
         lastWindowWidth.current = currentWindowWidth;
 
         if (rafId === null) {
           rafId = requestAnimationFrame(() => {
-            const width = entry.contentRect.width - channelColumnWidthRef.current;
-            setAvailableWidth(Math.max(width, 200));
+            measureWidth();
             rafId = null;
           });
         }
@@ -460,17 +479,12 @@ export function ChannelPanel({
 
     // Also listen for actual window resize
     const handleWindowResize = () => {
-      const container = gridContainerRef.current;
-      if (!container) return;
-
       lastWindowWidth.current = window.innerWidth;
-      const width = container.getBoundingClientRect().width - channelColumnWidthRef.current;
-      setAvailableWidth(Math.max(width, 200));
+      measureWidth();
     };
 
     // Set initial width
-    const initialWidth = container.getBoundingClientRect().width - channelColumnWidthRef.current;
-    setAvailableWidth(Math.max(initialWidth, 200));
+    measureWidth();
 
     observer.observe(container);
     window.addEventListener('resize', handleWindowResize);
@@ -481,6 +495,8 @@ export function ChannelPanel({
       window.removeEventListener('resize', handleWindowResize);
     };
   }, []);
+
+  const parsedEpgVisibleHours = epgVisibleHours === 'auto' ? undefined : Number(epgVisibleHours);
 
   // Time grid state and actions
   const {
@@ -494,7 +510,11 @@ export function ChannelPanel({
     goBack,
     goForward,
     goToNow,
-  } = useTimeGrid({ availableWidth });
+  } = useTimeGrid({
+    availableWidth,
+    minHours: parsedEpgVisibleHours,
+    maxHours: parsedEpgVisibleHours,
+  });
 
   // Programs will be fetched after selectedChannel is defined (see below)
 
@@ -1207,7 +1227,8 @@ export function ChannelPanel({
       // Recalculate available width after resize
       const container = gridContainerRef.current;
       if (container) {
-        const width = container.getBoundingClientRect().width - finalWidth;
+        const zoom = parseFloat(document.documentElement.style.getPropertyValue('--app-zoom')) || 1;
+        const width = (container.getBoundingClientRect().width / zoom) - finalWidth;
         setAvailableWidth(Math.max(width, 200));
       }
     };
@@ -1226,7 +1247,8 @@ export function ChannelPanel({
     // Recalculate available width after reset
     const container = gridContainerRef.current;
     if (container) {
-      const width = container.getBoundingClientRect().width - DEFAULT_CHANNEL_COLUMN_WIDTH;
+      const zoom = parseFloat(document.documentElement.style.getPropertyValue('--app-zoom')) || 1;
+      const width = (container.getBoundingClientRect().width / zoom) - DEFAULT_CHANNEL_COLUMN_WIDTH;
       setAvailableWidth(Math.max(width, 200));
     }
   }, []);
@@ -1461,7 +1483,15 @@ export function ChannelPanel({
         return;
       }
 
-      const rect = previewRef.current.getBoundingClientRect();
+      const clientRect = previewRef.current.getBoundingClientRect();
+      const rect = {
+        left: clientRect.left,
+        top: clientRect.top,
+        right: clientRect.right,
+        bottom: clientRect.bottom,
+        width: clientRect.width,
+        height: clientRect.height,
+      };
 
       // Safety check for zero dimensions (e.g. hidden)
       if (rect.width === 0 || rect.height === 0) return;
