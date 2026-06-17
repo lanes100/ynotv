@@ -89,6 +89,7 @@ import { useLayoutPersistence, type LayoutMode } from './hooks/useLayoutPersiste
 import { useMpvListeners } from './hooks/useMpvListeners';
 import { AdvancedSearchModal, type AdvancedSearchConfig } from './components/AdvancedSearchModal';
 import { StremioPage } from './components/stremio/StremioPage';
+import { NuvioPage } from './components/nuvio/NuvioPage';
 import { useStremioAddonStore } from './stores/stremioAddonStore';
 import { useStremioWatchStore } from './stores/stremioWatchStore';
 import { useStremioAuthStore } from './stores/stremioAuthStore';
@@ -2510,6 +2511,22 @@ function App() {
                   <span>Strem</span>
                 </button>
               )}
+
+              {!navHiddenTabs.includes('nuvio') && (
+                <button
+                  className={`segmented-btn ${activeView === 'nuvio' ? 'active' : ''}`}
+                  onClick={() => {
+                    setCategoriesOpen(false);
+                    setActiveView(activeView === 'nuvio' ? 'none' : 'nuvio');
+                  }}
+                  title="Nuvio"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                  </svg>
+                  <span>Nuvio</span>
+                </button>
+              )}
             </div>
 
             <div className="unified-divider"></div>
@@ -3302,6 +3319,13 @@ function App() {
           onStremioBadgeSizeChange={handleStremioBadgeSizeChange}
           showHoverDetails={showHoverDetails}
           onShowHoverDetailsChange={handleShowHoverDetailsChange}
+        />
+      </TransitionView>
+
+      {/* Nuvio Page */}
+      <TransitionView visible={activeView === 'nuvio'}>
+        <NuvioPage
+          onClose={() => setActiveView('none')}
         />
       </TransitionView>
 

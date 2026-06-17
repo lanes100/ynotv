@@ -609,6 +609,19 @@
   box-shadow: 0 4px 12px rgba(0,0,0,0.15), 0 0 15px var(--accent-glow, rgba(0, 212, 255, 0.05));
 }
 
+.stremio-detail-stream-group-title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--accent-primary, #00d4ff);
+  margin-top: 16px;
+  margin-bottom: 8px;
+  padding-left: 4px;
+  border-left: 2px solid var(--accent-primary, #00d4ff);
+  line-height: 1.2;
+}
+
 .stremio-detail-stream-header-row {
   display: flex;
   align-items: flex-start;

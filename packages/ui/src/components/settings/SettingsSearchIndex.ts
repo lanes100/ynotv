@@ -19,6 +19,7 @@ const TAB_LABELS: Record<SettingsTabId, string> = {
   metadata: 'Metadata',
   subtitles: 'Subtitles & Audio',
   strem: 'Strem',
+  nuvio: 'Nuvio',
   theme: 'Theme',
   ui: 'UI',
   navigation: 'Navigation',

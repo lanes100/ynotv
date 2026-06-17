@@ -1,0 +1,947 @@
+import { useState, useEffect } from 'react';
+import { useNuvioAuthStore } from '../../stores/nuvioAuthStore';
+import { useNuvioPluginStore } from '../../stores/nuvioPluginStore';
+import { useNuvioAddonStore } from '../../stores/nuvioAddonStore';
+import { getEffectiveNuvioUrl, getEffectiveNuvioKey, setNuvioCustomConfig } from '../../services/nuvio-api';
+
+export function NuvioTab() {
+  const authStore = useNuvioAuthStore();
+  const pluginStore = useNuvioPluginStore();
+  const addonsStore = useNuvioAddonStore();
+
+  const token = authStore.token;
+  const profile = authStore.activeProfile;
+
+  // Add Addon State
+  const [addonUrl, setAddonUrl] = useState('');
+  const [addonError, setAddonError] = useState<string | null>(null);
+  const [installingAddon, setInstallingAddon] = useState(false);
+
+  // Auth Form State
+  const [isLoginMode, setIsLoginMode] = useState(true);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [authError, setAuthError] = useState<string | null>(null);
+
+  // Self-hosting config state
+  const [customUrl, setCustomUrl] = useState('');
+  const [customKey, setCustomKey] = useState('');
+  const [isConfigExpanded, setIsConfigExpanded] = useState(false);
+
+  // Profile creation state
+  const [showCreateProfile, setShowCreateProfile] = useState(false);
+  const [newProfileName, setNewProfileName] = useState('');
+  const [newProfileColor, setNewProfileColor] = useState('#00d4ff');
+
+  // Add Repository State
+  const [repoUrl, setRepoUrl] = useState('');
+  const [repoError, setRepoError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setCustomUrl(localStorage.getItem('ynotv_nuvio_url') || '');
+    setCustomKey(localStorage.getItem('ynotv_nuvio_key') || '');
+    if (authStore.token) {
+      authStore.fetchProfiles();
+    }
+  }, [authStore.token]);
+
+  const handleAuthSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthError(null);
+    if (!email || !password) {
+      setAuthError('Please fill in all fields.');
+      return;
+    }
+    try {
+      if (isLoginMode) {
+        await authStore.login(email, password);
+      } else {
+        await authStore.signup(email, password);
+      }
+      setEmail('');
+      setPassword('');
+    } catch (err: any) {
+      setAuthError(err.message || 'Authentication failed');
+    }
+  };
+
+  const handleSaveConfig = () => {
+    const trimmedUrl = customUrl.trim();
+    const trimmedKey = customKey.trim();
+    setNuvioCustomConfig(trimmedUrl || null, trimmedKey || null);
+    alert('Nuvio Supabase configuration saved! Please reload settings or restart app.');
+  };
+
+  const handleResetConfig = () => {
+    setNuvioCustomConfig(null, null);
+    setCustomUrl('');
+    setCustomKey('');
+    alert('Nuvio configuration reset to official defaults.');
+  };
+
+  const handleCreateProfileSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newProfileName.trim()) return;
+    try {
+      await authStore.createProfile(newProfileName, newProfileColor, null, null);
+      setNewProfileName('');
+      setShowCreateProfile(false);
+    } catch (err: any) {
+      alert(err.message || 'Failed to create profile');
+    }
+  };
+
+  const handleAddAddon = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAddonError(null);
+    if (!addonUrl.trim()) return;
+    if (!token || !profile) {
+      setAddonError('Please select an active profile first.');
+      return;
+    }
+    setInstallingAddon(true);
+    try {
+      await addonsStore.addAddon(token, profile.profile_index, addonUrl.trim());
+      setAddonUrl('');
+      alert('Addon installed successfully!');
+    } catch (err: any) {
+      setAddonError(err.message || 'Failed to install addon');
+    } finally {
+      setInstallingAddon(false);
+    }
+  };
+
+  const handleToggleAddon = async (addonId: string) => {
+    if (!token || !profile) return;
+    try {
+      await addonsStore.toggleAddon(token, profile.profile_index, addonId);
+    } catch (err: any) {
+      alert(err.message || 'Failed to toggle addon');
+    }
+  };
+
+  const handleRemoveAddon = async (addonId: string) => {
+    if (!token || !profile) return;
+    if (confirm('Are you sure you want to uninstall this addon?')) {
+      try {
+        await addonsStore.removeAddon(token, profile.profile_index, addonId);
+      } catch (err: any) {
+        alert(err.message || 'Failed to remove addon');
+      }
+    }
+  };
+
+  const handleAddRepository = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setRepoError(null);
+    if (!repoUrl.trim()) return;
+    try {
+      await pluginStore.addRepository(repoUrl);
+      setRepoUrl('');
+    } catch (err: any) {
+      setRepoError(err.message || 'Failed to add repository');
+    }
+  };
+
+  const defaultColors = ['#00d4ff', '#ff007f', '#a020f0', '#00ff7f', '#ffaa00', '#ff0000', '#0088ff', '#ffffff'];
+
+  return (
+    <div className="settings-tab-content" style={{ color: '#fff' }}>
+      {/* 1. Header & Dynamic Server Sync Info */}
+      <div className="settings-section">
+        <h3 style={{ margin: '0 0 8px 0', fontSize: '1rem', fontWeight: 600 }}>Nuvio Integration</h3>
+        <p style={{ margin: '0 0 16px 0', fontSize: '0.82rem', color: 'rgba(255,255,255,0.5)' }}>
+          Nuvio is a media synchronization and plugin platform. Log in to sync collections, profiles, and run custom scrapers.
+        </p>
+
+        {/* Self-Hosting Toggle */}
+        <div style={{ marginBottom: '20px' }}>
+          <button
+            onClick={() => setIsConfigExpanded(!isConfigExpanded)}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#00d4ff',
+              fontSize: '0.8rem',
+              cursor: 'pointer',
+              padding: 0,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+            }}
+          >
+            <span>{isConfigExpanded ? '▼' : '▶'} Self-Hosting & Advanced Configuration</span>
+          </button>
+          {isConfigExpanded && (
+            <div style={{
+              background: 'rgba(255,255,255,0.03)',
+              border: '1px solid rgba(255,255,255,0.06)',
+              borderRadius: '8px',
+              padding: '14px',
+              marginTop: '10px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '10px'
+            }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', color: 'rgba(255,255,255,0.6)', marginBottom: '4px' }}>Supabase Project URL</label>
+                <input
+                  type="text"
+                  placeholder="https://nuvio-app.supabase.co"
+                  value={customUrl}
+                  onChange={(e) => setCustomUrl(e.target.value)}
+                  style={{
+                    width: '100%',
+                    background: 'rgba(0,0,0,0.25)',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    borderRadius: '6px',
+                    padding: '8px',
+                    fontSize: '0.8rem',
+                    color: '#fff',
+                    outline: 'none',
+                    boxSizing: 'border-box'
+                  }}
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', color: 'rgba(255,255,255,0.6)', marginBottom: '4px' }}>Supabase Anon Key</label>
+                <input
+                  type="password"
+                  placeholder="eyJhbGciOiJIUzI1Ni..."
+                  value={customKey}
+                  onChange={(e) => setCustomKey(e.target.value)}
+                  style={{
+                    width: '100%',
+                    background: 'rgba(0,0,0,0.25)',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    borderRadius: '6px',
+                    padding: '8px',
+                    fontSize: '0.8rem',
+                    color: '#fff',
+                    outline: 'none',
+                    boxSizing: 'border-box'
+                  }}
+                />
+              </div>
+              <div style={{ display: 'flex', gap: '8px', marginTop: '6px' }}>
+                <button
+                  onClick={handleSaveConfig}
+                  style={{
+                    background: '#00d4ff',
+                    border: 'none',
+                    color: '#000',
+                    borderRadius: '6px',
+                    padding: '6px 12px',
+                    fontSize: '0.75rem',
+                    fontWeight: 600,
+                    cursor: 'pointer'
+                  }}
+                >
+                  Save Config
+                </button>
+                <button
+                  onClick={handleResetConfig}
+                  style={{
+                    background: 'rgba(255,255,255,0.08)',
+                    border: '1px solid rgba(255,255,255,0.12)',
+                    color: '#fff',
+                    borderRadius: '6px',
+                    padding: '6px 12px',
+                    fontSize: '0.75rem',
+                    fontWeight: 600,
+                    cursor: 'pointer'
+                  }}
+                >
+                  Reset to Default
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* 2. AUTH STATUS OR LOGIN FORM */}
+        {!authStore.token ? (
+          <div style={{
+            background: 'rgba(255,255,255,0.02)',
+            border: '1px solid rgba(255,255,255,0.05)',
+            borderRadius: '8px',
+            padding: '20px'
+          }}>
+            <h4 style={{ margin: '0 0 14px 0', fontSize: '0.9rem', fontWeight: 600 }}>
+              {isLoginMode ? 'Sign In to Nuvio' : 'Create a Nuvio Account'}
+            </h4>
+            <form onSubmit={handleAuthSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div>
+                <input
+                  type="email"
+                  placeholder="Email Address"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  style={{
+                    width: '100%',
+                    background: 'rgba(0,0,0,0.2)',
+                    border: '1px solid rgba(255,255,255,0.08)',
+                    borderRadius: '6px',
+                    padding: '10px',
+                    fontSize: '0.85rem',
+                    color: '#fff',
+                    outline: 'none',
+                    boxSizing: 'border-box'
+                  }}
+                />
+              </div>
+              <div>
+                <input
+                  type="password"
+                  placeholder="Password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  style={{
+                    width: '100%',
+                    background: 'rgba(0,0,0,0.2)',
+                    border: '1px solid rgba(255,255,255,0.08)',
+                    borderRadius: '6px',
+                    padding: '10px',
+                    fontSize: '0.85rem',
+                    color: '#fff',
+                    outline: 'none',
+                    boxSizing: 'border-box'
+                  }}
+                />
+              </div>
+              {authError && (
+                <div style={{ color: '#ff4f4f', fontSize: '0.75rem', marginTop: '2px' }}>
+                  {authError}
+                </div>
+              )}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '6px' }}>
+                <button
+                  type="submit"
+                  disabled={authStore.isSyncing}
+                  style={{
+                    background: 'linear-gradient(135deg, #00d4ff, #0088ff)',
+                    border: 'none',
+                    color: '#000',
+                    borderRadius: '6px',
+                    padding: '10px 20px',
+                    fontSize: '0.8rem',
+                    fontWeight: 700,
+                    cursor: authStore.isSyncing ? 'not-allowed' : 'pointer',
+                    opacity: authStore.isSyncing ? 0.7 : 1
+                  }}
+                >
+                  {authStore.isSyncing ? 'Authenticating...' : isLoginMode ? 'Login' : 'Sign Up'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsLoginMode(!isLoginMode)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: 'rgba(255,255,255,0.6)',
+                    fontSize: '0.75rem',
+                    cursor: 'pointer',
+                    textDecoration: 'underline'
+                  }}
+                >
+                  {isLoginMode ? "Need an account? Register" : "Have an account? Login"}
+                </button>
+              </div>
+            </form>
+          </div>
+        ) : (
+          <div>
+            {/* Logged in state */}
+            <div style={{
+              background: 'rgba(255,255,255,0.02)',
+              border: '1px solid rgba(255,255,255,0.05)',
+              borderRadius: '8px',
+              padding: '16px',
+              marginBottom: '24px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between'
+            }}>
+              <div>
+                <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', fontWeight: 700, letterSpacing: '0.05em' }}>SIGNED IN AS</div>
+                <div style={{ fontSize: '0.9rem', fontWeight: 600, color: 'rgba(255,255,255,0.95)' }}>{authStore.user?.email}</div>
+                {authStore.lastSyncTime && (
+                  <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.35)', marginTop: '4px' }}>
+                    Synced: {new Date(authStore.lastSyncTime).toLocaleTimeString()}
+                  </div>
+                )}
+              </div>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button
+                  onClick={() => authStore.syncNow()}
+                  disabled={authStore.isSyncing}
+                  style={{
+                    background: 'rgba(0,212,255,0.12)',
+                    border: '1px solid rgba(0,212,255,0.25)',
+                    color: '#00d4ff',
+                    borderRadius: '6px',
+                    padding: '8px 14px',
+                    fontSize: '0.75rem',
+                    fontWeight: 600,
+                    cursor: authStore.isSyncing ? 'not-allowed' : 'pointer'
+                  }}
+                >
+                  {authStore.isSyncing ? 'Syncing...' : 'Sync Now'}
+                </button>
+                <button
+                  onClick={() => authStore.logout()}
+                  style={{
+                    background: 'rgba(255,79,79,0.12)',
+                    border: '1px solid rgba(255,79,79,0.25)',
+                    color: '#ff4f4f',
+                    borderRadius: '6px',
+                    padding: '8px 14px',
+                    fontSize: '0.75rem',
+                    fontWeight: 600,
+                    cursor: 'pointer'
+                  }}
+                >
+                  Sign Out
+                </button>
+              </div>
+            </div>
+
+            {/* Profiles Section */}
+            <div style={{ marginBottom: '24px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                <h4 style={{ margin: 0, fontSize: '0.88rem', fontWeight: 600, color: 'rgba(255,255,255,0.85)' }}>Profiles ({authStore.profiles.length}/4)</h4>
+                {authStore.profiles.length < 4 && !showCreateProfile && (
+                  <button
+                    onClick={() => setShowCreateProfile(true)}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: '#00d4ff',
+                      fontSize: '0.75rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      padding: 0
+                    }}
+                  >
+                    + Add Profile
+                  </button>
+                )}
+              </div>
+
+              {showCreateProfile && (
+                <form onSubmit={handleCreateProfileSubmit} style={{
+                  background: 'rgba(255,255,255,0.03)',
+                  border: '1px solid rgba(255,255,255,0.06)',
+                  borderRadius: '8px',
+                  padding: '14px',
+                  marginBottom: '12px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '10px'
+                }}>
+                  <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                    <input
+                      type="text"
+                      placeholder="Profile Name"
+                      value={newProfileName}
+                      onChange={(e) => setNewProfileName(e.target.value)}
+                      style={{
+                        flex: 1,
+                        background: 'rgba(0,0,0,0.2)',
+                        border: '1px solid rgba(255,255,255,0.08)',
+                        borderRadius: '6px',
+                        padding: '8px',
+                        fontSize: '0.8rem',
+                        color: '#fff',
+                        outline: 'none'
+                      }}
+                    />
+                    <input
+                      type="color"
+                      value={newProfileColor}
+                      onChange={(e) => setNewProfileColor(e.target.value)}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        width: '32px',
+                        height: '32px',
+                        cursor: 'pointer',
+                        padding: 0
+                      }}
+                    />
+                  </div>
+                  <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                    {defaultColors.map(c => (
+                      <button
+                        key={c}
+                        type="button"
+                        onClick={() => setNewProfileColor(c)}
+                        style={{
+                          width: '20px',
+                          height: '20px',
+                          borderRadius: '50%',
+                          background: c,
+                          border: newProfileColor === c ? '2px solid #fff' : '1px solid rgba(0,0,0,0.3)',
+                          cursor: 'pointer'
+                        }}
+                      />
+                    ))}
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '4px' }}>
+                    <button
+                      type="button"
+                      onClick={() => setShowCreateProfile(false)}
+                      style={{
+                        background: 'none',
+                        border: '1px solid rgba(255,255,255,0.1)',
+                        color: 'rgba(255,255,255,0.7)',
+                        borderRadius: '4px',
+                        padding: '4px 10px',
+                        fontSize: '0.75rem',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      style={{
+                        background: '#00d4ff',
+                        border: 'none',
+                        color: '#000',
+                        borderRadius: '4px',
+                        padding: '4px 12px',
+                        fontSize: '0.75rem',
+                        fontWeight: 600,
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Create
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              {/* Profiles List */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                {authStore.profiles.map((p) => {
+                  const isActive = authStore.activeProfile?.profile_index === p.profile_index;
+                  return (
+                    <div
+                      key={p.profile_index}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '10px 14px',
+                        borderRadius: '6px',
+                        background: isActive ? 'rgba(0,212,255,0.06)' : 'rgba(255,255,255,0.02)',
+                        border: `1px solid ${isActive ? 'rgba(0,212,255,0.2)' : 'rgba(255,255,255,0.04)'}`,
+                      }}
+                    >
+                      <div
+                        onClick={() => !isActive && authStore.selectProfile(p.profile_index)}
+                        style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, cursor: isActive ? 'default' : 'pointer' }}
+                      >
+                        <div style={{
+                          width: '32px',
+                          height: '32px',
+                          borderRadius: '50%',
+                          backgroundColor: p.avatar_color_hex || '#00d4ff',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontWeight: 700,
+                          fontSize: '1rem',
+                          color: '#000'
+                        }}>
+                          {p.name.charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                          <span style={{ fontSize: '0.85rem', fontWeight: isActive ? 600 : 500, color: isActive ? '#fff' : 'rgba(255,255,255,0.85)' }}>
+                            {p.name}
+                          </span>
+                          {isActive && (
+                            <span style={{
+                              marginLeft: '8px',
+                              fontSize: '0.62rem',
+                              background: '#00d4ff',
+                              color: '#000',
+                              padding: '2px 6px',
+                              borderRadius: '4px',
+                              fontWeight: 700
+                            }}>
+                              ACTIVE
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        {authStore.profiles.length > 1 && (
+                          <button
+                            onClick={() => {
+                              if (confirm(`Are you sure you want to delete profile "${p.name}"? This deletes all synced data for this profile.`)) {
+                                authStore.deleteProfile(p.profile_index);
+                              }
+                            }}
+                            title="Delete profile data"
+                            style={{
+                              background: 'none',
+                              border: 'none',
+                              color: 'rgba(255,79,79,0.5)',
+                              fontSize: '0.75rem',
+                              cursor: 'pointer',
+                              padding: '4px'
+                            }}
+                          >
+                            Delete
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Addons Section */}
+            <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '20px', marginTop: '20px' }}>
+              <h4 style={{ margin: '0 0 12px 0', fontSize: '0.9rem', fontWeight: 600 }}>Nuvio Addons</h4>
+              
+              {/* Install Addon form */}
+              <form onSubmit={handleAddAddon} style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+                <input
+                  type="text"
+                  placeholder="Install Addon Manifest URL (e.g. https://.../manifest.json)"
+                  value={addonUrl}
+                  onChange={(e) => setAddonUrl(e.target.value)}
+                  style={{
+                    flex: 1,
+                    background: 'rgba(0,0,0,0.2)',
+                    border: '1px solid rgba(255,255,255,0.08)',
+                    borderRadius: '6px',
+                    padding: '8px 10px',
+                    fontSize: '0.8rem',
+                    color: '#fff',
+                    outline: 'none'
+                  }}
+                />
+                <button
+                  type="submit"
+                  disabled={installingAddon || !addonUrl.trim()}
+                  style={{
+                    background: 'rgba(0,212,255,0.15)',
+                    border: '1px solid rgba(0,212,255,0.3)',
+                    color: '#00d4ff',
+                    borderRadius: '6px',
+                    padding: '8px 16px',
+                    fontSize: '0.8rem',
+                    fontWeight: 600,
+                    cursor: installingAddon ? 'not-allowed' : 'pointer'
+                  }}
+                >
+                  {installingAddon ? 'Installing...' : 'Install'}
+                </button>
+              </form>
+              {addonError && <div style={{ color: '#ff4f4f', fontSize: '0.75rem', marginBottom: '14px' }}>{addonError}</div>}
+              {addonsStore.error && <div style={{ color: '#ff4f4f', fontSize: '0.75rem', marginBottom: '14px' }}>{addonsStore.error}</div>}
+
+              {/* Installed Addons list */}
+              {addonsStore.addons.length > 0 ? (
+                <div>
+                  <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'rgba(255,255,255,0.4)', marginBottom: '8px', letterSpacing: '0.05em' }}>
+                    INSTALLED ADDONS
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {addonsStore.addons.map((addon) => (
+                      <div
+                        key={addon.id}
+                        style={{
+                          background: 'rgba(255,255,255,0.01)',
+                          border: '1px solid rgba(255,255,255,0.04)',
+                          borderRadius: '8px',
+                          padding: '12px 14px',
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center'
+                        }}
+                      >
+                        <div style={{ overflow: 'hidden', marginRight: '10px' }}>
+                          <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#fff' }}>
+                            {addon.manifest.name} <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.3)', marginLeft: '4px' }}>v{addon.manifest.version}</span>
+                          </div>
+                          {addon.manifest.description && (
+                            <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', marginTop: '2px' }}>
+                              {addon.manifest.description}
+                            </div>
+                          )}
+                          <div style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.35)', marginTop: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {addon.baseUrl}
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
+                          <button
+                            onClick={() => handleToggleAddon(addon.id)}
+                            style={{
+                              background: 'none',
+                              border: '1px solid rgba(255,255,255,0.1)',
+                              color: 'rgba(255,255,255,0.7)',
+                              borderRadius: '4px',
+                              padding: '4px 8px',
+                              fontSize: '0.7rem',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            {addon.enabled === false ? 'Enable' : 'Disable'}
+                          </button>
+                          <button
+                            onClick={() => handleRemoveAddon(addon.id)}
+                            style={{
+                              background: 'none',
+                              border: '1px solid rgba(255,79,79,0.25)',
+                              color: '#ff4f4f',
+                              borderRadius: '4px',
+                              padding: '4px 8px',
+                              fontSize: '0.7rem',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            Uninstall
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div style={{
+                  padding: '24px 0',
+                  textAlign: 'center',
+                  color: 'rgba(255,255,255,0.3)',
+                  fontSize: '0.8rem',
+                  border: '1px dashed rgba(255,255,255,0.06)',
+                  borderRadius: '8px'
+                }}>
+                  No addons installed yet.
+                </div>
+              )}
+            </div>
+
+            {/* Plugin Scrapers Section */}
+            <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '20px', marginTop: '20px' }}>
+              <h4 style={{ margin: '0 0 12px 0', fontSize: '0.9rem', fontWeight: 600 }}>Nuvio Scrapers / Plugins</h4>
+              
+              {/* Toggles */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '20px' }}>
+                <div className="retry-setting-row" style={{ borderBottom: 'none', padding: 0 }}>
+                  <div className="timeshift-toggle-info">
+                    <span className="timeshift-toggle-label" style={{ fontSize: '0.85rem' }}>Enable Plugin Scrapers</span>
+                    <span className="timeshift-toggle-sub" style={{ fontSize: '0.75rem' }}>Use installed Nuvio scrapers when looking for media streams.</span>
+                  </div>
+                  <label className="toggle-switch">
+                    <input
+                      type="checkbox"
+                      checked={pluginStore.pluginsEnabled}
+                      onChange={(e) => pluginStore.setPluginsEnabled(e.target.checked)}
+                    />
+                    <span className="toggle-slider" />
+                  </label>
+                </div>
+
+                <div className="retry-setting-row" style={{ borderBottom: 'none', padding: 0 }}>
+                  <div className="timeshift-toggle-info">
+                    <span className="timeshift-toggle-label" style={{ fontSize: '0.85rem' }}>Group Streams by Repository</span>
+                    <span className="timeshift-toggle-sub" style={{ fontSize: '0.75rem' }}>Group streams by their originating plugin scraper repo in the stream picker.</span>
+                  </div>
+                  <label className="toggle-switch">
+                    <input
+                      type="checkbox"
+                      checked={pluginStore.groupStreamsByRepository}
+                      onChange={(e) => pluginStore.setGroupStreamsByRepository(e.target.checked)}
+                    />
+                    <span className="toggle-slider" />
+                  </label>
+                </div>
+              </div>
+
+              {/* Install repository form */}
+              <form onSubmit={handleAddRepository} style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+                <input
+                  type="text"
+                  placeholder="Install Plugin Manifest URL (e.g. https://.../manifest.json)"
+                  value={repoUrl}
+                  onChange={(e) => setRepoUrl(e.target.value)}
+                  style={{
+                    flex: 1,
+                    background: 'rgba(0,0,0,0.2)',
+                    border: '1px solid rgba(255,255,255,0.08)',
+                    borderRadius: '6px',
+                    padding: '8px 10px',
+                    fontSize: '0.8rem',
+                    color: '#fff',
+                    outline: 'none'
+                  }}
+                />
+                <button
+                  type="submit"
+                  disabled={pluginStore.isLoading}
+                  style={{
+                    background: 'rgba(0,212,255,0.15)',
+                    border: '1px solid rgba(0,212,255,0.3)',
+                    color: '#00d4ff',
+                    borderRadius: '6px',
+                    padding: '8px 16px',
+                    fontSize: '0.8rem',
+                    fontWeight: 600,
+                    cursor: pluginStore.isLoading ? 'not-allowed' : 'pointer'
+                  }}
+                >
+                  Install
+                </button>
+              </form>
+              {repoError && <div style={{ color: '#ff4f4f', fontSize: '0.75rem', marginBottom: '14px' }}>{repoError}</div>}
+              {pluginStore.error && <div style={{ color: '#ff4f4f', fontSize: '0.75rem', marginBottom: '14px' }}>{pluginStore.error}</div>}
+
+              {/* Installed Repositories list */}
+              {pluginStore.repositories.length > 0 ? (
+                <div>
+                  <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'rgba(255,255,255,0.4)', marginBottom: '8px', letterSpacing: '0.05em' }}>
+                    INSTALLED REPOSITORIES
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {pluginStore.repositories.map((repo) => {
+                      const repoScrapers = pluginStore.scrapers.filter(s => s.repositoryUrl === repo.manifestUrl);
+                      return (
+                        <div
+                          key={repo.manifestUrl}
+                          style={{
+                            background: 'rgba(255,255,255,0.01)',
+                            border: '1px solid rgba(255,255,255,0.04)',
+                            borderRadius: '8px',
+                            padding: '12px 14px',
+                          }}
+                        >
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                            <div style={{ overflow: 'hidden', marginRight: '10px' }}>
+                              <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#fff' }}>
+                                {repo.name} <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.3)', marginLeft: '4px' }}>v{repo.version}</span>
+                              </div>
+                              {repo.description && (
+                                <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', marginTop: '2px' }}>
+                                  {repo.description}
+                                </div>
+                              )}
+                              <div style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.35)', marginTop: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {repo.manifestUrl}
+                              </div>
+                            </div>
+                            <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
+                              <button
+                                onClick={() => pluginStore.refreshRepository(repo.manifestUrl)}
+                                disabled={repo.isRefreshing}
+                                style={{
+                                  background: 'none',
+                                  border: '1px solid rgba(255,255,255,0.1)',
+                                  color: 'rgba(255,255,255,0.7)',
+                                  borderRadius: '4px',
+                                  padding: '4px 8px',
+                                  fontSize: '0.7rem',
+                                  cursor: repo.isRefreshing ? 'not-allowed' : 'pointer'
+                                }}
+                              >
+                                {repo.isRefreshing ? 'Refreshing...' : 'Refresh'}
+                              </button>
+                              <button
+                                onClick={() => pluginStore.removeRepository(repo.manifestUrl)}
+                                style={{
+                                  background: 'none',
+                                  border: '1px solid rgba(255,79,79,0.25)',
+                                  color: '#ff4f4f',
+                                  borderRadius: '4px',
+                                  padding: '4px 8px',
+                                  fontSize: '0.7rem',
+                                  cursor: 'pointer'
+                                }}
+                              >
+                                Remove
+                              </button>
+                            </div>
+                          </div>
+
+                          {repo.errorMessage && (
+                            <div style={{ color: '#ff4f4f', fontSize: '0.7rem', marginTop: '6px' }}>
+                              Error: {repo.errorMessage}
+                            </div>
+                          )}
+
+                          {/* Scrapers in repository */}
+                          {repoScrapers.length > 0 && (
+                            <div style={{ marginTop: '10px', paddingTop: '8px', borderTop: '1px solid rgba(255,255,255,0.03)' }}>
+                              <div style={{ fontSize: '0.68rem', fontWeight: 700, color: 'rgba(255,255,255,0.35)', marginBottom: '6px' }}>
+                                SCRAPERS
+                              </div>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                {repoScrapers.map((scraper) => (
+                                  <div
+                                    key={scraper.id}
+                                    style={{
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'space-between',
+                                      background: 'rgba(255,255,255,0.01)',
+                                      borderRadius: '4px',
+                                      padding: '6px 8px',
+                                    }}
+                                  >
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                      {scraper.logo ? (
+                                        <img src={scraper.logo} alt="" style={{ width: '16px', height: '16px', borderRadius: '2px', objectFit: 'contain' }} />
+                                      ) : (
+                                        <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#00d4ff' }} />
+                                      )}
+                                      <div>
+                                        <span style={{ fontSize: '0.78rem', fontWeight: 500, color: scraper.enabled ? '#fff' : 'rgba(255,255,255,0.4)' }}>
+                                          {scraper.name}
+                                        </span>
+                                        <span style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.25)', marginLeft: '6px' }}>
+                                          v{scraper.version}
+                                        </span>
+                                      </div>
+                                    </div>
+                                    <label className="toggle-switch" style={{ transform: 'scale(0.8)' }}>
+                                      <input
+                                        type="checkbox"
+                                        checked={scraper.enabled}
+                                        onChange={(e) => pluginStore.toggleScraper(scraper.id, e.target.checked)}
+                                      />
+                                      <span className="toggle-slider" />
+                                    </label>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : (
+                <div style={{
+                  padding: '24px 0',
+                  textAlign: 'center',
+                  color: 'rgba(255,255,255,0.3)',
+                  fontSize: '0.8rem',
+                  border: '1px dashed rgba(255,255,255,0.06)',
+                  borderRadius: '8px'
+                }}>
+                  No plugin repositories installed yet.
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

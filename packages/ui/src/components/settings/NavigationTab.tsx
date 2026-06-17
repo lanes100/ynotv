@@ -21,6 +21,7 @@ const NAV_ITEMS = [
   { id: 'dvr', label: 'DVR' },
   { id: 'sports', label: 'Sports' },
   { id: 'stremio', label: 'Strem' },
+  { id: 'nuvio', label: 'Nuvio' },
   { id: 'calendar', label: 'Calendar' },
   { id: 'cast', label: 'Cast' },
 ];

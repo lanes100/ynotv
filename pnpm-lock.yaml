@@ -139,12 +139,18 @@ importers:
       '@tauri-apps/plugin-updater':
         specifier: ^2.7.1
         version: 2.10.0
+      '@types/crypto-js':
+        specifier: ^4.2.2
+        version: 4.2.2
       '@ynotv/core':
         specifier: workspace:*
         version: link:../core
       '@ynotv/local-adapter':
         specifier: workspace:*
         version: link:../local-adapter
+      crypto-js:
+        specifier: ^4.2.0
+        version: 4.2.0
       hls.js:
         specifier: ^1.5.13
         version: 1.6.15

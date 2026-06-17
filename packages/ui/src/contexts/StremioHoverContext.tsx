@@ -28,7 +28,7 @@ interface StremioHoverContextType {
 
 const StremioHoverContext = createContext<StremioHoverContextType | undefined>(undefined);
 
-export function StremioHoverProvider({ children }: { children: React.ReactNode }) {
+export function StremioHoverProvider({ children, addons }: { children: React.ReactNode; addons?: InstalledAddon[] }) {
   const [activeItem, setActiveItem] = useState<StremioMetaPreview | null>(null);
   const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null);
   const [mouseY, setMouseY] = useState<number | null>(null);
@@ -37,7 +37,8 @@ export function StremioHoverProvider({ children }: { children: React.ReactNode }
   const [loading, setLoading] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
 
-  const enabledAddons = useStremioAddonStore((s) => s.enabledAddons);
+  const stremioAddons = useStremioAddonStore((s) => s.enabledAddons);
+  const enabledAddons = addons ?? stremioAddons;
   const tmdbToken = useTmdbAccessToken();
 
   const showTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);

@@ -5,6 +5,7 @@ export type SettingsTabId =
   | 'metadata'
   | 'subtitles'
   | 'strem'
+  | 'nuvio'
   | 'security'
   | 'proxy'
   | 'debug'
@@ -34,6 +35,7 @@ const SETTINGS_TABS: SettingsTab[] = [
   { id: 'metadata', label: 'Metadata' },
   { id: 'subtitles', label: 'Subtitles & Audio' },
   { id: 'strem', label: 'Strem' },
+  { id: 'nuvio', label: 'Nuvio' },
   { id: 'theme', label: 'Theme' },
   { id: 'ui', label: 'UI' },
   { id: 'navigation', label: 'Navigation' },

@@ -19,6 +19,7 @@ import { LiveTVTab } from './settings/LiveTVTab';
 import { SubtitlesTab, type SubtitleSettings } from './settings/SubtitlesTab';
 import { ScrobblingTab } from './settings/ScrobblingTab';
 import { StremTab } from './settings/StremTab';
+import { NuvioTab } from './settings/NuvioTab';
 import { ProxyTab } from './settings/ProxyTab';
 import { TmdbTab } from './settings/TmdbTab';
 import type { ShortcutsMap, ThemeId } from '../types/app';
@@ -1487,6 +1488,10 @@ export function Settings({
             showHoverDetails={showHoverDetails}
             onShowHoverDetailsChange={handleShowHoverDetailsChange}
           />
+        );
+      case 'nuvio':
+        return (
+          <NuvioTab />
         );
       case 'security':
         return (
