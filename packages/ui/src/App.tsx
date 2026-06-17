@@ -60,6 +60,7 @@ import { db } from './db';
 import { VideoErrorOverlay } from './components/VideoErrorOverlay';
 import { StreamRetryOverlay } from './components/StreamRetryOverlay';
 import { FailoverOverlay } from './components/FailoverOverlay';
+import { ChannelLoadingOverlay } from './components/ChannelLoadingOverlay';
 import { CastButton } from './components/CastButton';
 import { CastOverlay } from './components/CastOverlay';
 import { syncSource, syncVodForSource, isEpgStale, isVodStale, syncAllStaleGlobalEpgLinks } from './db/sync';
@@ -420,6 +421,7 @@ function App() {
     currentChannel,
     vodInfo,
     vodLoadingInfo,
+    loadingState,
     catchupInfo,
     isCatchup,
     retryState,
@@ -2730,6 +2732,14 @@ function App() {
           <FailoverOverlay state={failoverState} />
         )}
 
+        {/* Channel loading & buffering overlay */}
+        {loadingState !== 'idle' && !retryState?.isRetrying && !failoverState?.isFailingOver && activeView !== 'guide' && (
+          <ChannelLoadingOverlay
+            channelName={currentChannel?.name || 'Channel'}
+            loadingState={loadingState}
+          />
+        )}
+
         {/* Commented out so it is not shown, per user request. Kept here to add back later if needed.
         isCasting && (
           <CastOverlay
@@ -3162,6 +3172,7 @@ function App() {
         onShowAudioModal={handleShowAudioModal}
         retryState={retryState}
         failoverState={failoverState}
+        loadingState={loadingState}
         onCatchupSeek={handleCatchupSeek}
         timeshiftEnabled={timeshiftEnabled}
         timeshiftState={timeshiftState}

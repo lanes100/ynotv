@@ -22,6 +22,7 @@ import { syncSource, type SyncResult } from '../db/sync';
 import { VideoErrorOverlay } from './VideoErrorOverlay';
 import { StreamRetryOverlay, type RetryState } from './StreamRetryOverlay';
 import { FailoverOverlay } from './FailoverOverlay';
+import { ChannelLoadingOverlay } from './ChannelLoadingOverlay';
 import type { FailoverState } from '../hooks/usePlayback';
 import { Bridge, type AspectRatioMode, getAspectRatioLabel } from '../services/tauri-bridge';
 import { MetadataBadge } from './MetadataBadge';
@@ -163,6 +164,8 @@ interface ChannelPanelProps {
   retryState?: RetryState | null;
   /** Failover state for Live TV — shown in preview pane */
   failoverState?: FailoverState | null;
+  /** Loading state for Live TV — shown in preview pane */
+  loadingState?: 'idle' | 'loading' | 'buffering' | 'unavailable';
   // Popout props: 'off' | 'popout' | 'external'
   popoutMode?: 'off' | 'popout' | 'external';
   onTogglePopoutMode?: () => void;
@@ -208,6 +211,7 @@ export function ChannelPanel({
   vodInfo = null,
   isCatchup = false,
   catchupInfo = null,
+  loadingState,
   onStop,
   onToggleMute,
   onVolumeChange,
@@ -1667,6 +1671,14 @@ export function ChannelPanel({
             {/* Show Failover Overlay if a failover is in progress */}
             {failoverState?.isFailingOver && (
               <FailoverOverlay state={failoverState} isSmall />
+            )}
+            {/* Show Channel Loading Overlay if loading and not retrying/failing over */}
+            {loadingState && loadingState !== 'idle' && !retryState?.isRetrying && !failoverState?.isFailingOver && (
+              <ChannelLoadingOverlay
+                channelName={currentChannel?.name || 'Channel'}
+                loadingState={loadingState}
+                isSmall
+              />
             )}
           </div>
           {/* Mini Media Bar for EPG Preview - transparent overlay in bottom right */}

@@ -26,6 +26,8 @@ interface PlaybackTabProps {
   onUseEventBasedReconnectChange: (enabled: boolean) => Promise<void>;
   stallDetectionEnabled: boolean;
   onStallDetectionEnabledChange: (enabled: boolean) => Promise<void>;
+  showLoadingScreen: boolean;
+  onShowLoadingScreenChange: (enabled: boolean) => void;
   // Popout Player props
   popoutStopMain: boolean;
   onPopoutStopMainChange: (stop: boolean) => void;
@@ -76,6 +78,8 @@ export function PlaybackTab({
   onUseEventBasedReconnectChange,
   stallDetectionEnabled,
   onStallDetectionEnabledChange,
+  showLoadingScreen,
+  onShowLoadingScreenChange,
   popoutStopMain,
   onPopoutStopMainChange,
   popoutAlwaysOnTop,
@@ -283,7 +287,7 @@ export function PlaybackTab({
                 </button>
               </div>
 
-              <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+               <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
                 <div className="timeshift-toggle-row" style={{ marginBottom: '12px' }}>
                   <div className="timeshift-toggle-info">
                     <span className="timeshift-toggle-label">Disable Parameter Whitelist</span>
@@ -296,6 +300,23 @@ export function PlaybackTab({
                       type="checkbox"
                       checked={mpvDisableWhitelist}
                       onChange={(e) => onMpvDisableWhitelistChange(e.target.checked)}
+                    />
+                    <span className="toggle-slider" />
+                  </label>
+                </div>
+
+                <div className="timeshift-toggle-row" style={{ marginBottom: '12px', marginTop: '12px' }}>
+                  <div className="timeshift-toggle-info">
+                    <span className="timeshift-toggle-label">Show Channel Loading Screen</span>
+                    <span className="timeshift-toggle-sub">
+                      Show an overlay with a loading spinner and channel name when a stream starts or buffers.
+                    </span>
+                  </div>
+                  <label className="toggle-switch">
+                    <input
+                      type="checkbox"
+                      checked={showLoadingScreen}
+                      onChange={(e) => onShowLoadingScreenChange(e.target.checked)}
                     />
                     <span className="toggle-slider" />
                   </label>

@@ -132,4 +132,6 @@ export interface MpvStatus {
     duration?: number;
     pause?: boolean;
     Idle?: boolean;
+    pausedForCache?: boolean;
+    coreIdle?: boolean;
 }

@@ -253,6 +253,7 @@ export interface PlaybackState {
     duration: number;
     programDesc?: string;
   } | null;
+  loadingState: 'idle' | 'loading' | 'buffering' | 'unavailable';
 
   // Refs
   volumeDraggingRef: React.MutableRefObject<boolean>;
@@ -323,9 +324,11 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
   // This ensures error state is shared between App.tsx and usePlayback
   const {
     mpvReady, playing, volume, muted, position, duration, error,
+    pausedForCache, coreIdle,
     volumeDraggingRef, seekingRef,
     setError, setPlaying, setPosition, setVolume, setDuration,
     setIgnoreHttpErrors, isIgnoringHttpErrors,
+    suppressStatusUpdates,
   } = mpvListeners;
 
   const playingRef = useRef(playing);
@@ -405,6 +408,10 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
   const [currentChannel, setCurrentChannel] = useState<StoredChannel | null>(null);
   const [vodInfo, setVodInfo] = useState<VodPlayInfo | null>(null);
   const [vodLoadingInfo, setVodLoadingInfo] = useState<VodPlayInfo | null>(null);
+  const [loadingState, setLoadingState] = useState<'idle' | 'loading' | 'buffering' | 'unavailable'>('idle');
+  const [loadInFlight, setLoadInFlight] = useState(false);
+  const loadingStartedAtRef = useRef<number | null>(null);
+  const showLoadingScreenRef = useRef(false);
   const [catchupInfo, setCatchupInfo] = useState<{
     channelId: string;
     programTitle: string;
@@ -457,6 +464,9 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
         if (typeof s.stallDetectionEnabled === 'boolean') {
           stallDetectionEnabledRef.current = s.stallDetectionEnabled;
         }
+        if (typeof s.showLoadingScreen === 'boolean') {
+          showLoadingScreenRef.current = s.showLoadingScreen;
+        }
       }
     }).catch(() => {});
   }, []);
@@ -464,7 +474,7 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
   // Listen for real-time changes dispatched by Settings.tsx — no restart required
   useEffect(() => {
     const handler = (e: Event) => {
-      const detail = (e as CustomEvent<{ streamWatchdogSeconds?: number; streamMaxRetries?: number; useEventBasedReconnect?: boolean; stallDetectionEnabled?: boolean }>).detail;
+      const detail = (e as CustomEvent<{ streamWatchdogSeconds?: number; streamMaxRetries?: number; useEventBasedReconnect?: boolean; stallDetectionEnabled?: boolean; showLoadingScreen?: boolean }>).detail;
       if (typeof detail.streamWatchdogSeconds === 'number' && detail.streamWatchdogSeconds >= 3) {
         stallThresholdMsRef.current = detail.streamWatchdogSeconds * 1_000;
         logInfo(`[Retry] Watchdog threshold updated to ${detail.streamWatchdogSeconds}s`);
@@ -481,6 +491,10 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
         stallDetectionEnabledRef.current = detail.stallDetectionEnabled;
         logInfo(`[Retry] Stall detection ${detail.stallDetectionEnabled ? 'enabled' : 'disabled'}`);
       }
+      if (typeof detail.showLoadingScreen === 'boolean') {
+        showLoadingScreenRef.current = detail.showLoadingScreen;
+        logInfo(`[Playback] Show loading screen option ${detail.showLoadingScreen ? 'enabled' : 'disabled'}`);
+      }
     };
     window.addEventListener('ynotv:retry-settings-changed', handler);
     return () => window.removeEventListener('ynotv:retry-settings-changed', handler);
@@ -495,6 +509,57 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
     window.addEventListener('ynotv:intentional-stop', handler);
     return () => window.removeEventListener('ynotv:intentional-stop', handler);
   }, []);
+
+  // Effect to transition loadingState based on MPV player status
+  useEffect(() => {
+    // If show loading screen setting is disabled, keep loadingState 'idle'
+    if (!showLoadingScreenRef.current) {
+      if (loadingState !== 'idle') setLoadingState('idle');
+      return;
+    }
+
+    // If a load is currently in-flight, keep loadingState as 'loading'
+    if (loadInFlight) {
+      if (loadingState !== 'loading') setLoadingState('loading');
+      return;
+    }
+
+    // Only apply loading/buffering overlays to Live TV channels
+    if (!currentChannel || vodInfo || catchupInfo) {
+      if (loadingState !== 'idle') setLoadingState('idle');
+      return;
+    }
+
+    // If there is an active error, clear loading screen so error overlay can show
+    if (error) {
+      if (loadingState !== 'idle') setLoadingState('idle');
+      return;
+    }
+
+    // Transition rules:
+    if (playing && position > 0 && !pausedForCache) {
+      // Stream is playing and position is advancing: hide overlay
+      setLoadingState('idle');
+    } else if (pausedForCache) {
+      // MPV is paused waiting for cache: show buffering
+      setLoadingState('buffering');
+    }
+  }, [currentChannel, playing, position, pausedForCache, error, loadingState, vodInfo, catchupInfo, loadInFlight]);
+
+  // Effect to check timeout (12s) when loading or buffering
+  useEffect(() => {
+    if (loadingState === 'idle') return;
+
+    const interval = setInterval(() => {
+      if (loadingStartedAtRef.current && Date.now() - loadingStartedAtRef.current > 12000) {
+        if (loadingState === 'loading' || loadingState === 'buffering') {
+          setLoadingState('unavailable');
+        }
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [loadingState]);
 
   const retryAttemptRef = useRef(0);
   const isRetryingRef = useRef(false);
@@ -748,82 +813,105 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
   ): Promise<boolean> => {
     // Clear error immediately - stale errors from old channel will be ignored
     setError(null);
+
+    // Set candidate channel immediately so UI and loading overlay reflect the new channel
+    currentChannelRef.current = channel;
+    setCurrentChannel(channel);
+
+    if (showLoadingScreenRef.current) {
+      setLoadingState('loading');
+      loadingStartedAtRef.current = Date.now();
+
+      // Suppress status updates from MPV for up to 1.5 seconds during channel transition
+      // to prevent stale position/playing events from the old channel from overriding our state.
+      suppressStatusUpdates?.(1500);
+
+      // Clear last frame and reset state
+      Bridge.stop().catch(() => {});
+      setPlaying(false);
+      setPosition(0);
+    }
+    setLoadInFlight(true);
     userPausedRef.current = false;
     if (options.recoveryMode) {
       recoveryArmedRef.current = true;
     }
     resetHealthTracking();
 
-    logInfo('[Playback] Loading channel:', channel.name);
-    logInfo('[Playback] Raw URL:', channel.direct_url);
-
-    let resolved;
     try {
-      resolved = await resolvePlayUrl(channel.source_id, channel.direct_url);
-    } catch (e) {
-      logError('Stalker resolution failed:', e);
-      setError('Failed to resolve Stalker link');
-      return false;
-    }
+      logInfo('[Playback] Loading channel:', channel.name);
+      logInfo('[Playback] Raw URL:', channel.direct_url);
 
-    logInfo('[Playback] Resolved URL:', resolved.url);
-    logInfo('[Playback] User-Agent:', resolved.userAgent || '(default)');
-    logInfo('[Playback] Source:', resolved.sourceName || channel.source_id);
-
-    let sourceData: { type?: string } | undefined;
-    if (window.storage && channel.source_id) {
+      let resolved;
       try {
-        const srcResult = await window.storage.getSource(channel.source_id);
-        sourceData = srcResult?.data;
+        resolved = await resolvePlayUrl(channel.source_id, channel.direct_url);
       } catch (e) {
-        logWarn('Failed to look up source type for error suppression:', e);
+        logError('Stalker resolution failed:', e);
+        setError('Failed to resolve Stalker link');
+        return false;
       }
-    }
 
-    const isStalker = sourceData?.type === 'stalker';
-    const isLocal = isLocalUrl(resolved.url);
-    setIgnoreHttpErrors(isStalker || isLocal);
+      logInfo('[Playback] Resolved URL:', resolved.url);
+      logInfo('[Playback] User-Agent:', resolved.userAgent || '(default)');
+      logInfo('[Playback] Source:', resolved.sourceName || channel.source_id);
 
-    if (Bridge.getIsCasting?.()) {
-      Bridge.setCastMetadata(channel.name, 'Live TV');
-    }
-
-    const result = await tryLoadWithFallbacks(
-      resolved.url,
-      true,
-      resolved.userAgent,
-      (msg) => setError(msg)
-    );
-
-    if (!result.success) {
-      setIgnoreHttpErrors(false);
-      const errMsg = result.error ?? 'Failed to load stream';
-      setError(errMsg);
-      return false;
-    } else {
-      const resolvedChannel = result.url !== channel.direct_url
-        ? { ...channel, direct_url: result.url }
-        : channel;
-      currentChannelRef.current = resolvedChannel;
-      setCurrentChannel(resolvedChannel);
-      setPlaying(true);
-      resetHealthTracking();
-      // Explicitly force MPV to unpause after loading.
-      // If a previous stream ended/was interrupted, MPV may hold pause=true,
-      // causing the new stream to load but not start playing.
-      // Skip when casting: cast_load_media auto-starts playback on the Chromecast,
-      // and calling cast_play here races against the concurrent castCurrentMedia()
-      // call (triggered by the cast-status listener), causing INVALID_MEDIA_SESSION_ID.
-      if (!Bridge.getIsCasting?.()) {
-        Bridge.play().catch(e => console.warn('[usePlayback] play() after load failed:', e));
+      let sourceData: { type?: string } | undefined;
+      if (window.storage && channel.source_id) {
+        try {
+          const srcResult = await window.storage.getSource(channel.source_id);
+          sourceData = srcResult?.data;
+        } catch (e) {
+          logWarn('Failed to look up source type for error suppression:', e);
+        }
       }
-      applySubtitleSettings();
-      notifyMainLoaded?.(channel.name, result.url, resolved.sourceName ?? null);
 
-      import('../services/video-metadata').then(({ captureAndSaveMetadata }) => {
-        captureAndSaveMetadata(channel.stream_id, channel.source_id).catch(console.error);
-      });
-      return true;
+      const isStalker = sourceData?.type === 'stalker';
+      const isLocal = isLocalUrl(resolved.url);
+      setIgnoreHttpErrors(isStalker || isLocal);
+
+      if (Bridge.getIsCasting?.()) {
+        Bridge.setCastMetadata(channel.name, 'Live TV');
+      }
+
+      const result = await tryLoadWithFallbacks(
+        resolved.url,
+        true,
+        resolved.userAgent,
+        (msg) => setError(msg)
+      );
+
+      if (!result.success) {
+        setIgnoreHttpErrors(false);
+        const errMsg = result.error ?? 'Failed to load stream';
+        setError(errMsg);
+        return false;
+      } else {
+        const resolvedChannel = result.url !== channel.direct_url
+          ? { ...channel, direct_url: result.url }
+          : channel;
+        currentChannelRef.current = resolvedChannel;
+        setCurrentChannel(resolvedChannel);
+        setPlaying(true);
+        resetHealthTracking();
+        // Explicitly force MPV to unpause after loading.
+        // If a previous stream ended/was interrupted, MPV may hold pause=true,
+        // causing the new stream to load but not start playing.
+        // Skip when casting: cast_load_media auto-starts playback on the Chromecast,
+        // and calling cast_play here races against the concurrent castCurrentMedia()
+        // call (triggered by the cast-status listener), causing INVALID_MEDIA_SESSION_ID.
+        if (!Bridge.getIsCasting?.()) {
+          Bridge.play().catch(e => console.warn('[usePlayback] play() after load failed:', e));
+        }
+        applySubtitleSettings();
+        notifyMainLoaded?.(channel.name, result.url, resolved.sourceName ?? null);
+
+        import('../services/video-metadata').then(({ captureAndSaveMetadata }) => {
+          captureAndSaveMetadata(channel.stream_id, channel.source_id).catch(console.error);
+        });
+        return true;
+      }
+    } finally {
+      setLoadInFlight(false);
     }
   }, [notifyMainLoaded, resetHealthTracking, setIgnoreHttpErrors]);
 
@@ -2036,6 +2124,7 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
     setVodLoadingInfo(null);
     setCatchupInfo(null);
     setError(null);
+    setLoadingState('idle');
 
     if (autoSelectTimerRef.current) {
       clearInterval(autoSelectTimerRef.current);
@@ -2126,6 +2215,7 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
     currentChannel,
     vodInfo,
     vodLoadingInfo,
+    loadingState,
     catchupInfo,
     volumeDraggingRef,
     seekingRef,

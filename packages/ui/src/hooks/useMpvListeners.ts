@@ -10,6 +10,8 @@ export interface MpvState {
     position: number;
     duration: number;
     error: string | null;
+    pausedForCache: boolean;
+    coreIdle: boolean;
     // Drag/seek refs exposed for NowPlayingBar
     volumeDraggingRef: React.MutableRefObject<boolean>;
     seekingRef: React.MutableRefObject<boolean>;
@@ -18,6 +20,7 @@ export interface MpvState {
     setPosition: React.Dispatch<React.SetStateAction<number>>;
     setVolume: React.Dispatch<React.SetStateAction<number>>;
     setCurrentChannelNull: () => void;
+    suppressStatusUpdates: (durationMs: number) => void;
 }
 
 interface UseMpvListenersOptions {
@@ -39,10 +42,17 @@ export function useMpvListeners(options: UseMpvListenersOptions = {}) {
     const [position, setPosition] = useState(0);
     const [duration, setDuration] = useState(0);
     const [error, setError] = useState<string | null>(null);
+    const [pausedForCache, setPausedForCache] = useState(false);
+    const [coreIdle, setCoreIdle] = useState(true);
 
     const volumeDraggingRef = useRef(false);
     const seekingRef = useRef(false);
     const initializedRef = useRef(false);
+    const suppressStatusUntilRef = useRef<number>(0);
+    
+    const suppressStatusUpdates = useCallback((durationMs: number) => {
+        suppressStatusUntilRef.current = Date.now() + durationMs;
+    }, []);
     const timeshiftSettingsRef = useRef({
         enabled: options.timeshiftEnabled,
         cacheBytes: options.timeshiftCacheBytes,
@@ -88,10 +98,23 @@ export function useMpvListeners(options: UseMpvListenersOptions = {}) {
 
             const unlistenStatus = await listen('mpv-status', (e: any) => {
                 const status = e.payload as MpvStatus;
+
+                // Ignore stale position/playing updates from the old stream during channel transitions
+                if (Date.now() < suppressStatusUntilRef.current) {
+                    if (status.position === 0) {
+                        // Clear suppression early once the player state has reset
+                        suppressStatusUntilRef.current = 0;
+                    } else {
+                        return;
+                    }
+                }
+
                 if (status.playing !== undefined) setPlaying(status.playing);
                 if (status.volume !== undefined && !volumeDraggingRef.current) setVolume(status.volume);
                 if (status.muted !== undefined) setMuted(status.muted);
                 if (status.position !== undefined && !seekingRef.current) setPosition(status.position);
+                if (status.pausedForCache !== undefined) setPausedForCache(status.pausedForCache);
+                if (status.coreIdle !== undefined) setCoreIdle(status.coreIdle);
                 if (status.duration !== undefined) {
                     const dur = status.duration;
                     setDuration(prev => {
@@ -165,9 +188,11 @@ export function useMpvListeners(options: UseMpvListenersOptions = {}) {
 
     return {
         mpvReady, playing, volume, muted, position, duration, error,
+        pausedForCache, coreIdle,
         volumeDraggingRef, seekingRef,
         setError, setPlaying, setPosition, setVolume, setMuted,
         setDuration, setMpvReady,
         setIgnoreHttpErrors, isIgnoringHttpErrors,
+        suppressStatusUpdates,
     };
 }

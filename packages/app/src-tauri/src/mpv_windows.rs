@@ -107,6 +107,10 @@ pub struct MpvStatus {
     pub muted: bool,
     pub position: f64,
     pub duration: f64,
+    #[serde(rename = "pausedForCache")]
+    pub paused_for_cache: bool,
+    #[serde(rename = "coreIdle")]
+    pub core_idle: bool,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -421,6 +425,8 @@ async fn connect_ipc<R: Runtime>(
             muted: false,
             position: 0.0,
             duration: 0.0,
+            paused_for_cache: false,
+            core_idle: true,
         };
 
         loop {
@@ -439,6 +445,8 @@ async fn connect_ipc<R: Runtime>(
                                             "mute" => status.muted = data.as_bool().unwrap_or(false),
                                             "time-pos" => status.position = data.as_f64().unwrap_or(0.0),
                                             "duration" => status.duration = data.as_f64().unwrap_or(0.0),
+                                            "paused-for-cache" => status.paused_for_cache = data.as_bool().unwrap_or(false),
+                                            "core-idle" => status.core_idle = data.as_bool().unwrap_or(false),
                                             "demuxer-cache-state" => {
                                                 // Emit timeshift-update event for frontend scrubber
                                                 if let Some(obj) = data.as_object() {
@@ -521,6 +529,8 @@ async fn connect_ipc<R: Runtime>(
     let _ = send_command_internal(state, "observe_property", vec![json!(4), json!("time-pos")]).await;
     let _ = send_command_internal(state, "observe_property", vec![json!(5), json!("duration")]).await;
     let _ = send_command_internal(state, "observe_property", vec![json!(6), json!("demuxer-cache-state")]).await;
+    let _ = send_command_internal(state, "observe_property", vec![json!(7), json!("paused-for-cache")]).await;
+    let _ = send_command_internal(state, "observe_property", vec![json!(8), json!("core-idle")]).await;
 
     let _ = app.emit("mpv-ready", true);
     Ok(())

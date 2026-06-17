@@ -202,6 +202,7 @@ export function Settings({
   const [streamMaxRetries, setStreamMaxRetries] = useState(20);
   const [useEventBasedReconnect, setUseEventBasedReconnect] = useState(false);
   const [stallDetectionEnabled, setStallDetectionEnabled] = useState(true);
+  const [showLoadingScreen, setShowLoadingScreen] = useState(false);
   // Stremio settings
   const [stremioStreamPickerMode, setStremioStreamPickerMode] = useState<StremioStreamPickerMode>('modal');
   const [showStremioStreamBadges, setShowStremioStreamBadges] = useState(true);
@@ -444,6 +445,7 @@ export function Settings({
         streamMaxRetries?: number;
         useEventBasedReconnect?: boolean;
         stallDetectionEnabled?: boolean;
+        showLoadingScreen?: boolean;
         epgDarkenCurrent?: boolean;
         epgBoldChannelNames?: boolean;
         epgBoldTopCategories?: boolean;
@@ -612,6 +614,7 @@ export function Settings({
       setStreamMaxRetries(settings.streamMaxRetries ?? 20);
       setUseEventBasedReconnect(settings.useEventBasedReconnect ?? false);
       setStallDetectionEnabled(settings.stallDetectionEnabled ?? true);
+      setShowLoadingScreen(settings.showLoadingScreen ?? false);
       setStremioStreamPickerMode(settings.stremioStreamPickerMode ?? 'modal');
       setShowStremioStreamBadges(settings.showStremioStreamBadges ?? true);
       setBadgeSources(mergeDefaultBadgeSources(settings.badgeSources as BadgeSource[] | undefined));
@@ -881,6 +884,16 @@ export function Settings({
     }
     window.dispatchEvent(new CustomEvent('ynotv:retry-settings-changed', {
       detail: { stallDetectionEnabled: enabled }
+    }));
+  };
+
+  const handleShowLoadingScreenChange = async (enabled: boolean) => {
+    setShowLoadingScreen(enabled);
+    if (window.storage) {
+      await window.storage.updateSettings({ showLoadingScreen: enabled });
+    }
+    window.dispatchEvent(new CustomEvent('ynotv:retry-settings-changed', {
+      detail: { showLoadingScreen: enabled }
     }));
   };
 
@@ -1577,6 +1590,8 @@ export function Settings({
             onUseEventBasedReconnectChange={handleUseEventBasedReconnectChange}
             stallDetectionEnabled={stallDetectionEnabled}
             onStallDetectionEnabledChange={handleStallDetectionEnabledChange}
+            showLoadingScreen={showLoadingScreen}
+            onShowLoadingScreenChange={handleShowLoadingScreenChange}
             popoutStopMain={popoutStopMain}
             onPopoutStopMainChange={handlePopoutStopMainChange}
             popoutAlwaysOnTop={popoutAlwaysOnTop}

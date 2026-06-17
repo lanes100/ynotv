@@ -202,8 +202,22 @@ async fn connect_ipc<R: Runtime>(app: &AppHandle<R>) -> Result<(), String> {
 }
 
 fn start_status_monitor<R: Runtime>(app: AppHandle<R>) {
+    tauri::async_runtime::spawn(async move {
+        let mut last_status = MpvStatus {
+            playing: false,
+            volume: 100.0,
+            muted: false,
+            position: 0.0,
+            duration: 0.0,
+            paused_for_cache: false,
+            core_idle: true,
+        };
+
+        loop {
+            tokio::time::sleep(Duration::from_millis(500)).await;
+
             // Poll properties
-            let properties = ["pause", "volume", "mute", "time-pos", "duration"];
+            let properties = ["pause", "volume", "mute", "time-pos", "duration", "paused-for-cache", "core-idle"];
             for prop in &properties {
                 let result = get_property_internal(&app, prop).await;
                 match (*prop, result) {
@@ -212,6 +226,8 @@ fn start_status_monitor<R: Runtime>(app: AppHandle<R>) {
                     ("mute", Ok(Value::Bool(m))) => last_status.muted = m,
                     ("time-pos", Ok(Value::Number(t))) => last_status.position = t.as_f64().unwrap_or(0.0),
                     ("duration", Ok(Value::Number(d))) => last_status.duration = d.as_f64().unwrap_or(0.0),
+                    ("paused-for-cache", Ok(Value::Bool(p))) => last_status.paused_for_cache = p,
+                    ("core-idle", Ok(Value::Bool(i))) => last_status.core_idle = i,
                     _ => {}
                 }
             }
@@ -235,6 +251,10 @@ struct MpvStatus {
     muted: bool,
     position: f64,
     duration: f64,
+    #[serde(rename = "pausedForCache")]
+    paused_for_cache: bool,
+    #[serde(rename = "coreIdle")]
+    core_idle: bool,
 }
 
 /// Send a JSON IPC command to MPV
