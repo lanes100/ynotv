@@ -19,7 +19,7 @@ import { StremioCatalogRow } from '../stremio/StremioCatalogRow';
 import { StremioHoverProvider } from '../../contexts/StremioHoverContext';
 import { StremioHoverCard } from '../stremio/StremioHoverCard';
 import { NuvioDetailView, type NuvioMeta } from './NuvioDetailView';
-import type { StremioStream } from '../../types/stremio';
+import type { StremioStream, StremioVideo, StremioMeta } from '../../types/stremio';
 import type { StremioMetaPreview, InstalledAddon } from '../../types/stremio';
 import { NuvioTab } from '../settings/NuvioTab';
 import '../Settings.css';
@@ -544,11 +544,20 @@ export function NuvioPage({ onClose }: NuvioPageProps) {
     });
   };
 
-  const handleNuvioPlay = (stream: StremioStream, meta: NuvioMeta) => {
-    // Fire the same event the player listens to, using the stream from Nuvio's own addons/scrapers
+  const handleNuvioPlay = (stream: StremioStream, meta: NuvioMeta, episodeVideo?: StremioVideo) => {
     window.dispatchEvent(new CustomEvent('ynotv:stremio-play', {
-      detail: { stream, meta: { id: meta.id, type: meta.type, name: meta.name, poster: meta.poster } },
+      detail: { stream, meta: { id: meta.id, type: meta.type, name: meta.name, poster: meta.poster }, episodeVideo },
     }));
+  };
+
+  const handleNuvioNavigate = (newMeta: StremioMeta) => {
+    setNuvioActiveMeta({
+      id: newMeta.id,
+      type: newMeta.type,
+      name: newMeta.name,
+      poster: newMeta.poster ?? null,
+      background: newMeta.background ?? newMeta.poster ?? null,
+    });
   };
 
   const handleOpenSettings = () => {
@@ -1835,6 +1844,7 @@ export function NuvioPage({ onClose }: NuvioPageProps) {
           meta={nuvioActiveMeta}
           onBack={() => setNuvioActiveMeta(null)}
           onPlay={handleNuvioPlay}
+          onNavigate={handleNuvioNavigate}
         />
       )}
 
