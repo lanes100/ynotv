@@ -20,6 +20,8 @@ import { StremioHoverCard } from '../stremio/StremioHoverCard';
 import { NuvioDetailView, type NuvioMeta } from './NuvioDetailView';
 import type { StremioStream } from '../../types/stremio';
 import type { StremioMetaPreview, InstalledAddon } from '../../types/stremio';
+import { NuvioTab } from '../settings/NuvioTab';
+import '../Settings.css';
 import './NuvioPage.css';
 
 interface NuvioPageProps {
@@ -370,11 +372,6 @@ export function NuvioPage({ onClose }: NuvioPageProps) {
   const [repoUrl, setRepoUrl] = useState('');
   const [repoError, setRepoError] = useState<string | null>(null);
   const [installingRepo, setInstallingRepo] = useState(false);
-
-  // Profile creation state
-  const [showCreateProfile, setShowCreateProfile] = useState(false);
-  const [newProfileName, setNewProfileName] = useState('');
-  const [newProfileColor, setNewProfileColor] = useState('#00d4ff');
 
   const token = authStore.token;
   const profile = authStore.activeProfile;
@@ -862,20 +859,6 @@ export function NuvioPage({ onClose }: NuvioPageProps) {
     }
   };
 
-  const handleCreateProfileSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newProfileName.trim()) return;
-    try {
-      await authStore.createProfile(newProfileName, newProfileColor, null, null);
-      setNewProfileName('');
-      setShowCreateProfile(false);
-    } catch (err: any) {
-      alert(err.message || 'Failed to create profile');
-    }
-  };
-
-  const defaultColors = ['#00d4ff', '#ff007f', '#a020f0', '#00ff7f', '#ffaa00', '#ff0000', '#0088ff', '#ffffff'];
-
   return (
     <StremioHoverProvider addons={addons}>
       <div className="nuvio-page">
@@ -909,6 +892,7 @@ export function NuvioPage({ onClose }: NuvioPageProps) {
               <span>Home</span>
             </button>
 
+            {/* Collections tab hidden — code kept for future implementation
             <button
               className={`nuvio-topbar-item ${nuvioView === 'collections' ? 'active' : ''}`}
               onClick={() => setNuvioView('collections')}
@@ -918,6 +902,7 @@ export function NuvioPage({ onClose }: NuvioPageProps) {
               </svg>
               <span>Collections</span>
             </button>
+            */}
 
             <button
               className={`nuvio-topbar-item ${nuvioView === 'addons' ? 'active' : ''}`}
@@ -1236,7 +1221,8 @@ export function NuvioPage({ onClose }: NuvioPageProps) {
               </div>
             )}
 
-            {nuvioView === 'collections' && (
+            {/* Collections tab hidden — code kept for future implementation */}
+            {nuvioView === 'collections' && false && (
               <div className="nuvio-editor-container">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                   <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700, color: '#fff' }}>Collections Manager</h3>
@@ -1611,146 +1597,7 @@ export function NuvioPage({ onClose }: NuvioPageProps) {
             )}
 
             {nuvioView === 'settings' && (
-              <div className="nuvio-editor-container">
-                {/* Profiles Section */}
-                <div className="nuvio-editor-section">
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-                    <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: 600 }}>Profiles ({authStore.profiles.length}/4)</h4>
-                    {authStore.profiles.length < 4 && !showCreateProfile && (
-                      <button className="nuvio-btn" onClick={() => setShowCreateProfile(true)}>
-                        + Add Profile
-                      </button>
-                    )}
-                  </div>
-
-                  {showCreateProfile && (
-                    <form onSubmit={handleCreateProfileSubmit} style={{
-                      background: 'rgba(255,255,255,0.02)',
-                      border: '1px solid rgba(255,255,255,0.05)',
-                      borderRadius: '8px',
-                      padding: '16px',
-                      marginBottom: '14px',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '10px'
-                    }}>
-                      <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                        <input
-                          type="text"
-                          placeholder="Profile Name"
-                          value={newProfileName}
-                          onChange={(e) => setNewProfileName(e.target.value)}
-                          className="nuvio-input"
-                          style={{ flex: 1 }}
-                        />
-                        <input
-                          type="color"
-                          value={newProfileColor}
-                          onChange={(e) => setNewProfileColor(e.target.value)}
-                          style={{ background: 'none', border: 'none', width: '32px', height: '32px', cursor: 'pointer', padding: 0 }}
-                        />
-                      </div>
-                      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                        {defaultColors.map(c => (
-                          <button
-                            key={c}
-                            type="button"
-                            onClick={() => setNewProfileColor(c)}
-                            style={{
-                              width: '20px',
-                              height: '20px',
-                              borderRadius: '50%',
-                              background: c,
-                              border: newProfileColor === c ? '2px solid #fff' : '1px solid rgba(0,0,0,0.3)',
-                              cursor: 'pointer'
-                            }}
-                          />
-                        ))}
-                      </div>
-                      <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '4px' }}>
-                        <button type="button" className="nuvio-btn" onClick={() => setShowCreateProfile(false)}>Cancel</button>
-                        <button type="submit" className="nuvio-btn nuvio-btn-primary">Create</button>
-                      </div>
-                    </form>
-                  )}
-
-                  {/* Profiles List */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    {authStore.profiles.map((p) => {
-                      const isActive = authStore.activeProfile?.profile_index === p.profile_index;
-                      return (
-                        <div
-                          key={p.profile_index}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            padding: '12px 16px',
-                            borderRadius: '6px',
-                            background: isActive ? 'rgba(0,212,255,0.06)' : 'rgba(255,255,255,0.02)',
-                            border: `1px solid ${isActive ? 'rgba(0,212,255,0.2)' : 'rgba(255,255,255,0.04)'}`,
-                          }}
-                        >
-                          <div
-                            onClick={() => !isActive && authStore.selectProfile(p.profile_index)}
-                            style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, cursor: isActive ? 'default' : 'pointer' }}
-                          >
-                            <div style={{
-                              width: '30px',
-                              height: '30px',
-                              borderRadius: '50%',
-                              backgroundColor: p.avatar_color_hex || '#00d4ff',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              fontWeight: 700,
-                              fontSize: '0.85rem',
-                              color: '#000'
-                            }}>
-                              {p.name.charAt(0).toUpperCase()}
-                            </div>
-                            <div>
-                              <span style={{ fontSize: '0.85rem', fontWeight: isActive ? 600 : 500, color: isActive ? '#fff' : 'rgba(255,255,255,0.85)' }}>
-                                {p.name}
-                              </span>
-                              {isActive && (
-                                <span style={{ marginLeft: '8px', fontSize: '0.62rem', background: '#00d4ff', color: '#000', padding: '2px 6px', borderRadius: '4px', fontWeight: 700 }}>
-                                  ACTIVE
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                          {authStore.profiles.length > 1 && (
-                            <button
-                              className="nuvio-btn nuvio-btn-danger"
-                              style={{ padding: '4px 10px', fontSize: '0.75rem' }}
-                              onClick={() => {
-                                if (confirm(`Are you sure you want to delete profile "${p.name}"?`)) {
-                                  authStore.deleteProfile(p.profile_index);
-                                }
-                              }}
-                            >
-                              Delete
-                            </button>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Advanced / Server config info */}
-                <div className="nuvio-editor-section" style={{ marginTop: '20px' }}>
-                  <h4 className="nuvio-editor-title">Account details</h4>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.85rem' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: 'rgba(255,255,255,0.4)' }}>Email:</span> <span>{authStore.user?.email}</span></div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: 'rgba(255,255,255,0.4)' }}>Supabase Endpoint:</span> <span style={{ fontSize: '0.75rem', fontFamily: 'monospace' }}>{localStorage.getItem('ynotv_nuvio_url') || 'Official Cloud'}</span></div>
-                  </div>
-                  <button className="nuvio-btn nuvio-btn-danger" style={{ marginTop: '16px', width: '100%', justifyContent: 'center' }} onClick={() => authStore.logout()}>
-                    Sign Out of Nuvio
-                  </button>
-                </div>
-              </div>
+              <NuvioTab />
             )}
           </div>
         )}
