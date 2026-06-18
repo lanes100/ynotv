@@ -112,6 +112,22 @@ const matchCatalogKey = (settingsKey: string, row: { key: string; addon: Install
   return normSettingsType === normRowType && settingsCatId === rowCatId;
 };
 
+// Match a collection source's addonId against an installed addon.
+// Uses exact ID matching only to avoid selecting the wrong addon.
+const fuzzyMatchAddon = (source: NuvioCollectionSource, addon: InstalledAddon): boolean => {
+  const targetId = (source.addonId || '').trim().toLowerCase();
+  if (!targetId) return false;
+
+  const addonId = (addon.manifest?.id || addon.id || '').toLowerCase();
+  if (addonId === targetId) return true;
+
+  // Known heuristics for addons that alias IDs (only if targetId is NOT empty)
+  if ((targetId.includes('aio') || targetId.includes('genres')) && isAioMetadataAddon(addon)) return true;
+  if ((targetId.includes('cinemeta') || targetId.includes('linvo')) && isCinemetaAddon(addon)) return true;
+
+  return false;
+};
+
 const getSourceLabel = (
   source: NuvioCollectionSource,
   index: number,
@@ -124,30 +140,32 @@ const getSourceLabel = (
     return `Trakt - ${source.title || 'List'}`;
   }
   
-  // Find the resolved addon to get its manifest catalog name
-  const resolvedAddon = activeAddons.find(a => {
-    if (a.id === source.addonId || a.manifest?.id === source.addonId) return true;
-    const targetId = (source.addonId || '').toLowerCase();
-    
-    const isTargetAio = targetId.includes('aio') || targetId.includes('genres');
-    if (isTargetAio && isAioMetadataAddon(a)) {
-      return true;
-    }
-    
-    const isTargetCinemeta = targetId.includes('cinemeta') || targetId.includes('linvo');
-    if (isTargetCinemeta && isCinemetaAddon(a)) {
-      return true;
-    }
-    
-    return false;
-  });
-
   const catalogType = source.type === 'tv' ? 'series' : (source.type || 'movie');
-  const catalog = resolvedAddon?.manifest?.catalogs?.find(
-    c => c.type === catalogType && c.id === source.catalogId
-  );
-  
-  const catalogName = catalog?.name || source.catalogId || `Source ${index + 1}`;
+
+  // Find matching addons, preferring the one that has the target catalog
+  const matchingAddons = activeAddons.filter(a => fuzzyMatchAddon(source, a));
+  const resolvedAddon = source.catalogId
+    ? matchingAddons.find(a =>
+        a.manifest?.catalogs?.some(
+          c => (c.type === catalogType || (c.type === 'tv' && catalogType === 'series')) && c.id === source.catalogId
+        )
+      ) || matchingAddons[0]
+    : matchingAddons[0];
+
+  let catalogName: string;
+  if (resolvedAddon) {
+    const catalog = resolvedAddon.manifest?.catalogs?.find(
+      c => (c.type === catalogType || (c.type === 'tv' && catalogType === 'series')) && c.id === source.catalogId
+    );
+    if (catalog) {
+      catalogName = catalog.name;
+    } else {
+      catalogName = source.catalogId || resolvedAddon.manifest?.name || `Source ${index + 1}`;
+    }
+  } else {
+    catalogName = source.catalogId || source.addonId || `Source ${index + 1}`;
+  }
+
   const typeLabel = source.type === 'tv' || source.type === 'series' ? 'Series' : 'Movie';
   const genreSuffix = source.genre ? ` · ${source.genre}` : '';
   
@@ -324,6 +342,25 @@ export function NuvioPage({ onClose }: NuvioPageProps) {
   const [loadingFolderItems, setLoadingFolderItems] = useState(false);
   const [activeSourceIndex, setActiveSourceIndex] = useState(0);
 
+  // Pagination state for folder detail grid
+  const [folderSkip, setFolderSkip] = useState(0);
+  const [hasMoreFolderItems, setHasMoreFolderItems] = useState(true);
+  const [loadingMoreFolderItems, setLoadingMoreFolderItems] = useState(false);
+  const folderGridContainerRef = useRef<HTMLDivElement | null>(null);
+  const folderSentinelRef = useRef<HTMLDivElement | null>(null);
+
+  // Refs for observer closure safety
+  const loadingMoreFolderRef = useRef(loadingMoreFolderItems);
+  const hasMoreFolderRef = useRef(hasMoreFolderItems);
+  const folderSkipRef = useRef(folderSkip);
+  const selectedFolderRef = useRef(selectedFolder);
+  const activeSourceIndexRef = useRef(activeSourceIndex);
+  useEffect(() => { loadingMoreFolderRef.current = loadingMoreFolderItems; }, [loadingMoreFolderItems]);
+  useEffect(() => { hasMoreFolderRef.current = hasMoreFolderItems; }, [hasMoreFolderItems]);
+  useEffect(() => { folderSkipRef.current = folderSkip; }, [folderSkip]);
+  useEffect(() => { selectedFolderRef.current = selectedFolder; }, [selectedFolder]);
+  useEffect(() => { activeSourceIndexRef.current = activeSourceIndex; }, [activeSourceIndex]);
+
   // Add addon states
   const [addonUrl, setAddonUrl] = useState('');
   const [addonError, setAddonError] = useState<string | null>(null);
@@ -384,6 +421,23 @@ export function NuvioPage({ onClose }: NuvioPageProps) {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // IntersectionObserver for folder detail infinite scroll
+  useEffect(() => {
+    const sentinel = folderSentinelRef.current;
+    const container = folderGridContainerRef.current;
+    if (!sentinel || !container || loadingFolderItems) return;
+
+    const observer = new IntersectionObserver((entries) => {
+      if (entries[0]?.isIntersecting) {
+        if (loadingMoreFolderRef.current || !hasMoreFolderRef.current || !selectedFolderRef.current) return;
+        loadFolderSourceItems(selectedFolderRef.current, activeSourceIndexRef.current, true);
+      }
+    }, { root: container, rootMargin: '400px' });
+
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [folderItems, loadingFolderItems]);
 
   // Helper to resolve folder sources
   const getResolvedSources = (folder: NuvioCollectionFolder): NuvioCollectionSource[] => {
@@ -490,57 +544,112 @@ export function NuvioPage({ onClose }: NuvioPageProps) {
     setSelectedFolder(folder);
     setSelectedFolderCollectionTitle(collectionTitle);
     setActiveSourceIndex(0);
-    loadFolderSourceItems(folder, 0);
+    setFolderSkip(0);
+    setHasMoreFolderItems(true);
+    setLoadingMoreFolderItems(false);
+    loadFolderSourceItems(folder, 0, false);
   };
 
-  const loadFolderSourceItems = async (folder: NuvioCollectionFolder, sourceIndex: number) => {
-    setLoadingFolderItems(true);
-    setFolderItems([]);
-    setFolderError(null);
+  const loadFolderSourceItems = async (folder: NuvioCollectionFolder, sourceIndex: number, append = false) => {
+    if (append) {
+      if (loadingMoreFolderRef.current || !hasMoreFolderRef.current) return;
+      loadingMoreFolderRef.current = true;
+      setLoadingMoreFolderItems(true);
+    } else {
+      setLoadingFolderItems(true);
+      setFolderItems([]);
+      setFolderError(null);
+      setFolderSkip(0);
+      setHasMoreFolderItems(true);
+    }
     try {
       const sources = getResolvedSources(folder);
       const source = sources[sourceIndex];
-      if (source && (!source.provider || source.provider === 'addon')) {
-        const activeAddons = useNuvioAddonStore.getState().enabledAddons;
-        const resolvedAddon = activeAddons.find(a => {
-          if (a.id === source.addonId || a.manifest?.id === source.addonId) return true;
-          const targetId = (source.addonId || '').toLowerCase();
-          
-          const isTargetAio = targetId.includes('aio') || targetId.includes('genres');
-          if (isTargetAio && isAioMetadataAddon(a)) {
-            return true;
-          }
-          
-          const isTargetCinemeta = targetId.includes('cinemeta') || targetId.includes('linvo');
-          if (isTargetCinemeta && isCinemetaAddon(a)) {
-            return true;
-          }
-          
-          return false;
-        });
-        if (resolvedAddon) {
-          const catalogType = source.type === 'tv' ? 'series' : (source.type || 'movie');
-          const resp = await fetchCatalog(
-            resolvedAddon.baseUrl,
-            catalogType,
-            source.catalogId || 'top',
-            source.genre ? { genre: source.genre } : undefined
-          );
-          setFolderItems(resp?.metas || []);
-        } else {
-          const missingId = source.addonId || 'unknown';
-          setFolderError(`Addon "${missingId}" is not installed in your Nuvio profile. Install it from the Addons tab to see content here.`);
-        }
-      } else if (!source) {
+      
+      if (!append) {
+        console.log('[NuvioPage] loadFolderSourceItems - source:', JSON.parse(JSON.stringify(source)));
+        console.log('[NuvioPage] enabledAddons:', useNuvioAddonStore.getState().enabledAddons.map(a => ({ id: a.id, manifestId: a.manifest?.id, baseUrl: a.baseUrl, catalogs: a.manifest?.catalogs })));
+      }
+
+      if (!source) {
         setFolderError('This folder has no catalog source configured. Edit it in the Collections tab.');
-      } else if (source && (source.provider === 'tmdb' || source.provider === 'trakt')) {
+      } else if (source.provider === 'tmdb' || source.provider === 'trakt') {
         setFolderError(`Catalog source provider "${source.provider}" is currently not supported in this client. Please configure this folder to use a Stremio addon.`);
+      } else if (source.provider && source.provider !== 'addon') {
+        setFolderError(`Catalog source provider "${source.provider}" is not recognized. Supported providers: addon, tmdb, trakt. Edit the folder sources in the Collections tab.`);
+      } else {
+        const activeAddons = useNuvioAddonStore.getState().enabledAddons;
+        const catalogType = source.type === 'tv' ? 'series' : (source.type || 'movie');
+        const catalogId = source.catalogId || 'top';
+
+        const matchingAddons = activeAddons.filter(a => fuzzyMatchAddon(source, a));
+        const resolvedAddon = matchingAddons.find(a =>
+          a.manifest?.catalogs?.some(
+            c => (c.type === catalogType || (c.type === 'tv' && catalogType === 'series')) && c.id === catalogId
+          )
+        ) || matchingAddons[0];
+
+        if (resolvedAddon) {
+          const matchingCatalog = resolvedAddon.manifest?.catalogs?.find(
+            c => (c.type === catalogType || (c.type === 'tv' && catalogType === 'series')) && c.id === catalogId
+          );
+
+          if (!matchingCatalog) {
+            if (!append) {
+              const availableCatalogs = (resolvedAddon.manifest?.catalogs || [])
+                .filter(c => c.type === catalogType || (c.type === 'tv' && catalogType === 'series'))
+                .map(c => `"${c.id}"`)
+                .join(', ');
+              setFolderError(
+                `Catalog "${catalogId}" not found in addon "${resolvedAddon.manifest?.name || resolvedAddon.id}". ` +
+                `Matching addons: ${matchingAddons.map(a => a.manifest?.name || a.id).join(', ')}. ` +
+                `Available catalogs in selected addon: ${availableCatalogs || 'none'}. ` +
+                `Edit the folder sources in the Collections tab to use a valid catalog.`
+              );
+            }
+          } else {
+            const skip = append ? folderSkipRef.current : 0;
+            const extra: Record<string, string> = {};
+            if (source.genre) extra.genre = source.genre;
+            if (skip > 0) extra.skip = String(skip);
+            extra.limit = '100';
+
+            const resp = await fetchCatalog(
+              resolvedAddon.baseUrl,
+              catalogType,
+              catalogId,
+              extra
+            );
+            const metas = resp?.metas || [];
+            if (append) {
+              setFolderItems(prev => [...prev, ...metas]);
+              setFolderSkip(skip + metas.length);
+              if (metas.length === 0) setHasMoreFolderItems(false);
+            } else {
+              setFolderItems(metas);
+              setFolderSkip(metas.length);
+              if (metas.length === 0) setHasMoreFolderItems(false);
+            }
+          }
+        } else {
+          if (!append) {
+            const missingId = source.addonId || source.catalogId || 'unknown';
+            setFolderError(`Addon matching "${missingId}" was not found among your installed Nuvio addons. Install the required addon from the Addons tab.`);
+          }
+        }
       }
     } catch (e) {
-      console.error('[NuvioPage] Failed to fetch folder items:', e);
-      setFolderError('Failed to load catalog items. Check your connection.');
+      if (!append) {
+        console.error('[NuvioPage] Failed to fetch folder items:', e);
+        setFolderError('Failed to load catalog items. Check your connection.');
+      }
     } finally {
-      setLoadingFolderItems(false);
+      if (append) {
+        loadingMoreFolderRef.current = false;
+        setLoadingMoreFolderItems(false);
+      } else {
+        setLoadingFolderItems(false);
+      }
     }
   };
 
@@ -1668,7 +1777,10 @@ export function NuvioPage({ onClose }: NuvioPageProps) {
                     className={`nuvio-folder-detail-tab-btn ${activeSourceIndex === idx ? 'active' : ''}`}
                     onClick={() => {
                       setActiveSourceIndex(idx);
-                      loadFolderSourceItems(selectedFolder, idx);
+                      setFolderSkip(0);
+                      setHasMoreFolderItems(true);
+                      setLoadingMoreFolderItems(false);
+                      loadFolderSourceItems(selectedFolder, idx, false);
                     }}
                   >
                     {getSourceLabel(source, idx, addons)}
@@ -1677,7 +1789,7 @@ export function NuvioPage({ onClose }: NuvioPageProps) {
               </div>
             )}
             
-            <div className="nuvio-folder-detail-grid-container">
+            <div className="nuvio-folder-detail-grid-container" ref={folderGridContainerRef}>
               {loadingFolderItems ? (
                 <div className="nuvio-folder-detail-loading">
                   <div className="spinner" style={{ width: '28px', height: '28px', borderRadius: '50%', border: '3px solid rgba(0,212,255,0.1)', borderTopColor: '#00d4ff', animation: 'spin 1s linear infinite' }} />
@@ -1693,24 +1805,36 @@ export function NuvioPage({ onClose }: NuvioPageProps) {
                   <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.85rem', textAlign: 'center', maxWidth: '360px', lineHeight: 1.5 }}>{folderError}</span>
                 </div>
               ) : folderItems.length > 0 ? (
-                <div className="nuvio-folder-detail-grid">
-                  {folderItems.map((item) => (
-                    <div
-                      key={item.id}
-                      className="nuvio-folder-detail-item"
-                      onClick={() => handleItemClick({ content_id: item.id, content_type: item.type, name: item.name, poster: item.poster ?? null })}
-                    >
-                      <div className="nuvio-folder-detail-poster-wrapper">
-                        {item.poster ? (
-                          <img src={item.poster} alt={item.name} className="nuvio-folder-detail-poster" />
-                        ) : (
-                          <div className="nuvio-folder-detail-poster-placeholder">{item.name}</div>
-                        )}
+                <>
+                  <div className="nuvio-folder-detail-grid">
+                    {folderItems.map((item) => (
+                      <div
+                        key={item.id}
+                        className="nuvio-folder-detail-item"
+                        onClick={() => handleItemClick({ content_id: item.id, content_type: item.type, name: item.name, poster: item.poster ?? null })}
+                      >
+                        <div className="nuvio-folder-detail-poster-wrapper">
+                          {item.poster ? (
+                            <img src={item.poster} alt={item.name} className="nuvio-folder-detail-poster" />
+                          ) : (
+                            <div className="nuvio-folder-detail-poster-placeholder">{item.name}</div>
+                          )}
+                        </div>
+                        <div className="nuvio-folder-detail-item-title">{item.name}</div>
                       </div>
-                      <div className="nuvio-folder-detail-item-title">{item.name}</div>
+                    ))}
+                  </div>
+                  {/* Sentinel for infinite scroll */}
+                  {hasMoreFolderItems && (
+                    <div ref={folderSentinelRef} style={{ height: '1px' }} />
+                  )}
+                  {loadingMoreFolderItems && (
+                    <div className="nuvio-folder-detail-loading" style={{ padding: '20px 0' }}>
+                      <div className="spinner" style={{ width: '20px', height: '20px', borderRadius: '50%', border: '2px solid rgba(0,212,255,0.1)', borderTopColor: '#00d4ff', animation: 'spin 1s linear infinite' }} />
+                      <span style={{ fontSize: '0.78rem' }}>Loading more...</span>
                     </div>
-                  ))}
-                </div>
+                  )}
+                </>
               ) : (
                 <div className="nuvio-folder-detail-empty">No items found in this catalog source.</div>
               )}

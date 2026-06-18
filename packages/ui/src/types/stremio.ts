@@ -31,6 +31,7 @@ export interface InstalledAddon {
 
 export interface StremioCatalogResponse {
   metas: StremioMetaPreview[];
+  nextSkip?: number;
   cacheMaxAge?: number;
   staleRevalidate?: number;
   staleError?: number;
