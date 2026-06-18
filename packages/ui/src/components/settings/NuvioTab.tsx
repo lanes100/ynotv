@@ -1,13 +1,91 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNuvioAuthStore } from '../../stores/nuvioAuthStore';
 import { useNuvioPluginStore } from '../../stores/nuvioPluginStore';
 import { useNuvioAddonStore } from '../../stores/nuvioAddonStore';
+import { useNuvioCollectionStore } from '../../stores/nuvioCollectionStore';
 import { getEffectiveNuvioUrl, getEffectiveNuvioKey, setNuvioCustomConfig } from '../../services/nuvio-api';
+import type { InstalledAddon } from '../../types/stremio';
+
+const isAioMetadataAddon = (addon: InstalledAddon): boolean => {
+  const addonId = (addon.manifest?.id || addon.id || '').toLowerCase();
+  const baseUrl = (addon.baseUrl || '').toLowerCase();
+  const name = (addon.manifest?.name || '').toLowerCase();
+  const description = (addon.manifest?.description || '').toLowerCase();
+  
+  return (
+    addonId.includes('aio') ||
+    addonId.includes('genres') ||
+    baseUrl.includes('aio') ||
+    baseUrl.includes('genres') ||
+    name.includes('aio') ||
+    name.includes('genres') ||
+    description.includes('aio') ||
+    description.includes('genres')
+  );
+};
+
+const isCinemetaAddon = (addon: InstalledAddon): boolean => {
+  const addonId = (addon.manifest?.id || addon.id || '').toLowerCase();
+  const baseUrl = (addon.baseUrl || '').toLowerCase();
+  const name = (addon.manifest?.name || '').toLowerCase();
+  
+  return (
+    addonId.includes('cinemeta') ||
+    addonId.includes('linvo') ||
+    baseUrl.includes('cinemeta') ||
+    baseUrl.includes('linvo') ||
+    name.includes('cinemeta') ||
+    name.includes('linvo')
+  );
+};
+
+const matchCatalogKey = (settingsKey: string, availableKey: string, activeAddons: InstalledAddon[]): boolean => {
+  const parts = settingsKey.split(':');
+  if (parts.length < 3) return false;
+  
+  const catalogId = parts.pop()?.toLowerCase();
+  const catalogType = parts.pop()?.toLowerCase();
+  const addonManifestId = parts.join(':').toLowerCase();
+  
+  const compareParts = availableKey.split(':');
+  if (compareParts.length < 3) return false;
+  
+  const compareCatId = compareParts.pop()?.toLowerCase();
+  const compareCatType = compareParts.pop()?.toLowerCase();
+  const compareAddonId = compareParts.join(':').toLowerCase();
+  
+  // Fuzzy addon match
+  let addonMatches = false;
+  if (compareAddonId === addonManifestId || addonManifestId.includes(compareAddonId) || compareAddonId.includes(addonManifestId)) {
+    addonMatches = true;
+  } else {
+    const matchedAddon = activeAddons.find(a => (a.manifest?.id || a.id || '').toLowerCase() === compareAddonId);
+    if (matchedAddon) {
+      const settingsIsCinemeta = addonManifestId.includes('cinemeta') || addonManifestId.includes('linvo');
+      if (settingsIsCinemeta && isCinemetaAddon(matchedAddon)) {
+        addonMatches = true;
+      }
+      
+      const settingsIsAio = addonManifestId.includes('aio') || addonManifestId.includes('genres');
+      if (settingsIsAio && isAioMetadataAddon(matchedAddon)) {
+        addonMatches = true;
+      }
+    }
+  }
+  
+  if (!addonMatches) return false;
+  
+  const normSettingsType = catalogType === 'tv' ? 'series' : catalogType;
+  const normCompareType = compareCatType === 'tv' ? 'series' : compareCatType;
+  
+  return normSettingsType === normCompareType && catalogId === compareCatId;
+};
 
 export function NuvioTab() {
   const authStore = useNuvioAuthStore();
   const pluginStore = useNuvioPluginStore();
   const addonsStore = useNuvioAddonStore();
+  const collectionStore = useNuvioCollectionStore();
 
   const token = authStore.token;
   const profile = authStore.activeProfile;
@@ -37,13 +115,266 @@ export function NuvioTab() {
   const [repoUrl, setRepoUrl] = useState('');
   const [repoError, setRepoError] = useState<string | null>(null);
 
+  // Nuvio Profile Settings States
+  const [debridEnabled, setDebridEnabled] = useState(false);
+  const [cloudLibEnabled, setCloudLibEnabled] = useState(true);
+  const [preferredDebrid, setPreferredDebrid] = useState('');
+  const [realDebridKey, setRealDebridKey] = useState('');
+  const [premiumizeKey, setPremiumizeKey] = useState('');
+  const [torboxKey, setTorboxKey] = useState('');
+
+  const [tmdbEnabled, setTmdbEnabled] = useState(false);
+  const [tmdbKey, setTmdbKey] = useState('');
+  const [tmdbLang, setTmdbLang] = useState('en');
+
+  // Homepage catalog settings states
+  const [localCatalogItems, setLocalCatalogItems] = useState<any[]>([]);
+  const [hideUnreleased, setHideUnreleased] = useState(false);
+  const [hideUnderline, setHideUnderline] = useState(false);
+
   useEffect(() => {
     setCustomUrl(localStorage.getItem('ynotv_nuvio_url') || '');
     setCustomKey(localStorage.getItem('ynotv_nuvio_key') || '');
     if (authStore.token) {
       authStore.fetchProfiles();
+      if (authStore.activeProfile) {
+        authStore.fetchSettings();
+        authStore.fetchHomeCatalogSettings();
+        const effectiveAddonProfileId =
+          authStore.activeProfile.profile_index !== 1 && authStore.activeProfile.uses_primary_addons
+            ? 1
+            : authStore.activeProfile.profile_index;
+        addonsStore.pullAddons(authStore.token, effectiveAddonProfileId);
+      }
     }
-  }, [authStore.token]);
+  }, [authStore.token, authStore.activeProfile?.profile_index]);
+
+  useEffect(() => {
+    if (authStore.homeCatalogSettings) {
+      setHideUnreleased(authStore.homeCatalogSettings.hide_unreleased_content || false);
+      setHideUnderline(authStore.homeCatalogSettings.hide_catalog_underline || false);
+    }
+  }, [authStore.homeCatalogSettings]);
+
+
+  useEffect(() => {
+    const features = authStore.settings?.features || {};
+    const debrid = features.debrid_settings || {};
+    const tmdb = features.tmdb_settings || {};
+
+    setDebridEnabled(debrid.enabled || false);
+    setCloudLibEnabled(debrid.cloudLibraryEnabled !== false);
+    setPreferredDebrid(debrid.preferredResolverProviderId || '');
+    
+    const apiKeys = debrid.providerApiKeys || {};
+    setRealDebridKey(apiKeys.realdebrid || '');
+    setPremiumizeKey(apiKeys.premiumize || '');
+    setTorboxKey(apiKeys.torbox || '');
+
+    setTmdbEnabled(tmdb.enabled || false);
+    setTmdbKey(tmdb.apiKey || '');
+    setTmdbLang(tmdb.language || 'en');
+  }, [authStore.settings]);
+
+  // Derive catalog lists
+  const collections = collectionStore.collections || [];
+  const activeAddons = addonsStore.enabledAddons || [];
+
+  const collectionsList = useMemo(() => {
+    return collections.map(c => ({
+      key: `collection_${c.id}`,
+      title: c.title,
+      subtitle: `${c.folders?.length || 0} folders`,
+      isCollection: true,
+      collectionId: c.id,
+      addonName: 'Collection'
+    }));
+  }, [collections]);
+
+  const catalogsList = useMemo(() => {
+    const list: any[] = [];
+    activeAddons.forEach(addon => {
+      addon.manifest?.catalogs?.forEach(catalog => {
+        if (catalog.extra?.some(e => e.isRequired)) return;
+        list.push({
+          key: `${addon.manifest.id || addon.id}:${catalog.type}:${catalog.id}`,
+          title: catalog.name,
+          subtitle: `${catalog.type.charAt(0).toUpperCase() + catalog.type.slice(1)} catalog`,
+          isCollection: false,
+          addonName: addon.manifest.name,
+          addonId: addon.manifest.id || addon.id,
+          type: catalog.type,
+          catalogId: catalog.id
+        });
+      });
+    });
+    return list;
+  }, [activeAddons]);
+
+  const mergedItems = useMemo(() => {
+    const allAvailable = [...collectionsList, ...catalogsList];
+    const settingsItems = authStore.homeCatalogSettings?.items || [];
+    
+    const result: any[] = [];
+    const usedKeys = new Set<string>();
+    
+    const sortedSettings = [...settingsItems].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+    sortedSettings.forEach(sItem => {
+      const key = sItem.isCollection 
+        ? `collection_${sItem.collectionId}` 
+        : `${sItem.addonId}:${sItem.type}:${sItem.catalogId}`;
+        
+      let availableItem: any = null;
+      if (sItem.isCollection) {
+        availableItem = collectionsList.find(c => c.key === key);
+      } else {
+        availableItem = catalogsList.find(c => {
+          const settingsKey = `${sItem.addonId}:${sItem.type}:${sItem.catalogId}`;
+          return matchCatalogKey(settingsKey, c.key, activeAddons);
+        });
+      }
+      
+      if (availableItem) {
+        result.push({
+          ...availableItem,
+          enabled: sItem.enabled !== false,
+          customTitle: sItem.customTitle || '',
+          order: sItem.order ?? 999
+        });
+        usedKeys.add(availableItem.key);
+      }
+    });
+    
+    allAvailable.forEach(item => {
+      if (!usedKeys.has(item.key)) {
+        result.push({
+          ...item,
+          enabled: true,
+          customTitle: '',
+          order: result.length
+        });
+      }
+    });
+    
+    return result.map((item, idx) => ({ ...item, order: idx }));
+  }, [collectionsList, catalogsList, authStore.homeCatalogSettings, activeAddons]);
+
+  useEffect(() => {
+    setLocalCatalogItems(mergedItems);
+  }, [mergedItems]);
+
+  const handleToggleItem = (key: string) => {
+    const updated = localCatalogItems.map(item => 
+      item.key === key ? { ...item, enabled: !item.enabled } : item
+    );
+    setLocalCatalogItems(updated);
+  };
+
+  const handleCustomTitleChange = (key: string, title: string) => {
+    const updated = localCatalogItems.map(item => 
+      item.key === key ? { ...item, customTitle: title } : item
+    );
+    setLocalCatalogItems(updated);
+  };
+
+  const handleMoveItem = (index: number, direction: 'up' | 'down') => {
+    const targetIdx = direction === 'up' ? index - 1 : index + 1;
+    if (targetIdx < 0 || targetIdx >= localCatalogItems.length) return;
+    
+    const updated = [...localCatalogItems];
+    const temp = updated[index];
+    updated[index] = updated[targetIdx];
+    updated[targetIdx] = temp;
+    
+    const reordered = updated.map((item, idx) => ({ ...item, order: idx }));
+    setLocalCatalogItems(reordered);
+  };
+
+  const handleSaveCatalogSettings = async () => {
+    try {
+      const itemsPayload = localCatalogItems.map(item => {
+        if (item.isCollection) {
+          return {
+            addon_id: '',
+            type: '',
+            catalog_id: '',
+            enabled: item.enabled,
+            order: item.order,
+            custom_title: item.customTitle.trim(),
+            is_collection: true,
+            collection_id: item.collectionId
+          };
+        } else {
+          return {
+            addon_id: item.addonId,
+            type: item.type,
+            catalog_id: item.catalogId,
+            enabled: item.enabled,
+            order: item.order,
+            custom_title: item.customTitle.trim(),
+            is_collection: false,
+            collection_id: ''
+          };
+        }
+      });
+      
+      const payload = {
+        hide_unreleased_content: hideUnreleased,
+        hide_catalog_underline: hideUnderline,
+        items: itemsPayload
+      };
+      
+      await authStore.updateHomeCatalogSettings(payload);
+      alert('Homepage catalog settings saved and synced successfully!');
+    } catch (e: any) {
+      alert(e.message || 'Failed to save homepage catalog settings');
+    }
+  };
+
+  const handleResetCatalogSettings = async () => {
+    if (confirm('Are you sure you want to reset homepage catalog settings to defaults?')) {
+      try {
+        const payload = {
+          hide_unreleased_content: false,
+          hide_catalog_underline: false,
+          items: []
+        };
+        await authStore.updateHomeCatalogSettings(payload);
+        alert('Homepage catalog settings reset to defaults.');
+      } catch (e: any) {
+        alert(e.message || 'Failed to reset settings');
+      }
+    }
+  };
+
+  const handleSaveSettings = async () => {
+    try {
+      const updatedDebrid = {
+        enabled: debridEnabled,
+        cloudLibraryEnabled: cloudLibEnabled,
+        preferredResolverProviderId: preferredDebrid,
+        providerApiKeys: {
+          realdebrid: realDebridKey.trim(),
+          premiumize: premiumizeKey.trim(),
+          torbox: torboxKey.trim()
+        }
+      };
+
+      const updatedTmdb = {
+        enabled: tmdbEnabled,
+        apiKey: tmdbKey.trim(),
+        language: tmdbLang.trim() || 'en'
+      };
+
+      await authStore.updateSettings({
+        debrid_settings: updatedDebrid,
+        tmdb_settings: updatedTmdb
+      });
+      alert('Settings saved and synced to Nuvio cloud successfully!');
+    } catch (e: any) {
+      alert(e.message || 'Failed to save settings');
+    }
+  };
 
   const handleAuthSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -604,6 +935,346 @@ export function NuvioTab() {
               </div>
             </div>
 
+            {/* Profile Cloud Settings Section */}
+            <div style={{
+              background: 'rgba(255,255,255,0.02)',
+              border: '1px solid rgba(255,255,255,0.05)',
+              borderRadius: '8px',
+              padding: '20px',
+              marginBottom: '24px'
+            }}>
+              <h4 style={{ margin: '0 0 14px 0', fontSize: '0.95rem', fontWeight: 600, color: '#fff' }}>
+                Profile Cloud Settings
+              </h4>
+              <p style={{ margin: '0 0 20px 0', fontSize: '0.8rem', color: 'rgba(255,255,255,0.45)' }}>
+                Configure Debrid caching services and TMDB metadata enrichment synced directly with Nuvio's cloud profile.
+              </p>
+
+              {/* TMDB SECTION */}
+              <div style={{ marginBottom: '24px', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '20px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                  <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'rgba(255,255,255,0.9)' }}>TMDB Metadata Enrichment</span>
+                  <label className="toggle-switch" style={{ transform: 'scale(0.85)' }}>
+                    <input
+                      type="checkbox"
+                      checked={tmdbEnabled}
+                      onChange={(e) => setTmdbEnabled(e.target.checked)}
+                    />
+                    <span className="toggle-slider" />
+                  </label>
+                </div>
+                
+                {tmdbEnabled && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '10px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.72rem', color: 'rgba(255,255,255,0.5)', marginBottom: '4px' }}>TMDB API Read Access Token</label>
+                      <input
+                        type="password"
+                        placeholder="eyJhbGciOiJIUzI1Ni..."
+                        value={tmdbKey}
+                        onChange={(e) => setTmdbKey(e.target.value)}
+                        className="nuvio-input"
+                        style={{ width: '100%' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.72rem', color: 'rgba(255,255,255,0.5)', marginBottom: '4px' }}>Metadata Language</label>
+                      <input
+                        type="text"
+                        placeholder="en"
+                        value={tmdbLang}
+                        onChange={(e) => setTmdbLang(e.target.value)}
+                        className="nuvio-input"
+                        style={{ width: '80px' }}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* DEBRID SECTION */}
+              <div style={{ marginBottom: '20px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                  <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'rgba(255,255,255,0.9)' }}>Debrid Link Resolving</span>
+                  <label className="toggle-switch" style={{ transform: 'scale(0.85)' }}>
+                    <input
+                      type="checkbox"
+                      checked={debridEnabled}
+                      onChange={(e) => setDebridEnabled(e.target.checked)}
+                    />
+                    <span className="toggle-slider" />
+                  </label>
+                </div>
+
+                {debridEnabled && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                      <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.7)' }}>Enable Cloud Library Cache</span>
+                      <label className="toggle-switch" style={{ transform: 'scale(0.75)' }}>
+                        <input
+                          type="checkbox"
+                          checked={cloudLibEnabled}
+                          onChange={(e) => setCloudLibEnabled(e.target.checked)}
+                        />
+                        <span className="toggle-slider" />
+                      </label>
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.72rem', color: 'rgba(255,255,255,0.5)', marginBottom: '4px' }}>Preferred Debrid Provider</label>
+                      <select
+                        value={preferredDebrid}
+                        onChange={(e) => setPreferredDebrid(e.target.value)}
+                        className="nuvio-input"
+                        style={{ width: '100%', padding: '9px 12px' }}
+                      >
+                        <option value="">None (Disable resolving)</option>
+                        <option value="realdebrid">Real-Debrid</option>
+                        <option value="premiumize">Premiumize</option>
+                        <option value="torbox">Torbox</option>
+                      </select>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '4px', background: 'rgba(0,0,0,0.15)', padding: '12px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.03)' }}>
+                      <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.05em' }}>PROVIDER API KEYS</span>
+                      
+                      <div>
+                        <label style={{ display: 'block', fontSize: '0.7rem', color: 'rgba(255,255,255,0.5)', marginBottom: '4px' }}>Real-Debrid API Key</label>
+                        <input
+                          type="password"
+                          placeholder="Real-Debrid Token"
+                          value={realDebridKey}
+                          onChange={(e) => setRealDebridKey(e.target.value)}
+                          className="nuvio-input"
+                          style={{ width: '100%', background: 'rgba(0,0,0,0.2)' }}
+                        />
+                      </div>
+
+                      <div>
+                        <label style={{ display: 'block', fontSize: '0.7rem', color: 'rgba(255,255,255,0.5)', marginBottom: '4px' }}>Premiumize API Key</label>
+                        <input
+                          type="password"
+                          placeholder="Premiumize Token/PIN"
+                          value={premiumizeKey}
+                          onChange={(e) => setPremiumizeKey(e.target.value)}
+                          className="nuvio-input"
+                          style={{ width: '100%', background: 'rgba(0,0,0,0.2)' }}
+                        />
+                      </div>
+
+                      <div>
+                        <label style={{ display: 'block', fontSize: '0.7rem', color: 'rgba(255,255,255,0.5)', marginBottom: '4px' }}>Torbox API Key</label>
+                        <input
+                          type="password"
+                          placeholder="Torbox Token"
+                          value={torboxKey}
+                          onChange={(e) => setTorboxKey(e.target.value)}
+                          className="nuvio-input"
+                          style={{ width: '100%', background: 'rgba(0,0,0,0.2)' }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* SAVE BUTTON */}
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '16px' }}>
+                <button
+                  type="button"
+                  onClick={handleSaveSettings}
+                  disabled={authStore.isSyncing}
+                  style={{
+                    background: 'linear-gradient(135deg, #00d4ff, #0088ff)',
+                    border: 'none',
+                    color: '#000',
+                    borderRadius: '6px',
+                    padding: '8px 16px',
+                    fontSize: '0.8rem',
+                    fontWeight: 700,
+                    cursor: authStore.isSyncing ? 'not-allowed' : 'pointer',
+                    opacity: authStore.isSyncing ? 0.7 : 1
+                  }}
+                >
+                  {authStore.isSyncing ? 'Saving to Cloud...' : 'Save Profile Settings'}
+                </button>
+              </div>
+            </div>
+
+            {/* Homepage Layout Customization */}
+            <div style={{
+              background: 'rgba(255,255,255,0.02)',
+              border: '1px solid rgba(255,255,255,0.05)',
+              borderRadius: '8px',
+              padding: '20px',
+              marginTop: '20px',
+              marginBottom: '24px'
+            }}>
+              <h4 style={{ margin: '0 0 14px 0', fontSize: '0.95rem', fontWeight: 600, color: '#fff' }}>
+                Homepage Layout Customization
+              </h4>
+              <p style={{ margin: '0 0 20px 0', fontSize: '0.8rem', color: 'rgba(255,255,255,0.45)' }}>
+                Customize which catalog rows (from your collections or addons) appear on your homepage and rearrange their display order.
+              </p>
+
+              {/* Toggles */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '20px', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '16px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'rgba(255,255,255,0.9)' }}>Hide Unreleased Content</span>
+                    <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.4)', marginTop: '2px' }}>Filter out movies/shows that haven't aired or released yet.</div>
+                  </div>
+                  <label className="toggle-switch" style={{ transform: 'scale(0.85)' }}>
+                    <input
+                      type="checkbox"
+                      checked={hideUnreleased}
+                      onChange={(e) => setHideUnreleased(e.target.checked)}
+                    />
+                    <span className="toggle-slider" />
+                  </label>
+                </div>
+                
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'rgba(255,255,255,0.9)' }}>Hide Catalog Underline</span>
+                    <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.4)', marginTop: '2px' }}>Hide the horizontal indicator line beneath catalog titles.</div>
+                  </div>
+                  <label className="toggle-switch" style={{ transform: 'scale(0.85)' }}>
+                    <input
+                      type="checkbox"
+                      checked={hideUnderline}
+                      onChange={(e) => setHideUnderline(e.target.checked)}
+                    />
+                    <span className="toggle-slider" />
+                  </label>
+                </div>
+              </div>
+
+              {/* Catalog Rows list */}
+              {localCatalogItems.length > 0 ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'rgba(255,255,255,0.4)', marginBottom: '4px', letterSpacing: '0.05em' }}>
+                    CATALOG DISPLAY ORDER & VISIBILITY
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '400px', overflowY: 'auto', paddingRight: '4px' }}>
+                    {localCatalogItems.map((item, index) => (
+                      <div
+                        key={item.key}
+                        style={{
+                          background: item.enabled ? 'rgba(255,255,255,0.01)' : 'rgba(255,255,255,0.005)',
+                          border: '1px solid rgba(255,255,255,0.04)',
+                          borderRadius: '6px',
+                          padding: '10px 12px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          opacity: item.enabled ? 1 : 0.6
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: 0 }}>
+                          {/* Reordering arrows */}
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                            <button
+                              type="button"
+                              onClick={() => handleMoveItem(index, 'up')}
+                              disabled={index === 0}
+                              style={{ background: 'none', border: 'none', color: index === 0 ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.6)', cursor: index === 0 ? 'default' : 'pointer', fontSize: '0.8rem', padding: '0 4px', lineHeight: 1 }}
+                            >
+                              ▲
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleMoveItem(index, 'down')}
+                              disabled={index === localCatalogItems.length - 1}
+                              style={{ background: 'none', border: 'none', color: index === localCatalogItems.length - 1 ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.6)', cursor: index === localCatalogItems.length - 1 ? 'default' : 'pointer', fontSize: '0.8rem', padding: '0 4px', lineHeight: 1 }}
+                            >
+                              ▼
+                            </button>
+                          </div>
+                          
+                          {/* Item Details */}
+                          <div style={{ minWidth: 0, flex: 1 }}>
+                            <input
+                              type="text"
+                              value={item.customTitle !== undefined ? (item.customTitle || item.title) : item.title}
+                              placeholder={item.title}
+                              onChange={(e) => handleCustomTitleChange(item.key, e.target.value)}
+                              style={{
+                                background: 'transparent',
+                                border: 'none',
+                                borderBottom: '1px dashed rgba(255,255,255,0.15)',
+                                color: '#fff',
+                                fontSize: '0.82rem',
+                                fontWeight: 600,
+                                padding: '2px 0',
+                                width: '90%',
+                                outline: 'none'
+                              }}
+                            />
+                            <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)', marginTop: '2px', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                              {item.addonName} · {item.subtitle}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Enabled Switch */}
+                        <label className="toggle-switch" style={{ transform: 'scale(0.8)' }}>
+                          <input
+                            type="checkbox"
+                            checked={item.enabled}
+                            onChange={() => handleToggleItem(item.key)}
+                          />
+                          <span className="toggle-slider" />
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div style={{ padding: '20px', textAlign: 'center', color: 'rgba(255,255,255,0.3)', fontSize: '0.8rem', border: '1px dashed rgba(255,255,255,0.06)', borderRadius: '6px' }}>
+                  No collections or catalogs available. Install addons or create collections first.
+                </div>
+              )}
+
+              {/* SAVE / RESET ACTIONS */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '14px' }}>
+                <button
+                  type="button"
+                  onClick={handleResetCatalogSettings}
+                  style={{
+                    background: 'none',
+                    border: '1px solid rgba(255,79,79,0.2)',
+                    color: '#ff4f4f',
+                    borderRadius: '6px',
+                    padding: '6px 12px',
+                    fontSize: '0.75rem',
+                    fontWeight: 600,
+                    cursor: 'pointer'
+                  }}
+                >
+                  Reset Layout Defaults
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveCatalogSettings}
+                  disabled={authStore.isSyncing}
+                  style={{
+                    background: 'linear-gradient(135deg, #00d4ff, #0088ff)',
+                    border: 'none',
+                    color: '#000',
+                    borderRadius: '6px',
+                    padding: '8px 16px',
+                    fontSize: '0.8rem',
+                    fontWeight: 700,
+                    cursor: authStore.isSyncing ? 'not-allowed' : 'pointer',
+                    opacity: authStore.isSyncing ? 0.7 : 1
+                  }}
+                >
+                  {authStore.isSyncing ? 'Saving Layout...' : 'Save Homepage Layout'}
+                </button>
+              </div>
+            </div>
+
             {/* Addons Section */}
             <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '20px', marginTop: '20px' }}>
               <h4 style={{ margin: '0 0 12px 0', fontSize: '0.9rem', fontWeight: 600 }}>Nuvio Addons</h4>
@@ -655,7 +1326,7 @@ export function NuvioTab() {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     {addonsStore.addons.map((addon) => (
                       <div
-                        key={addon.id}
+                        key={`${addon.id}-${addon.baseUrl}`}
                         style={{
                           background: 'rgba(255,255,255,0.01)',
                           border: '1px solid rgba(255,255,255,0.04)',

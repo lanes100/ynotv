@@ -55,7 +55,13 @@ export const useNuvioAddonStore = create<NuvioAddonStore>()(
                 (a) => a.baseUrl === url.replace(/\/manifest\.json$/, '') || `${a.baseUrl}/manifest.json` === url
               );
 
-              if (existing && existing.manifest) {
+              const isPlaceholder = existing && (
+                !existing.manifest ||
+                (existing.manifest.id && (existing.manifest.id.startsWith('http') || existing.manifest.id.includes('/manifest.json'))) ||
+                ((existing.manifest.resources || []).length === 0 && (existing.manifest.catalogs || []).length === 0)
+              );
+
+              if (existing && existing.manifest && !isPlaceholder) {
                 return {
                   ...existing,
                   enabled: row.enabled,
@@ -207,6 +213,12 @@ export const useNuvioAddonStore = create<NuvioAddonStore>()(
     {
       name: STORAGE_KEY,
       partialize: (state) => ({ addons: state.addons }),
+      onRehydrateStorage: () => (state) => {
+        if (state) {
+          state.enabledAddons = state.addons ? state.addons.filter(a => a.enabled !== false) : [];
+          state.initialized = true;
+        }
+      }
     }
   )
 );

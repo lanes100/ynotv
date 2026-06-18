@@ -93,6 +93,7 @@ import { NuvioPage } from './components/nuvio/NuvioPage';
 import { useStremioAddonStore } from './stores/stremioAddonStore';
 import { useStremioWatchStore } from './stores/stremioWatchStore';
 import { useStremioAuthStore } from './stores/stremioAuthStore';
+import { useNuvioAuthStore } from './stores/nuvioAuthStore';
 import { useUIStore } from './stores/uiStore';
 import { fetchSubtitles } from './services/stremio-addon';
 import { scrobbler } from './services/scrobbler';
@@ -867,6 +868,17 @@ function App() {
       initializeStremioSync();
     }
   }, [layoutSettingsLoaded, initializeStremioAddons, initializeStremioSync]);
+
+  // ==========================================================================
+  // Initialize Nuvio sync
+  // ==========================================================================
+  const initializeNuvioSync = useNuvioAuthStore((s) => s.syncNow);
+
+  useEffect(() => {
+    if (layoutSettingsLoaded) {
+      initializeNuvioSync();
+    }
+  }, [layoutSettingsLoaded, initializeNuvioSync]);
 
   // ==========================================================================
   // Channel Info Overlay

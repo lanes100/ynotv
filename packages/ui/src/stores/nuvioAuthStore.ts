@@ -51,6 +51,8 @@ interface NuvioAuthStore {
   isSyncing: boolean;
   error: string | null;
   lastSyncTime: number | null;
+  settings: any | null;
+  homeCatalogSettings: any | null;
 
   login: (email: string, password: string) => Promise<void>;
   signup: (email: string, password: string) => Promise<void>;
@@ -61,6 +63,10 @@ interface NuvioAuthStore {
   updateProfile: (profileIndex: number, name: string, colorHex: string, avatarId: string | null, avatarUrl: string | null) => Promise<void>;
   deleteProfile: (profileIndex: number) => Promise<void>;
   loadAvatarCatalog: () => Promise<void>;
+  fetchSettings: () => Promise<void>;
+  updateSettings: (features: any) => Promise<void>;
+  fetchHomeCatalogSettings: () => Promise<void>;
+  updateHomeCatalogSettings: (settings: any) => Promise<void>;
   syncNow: () => Promise<void>;
 }
 
@@ -76,6 +82,8 @@ export const useNuvioAuthStore = create<NuvioAuthStore>()(
       isSyncing: false,
       error: null,
       lastSyncTime: null,
+      settings: null,
+      homeCatalogSettings: null,
 
       login: async (email, password) => {
         set({ isSyncing: true, error: null });
@@ -291,6 +299,85 @@ export const useNuvioAuthStore = create<NuvioAuthStore>()(
         }
       },
 
+      fetchSettings: async () => {
+        const token = get().token;
+        const profile = get().activeProfile;
+        if (!token || !profile) return;
+        try {
+          const profileSettings = await fetchNuvioProfileSettings(token, profile.profile_index);
+          set({ settings: profileSettings });
+          // Sync TMDB key locally if found
+          const tmdbKey = profileSettings?.features?.tmdb_settings?.apiKey;
+          if (tmdbKey && (window as any).storage) {
+            await (window as any).storage.updateSettings({ tmdbApiKey: tmdbKey });
+          }
+        } catch (e) {
+          console.error('[NuvioAuthStore] Failed to fetch profile settings:', e);
+        }
+      },
+
+      updateSettings: async (updatedFeatures) => {
+        const token = get().token;
+        const profile = get().activeProfile;
+        if (!token || !profile) return;
+
+        const currentSettings = get().settings || { version: 3, features: {} };
+        const newSettings = {
+          ...currentSettings,
+          features: {
+            ...currentSettings.features,
+            ...updatedFeatures,
+          }
+        };
+
+        set({ isSyncing: true, error: null });
+        try {
+          await pushNuvioProfileSettings(token, profile.profile_index, newSettings);
+          set({ settings: newSettings, error: null });
+          
+          // Also sync TMDB API key locally if it was updated
+          const tmdbKey = updatedFeatures.tmdb_settings?.apiKey;
+          if (tmdbKey && (window as any).storage) {
+            await (window as any).storage.updateSettings({ tmdbApiKey: tmdbKey });
+          }
+        } catch (e: any) {
+          console.error('[NuvioAuthStore] Failed to update profile settings:', e);
+          set({ error: e.message || 'Failed to update settings' });
+          throw e;
+        } finally {
+          set({ isSyncing: false });
+        }
+      },
+
+      fetchHomeCatalogSettings: async () => {
+        const token = get().token;
+        const profile = get().activeProfile;
+        if (!token || !profile) return;
+        try {
+          const homeSettings = await fetchNuvioHomeCatalogSettings(token, profile.profile_index);
+          set({ homeCatalogSettings: homeSettings });
+        } catch (e) {
+          console.error('[NuvioAuthStore] Failed to fetch home catalog settings:', e);
+        }
+      },
+
+      updateHomeCatalogSettings: async (newSettings: any) => {
+        const token = get().token;
+        const profile = get().activeProfile;
+        if (!token || !profile) return;
+        set({ isSyncing: true, error: null });
+        try {
+          await pushNuvioHomeCatalogSettings(token, profile.profile_index, newSettings);
+          set({ homeCatalogSettings: newSettings, error: null });
+        } catch (e: any) {
+          console.error('[NuvioAuthStore] Failed to update home catalog settings:', e);
+          set({ error: e.message || 'Failed to update home catalog settings' });
+          throw e;
+        } finally {
+          set({ isSyncing: false });
+        }
+      },
+
       syncNow: async () => {
         const token = get().token;
         const profile = get().activeProfile;
@@ -298,6 +385,19 @@ export const useNuvioAuthStore = create<NuvioAuthStore>()(
 
         set({ isSyncing: true });
         try {
+          // Pull profile settings
+          const profileSettings = await fetchNuvioProfileSettings(token, profile.profile_index);
+          set({ settings: profileSettings });
+          // Sync TMDB key locally if found
+          const tmdbKey = profileSettings?.features?.tmdb_settings?.apiKey;
+          if (tmdbKey && (window as any).storage) {
+            await (window as any).storage.updateSettings({ tmdbApiKey: tmdbKey });
+          }
+
+          // Pull home catalog settings
+          const homeSettings = await fetchNuvioHomeCatalogSettings(token, profile.profile_index);
+          set({ homeCatalogSettings: homeSettings });
+
           // Import stores dynamically or trigger them directly if imported
           // Pull Collections
           const collections = await fetchNuvioCollections(token, profile.profile_index);
@@ -311,7 +411,6 @@ export const useNuvioAuthStore = create<NuvioAuthStore>()(
           await setPlugins(plugins);
 
           // Pull Nuvio Addons
-          // Mirror Nuvio's resolveEffectiveProfileId: if the active profile delegates to the primary profile, pull from profile 1
           const { pullAddons } = (await import('./nuvioAddonStore')).useNuvioAddonStore.getState();
           const effectiveAddonProfileId =
             profile.profile_index !== 1 && profile.uses_primary_addons ? 1 : profile.profile_index;
@@ -333,6 +432,8 @@ export const useNuvioAuthStore = create<NuvioAuthStore>()(
         refreshToken: state.refreshToken,
         user: state.user,
         activeProfile: state.activeProfile,
+        settings: state.settings,
+        homeCatalogSettings: state.homeCatalogSettings,
       }),
     }
   )

@@ -215,7 +215,11 @@ async function callNuvioApiRaw<T>(
       err.status = status;
       throw err;
     }
-    return (await res.data.json()) as T;
+    const text = res.data.text || '';
+    if (!text.trim()) {
+      return {} as T;
+    }
+    return JSON.parse(text) as T;
   }
 
   const res = await fetch(url, options);
@@ -226,7 +230,11 @@ async function callNuvioApiRaw<T>(
     err.status = res.status;
     throw err;
   }
-  return (await res.json()) as T;
+  const text = await res.text();
+  if (!text.trim()) {
+    return {} as T;
+  }
+  return JSON.parse(text) as T;
 }
 
 // Request Helper – calls raw, auto-refreshes token on 401 and retries once
@@ -516,6 +524,7 @@ export async function pushNuvioProfileSettings(token: string, profileId: number,
 export async function fetchNuvioHomeCatalogSettings(token: string, profileId: number): Promise<any | null> {
   const res = await callNuvioApi<any>('POST', 'rest/v1/rpc/sync_pull_home_catalog_settings', {
     p_profile_id: profileId,
+    p_platform: 'home_catalog_shared',
   }, token);
   return res[0]?.settings_json || null;
 }
@@ -523,7 +532,8 @@ export async function fetchNuvioHomeCatalogSettings(token: string, profileId: nu
 export async function pushNuvioHomeCatalogSettings(token: string, profileId: number, settings: any): Promise<void> {
   await callNuvioApi<void>('POST', 'rest/v1/rpc/sync_push_home_catalog_settings', {
     p_profile_id: profileId,
-    p_settings: settings,
+    p_platform: 'home_catalog_shared',
+    p_settings_json: settings,
   }, token);
 }
 
