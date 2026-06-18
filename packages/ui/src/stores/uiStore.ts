@@ -116,8 +116,8 @@ interface UIState {
   setStremioSelectedCloudCatalogKey: (key: string | null) => void;
 
   // Nuvio
-  nuvioView: 'home' | 'library' | 'collections' | 'addons' | 'scrapers' | 'settings';
-  setNuvioView: (view: 'home' | 'library' | 'collections' | 'addons' | 'scrapers' | 'settings') => void;
+  nuvioView: 'home' | 'library' | 'collections' | 'addons' | 'scrapers' | 'settings' | 'person';
+  setNuvioView: (view: 'home' | 'library' | 'collections' | 'addons' | 'scrapers' | 'settings' | 'person') => void;
   nuvioActiveMeta: NuvioMeta | null;
   setNuvioActiveMeta: (meta: NuvioMeta | null) => void;
   nuvioSelectedFolder: NuvioCollectionFolder | null;
@@ -126,6 +126,8 @@ interface UIState {
   setNuvioSelectedFolderCollectionTitle: (title: string) => void;
   nuvioPreselectVideoId: string | null;
   setNuvioPreselectVideoId: (id: string | null) => void;
+  nuvioActivePersonId: number | null;
+  setNuvioActivePersonId: (id: number | null) => void;
 }
 
 export const useUIStore = create<UIState>((set) => ({
@@ -280,6 +282,8 @@ export const useUIStore = create<UIState>((set) => ({
   setNuvioSelectedFolderCollectionTitle: (title) => set({ nuvioSelectedFolderCollectionTitle: title }),
   nuvioPreselectVideoId: null,
   setNuvioPreselectVideoId: (id) => set({ nuvioPreselectVideoId: id }),
+  nuvioActivePersonId: null,
+  setNuvioActivePersonId: (id) => set({ nuvioActivePersonId: id }),
 }));
 
 // Selectors for cleaner component code
@@ -374,3 +378,5 @@ export const useNuvioSelectedFolderCollectionTitle = () => useUIStore((s) => s.n
 export const useSetNuvioSelectedFolderCollectionTitle = () => useUIStore((s) => s.setNuvioSelectedFolderCollectionTitle);
 export const useNuvioPreselectVideoId = () => useUIStore((s) => s.nuvioPreselectVideoId);
 export const useSetNuvioPreselectVideoId = () => useUIStore((s) => s.setNuvioPreselectVideoId);
+export const useNuvioActivePersonId = () => useUIStore((s) => s.nuvioActivePersonId);
+export const useSetNuvioActivePersonId = () => useUIStore((s) => s.setNuvioActivePersonId);

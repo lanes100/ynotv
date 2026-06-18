@@ -17,6 +17,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useLiveQuery } from './useSqliteLiveQuery';
 import { db, type StoredMovie, type StoredSeries } from '../db';
+import { useNuvioAuthStore } from '../stores/nuvioAuthStore';
 import {
   getTrendingMoviesWithCache,
   getTrendingTvShowsWithCache,
@@ -77,6 +78,17 @@ export function useTmdbAccessToken(): string | null {
 
 // Alias for backwards compatibility
 export const useTmdbApiKey = useTmdbAccessToken;
+
+/**
+ * Get active TMDB access token: Nuvio-synced key takes priority,
+ * falling back to local Settings -> Metadata -> TMDB key.
+ */
+export function useActiveTmdbToken(): string | null {
+  const localToken = useTmdbAccessToken();
+  const nuvioAuth = useNuvioAuthStore();
+  const nuvioToken = nuvioAuth.settings?.features?.tmdb_settings?.apiKey;
+  return nuvioToken && nuvioToken.trim() !== '' ? nuvioToken : localToken;
+}
 
 /**
  * Get enabled movie genres from settings

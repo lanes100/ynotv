@@ -12,7 +12,9 @@ import {
   useSetNuvioSelectedFolder,
   useNuvioSelectedFolderCollectionTitle,
   useSetNuvioSelectedFolderCollectionTitle,
-  useSetNuvioPreselectVideoId
+  useSetNuvioPreselectVideoId,
+  useNuvioActivePersonId,
+  useSetNuvioActivePersonId
 } from '../../stores/uiStore';
 import {
   fetchNuvioLibrary,
@@ -30,6 +32,7 @@ import { StremioCatalogRow } from '../stremio/StremioCatalogRow';
 import { StremioHoverProvider } from '../../contexts/StremioHoverContext';
 import { StremioHoverCard } from '../stremio/StremioHoverCard';
 import { NuvioDetailView, type NuvioMeta } from './NuvioDetailView';
+import { NuvioPersonDetail } from './NuvioPersonDetail';
 import type { StremioStream, StremioVideo, StremioMeta, BadgeSource } from '../../types/stremio';
 import type { StremioMetaPreview, InstalledAddon } from '../../types/stremio';
 import { compileBadgeSources } from '../../utils/streamBadges';
@@ -227,6 +230,16 @@ export function NuvioPage({
   const nuvioActiveMeta = useNuvioActiveMeta();
   const setNuvioActiveMeta = useSetNuvioActiveMeta();
   const setNuvioPreselectVideoId = useSetNuvioPreselectVideoId();
+  const nuvioActivePersonId = useNuvioActivePersonId();
+  const setNuvioActivePersonId = useSetNuvioActivePersonId();
+  const previousNuvioViewRef = useRef<'home' | 'library' | 'collections' | 'addons' | 'scrapers' | 'settings'>('home');
+
+  useEffect(() => {
+    if (nuvioView && nuvioView !== 'person') {
+      previousNuvioViewRef.current = nuvioView;
+    }
+  }, [nuvioView]);
+
   const [editableCollections, setEditableCollections] = useState<NuvioCollection[]>([]);
 
   // Refs and controls for Collection rail horizontal scrolling
@@ -602,6 +615,15 @@ export function NuvioPage({
   };
 
   const handleNuvioNavigate = (newMeta: StremioMeta) => {
+    if (newMeta.type === 'person') {
+      const idNum = parseInt(newMeta.id.replace('tmdb:', ''), 10);
+      if (!isNaN(idNum)) {
+        setNuvioActivePersonId(idNum);
+        setNuvioView('person');
+      }
+      return;
+    }
+
     setNuvioActiveMeta({
       id: newMeta.id,
       type: newMeta.type,
@@ -1913,6 +1935,22 @@ export function NuvioPage({
           streamBadgePlacement={nuvioStreamBadgePlacement}
           library={library}
           onUpdateLibrary={setLibrary}
+        />
+      )}
+
+      {/* Nuvio Person/Cast Detail View Overlay */}
+      {nuvioView === 'person' && nuvioActivePersonId && (
+        <NuvioPersonDetail
+          personId={nuvioActivePersonId}
+          onBack={() => {
+            setNuvioActivePersonId(null);
+            setNuvioView(previousNuvioViewRef.current);
+          }}
+          onItemClick={(meta) => {
+            handleNuvioNavigate(meta);
+            setNuvioActivePersonId(null);
+            setNuvioView(previousNuvioViewRef.current);
+          }}
         />
       )}
 
