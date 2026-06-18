@@ -1702,7 +1702,8 @@
 .view-transition-container > .dvr-dashboard,
 .view-transition-container > .sports-hub,
 .view-transition-container > .stremio-page,
-.view-transition-container > .tvcp-page {
+.view-transition-container > .tvcp-page,
+.view-transition-container > .nuvio-page {
   top: 0 !important;
   height: 100% !important;
 }
