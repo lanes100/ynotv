@@ -6,6 +6,7 @@ import { useNuvioPluginStore } from '../../stores/nuvioPluginStore';
 import {
   fetchNuvioLibrary,
   fetchNuvioWatchProgress,
+  pushNuvioLibrary,
   type NuvioLibrarySyncItem,
   type NuvioWatchProgressSyncEntry,
   type NuvioCollectionFolder,
@@ -13,7 +14,7 @@ import {
   type NuvioCollection
 } from '../../services/nuvio-api';
 import { fetchCatalog, fetchMeta } from '../../services/stremio-addon';
-import { StremioHeroBanner } from '../stremio/StremioHeroBanner';
+import { NuvioHeroBanner } from './NuvioHeroBanner';
 import { StremioCatalogRow } from '../stremio/StremioCatalogRow';
 import { StremioHoverProvider } from '../../contexts/StremioHoverContext';
 import { StremioHoverCard } from '../stremio/StremioHoverCard';
@@ -182,6 +183,7 @@ export function NuvioPage({ onClose }: NuvioPageProps) {
   const addons = addonsStore.enabledAddons;
 
   const [library, setLibrary] = useState<NuvioLibrarySyncItem[]>([]);
+  const libraryIds = useMemo(() => new Set(library.map(l => l.content_id)), [library]);
   const [resolvedWatchProgress, setResolvedWatchProgress] = useState<(NuvioWatchProgressSyncEntry & { poster?: string; name?: string; background?: string; episodeTitle?: string; episodeThumbnail?: string })[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -390,23 +392,7 @@ export function NuvioPage({ onClose }: NuvioPageProps) {
     }
   }, [token]);
 
-  // Proactively refresh the session on mount to avoid stale-token 401s
-  useEffect(() => {
-    const rt = authStore.refreshToken;
-    if (!token || !rt) return;
-    import('../../services/nuvio-api').then(({ refreshNuvioSession }) => {
-      refreshNuvioSession(rt)
-        .then((session) => {
-          useNuvioAuthStore.setState({
-            token: session.access_token,
-            refreshToken: session.refresh_token,
-          });
-          console.log('[NuvioPage] Session refreshed proactively.');
-        })
-        .catch((e) => console.warn('[NuvioPage] Proactive refresh failed (will retry on next 401):', e));
-    });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+
 
   // Click outside listener for profile menu
   useEffect(() => {
@@ -460,11 +446,10 @@ export function NuvioPage({ onClose }: NuvioPageProps) {
           ? 1
           : profile.profile_index;
 
-      // Fetch Library, Progress and Addons concurrently
+      // Fetch Library and Progress concurrently (addons already synced by syncNow)
       const [lib, progress] = await Promise.all([
         fetchNuvioLibrary(token, profile.profile_index, 100),
         fetchNuvioWatchProgress(token, profile.profile_index, null, 100),
-        addonsStore.pullAddons(token, effectiveAddonProfileId)
       ]);
 
       setLibrary(lib || []);
@@ -522,6 +507,31 @@ export function NuvioPage({ onClose }: NuvioPageProps) {
   useEffect(() => {
     loadSyncedData();
   }, [token, profile?.profile_index]);
+
+  const handleAddToLibrary = async (item: { id: string; type: string; name: string; poster?: string | null; background?: string | null }) => {
+    if (!token || !profile) return;
+    if (libraryIds.has(item.id)) return;
+    const libItem: NuvioLibrarySyncItem = {
+      content_id: item.id,
+      content_type: item.type === 'series' || item.type === 'show' ? 'series' : 'movie',
+      name: item.name,
+      poster: item.poster || null,
+      poster_shape: 'POSTER',
+      background: item.background || null,
+      description: null,
+      release_info: null,
+      imdb_rating: null,
+      genres: [],
+      addon_base_url: null,
+      added_at: Date.now(),
+    };
+    try {
+      await pushNuvioLibrary(token, profile.profile_index, [libItem]);
+      setLibrary(prev => [libItem, ...prev]);
+    } catch (e) {
+      console.error('[NuvioPage] Failed to add to library:', e);
+    }
+  };
 
   const handleItemClick = (item: { content_id: string; content_type: string; name: string; poster: string | null; background?: string | null }) => {
     // Navigate within Nuvio — no Stremio page involved
@@ -1078,15 +1088,14 @@ export function NuvioPage({ onClose }: NuvioPageProps) {
           <div>
             {nuvioView === 'home' && (
               <div>
-                {/* Stremio Hero Banner at top */}
-                {addons.length > 0 && (
-                  <div style={{ marginBottom: '24px' }}>
-                    <StremioHeroBanner
-                      addons={addons}
-                      onItemClick={(item) => handleItemClick({ content_id: item.id, content_type: item.type, name: item.name, poster: item.poster ?? null })}
-                    />
-                  </div>
-                )}
+                {/* Hero banner — fed from selected catalogs in settings */}
+                <div style={{ marginBottom: '24px' }}>
+                  <NuvioHeroBanner
+                    libraryIds={libraryIds}
+                    onItemClick={(item) => handleItemClick({ content_id: item.id, content_type: item.type, name: item.name, poster: item.poster ?? null })}
+                    onAddToLibrary={handleAddToLibrary}
+                  />
+                </div>
 
                 {/* Continue Watching (Watch Progress) — 3 styles configurable from Settings */}
                 {resolvedWatchProgress.length > 0 && (

@@ -97,7 +97,6 @@ export const useNuvioAddonStore = create<NuvioAddonStore>()(
             })
           );
 
-          clearCatalogCache();
           set({
             addons: loadedAddons,
             enabledAddons: deriveEnabled(loadedAddons),

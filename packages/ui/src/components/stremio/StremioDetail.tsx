@@ -19,54 +19,9 @@ import { useLazyStremioCast, type StremioCastMember } from '../../hooks/useLazyS
 import { useLazyStremioTrailer } from '../../hooks/useLazyStremioTrailer';
 import { useLazyStremioRecommendations, type RecommendationItem } from '../../hooks/useLazyStremioRecommendations';
 import { useTmdbAccessToken } from '../../hooks/useTmdbLists';
-import { getMovieDetails, getTvShowDetails, getTmdbImageUrl, tmdbPersonIdByName, getTmdb } from '../../services/tmdb';
+import { getMovieDetails, getTvShowDetails, getTmdbImageUrl, tmdbPersonIdByName } from '../../services/tmdb';
 import { useDownloadStore } from '../../stores/downloadStore';
-import { useNuvioPluginStore } from '../../stores/nuvioPluginStore';
-import { executePlugin } from '../../services/nuvio-plugin-runtime';
 import './StremioDetail.css';
-
-async function resolveImdbToTmdbId(
-  id: string,
-  mediaType: string,
-  apiKey: string | null
-): Promise<{ tmdbId: string; season: number | null; episode: number | null }> {
-  let imdbId = id;
-  let seasonNum: number | null = null;
-  let episodeNum: number | null = null;
-
-  if (id.includes(':')) {
-    const parts = id.split(':');
-    imdbId = parts[0];
-    if (parts[1]) seasonNum = parseInt(parts[1], 10);
-    if (parts[2]) episodeNum = parseInt(parts[2], 10);
-  }
-
-  if (imdbId.startsWith('tmdb:')) {
-    const tmdbIdOnly = imdbId.replace('tmdb:', '');
-    return { tmdbId: tmdbIdOnly, season: seasonNum, episode: episodeNum };
-  }
-
-  if (!imdbId.startsWith('tt')) {
-    return { tmdbId: imdbId, season: seasonNum, episode: episodeNum };
-  }
-
-  if (!apiKey) {
-    throw new Error('TMDB API Key is required to resolve IMDb ID');
-  }
-
-  const tmdb = getTmdb(apiKey);
-  const findResult = await tmdb.find.byExternalId(imdbId, { external_source: 'imdb_id' });
-  const isSeries = mediaType === 'series' || mediaType === 'tv' || mediaType === 'show';
-  const resolvedId = isSeries
-    ? findResult.tv_results?.[0]?.id
-    : findResult.movie_results?.[0]?.id;
-
-  if (!resolvedId) {
-    throw new Error(`Could not resolve TMDB ID for IMDb ID ${imdbId}`);
-  }
-
-  return { tmdbId: String(resolvedId), season: seasonNum, episode: episodeNum };
-}
 
 interface StremioDetailProps {
   meta: StremioMeta;
@@ -322,291 +277,93 @@ export function StremioDetail({ meta, onBack, onPlay, streamPickerMode, showStre
     return streams.filter((s) => s.addonName === selectedAddonFilter);
   }, [streams, selectedAddonFilter]);
 
-  const groupStreamsByRepository = useNuvioPluginStore((s) => s.groupStreamsByRepository);
-
-  const fetchStreamsWithPlugins = useCallback(async (
-    addonsList: any[],
-    type: string,
-    id: string,
-    onStreams?: (streams: StremioStream[]) => void
-  ): Promise<StremioStream[]> => {
-    const results: StremioStream[] = [];
-
-    // 1. Fetch standard Stremio addon streams
-    const addonPromise = fetchStreams(addonsList, type, id, (newStreams) => {
-      results.push(...newStreams);
-      if (onStreams) {
-        onStreams(newStreams);
-      }
-    });
-
-    // 2. Concurrently fetch Nuvio plugin scraper streams
-    const nuvioPromise = (async () => {
-      try {
-        const store = useNuvioPluginStore.getState();
-        if (!store.pluginsEnabled) return;
-
-        const enabledScrapers = store.getEnabledScrapersForType(type);
-        if (enabledScrapers.length === 0) return;
-
-        // Retrieve active token
-        let activeToken = tmdbToken;
-        if (!activeToken && window.storage) {
-          try {
-            const settings = await window.storage.getSettings();
-            activeToken = (settings.data as any)?.tmdbApiKey || null;
-          } catch (e) {
-            console.error('[StremioDetail] Failed to read tmdbApiKey directly from storage:', e);
-          }
-        }
-
-        const { tmdbId, season, episode } = await resolveImdbToTmdbId(id, type, activeToken);
-        const mediaType = type.toLowerCase() === 'series' || type.toLowerCase() === 'show' ? 'tv' : 'movie';
-
-        const scraperPromises = enabledScrapers.map(async (scraper) => {
-          try {
-            const rawResults = await executePlugin(
-              scraper.code,
-              tmdbId,
-              mediaType,
-              season,
-              episode,
-              scraper.id
-            );
-
-            if (rawResults.length > 0) {
-              const repo = store.repositories.find(r => r.manifestUrl === scraper.repositoryUrl);
-              const repoName = repo?.name || 'Nuvio Plugins';
-
-              const mappedStreams: StremioStream[] = rawResults.map((item) => {
-                const descParts = [];
-                if (item.quality) descParts.push(item.quality);
-                if (item.size) descParts.push(item.size);
-                if (item.provider) descParts.push(`via ${item.provider}`);
-                const description = descParts.join(' | ') || item.title || '';
-
-                return {
-                  url: item.url,
-                  name: `[Nuvio] ${scraper.name}`,
-                  title: item.title || item.name || 'Scraped Stream',
-                  description,
-                  addonName: repoName,
-                  behaviorHints: item.headers ? { proxyHeaders: item.headers } : undefined,
-                };
-              });
-
-              results.push(...mappedStreams);
-              if (onStreams) {
-                onStreams(mappedStreams);
-              }
-            }
-          } catch (err) {
-            console.error(`[StremioDetail] Scraper ${scraper.name} failed:`, err);
-          }
-        });
-
-        await Promise.all(scraperPromises);
-      } catch (err) {
-        console.warn('[StremioDetail] Nuvio scraper plugin run skipped or failed:', err);
-      }
-    })();
-
-    await Promise.all([addonPromise, nuvioPromise]);
-    return results;
-  }, [tmdbToken]);
-
   const renderedStreams = useMemo(() => {
-    if (!groupStreamsByRepository) {
-      return filteredStreams.map((stream, idx) => {
-        const name = stream.name || '';
-        const desc = stream.description || stream.title || '';
-        const displayName = name.trim();
-        const displayDesc = displayName ? desc : '';
-        const badges = showStreamBadges ? extractStreamBadges(stream, compiledBadgeRules) : [];
-        return (
-          <div
-            key={`flat-${idx}`}
-            className="stremio-detail-stream-card"
-            onClick={() => onPlay(stream, meta, selectedVideo ?? undefined)}
-          >
-            {stream.url && (
-              <button
-                className={`stremio-detail-stream-download-btn ${downloadingUrl === stream.url ? 'downloading' : ''}`}
-                onClick={(e) => handleDownloadStream(stream, e)}
-                disabled={downloadingUrl === stream.url}
-                title="Download Stream"
-              >
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  {downloadingUrl === stream.url ? (
-                    <circle cx="12" cy="12" r="10" strokeDasharray="31.4" strokeDashoffset="10" style={{ transformOrigin: 'center', animation: 'spin 1.5s linear infinite' }} />
-                  ) : (
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4m4-5 5 5 5-5m-5 5V3" strokeLinecap="round" strokeLinejoin="round" />
-                  )}
-                </svg>
-              </button>
-            )}
-            <div className="stremio-detail-stream-header-row">
-              <div className="stremio-detail-stream-card-title">
-                {displayName || desc || `Stream #${idx + 1}`}
-              </div>
-              {stream.addonName && (
-                <span className="stremio-detail-stream-addon">
-                  via {stream.addonName}
-                </span>
-              )}
+    return filteredStreams.map((stream, idx) => {
+      const name = stream.name || '';
+      const desc = stream.description || stream.title || '';
+      const displayName = name.trim();
+      const displayDesc = displayName ? desc : '';
+      const badges = showStreamBadges ? extractStreamBadges(stream, compiledBadgeRules) : [];
+      return (
+        <div
+          key={`flat-${idx}`}
+          className="stremio-detail-stream-card"
+          onClick={() => onPlay(stream, meta, selectedVideo ?? undefined)}
+        >
+          {stream.url && (
+            <button
+              className={`stremio-detail-stream-download-btn ${downloadingUrl === stream.url ? 'downloading' : ''}`}
+              onClick={(e) => handleDownloadStream(stream, e)}
+              disabled={downloadingUrl === stream.url}
+              title="Download Stream"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                {downloadingUrl === stream.url ? (
+                  <circle cx="12" cy="12" r="10" strokeDasharray="31.4" strokeDashoffset="10" style={{ transformOrigin: 'center', animation: 'spin 1.5s linear infinite' }} />
+                ) : (
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4m4-5 5 5 5-5m-5 5V3" strokeLinecap="round" strokeLinejoin="round" />
+                )}
+              </svg>
+            </button>
+          )}
+          <div className="stremio-detail-stream-header-row">
+            <div className="stremio-detail-stream-card-title">
+              {displayName || desc || `Stream #${idx + 1}`}
             </div>
-            {badges.length > 0 && (
-              <div className="stremio-detail-stream-badges">
-                {badges.map((badge) => {
-                  const bgColor = badge.color || '#1a1a1a';
-                  const isLightBg = isLightColor(bgColor);
-                  const textColor = badge.textColor || (isLightBg ? '#000000' : '#ffffff');
-                  return badge.imageUrl ? (
-                    <span
-                      key={badge.label}
-                      className="stremio-stream-badge-img"
-                      style={{
-                        backgroundColor: bgColor,
-                        borderColor: badge.borderColor,
-                      }}
-                    >
-                      <img src={badge.imageUrl} alt={badge.label} title={badge.label} />
-                    </span>
-                  ) : (
-                    <span
-                      key={badge.label}
-                      className="stremio-stream-badge"
-                      style={{
-                        backgroundColor: bgColor,
-                        color: textColor,
-                        borderColor: badge.borderColor,
-                      }}
-                    >
-                      {badge.label}
-                    </span>
-                  );
-                })}
-              </div>
-            )}
-            {displayDesc && (
-              <div className="stremio-detail-stream-description">
-                {displayDesc}
-              </div>
-            )}
-            {stream.infoHash && (
-              <div className="stremio-detail-stream-hash">
-                infoHash: {stream.infoHash.substring(0, 16)}...
-                {stream.fileIdx !== undefined && ` | fileIdx: ${stream.fileIdx}`}
-              </div>
+            {stream.addonName && (
+              <span className="stremio-detail-stream-addon">
+                via {stream.addonName}
+              </span>
             )}
           </div>
-        );
-      });
-    }
-
-    // Group streams by addonName
-    const groups: Record<string, StremioStream[]> = {};
-    for (const s of filteredStreams) {
-      const groupName = s.addonName || 'Other';
-      if (!groups[groupName]) {
-        groups[groupName] = [];
-      }
-      groups[groupName].push(s);
-    }
-
-    return Object.entries(groups).map(([groupName, groupStreams]) => (
-      <div key={`group-${groupName}`} className="stremio-detail-stream-group">
-        <div className="stremio-detail-stream-group-title">{groupName}</div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          {groupStreams.map((stream, idx) => {
-            const name = stream.name || '';
-            const desc = stream.description || stream.title || '';
-            const displayName = name.trim();
-            const displayDesc = displayName ? desc : '';
-            const badges = showStreamBadges ? extractStreamBadges(stream, compiledBadgeRules) : [];
-            return (
-              <div
-                key={`grouped-stream-${idx}`}
-                className="stremio-detail-stream-card"
-                onClick={() => onPlay(stream, meta, selectedVideo ?? undefined)}
-              >
-                {stream.url && (
-                  <button
-                    className={`stremio-detail-stream-download-btn ${downloadingUrl === stream.url ? 'downloading' : ''}`}
-                    onClick={(e) => handleDownloadStream(stream, e)}
-                    disabled={downloadingUrl === stream.url}
-                    title="Download Stream"
+          {badges.length > 0 && (
+            <div className="stremio-detail-stream-badges">
+              {badges.map((badge) => {
+                const bgColor = badge.color || '#1a1a1a';
+                const isLightBg = isLightColor(bgColor);
+                const textColor = badge.textColor || (isLightBg ? '#000000' : '#ffffff');
+                return badge.imageUrl ? (
+                  <span
+                    key={badge.label}
+                    className="stremio-stream-badge-img"
+                    style={{
+                      backgroundColor: bgColor,
+                      borderColor: badge.borderColor,
+                    }}
                   >
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      {downloadingUrl === stream.url ? (
-                        <circle cx="12" cy="12" r="10" strokeDasharray="31.4" strokeDashoffset="10" style={{ transformOrigin: 'center', animation: 'spin 1.5s linear infinite' }} />
-                      ) : (
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4m4-5 5 5 5-5m-5 5V3" strokeLinecap="round" strokeLinejoin="round" />
-                      )}
-                    </svg>
-                  </button>
-                )}
-                <div className="stremio-detail-stream-header-row">
-                  <div className="stremio-detail-stream-card-title">
-                    {displayName || desc || `Stream #${idx + 1}`}
-                  </div>
-                  {stream.addonName && (
-                    <span className="stremio-detail-stream-addon">
-                      via {stream.addonName}
-                    </span>
-                  )}
-                </div>
-                {badges.length > 0 && (
-                  <div className="stremio-detail-stream-badges">
-                    {badges.map((badge) => {
-                      const bgColor = badge.color || '#1a1a1a';
-                      const isLightBg = isLightColor(bgColor);
-                      const textColor = badge.textColor || (isLightBg ? '#000000' : '#ffffff');
-                      return badge.imageUrl ? (
-                        <span
-                          key={badge.label}
-                          className="stremio-stream-badge-img"
-                          style={{
-                            backgroundColor: bgColor,
-                            borderColor: badge.borderColor,
-                          }}
-                        >
-                          <img src={badge.imageUrl} alt={badge.label} title={badge.label} />
-                        </span>
-                      ) : (
-                        <span
-                          key={badge.label}
-                          className="stremio-stream-badge"
-                          style={{
-                            backgroundColor: bgColor,
-                            color: textColor,
-                            borderColor: badge.borderColor,
-                          }}
-                        >
-                          {badge.label}
-                        </span>
-                      );
-                    })}
-                  </div>
-                )}
-                {displayDesc && (
-                  <div className="stremio-detail-stream-description">
-                    {displayDesc}
-                  </div>
-                )}
-                {stream.infoHash && (
-                  <div className="stremio-detail-stream-hash">
-                    infoHash: {stream.infoHash.substring(0, 16)}...
-                    {stream.fileIdx !== undefined && ` | fileIdx: ${stream.fileIdx}`}
-                  </div>
-                )}
-              </div>
-            );
-          })}
+                    <img src={badge.imageUrl} alt={badge.label} title={badge.label} />
+                  </span>
+                ) : (
+                  <span
+                    key={badge.label}
+                    className="stremio-stream-badge"
+                    style={{
+                      backgroundColor: bgColor,
+                      color: textColor,
+                      borderColor: badge.borderColor,
+                    }}
+                  >
+                    {badge.label}
+                  </span>
+                );
+              })}
+            </div>
+          )}
+          {displayDesc && (
+            <div className="stremio-detail-stream-description">
+              {displayDesc}
+            </div>
+          )}
+          {stream.infoHash && (
+            <div className="stremio-detail-stream-hash">
+              infoHash: {stream.infoHash.substring(0, 16)}...
+              {stream.fileIdx !== undefined && ` | fileIdx: ${stream.fileIdx}`}
+            </div>
+          )}
         </div>
-      </div>
-    ));
-  }, [groupStreamsByRepository, filteredStreams, showStreamBadges, compiledBadgeRules, downloadingUrl, handleDownloadStream, onPlay, meta, selectedVideo]);
+      );
+    });
+  }, [filteredStreams, showStreamBadges, compiledBadgeRules, downloadingUrl, handleDownloadStream, onPlay, meta, selectedVideo]);
 
   const isSeries = meta.type === 'series';
   const isAdded = isInLibrary(meta.id);
@@ -656,7 +413,7 @@ export function StremioDetail({ meta, onBack, onPlay, streamPickerMode, showStre
     setSelectedVideo(video);
     setStreams([]);
     setLoadingStreams(true);
-    fetchStreamsWithPlugins(addons, 'series', video.id, (newStreams) => {
+    fetchStreams(addons, 'series', video.id, (newStreams) => {
       setStreams((prev) => [...prev, ...newStreams]);
     }).then((result) => {
       setLoadingStreams(false);
@@ -674,7 +431,7 @@ export function StremioDetail({ meta, onBack, onPlay, streamPickerMode, showStre
       const loadMovieStreams = async () => {
         setStreams([]);
         setLoadingStreams(true);
-        const result = await fetchStreamsWithPlugins(addons, meta.type, meta.id, (newStreams) => {
+        const result = await fetchStreams(addons, meta.type, meta.id, (newStreams) => {
           setStreams((prev) => [...prev, ...newStreams]);
         });
         setLoadingStreams(false);
@@ -704,7 +461,7 @@ export function StremioDetail({ meta, onBack, onPlay, streamPickerMode, showStre
     setSelectedVideo(ep);
     setStreams([]);
     setLoadingStreams(true);
-    const result = await fetchStreamsWithPlugins(addons, 'series', ep.id, (newStreams) => {
+    const result = await fetchStreams(addons, 'series', ep.id, (newStreams) => {
       setStreams((prev) => [...prev, ...newStreams]);
     });
     setLoadingStreams(false);
@@ -716,7 +473,7 @@ export function StremioDetail({ meta, onBack, onPlay, streamPickerMode, showStre
         setSelectedVideo(null); // Reset back to list on play
       }
     }
-  }, [addons, streamPickerMode, onPlay, meta, fetchStreamsWithPlugins]);
+  }, [addons, streamPickerMode, onPlay, meta]);
 
   const handleLibraryToggle = () => {
     if (isAdded) {

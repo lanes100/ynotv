@@ -1059,6 +1059,107 @@ export function NuvioTab() {
                 </div>
               </div>
 
+              {/* Hero Catalog Sources */}
+              <div style={{ marginBottom: '20px', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '16px' }}>
+                <div style={{ fontSize: '0.82rem', fontWeight: 600, color: 'rgba(255,255,255,0.9)', marginBottom: '4px' }}>Hero Banner Sources</div>
+                <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.4)', marginBottom: '10px' }}>
+                  Select up to 2 catalogs to feature in the hero banner at the top of the home page. Items will be randomly picked from these catalogs.
+                </div>
+                  {(() => {
+                  // Normalize: handle old string[] format too
+                  const raw: any[] = JSON.parse(localStorage.getItem('nuvio_hero_catalogs') || '[]');
+                  const heroEntries: { key: string; baseUrl: string }[] = raw.map((e: any) =>
+                    typeof e === 'string' ? { key: e, baseUrl: '' } : e
+                  );
+                  const selectedKeys = heroEntries.map(e => e.key);
+                  return (
+                    <>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                        <span style={{ fontSize: '0.7rem', fontWeight: 700, color: selectedKeys.length >= 2 ? '#ff4f4f' : 'rgba(255,255,255,0.4)', letterSpacing: '0.05em' }}>
+                          {selectedKeys.length}/2 selected
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            localStorage.setItem('nuvio_hero_catalogs', '[]');
+                            window.dispatchEvent(new Event('nuvioHeroCatalogsChanged'));
+                          }}
+                          style={{
+                            background: 'rgba(255,79,79,0.1)',
+                            border: '1px solid rgba(255,79,79,0.2)',
+                            color: '#ff4f4f',
+                            fontSize: '0.7rem',
+                            fontWeight: 600,
+                            padding: '4px 10px',
+                            borderRadius: '5px',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          Reset Selection
+                        </button>
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', maxHeight: '200px', overflowY: 'auto', paddingRight: '4px' }}>
+                        {catalogsList.map((cat) => {
+                          const isSelected = selectedKeys.includes(cat.key);
+                          const atLimit = selectedKeys.length >= 2;
+                          return (
+                            <label
+                              key={cat.key}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '10px',
+                                padding: '6px 10px',
+                                borderRadius: '6px',
+                                background: isSelected ? 'rgba(0,212,255,0.08)' : 'rgba(255,255,255,0.02)',
+                                border: isSelected ? '1px solid rgba(0,212,255,0.2)' : '1px solid rgba(255,255,255,0.04)',
+                                cursor: atLimit && !isSelected ? 'not-allowed' : 'pointer',
+                                opacity: atLimit && !isSelected ? 0.4 : 1,
+                                transition: 'all 0.15s ease',
+                              }}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                disabled={atLimit && !isSelected}
+                                onChange={() => {
+                                  const raw: any[] = JSON.parse(localStorage.getItem('nuvio_hero_catalogs') || '[]');
+                                  const current: { key: string; baseUrl: string }[] = raw.map((e: any) =>
+                                    typeof e === 'string' ? { key: e, baseUrl: '' } : e
+                                  );
+                                  if (isSelected) {
+                                    localStorage.setItem('nuvio_hero_catalogs', JSON.stringify(current.filter((e) => e.key !== cat.key)));
+                                  } else if (current.length < 2) {
+                                    // Find the addon's baseUrl
+                                    const addon = activeAddons.find(a => (a.manifest?.id || a.id) === cat.addonId);
+                                    const baseUrl = addon?.baseUrl || cat.addonId;
+                                    localStorage.setItem('nuvio_hero_catalogs', JSON.stringify([...current, { key: cat.key, baseUrl }]));
+                                  }
+                                  window.dispatchEvent(new Event('nuvioHeroCatalogsChanged'));
+                                }}
+                              />
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ fontSize: '0.8rem', fontWeight: 500, color: isSelected ? '#fff' : 'rgba(255,255,255,0.8)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                  {cat.title || cat.catalogId}
+                                </div>
+                                <div style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.4)' }}>
+                                  {cat.addonName} · {cat.type}
+                                </div>
+                              </div>
+                            </label>
+                          );
+                        })}
+                        {catalogsList.length === 0 && (
+                          <div style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.3)', padding: '10px 0' }}>
+                            No catalogs available. Install addons first.
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  );
+                })()}
+              </div>
+
               {/* Catalog Rows list */}
               {localCatalogItems.length > 0 ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
