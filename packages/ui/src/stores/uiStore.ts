@@ -124,6 +124,8 @@ interface UIState {
   setNuvioSelectedFolder: (folder: NuvioCollectionFolder | null) => void;
   nuvioSelectedFolderCollectionTitle: string;
   setNuvioSelectedFolderCollectionTitle: (title: string) => void;
+  nuvioPreselectVideoId: string | null;
+  setNuvioPreselectVideoId: (id: string | null) => void;
 }
 
 export const useUIStore = create<UIState>((set) => ({
@@ -276,6 +278,8 @@ export const useUIStore = create<UIState>((set) => ({
   setNuvioSelectedFolder: (folder) => set({ nuvioSelectedFolder: folder }),
   nuvioSelectedFolderCollectionTitle: '',
   setNuvioSelectedFolderCollectionTitle: (title) => set({ nuvioSelectedFolderCollectionTitle: title }),
+  nuvioPreselectVideoId: null,
+  setNuvioPreselectVideoId: (id) => set({ nuvioPreselectVideoId: id }),
 }));
 
 // Selectors for cleaner component code
@@ -368,3 +372,5 @@ export const useNuvioSelectedFolder = () => useUIStore((s) => s.nuvioSelectedFol
 export const useSetNuvioSelectedFolder = () => useUIStore((s) => s.setNuvioSelectedFolder);
 export const useNuvioSelectedFolderCollectionTitle = () => useUIStore((s) => s.nuvioSelectedFolderCollectionTitle);
 export const useSetNuvioSelectedFolderCollectionTitle = () => useUIStore((s) => s.setNuvioSelectedFolderCollectionTitle);
+export const useNuvioPreselectVideoId = () => useUIStore((s) => s.nuvioPreselectVideoId);
+export const useSetNuvioPreselectVideoId = () => useUIStore((s) => s.setNuvioPreselectVideoId);

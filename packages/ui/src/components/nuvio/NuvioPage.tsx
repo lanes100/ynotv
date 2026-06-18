@@ -11,7 +11,8 @@ import {
   useNuvioSelectedFolder,
   useSetNuvioSelectedFolder,
   useNuvioSelectedFolderCollectionTitle,
-  useSetNuvioSelectedFolderCollectionTitle
+  useSetNuvioSelectedFolderCollectionTitle,
+  useSetNuvioPreselectVideoId
 } from '../../stores/uiStore';
 import {
   fetchNuvioLibrary,
@@ -225,6 +226,7 @@ export function NuvioPage({
   const setNuvioView = useSetNuvioView();
   const nuvioActiveMeta = useNuvioActiveMeta();
   const setNuvioActiveMeta = useSetNuvioActiveMeta();
+  const setNuvioPreselectVideoId = useSetNuvioPreselectVideoId();
   const [editableCollections, setEditableCollections] = useState<NuvioCollection[]>([]);
 
   // Refs and controls for Collection rail horizontal scrolling
@@ -579,7 +581,10 @@ export function NuvioPage({
     }
   };
 
-  const handleItemClick = (item: { content_id: string; content_type: string; name: string; poster: string | null; background?: string | null }) => {
+  const handleItemClick = (item: { content_id: string; content_type: string; name: string; poster: string | null; background?: string | null; video_id?: string | null }) => {
+    if ((item.content_type === 'series' || item.content_type === 'show') && item.video_id) {
+      setNuvioPreselectVideoId(item.video_id);
+    }
     // Navigate within Nuvio — no Stremio page involved
     setNuvioActiveMeta({
       id: item.content_id,
@@ -1174,7 +1179,7 @@ export function NuvioPage({
                               <div
                                 key={entry.progress_key}
                                 className="nuvio-cw-wide-card"
-                                onClick={() => handleItemClick({ content_id: entry.content_id, content_type: entry.content_type, name: entry.name || entry.progress_key, poster: entry.poster || null })}
+                                onClick={() => handleItemClick({ content_id: entry.content_id, content_type: entry.content_type, name: entry.name || entry.progress_key, poster: entry.poster || null, video_id: entry.video_id })}
                               >
                                 {imgUrl ? (
                                   <img src={imgUrl} alt={entry.name} className="nuvio-cw-wide-poster" />
@@ -1211,7 +1216,7 @@ export function NuvioPage({
                               <div
                                 key={entry.progress_key}
                                 className="nuvio-cw-poster-card"
-                                onClick={() => handleItemClick({ content_id: entry.content_id, content_type: entry.content_type, name: entry.name || entry.progress_key, poster: entry.poster || null })}
+                                onClick={() => handleItemClick({ content_id: entry.content_id, content_type: entry.content_type, name: entry.name || entry.progress_key, poster: entry.poster || null, video_id: entry.video_id })}
                               >
                                 {imgUrl ? (
                                   <img src={imgUrl} alt={entry.name} className="nuvio-cw-poster-img" />
@@ -1251,7 +1256,7 @@ export function NuvioPage({
                             <div
                               key={entry.progress_key}
                               className="nuvio-cw-card"
-                              onClick={() => handleItemClick({ content_id: entry.content_id, content_type: entry.content_type, name: entry.name || entry.progress_key, poster: entry.poster || null })}
+                              onClick={() => handleItemClick({ content_id: entry.content_id, content_type: entry.content_type, name: entry.name || entry.progress_key, poster: entry.poster || null, video_id: entry.video_id })}
                             >
                               {cardImg ? (
                                 <img src={cardImg} alt={entry.name} className="nuvio-cw-card-img" />

@@ -14,6 +14,7 @@ import { useLazyStremioRecommendations, type RecommendationItem } from '../../ho
 import { useTmdbAccessToken } from '../../hooks/useTmdbLists';
 import { getMovieDetails, getTvShowDetails, getTmdbImageUrl, tmdbPersonIdByName } from '../../services/tmdb';
 import { useDownloadStore } from '../../stores/downloadStore';
+import { useNuvioPreselectVideoId, useSetNuvioPreselectVideoId } from '../../stores/uiStore';
 import '../stremio/StremioDetail.css';
 
 export interface NuvioMeta {
@@ -228,6 +229,20 @@ export function NuvioDetailView({
     window.addEventListener('ynotv:nuvio-sync-required', syncHandler);
     return () => window.removeEventListener('ynotv:nuvio-sync-required', syncHandler);
   }, [loadWatchProgress]);
+
+  // ─── Auto-select preselected video (from Continue Watching) ─
+  const preselectVideoId = useNuvioPreselectVideoId();
+  const setPreselectVideoId = useSetNuvioPreselectVideoId();
+
+  useEffect(() => {
+    if (meta.type !== 'series' || !preselectVideoId || !fullMeta || !fullMeta.videos) return;
+    const video = fullMeta.videos.find((v) => v.id === preselectVideoId);
+    if (video) {
+      if (video.season != null) setSelectedSeason(video.season);
+      setSelectedVideo(video);
+      setPreselectVideoId(null);
+    }
+  }, [meta.type, preselectVideoId, fullMeta, setPreselectVideoId]);
 
   // ─── Fetch streams (addons + plugins) ──────────────────────
   const fetchStreamsWithPlugins = useCallback(async (
