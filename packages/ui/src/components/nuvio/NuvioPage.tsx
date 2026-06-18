@@ -182,7 +182,7 @@ export function NuvioPage({ onClose }: NuvioPageProps) {
   const addons = addonsStore.enabledAddons;
 
   const [library, setLibrary] = useState<NuvioLibrarySyncItem[]>([]);
-  const [resolvedWatchProgress, setResolvedWatchProgress] = useState<(NuvioWatchProgressSyncEntry & { poster?: string; name?: string })[]>([]);
+  const [resolvedWatchProgress, setResolvedWatchProgress] = useState<(NuvioWatchProgressSyncEntry & { poster?: string; name?: string; background?: string; episodeTitle?: string; episodeThumbnail?: string })[]>([]);
   const [loading, setLoading] = useState(false);
 
   const [nuvioView, setNuvioView] = useState<'home' | 'library' | 'collections' | 'addons' | 'scrapers' | 'settings'>('home');
@@ -490,10 +490,24 @@ export function NuvioPage({ onClose }: NuvioPageProps) {
           const type = entry.content_type === 'series' || entry.content_type === 'show' ? 'series' : 'movie';
           const meta = await fetchMeta(activeAddons, type, entry.content_id);
           if (meta) {
+            let episodeTitle: string | undefined;
+            let episodeThumbnail: string | undefined;
+            if (entry.season != null && entry.episode != null && meta.videos) {
+              const match = meta.videos.find(
+                v => v.season === entry.season && v.episode === entry.episode
+              );
+              if (match) {
+                episodeTitle = match.title;
+                episodeThumbnail = match.thumbnail;
+              }
+            }
             return {
               ...entry,
               poster: meta.poster,
+              background: meta.background,
               name: meta.name,
+              episodeTitle,
+              episodeThumbnail,
             };
           }
         } catch (e) {
@@ -1074,45 +1088,132 @@ export function NuvioPage({ onClose }: NuvioPageProps) {
                   </div>
                 )}
 
-                {/* Continue Watching (Watch Progress) */}
+                {/* Continue Watching (Watch Progress) — 3 styles configurable from Settings */}
                 {resolvedWatchProgress.length > 0 && (
                   <div className="nuvio-row">
                     <div className="nuvio-row-header">
                       <h3 className="nuvio-row-title">Continue Watching</h3>
                     </div>
                     <div className="nuvio-scroll-rail">
-                      {resolvedWatchProgress.map((entry) => (
-                        <div
-                          key={entry.progress_key}
-                          className="nuvio-card"
-                          onClick={() => handleItemClick({
-                            content_id: entry.content_id,
-                            content_type: entry.content_type,
-                            name: entry.name || entry.progress_key,
-                            poster: entry.poster || null
-                          })}
-                          style={{ width: '150px' }}
-                        >
-                          {entry.poster ? (
-                            <img src={entry.poster} alt={entry.name} className="nuvio-card-img" />
-                          ) : (
-                            <div style={{ width: '100%', height: '100%', background: 'rgba(255,255,255,0.03)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '12px', boxSizing: 'border-box' }}>
-                              <span style={{ alignSelf: 'flex-start', fontSize: '0.55rem', background: 'rgba(255,255,255,0.1)', padding: '2px 5px', borderRadius: '3px', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#fff' }}>
-                                {entry.content_type}
-                              </span>
-                              <div style={{ fontSize: '0.72rem', fontWeight: 600, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' }}>
-                                {entry.name || entry.content_id}
+                      {(() => {
+                        const cwStyle = localStorage.getItem('nuvio_cw_style') || 'card';
+                        if (cwStyle === 'wide') {
+                          return resolvedWatchProgress.map((entry) => {
+                            const progressPct = getProgressPercent(entry);
+                            const progressInt = Math.round(progressPct);
+                            const imgUrl = entry.poster || entry.background;
+                            const isEpisode = entry.season !== null && entry.episode !== null;
+                            const subtitle = isEpisode
+                              ? entry.episodeTitle || ''
+                              : entry.content_type === 'movie' ? 'Movie' : entry.content_type;
+                            return (
+                              <div
+                                key={entry.progress_key}
+                                className="nuvio-cw-wide-card"
+                                onClick={() => handleItemClick({ content_id: entry.content_id, content_type: entry.content_type, name: entry.name || entry.progress_key, poster: entry.poster || null })}
+                              >
+                                {imgUrl ? (
+                                  <img src={imgUrl} alt={entry.name} className="nuvio-cw-wide-poster" />
+                                ) : (
+                                  <div className="nuvio-cw-wide-poster" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', color: 'rgba(255,255,255,0.3)' }}>{entry.name?.[0]}</div>
+                                )}
+                                <div className="nuvio-cw-wide-body">
+                                  <div className="nuvio-cw-wide-title">{entry.name || entry.content_id}</div>
+                                  {isEpisode && <div className="nuvio-cw-wide-ep">S{entry.season}:E{entry.episode}</div>}
+                                  <div className="nuvio-cw-wide-meta">{subtitle}</div>
+                                  <div className="nuvio-cw-wide-progress-row">
+                                    <div className="nuvio-cw-wide-progress-track">
+                                      <div className="nuvio-cw-wide-progress-fill" style={{ width: `${progressPct}%` }} />
+                                    </div>
+                                    <span className="nuvio-cw-wide-pct">{progressInt}%</span>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          });
+                        }
+                        if (cwStyle === 'poster') {
+                          return resolvedWatchProgress.map((entry) => {
+                            const progressPct = getProgressPercent(entry);
+                            const imgUrl = entry.poster || entry.background;
+                            const remainingMs = entry.duration - entry.position;
+                            const remainingMin = Math.max(1, Math.round(remainingMs / 60000));
+                            const badgeText = progressPct > 0
+                              ? remainingMin >= 60
+                                ? `${Math.floor(remainingMin / 60)}h ${remainingMin % 60}m`
+                                : `${remainingMin}m`
+                              : '';
+                            return (
+                              <div
+                                key={entry.progress_key}
+                                className="nuvio-cw-poster-card"
+                                onClick={() => handleItemClick({ content_id: entry.content_id, content_type: entry.content_type, name: entry.name || entry.progress_key, poster: entry.poster || null })}
+                              >
+                                {imgUrl ? (
+                                  <img src={imgUrl} alt={entry.name} className="nuvio-cw-poster-img" />
+                                ) : (
+                                  <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', color: 'rgba(255,255,255,0.3)', padding: '12px', boxSizing: 'border-box', textAlign: 'center' }}>{entry.name}</div>
+                                )}
+                                {entry.season !== null && entry.episode !== null && (
+                                  <div className="nuvio-cw-poster-badge">S{entry.season}:E{entry.episode}</div>
+                                )}
+                                <div className="nuvio-cw-poster-progress-pill">
+                                  <div className="nuvio-cw-poster-progress-track">
+                                    <div className="nuvio-cw-poster-progress-fill" style={{ width: `${progressPct}%` }} />
+                                  </div>
+                                  {badgeText && <span className="nuvio-cw-poster-pct">{badgeText}</span>}
+                                </div>
+                                <div className="nuvio-cw-poster-title">{entry.name || entry.content_id}</div>
+                              </div>
+                            );
+                          });
+                        }
+                        // Default: Card style (landscape with gradient overlay)
+                        return resolvedWatchProgress.map((entry) => {
+                          const progressPct = getProgressPercent(entry);
+                          const remainingMs = entry.duration - entry.position;
+                          const remainingMin = Math.max(1, Math.round(remainingMs / 60000));
+                          const badgeText = progressPct > 0
+                            ? remainingMin >= 60
+                              ? `${Math.floor(remainingMin / 60)}h ${remainingMin % 60}m left`
+                              : `${remainingMin}m left`
+                            : '';
+                          const cardImg = entry.episodeThumbnail || entry.background || entry.poster;
+                          const isEpisode = entry.season !== null && entry.episode !== null;
+                          const subtitle = isEpisode
+                            ? entry.episodeTitle || ''
+                            : entry.content_type === 'movie' ? 'Movie' : entry.content_type;
+                          return (
+                            <div
+                              key={entry.progress_key}
+                              className="nuvio-cw-card"
+                              onClick={() => handleItemClick({ content_id: entry.content_id, content_type: entry.content_type, name: entry.name || entry.progress_key, poster: entry.poster || null })}
+                            >
+                              {cardImg ? (
+                                <img src={cardImg} alt={entry.name} className="nuvio-cw-card-img" />
+                              ) : (
+                                <div style={{ width: '100%', height: '100%', background: 'rgba(255,255,255,0.03)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '12px', boxSizing: 'border-box', fontSize: '0.85rem', fontWeight: 600, color: 'rgba(255,255,255,0.5)' }}>
+                                  {entry.name || entry.content_id}
+                                </div>
+                              )}
+                              {isEpisode && (
+                                <div className="nuvio-cw-card-ep-top">S{entry.season}:E{entry.episode}</div>
+                              )}
+                              <div className="nuvio-cw-card-gradient" />
+                              <div className="nuvio-cw-card-body">
+                                <div className="nuvio-cw-card-title">{entry.name || entry.content_id}</div>
+                                {subtitle && <div className="nuvio-cw-card-meta">{subtitle}</div>}
+                              </div>
+                              {badgeText && (
+                                <div className="nuvio-cw-card-badge">{badgeText}</div>
+                              )}
+                              <div className="nuvio-cw-progress-track">
+                                <div className="nuvio-cw-progress-fill" style={{ width: `${progressPct}%` }} />
                               </div>
                             </div>
-                          )}
-                          {entry.season !== null && entry.episode !== null && (
-                            <div className="nuvio-card-episode-badge">
-                              S{entry.season}E{entry.episode}
-                            </div>
-                          )}
-                          <div className="nuvio-progress-bar" style={{ width: `${getProgressPercent(entry)}%` }} />
-                        </div>
-                      ))}
+                          );
+                        });
+                      })()}
                     </div>
                   </div>
                 )}

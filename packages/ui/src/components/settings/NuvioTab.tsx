@@ -1026,6 +1026,39 @@ export function NuvioTab() {
                 </div>
               </div>
 
+              {/* Continue Watching Style */}
+              <div style={{ marginBottom: '20px', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '16px' }}>
+                <div style={{ fontSize: '0.82rem', fontWeight: 600, color: 'rgba(255,255,255,0.9)', marginBottom: '4px' }}>Continue Watching Style</div>
+                <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.4)', marginBottom: '10px' }}>Choose how continue watching items are displayed.</div>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  {['card', 'wide', 'poster'].map((style) => {
+                    const current = localStorage.getItem('nuvio_cw_style') || 'card';
+                    return (
+                      <button
+                        key={style}
+                        type="button"
+                        onClick={() => localStorage.setItem('nuvio_cw_style', style)}
+                        style={{
+                          flex: 1,
+                          padding: '8px 12px',
+                          borderRadius: '6px',
+                          fontSize: '0.78rem',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          background: current === style ? 'rgba(0,212,255,0.15)' : 'rgba(255,255,255,0.04)',
+                          border: current === style ? '1px solid #00d4ff' : '1px solid rgba(255,255,255,0.08)',
+                          color: current === style ? '#00d4ff' : 'rgba(255,255,255,0.7)',
+                          textTransform: 'capitalize',
+                          transition: 'all 0.15s ease',
+                        }}
+                      >
+                        {style}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
               {/* Catalog Rows list */}
               {localCatalogItems.length > 0 ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
