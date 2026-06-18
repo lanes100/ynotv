@@ -13,6 +13,10 @@ interface StremTabProps {
   onStremioBadgeSizeChange: (size: number) => Promise<void>;
   showHoverDetails: boolean;
   onShowHoverDetailsChange: (show: boolean) => Promise<void>;
+  showFileSizeBadges: boolean;
+  onShowFileSizeBadgesChange: (show: boolean) => Promise<void> | void;
+  streamBadgePlacement: 'top' | 'bottom';
+  onStreamBadgePlacementChange: (placement: 'top' | 'bottom') => Promise<void> | void;
 }
 
 export function StremTab({
@@ -26,6 +30,10 @@ export function StremTab({
   onStremioBadgeSizeChange,
   showHoverDetails,
   onShowHoverDetailsChange,
+  showFileSizeBadges,
+  onShowFileSizeBadgesChange,
+  streamBadgePlacement,
+  onStreamBadgePlacementChange,
 }: StremTabProps) {
   const [badgeUrl, setBadgeUrl] = useState('');
   const [badgePaste, setBadgePaste] = useState('');
@@ -175,7 +183,47 @@ export function StremTab({
       </div>
 
       {showStremioStreamBadges && (
-        <div className="retry-setting-row" style={{ borderBottom: 'none', flexDirection: 'column', alignItems: 'stretch', gap: '10px', marginTop: '4px' }}>
+        <>
+          <div className="retry-setting-row" style={{ borderBottom: 'none', marginTop: '12px' }}>
+            <div className="timeshift-toggle-info">
+              <span className="timeshift-toggle-label">Show File Size Badges</span>
+              <span className="timeshift-toggle-sub">Display the video file size badge if available.</span>
+            </div>
+            <label className="toggle-switch">
+              <input
+                type="checkbox"
+                checked={showFileSizeBadges}
+                onChange={(e) => onShowFileSizeBadgesChange(e.target.checked)}
+              />
+              <span className="toggle-slider" />
+            </label>
+          </div>
+
+          <div className="retry-setting-row" style={{ borderBottom: 'none', marginTop: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div className="timeshift-toggle-info">
+              <span className="timeshift-toggle-label">Badge Position</span>
+              <span className="timeshift-toggle-sub">Render badges above or below the stream title.</span>
+            </div>
+            <select
+              value={streamBadgePlacement}
+              onChange={(e) => onStreamBadgePlacementChange(e.target.value as 'top' | 'bottom')}
+              style={{
+                background: 'rgba(255,255,255,0.05)',
+                border: '1px solid rgba(255,255,255,0.08)',
+                color: 'rgba(255,255,255,0.85)',
+                borderRadius: '6px',
+                padding: '6px 10px',
+                fontSize: '0.8rem',
+                outline: 'none',
+                cursor: 'pointer',
+              }}
+            >
+              <option value="bottom" style={{ background: '#1a1a1a' }}>Bottom (Below Title)</option>
+              <option value="top" style={{ background: '#1a1a1a' }}>Top (Above Title)</option>
+            </select>
+          </div>
+
+          <div className="retry-setting-row" style={{ borderBottom: 'none', flexDirection: 'column', alignItems: 'stretch', gap: '10px', marginTop: '12px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
             <span className="timeshift-toggle-label" style={{ fontSize: '0.85rem' }}>Badge Scale ({stremioBadgeSize}%)</span>
           </div>
@@ -218,17 +266,18 @@ export function StremTab({
             </div>
           </div>
         </div>
+      </>
       )}
 
       {/* Custom Badge Import */}
       <div style={{ marginTop: '20px', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '16px' }}>
         <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'rgba(255,255,255,0.8)', marginBottom: '8px' }}>
-          Custom Badge Rules
+          Fusion Badges / Custom Rules
         </div>
 
         <input
           type="text"
-          placeholder="Badge JSON URL (e.g. https://pastebin.com/raw/...)"
+          placeholder="Fusion Badge JSON URL (e.g. https://pastebin.com/raw/...)"
           value={badgeUrl}
           onChange={(e) => setBadgeUrl(e.target.value)}
           style={{

@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
-import type { StremioStream } from '../../types/stremio';
+import type { StremioStream, StremioStreamBadge } from '../../types/stremio';
 import { useDownloadStore } from '../../stores/downloadStore';
+import { extractStreamBadges, isLightColor, formatVideoSize } from '../../utils/streamBadges';
 import './StreamPickerModal.css';
 
 interface StreamPickerModalProps {
@@ -9,9 +10,23 @@ interface StreamPickerModalProps {
   onClose: () => void;
   meta?: any;
   selectedVideo?: any;
+  showStreamBadges?: boolean;
+  compiledBadgeRules?: { pattern: RegExp; badge: StremioStreamBadge }[];
+  showFileSizeBadges?: boolean;
+  streamBadgePlacement?: 'top' | 'bottom';
 }
 
-export function StreamPickerModal({ streams, onSelect, onClose, meta, selectedVideo }: StreamPickerModalProps) {
+export function StreamPickerModal({
+  streams,
+  onSelect,
+  onClose,
+  meta,
+  selectedVideo,
+  showStreamBadges = true,
+  compiledBadgeRules = [],
+  showFileSizeBadges = true,
+  streamBadgePlacement = 'bottom',
+}: StreamPickerModalProps) {
   const directStreams = streams.filter(s => s.url);
   const torrentStreams = streams.filter(s => s.infoHash);
 
@@ -52,6 +67,71 @@ export function StreamPickerModal({ streams, onSelect, onClose, meta, selectedVi
     [meta, selectedVideo, startDownload]
   );
 
+  const renderItemBadges = (stream: StremioStream) => {
+    if (!showStreamBadges) return null;
+    const badges = extractStreamBadges(stream, compiledBadgeRules);
+    if (showFileSizeBadges && stream.behaviorHints?.videoSize) {
+      const sizeStr = formatVideoSize(stream.behaviorHints.videoSize);
+      if (sizeStr) {
+        badges.push({
+          label: sizeStr,
+          color: '#4b5563',
+        });
+      }
+    }
+    if (badges.length === 0) return null;
+
+    return (
+      <div className="stremio-detail-stream-badges" style={{ 
+        display: 'flex', 
+        gap: '6px', 
+        flexWrap: 'wrap', 
+        alignItems: 'center',
+        marginTop: streamBadgePlacement === 'top' ? '4px' : '6px',
+        marginBottom: streamBadgePlacement === 'top' ? '6px' : '4px',
+        transform: 'scale(0.9)',
+        transformOrigin: 'left center',
+      }}>
+        {badges.map((badge) => {
+          const bgColor = badge.color || '#1a1a1a';
+          const isLightBg = isLightColor(bgColor);
+          const textColor = badge.textColor || (isLightBg ? '#000000' : '#ffffff');
+          return badge.imageUrl ? (
+            <span
+              key={badge.label}
+              className="stremio-stream-badge-img"
+              style={{
+                backgroundColor: bgColor,
+                borderColor: badge.borderColor,
+                padding: '2px',
+                height: '14px',
+                display: 'inline-flex',
+                alignItems: 'center',
+              }}
+            >
+              <img src={badge.imageUrl} alt={badge.label} title={badge.label} style={{ height: '100%', objectFit: 'contain' }} />
+            </span>
+          ) : (
+            <span
+              key={badge.label}
+              className="stremio-stream-badge"
+              style={{
+                backgroundColor: bgColor,
+                color: textColor,
+                borderColor: badge.borderColor,
+                fontSize: '0.65rem',
+                padding: '1px 4px',
+                borderRadius: '3px',
+              }}
+            >
+              {badge.label}
+            </span>
+          );
+        })}
+      </div>
+    );
+  };
+
   return (
     <div className="stremio-picker-overlay" onClick={onClose}>
       <div className="stremio-picker-modal" onClick={(e) => e.stopPropagation()}>
@@ -72,7 +152,9 @@ export function StreamPickerModal({ streams, onSelect, onClose, meta, selectedVi
                 return (
                   <div key={`direct-${i}`} className="stremio-picker-item-row">
                     <button className="stremio-picker-item" onClick={() => onSelect(s)}>
+                      {streamBadgePlacement === 'top' && renderItemBadges(s)}
                       <div className="stremio-picker-item-name">{displayName}</div>
+                      {streamBadgePlacement === 'bottom' && renderItemBadges(s)}
                       {displayDesc && <div className="stremio-picker-item-desc">{displayDesc}</div>}
                       <div className="stremio-picker-item-source">{s.addonName}</div>
                     </button>
@@ -111,7 +193,9 @@ export function StreamPickerModal({ streams, onSelect, onClose, meta, selectedVi
                 const displayDesc = name ? desc : '';
                 return (
                   <button key={`torrent-${i}`} className="stremio-picker-item" onClick={() => onSelect(s)}>
+                    {streamBadgePlacement === 'top' && renderItemBadges(s)}
                     <div className="stremio-picker-item-name">{displayName}</div>
+                    {streamBadgePlacement === 'bottom' && renderItemBadges(s)}
                     {displayDesc && <div className="stremio-picker-item-desc">{displayDesc}</div>}
                     <div className="stremio-picker-item-hash">
                       infoHash: {s.infoHash?.substring(0, 16)}...

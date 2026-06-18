@@ -97,6 +97,7 @@ import { useNuvioAuthStore } from './stores/nuvioAuthStore';
 import { useUIStore } from './stores/uiStore';
 import { fetchSubtitles } from './services/stremio-addon';
 import { scrobbler } from './services/scrobbler';
+import { pushNuvioWatchProgress } from './services/nuvio-api';
 import { SkipIntroButton } from './components/SkipIntroButton';
 import { useSkipIntro } from './hooks/useSkipIntro';
 import { BackButtonOverlay } from './components/BackButtonOverlay';
@@ -257,6 +258,65 @@ function App() {
     }
   }, []);
 
+  // File size badges and placement
+  const [showFileSizeBadges, setShowFileSizeBadges] = useState(true);
+  const handleShowFileSizeBadgesChange = useCallback(async (enabled: boolean) => {
+    setShowFileSizeBadges(enabled);
+    if (window.storage) {
+      await window.storage.updateSettings({ showFileSizeBadges: enabled });
+    }
+  }, []);
+
+  const [streamBadgePlacement, setStreamBadgePlacement] = useState<'top' | 'bottom'>('bottom');
+  const handleStreamBadgePlacementChange = useCallback(async (placement: 'top' | 'bottom') => {
+    setStreamBadgePlacement(placement);
+    if (window.storage) {
+      await window.storage.updateSettings({ streamBadgePlacement: placement });
+    }
+  }, []);
+
+  // Nuvio independent badges configuration
+  const [showNuvioStreamBadges, setShowNuvioStreamBadges] = useState(true);
+  const handleShowNuvioStreamBadgesChange = useCallback(async (enabled: boolean) => {
+    setShowNuvioStreamBadges(enabled);
+    if (window.storage) {
+      await window.storage.updateSettings({ showNuvioStreamBadges: enabled });
+    }
+  }, []);
+
+  const [nuvioBadgeSources, setNuvioBadgeSources] = useState<BadgeSource[]>(DEFAULT_BADGE_SOURCES);
+  const handleNuvioBadgeSourcesChange = useCallback(async (sources: BadgeSource[]) => {
+    setNuvioBadgeSources(sources);
+    if (window.storage) {
+      await window.storage.updateSettings({ nuvioBadgeSources: sources });
+    }
+  }, []);
+
+  const [nuvioBadgeSize, setNuvioBadgeSize] = useState(100);
+  const handleNuvioBadgeSizeChange = useCallback(async (size: number) => {
+    setNuvioBadgeSize(size);
+    document.documentElement.style.setProperty('--nuvio-badge-scale', String(size / 100));
+    if (window.storage) {
+      await window.storage.updateSettings({ nuvioBadgeSize: size });
+    }
+  }, []);
+
+  const [nuvioShowFileSizeBadges, setNuvioShowFileSizeBadges] = useState(true);
+  const handleNuvioShowFileSizeBadgesChange = useCallback(async (enabled: boolean) => {
+    setNuvioShowFileSizeBadges(enabled);
+    if (window.storage) {
+      await window.storage.updateSettings({ nuvioShowFileSizeBadges: enabled });
+    }
+  }, []);
+
+  const [nuvioStreamBadgePlacement, setNuvioStreamBadgePlacement] = useState<'top' | 'bottom'>('bottom');
+  const handleNuvioStreamBadgePlacementChange = useCallback(async (placement: 'top' | 'bottom') => {
+    setNuvioStreamBadgePlacement(placement);
+    if (window.storage) {
+      await window.storage.updateSettings({ nuvioStreamBadgePlacement: placement });
+    }
+  }, []);
+
   // Load stremioStreamPickerMode from storage
   useEffect(() => {
     if (!layoutSettingsLoaded) return;
@@ -280,6 +340,31 @@ function App() {
         if (res.data?.showHoverDetails !== undefined) {
           setShowHoverDetails(res.data.showHoverDetails as boolean);
           document.documentElement.toggleAttribute('data-hover-details-disabled', !res.data.showHoverDetails);
+        }
+        if (res.data?.showFileSizeBadges !== undefined) {
+          setShowFileSizeBadges(res.data.showFileSizeBadges as boolean);
+        }
+        if (res.data?.streamBadgePlacement) {
+          setStreamBadgePlacement(res.data.streamBadgePlacement as 'top' | 'bottom');
+        }
+        if (res.data?.showNuvioStreamBadges !== undefined) {
+          setShowNuvioStreamBadges(res.data.showNuvioStreamBadges as boolean);
+        }
+        if (res.data?.nuvioBadgeSources !== undefined) {
+          setNuvioBadgeSources(mergeDefaultBadgeSources(res.data.nuvioBadgeSources as BadgeSource[] | undefined));
+        }
+        if (res.data?.nuvioBadgeSize !== undefined) {
+          const size = res.data.nuvioBadgeSize as number;
+          setNuvioBadgeSize(size);
+          document.documentElement.style.setProperty('--nuvio-badge-scale', String(size / 100));
+        } else {
+          document.documentElement.style.setProperty('--nuvio-badge-scale', '1');
+        }
+        if (res.data?.nuvioShowFileSizeBadges !== undefined) {
+          setNuvioShowFileSizeBadges(res.data.nuvioShowFileSizeBadges as boolean);
+        }
+        if (res.data?.nuvioStreamBadgePlacement) {
+          setNuvioStreamBadgePlacement(res.data.nuvioStreamBadgePlacement as 'top' | 'bottom');
         }
         if (res.data?.popoutMode) {
           setPopoutMode(res.data.popoutMode as 'off' | 'popout' | 'external');
@@ -478,7 +563,7 @@ function App() {
   // Popout mode state: 'off' | 'popout' | 'external'
   const [popoutMode, setPopoutMode] = useState<'off' | 'popout' | 'external'>('off');
   // Playback source view state to know where to go back when stopped
-  const [playbackSourceView, setPlaybackSourceView] = useState<'movies' | 'series' | 'dvr' | 'stremio' | null>(null);
+  const [playbackSourceView, setPlaybackSourceView] = useState<'movies' | 'series' | 'dvr' | 'stremio' | 'nuvio' | null>(null);
   const isPopoutModeLoadedRef = useRef(false);
 
   const cyclePopoutMode = useCallback(() => {
@@ -735,12 +820,13 @@ function App() {
     handleMouseMove,
   } = nav;
 
-  // Wrap handleStop to restore Stremio page if stopped from a Stremio media context
+  // Wrap handleStop to restore Stremio/Nuvio page if stopped from a media context
   const handleStop = useCallback(async () => {
     const isStremio = vodInfo?.source_id === 'stremio' || vodInfo?.source_id === 'trailer';
+    const isNuvio = vodInfo?.source_id === 'nuvio';
     
-    // Save final progress to Stremio watch store before stopping
-    if (vodInfo?.source_id === 'stremio') {
+    // Save final progress before stopping
+    if (isStremio || isNuvio) {
       const pos = positionRef.current;
       const dur = durationRef.current;
       if (dur > 0 && pos > 0) {
@@ -748,46 +834,95 @@ function App() {
         const watchStore = useStremioWatchStore.getState();
         const epInfo = stremioEpisodeRef.current;
         const movieInfo = stremioMovieRef.current;
+        
         if (epInfo) {
-          watchStore.updateEpisodeProgress(
-            epInfo.metaId,
-            epInfo.videoId,
-            fraction,
-            epInfo.season,
-            epInfo.episode,
-            epInfo.nextVideoId,
-            epInfo.nextSeason,
-            epInfo.nextEpisode
-          );
-
-          // Sync to Stremio cloud
-          const auth = useStremioAuthStore.getState();
-          if (auth.authKey && auth.syncProgress) {
-            auth.syncPlaybackProgress(
+          if (!isNuvio) {
+            watchStore.updateEpisodeProgress(
               epInfo.metaId,
               epInfo.videoId,
-              pos,
-              dur,
-              'series',
-              epInfo.name,
-              epInfo.poster
-            ).catch(() => {});
+              fraction,
+              epInfo.season,
+              epInfo.episode,
+              epInfo.nextVideoId,
+              epInfo.nextSeason,
+              epInfo.nextEpisode
+            );
+          }
+
+          if (isStremio) {
+            // Sync to Stremio cloud
+            const auth = useStremioAuthStore.getState();
+            if (auth.authKey && auth.syncProgress) {
+              auth.syncPlaybackProgress(
+                epInfo.metaId,
+                epInfo.videoId,
+                pos,
+                dur,
+                'series',
+                epInfo.name,
+                epInfo.poster
+              ).catch(() => {});
+            }
+          } else if (isNuvio) {
+            // Sync to Nuvio cloud
+            const nuvioAuth = useNuvioAuthStore.getState();
+            const nuvioToken = nuvioAuth.token;
+            const nuvioProfile = nuvioAuth.activeProfile;
+            if (nuvioToken && nuvioProfile) {
+              pushNuvioWatchProgress(nuvioToken, nuvioProfile.profile_index, [{
+                content_id: epInfo.metaId,
+                content_type: 'series',
+                video_id: epInfo.videoId,
+                season: epInfo.season,
+                episode: epInfo.episode,
+                position: Math.floor(pos * 1000),
+                duration: Math.floor(dur * 1000),
+                last_watched: Date.now(),
+                progress_key: `${epInfo.metaId}_s${epInfo.season}e${epInfo.episode}`,
+              }]).then(() => {
+                window.dispatchEvent(new CustomEvent('ynotv:nuvio-sync-required'));
+              }).catch((err) => console.error('[NuvioProgress] Failed to sync progress:', err));
+            }
           }
         } else if (movieInfo) {
-          watchStore.updateMovieProgress(movieInfo.metaId, fraction);
+          if (!isNuvio) {
+            watchStore.updateMovieProgress(movieInfo.metaId, fraction);
+          }
 
-          // Sync to Stremio cloud
-          const auth = useStremioAuthStore.getState();
-          if (auth.authKey && auth.syncProgress) {
-            auth.syncPlaybackProgress(
-              movieInfo.metaId,
-              movieInfo.metaId,
-              pos,
-              dur,
-              'movie',
-              movieInfo.name,
-              movieInfo.poster
-            ).catch(() => {});
+          if (isStremio) {
+            // Sync to Stremio cloud
+            const auth = useStremioAuthStore.getState();
+            if (auth.authKey && auth.syncProgress) {
+              auth.syncPlaybackProgress(
+                movieInfo.metaId,
+                movieInfo.metaId,
+                pos,
+                dur,
+                'movie',
+                movieInfo.name,
+                movieInfo.poster
+              ).catch(() => {});
+            }
+          } else if (isNuvio) {
+            // Sync to Nuvio cloud
+            const nuvioAuth = useNuvioAuthStore.getState();
+            const nuvioToken = nuvioAuth.token;
+            const nuvioProfile = nuvioAuth.activeProfile;
+            if (nuvioToken && nuvioProfile) {
+              pushNuvioWatchProgress(nuvioToken, nuvioProfile.profile_index, [{
+                content_id: movieInfo.metaId,
+                content_type: 'movie',
+                video_id: movieInfo.metaId,
+                season: null,
+                episode: null,
+                position: Math.floor(pos * 1000),
+                duration: Math.floor(dur * 1000),
+                last_watched: Date.now(),
+                progress_key: `${movieInfo.metaId}`,
+              }]).then(() => {
+                window.dispatchEvent(new CustomEvent('ynotv:nuvio-sync-required'));
+              }).catch((err) => console.error('[NuvioProgress] Failed to sync progress:', err));
+            }
           }
         }
       }
@@ -799,6 +934,8 @@ function App() {
       setPlaybackSourceView(null);
     } else if (isStremio) {
       setActiveView('stremio');
+    } else if (isNuvio) {
+      setActiveView('nuvio');
     }
   }, [vodInfo, handleStopRaw, setActiveView, playbackSourceView]);
 
@@ -1299,7 +1436,7 @@ function App() {
   useEffect(() => {
     if (activeView === 'guide' || activeView === 'sports' || activeView === 'dvr' ||
         activeView === 'settings' || activeView === 'movies' || activeView === 'series' ||
-        activeView === 'calendar' || activeView === 'stremio') {
+        activeView === 'calendar' || activeView === 'stremio' || activeView === 'nuvio') {
       enterTabMode(activeView);
     } else {
       exitTabMode();
@@ -1415,9 +1552,9 @@ function App() {
         durationRef.current = 0;
         positionRef.current = 0;
 
-        // Record watch in stremio watch store
+        const isNuvio = !!detail.isNuvio;
+        stremioMetaRef.current = meta;
         const watchStore = useStremioWatchStore.getState();
-
 
         if (meta.type === 'series' && episodeVideo) {
           // Compute next episode: iterate videos sorted by season/episode
@@ -1437,12 +1574,14 @@ function App() {
               nextEpisode = nxt.episode;
             }
           }
-          watchStore.recordEpisodeStart(
-            meta.id, meta.name, meta.poster,
-            episodeVideo.id, episodeVideo.season ?? 0, episodeVideo.episode ?? 0,
-            nextVideoId, nextSeason, nextEpisode,
-            stream
-          );
+          if (!isNuvio) {
+            watchStore.recordEpisodeStart(
+              meta.id, meta.name, meta.poster,
+              episodeVideo.id, episodeVideo.season ?? 0, episodeVideo.episode ?? 0,
+              nextVideoId, nextSeason, nextEpisode,
+              stream
+            );
+          }
           stremioEpisodeRef.current = {
             metaId: meta.id,
             name: meta.name,
@@ -1456,13 +1595,13 @@ function App() {
           };
           stremioMovieRef.current = null;
         } else {
-          watchStore.recordMovieWatch(meta.id, meta.name, meta.poster, stream);
+          if (!isNuvio) {
+            watchStore.recordMovieWatch(meta.id, meta.name, meta.poster, stream);
+          }
           stremioMovieRef.current = { metaId: meta.id, name: meta.name, poster: meta.poster };
           stremioEpisodeRef.current = null;
         }
-
-        stremioMetaRef.current = meta;
-        setPlaybackSourceView('stremio');
+        setPlaybackSourceView(isNuvio ? 'nuvio' : 'stremio');
         setActiveViewRef.current('none');
         const isSeries = meta.type === 'series' && episodeVideo;
 
@@ -1470,14 +1609,14 @@ function App() {
         void recordVodWatch(
           meta.id,
           isSeries ? 'series' : 'movie',
-          'stremio',
+          isNuvio ? 'nuvio' : 'stremio',
           meta.name,
           meta.poster,
           isSeries ? (episodeVideo.season ?? undefined) : undefined,
           isSeries ? (episodeVideo.episode ?? undefined) : undefined,
           isSeries ? (episodeVideo.title || `Episode ${episodeVideo.episode}`) : undefined
         ).catch((err) => {
-          console.error('[Stremio] Failed to record VOD watch in history:', err);
+          console.error(isNuvio ? '[Nuvio] Failed to record VOD watch in history:' : '[Stremio] Failed to record VOD watch in history:', err);
         });
 
         await handlePlayVodRef.current({
@@ -1491,7 +1630,7 @@ function App() {
           episodeInfo: isSeries
             ? `S${episodeVideo.season} E${episodeVideo.episode}${episodeVideo.title ? ` · ${episodeVideo.title}` : ''}`
             : undefined,
-          source_id: 'stremio',
+          source_id: isNuvio ? 'nuvio' : 'stremio',
           mediaId: isSeries ? `${meta.id}_ep_${episodeVideo.id}` : meta.id,
           seriesId: isSeries ? meta.id : undefined,
           seasonNum: episodeVideo?.season,
@@ -1567,7 +1706,7 @@ function App() {
       const { url, title, backdropUrl, logoUrl } = (e as CustomEvent).detail;
       if (!url) return;
       const currentView = activeViewRef.current;
-      if (currentView === 'movies' || currentView === 'series' || currentView === 'stremio' || currentView === 'dvr') {
+      if (currentView === 'movies' || currentView === 'series' || currentView === 'stremio' || currentView === 'dvr' || currentView === 'nuvio') {
         setPlaybackSourceView(currentView);
       }
       setActiveViewRef.current?.('none');
@@ -1618,12 +1757,14 @@ function App() {
   }, []);
 
   // ==========================================================================
-  // Stremio Progress Updater — saves watch progress every 10 seconds
+  // Stremio & Nuvio Progress Updater — saves watch progress every 10 seconds
   // ==========================================================================
   useEffect(() => {
-    if (vodInfo?.source_id !== 'stremio' || !playing || duration <= 0) return;
+    const isStremio = vodInfo?.source_id === 'stremio';
+    const isNuvio = vodInfo?.source_id === 'nuvio';
+    if ((!isStremio && !isNuvio) || !playing || duration <= 0) return;
 
-    const saveStremioProgress = () => {
+    const saveProgress = () => {
       const pos = positionRef.current;
       const dur = durationRef.current;
       if (dur <= 0 || pos <= 0) return;
@@ -1634,20 +1775,22 @@ function App() {
       const movieInfo = stremioMovieRef.current;
 
       if (epInfo) {
-        watchStore.updateEpisodeProgress(
-          epInfo.metaId,
-          epInfo.videoId,
-          fraction,
-          epInfo.season,
-          epInfo.episode,
-          epInfo.nextVideoId,
-          epInfo.nextSeason,
-          epInfo.nextEpisode
-        );
+        if (!isNuvio) {
+          watchStore.updateEpisodeProgress(
+            epInfo.metaId,
+            epInfo.videoId,
+            fraction,
+            epInfo.season,
+            epInfo.episode,
+            epInfo.nextVideoId,
+            epInfo.nextSeason,
+            epInfo.nextEpisode
+          );
+        }
         recordEpisodeWatch(
           epInfo.videoId,
           epInfo.metaId,
-          'stremio',
+          isNuvio ? 'nuvio' : 'stremio',
           epInfo.season,
           epInfo.episode,
           '',
@@ -1655,47 +1798,90 @@ function App() {
           Math.floor(dur)
         ).catch(() => {});
 
-        // Sync to Stremio Cloud
-        const auth = useStremioAuthStore.getState();
-        if (auth.authKey && auth.syncProgress) {
-          auth.syncPlaybackProgress(
-            epInfo.metaId,
-            epInfo.videoId,
-            pos,
-            dur,
-            'series',
-            epInfo.name,
-            epInfo.poster
-          ).catch(() => {});
+        if (isStremio) {
+          // Sync to Stremio Cloud
+          const auth = useStremioAuthStore.getState();
+          if (auth.authKey && auth.syncProgress) {
+            auth.syncPlaybackProgress(
+              epInfo.metaId,
+              epInfo.videoId,
+              pos,
+              dur,
+              'series',
+              epInfo.name,
+              epInfo.poster
+            ).catch(() => {});
+          }
+        } else if (isNuvio) {
+          // Sync to Nuvio Cloud
+          const nuvioAuth = useNuvioAuthStore.getState();
+          const nuvioToken = nuvioAuth.token;
+          const nuvioProfile = nuvioAuth.activeProfile;
+          if (nuvioToken && nuvioProfile) {
+            pushNuvioWatchProgress(nuvioToken, nuvioProfile.profile_index, [{
+              content_id: epInfo.metaId,
+              content_type: 'series',
+              video_id: epInfo.videoId,
+              season: epInfo.season,
+              episode: epInfo.episode,
+              position: Math.floor(pos * 1000),
+              duration: Math.floor(dur * 1000),
+              last_watched: Date.now(),
+              progress_key: `${epInfo.metaId}_s${epInfo.season}e${epInfo.episode}`,
+            }]).then(() => {
+              window.dispatchEvent(new CustomEvent('ynotv:nuvio-sync-required'));
+            }).catch(() => {});
+          }
         }
       } else if (movieInfo) {
-        watchStore.updateMovieProgress(movieInfo.metaId, fraction);
+        if (!isNuvio) {
+          watchStore.updateMovieProgress(movieInfo.metaId, fraction);
+        }
 
-        // Sync to Stremio Cloud
-        const auth = useStremioAuthStore.getState();
-        if (auth.authKey && auth.syncProgress) {
-          auth.syncPlaybackProgress(
-            movieInfo.metaId,
-            movieInfo.metaId,
-            pos,
-            dur,
-            'movie',
-            movieInfo.name,
-            movieInfo.poster
-          ).catch(() => {});
+        if (isStremio) {
+          // Sync to Stremio Cloud
+          const auth = useStremioAuthStore.getState();
+          if (auth.authKey && auth.syncProgress) {
+            auth.syncPlaybackProgress(
+              movieInfo.metaId,
+              movieInfo.metaId,
+              pos,
+              dur,
+              'movie',
+              movieInfo.name,
+              movieInfo.poster
+            ).catch(() => {});
+          }
+        } else if (isNuvio) {
+          // Sync to Nuvio Cloud
+          const nuvioAuth = useNuvioAuthStore.getState();
+          const nuvioToken = nuvioAuth.token;
+          const nuvioProfile = nuvioAuth.activeProfile;
+          if (nuvioToken && nuvioProfile) {
+            pushNuvioWatchProgress(nuvioToken, nuvioProfile.profile_index, [{
+              content_id: movieInfo.metaId,
+              content_type: 'movie',
+              video_id: movieInfo.metaId,
+              season: null,
+              episode: null,
+              position: Math.floor(pos * 1000),
+              duration: Math.floor(dur * 1000),
+              last_watched: Date.now(),
+              progress_key: `${movieInfo.metaId}`,
+            }]).then(() => {
+              window.dispatchEvent(new CustomEvent('ynotv:nuvio-sync-required'));
+            }).catch(() => {});
+          }
         }
       }
     };
 
     // Save immediately and then every 10 seconds
-    saveStremioProgress();
-    const interval = setInterval(saveStremioProgress, 10_000);
+    saveProgress();
+    const interval = setInterval(saveProgress, 10_000);
     return () => clearInterval(interval);
   }, [vodInfo, playing, duration]);
 
-  // ==========================================================================
-  // Trakt & Simkl Unified Playback Scrobbler
-  // ==========================================================================
   const lastKnownProgressPercentRef = useRef(0);
   const scrobblingMediaRef = useRef<any>(null);
   const scrobbleTimerRef = useRef<any>(null);
@@ -3225,6 +3411,20 @@ function App() {
           onStremioBadgeSizeChange={handleStremioBadgeSizeChange}
           showHoverDetails={showHoverDetails}
           onShowHoverDetailsChange={handleShowHoverDetailsChange}
+          showFileSizeBadges={showFileSizeBadges}
+          onShowFileSizeBadgesChange={handleShowFileSizeBadgesChange}
+          streamBadgePlacement={streamBadgePlacement}
+          onStreamBadgePlacementChange={handleStreamBadgePlacementChange}
+          showNuvioStreamBadges={showNuvioStreamBadges}
+          onShowNuvioStreamBadgesChange={handleShowNuvioStreamBadgesChange}
+          nuvioBadgeSources={nuvioBadgeSources}
+          onNuvioBadgeSourcesChange={handleNuvioBadgeSourcesChange}
+          nuvioBadgeSize={nuvioBadgeSize}
+          onNuvioBadgeSizeChange={handleNuvioBadgeSizeChange}
+          nuvioShowFileSizeBadges={nuvioShowFileSizeBadges}
+          onNuvioShowFileSizeBadgesChange={handleNuvioShowFileSizeBadgesChange}
+          nuvioStreamBadgePlacement={nuvioStreamBadgePlacement}
+          onNuvioStreamBadgePlacementChange={handleNuvioStreamBadgePlacementChange}
           initialTab={settingsTab}
           pendingSubTabFromParent={pendingSettingsSubTab}
           onConsumePendingSubTab={() => setPendingSettingsSubTab(null)}
@@ -3331,6 +3531,10 @@ function App() {
           onStremioBadgeSizeChange={handleStremioBadgeSizeChange}
           showHoverDetails={showHoverDetails}
           onShowHoverDetailsChange={handleShowHoverDetailsChange}
+          showFileSizeBadges={showFileSizeBadges}
+          onShowFileSizeBadgesChange={handleShowFileSizeBadgesChange}
+          streamBadgePlacement={streamBadgePlacement}
+          onStreamBadgePlacementChange={handleStreamBadgePlacementChange}
         />
       </TransitionView>
 
@@ -3338,6 +3542,16 @@ function App() {
       <TransitionView visible={activeView === 'nuvio'}>
         <NuvioPage
           onClose={() => setActiveView('none')}
+          showNuvioStreamBadges={showNuvioStreamBadges}
+          onShowNuvioStreamBadgesChange={handleShowNuvioStreamBadgesChange}
+          nuvioBadgeSources={nuvioBadgeSources}
+          onNuvioBadgeSourcesChange={handleNuvioBadgeSourcesChange}
+          nuvioBadgeSize={nuvioBadgeSize}
+          onNuvioBadgeSizeChange={handleNuvioBadgeSizeChange}
+          nuvioShowFileSizeBadges={nuvioShowFileSizeBadges}
+          onNuvioShowFileSizeBadgesChange={handleNuvioShowFileSizeBadgesChange}
+          nuvioStreamBadgePlacement={nuvioStreamBadgePlacement}
+          onNuvioStreamBadgePlacementChange={handleNuvioStreamBadgePlacementChange}
         />
       </TransitionView>
 

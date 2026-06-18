@@ -41,6 +41,10 @@ interface StremioPageProps {
   onStremioBadgeSizeChange: (size: number) => Promise<void>;
   showHoverDetails: boolean;
   onShowHoverDetailsChange: (show: boolean) => Promise<void>;
+  showFileSizeBadges: boolean;
+  onShowFileSizeBadgesChange?: (show: boolean) => Promise<void> | void;
+  streamBadgePlacement: 'top' | 'bottom';
+  onStreamBadgePlacementChange?: (placement: 'top' | 'bottom') => Promise<void> | void;
 }
 
 export function StremioPage({
@@ -55,6 +59,10 @@ export function StremioPage({
   onStremioBadgeSizeChange,
   showHoverDetails,
   onShowHoverDetailsChange,
+  showFileSizeBadges,
+  onShowFileSizeBadgesChange,
+  streamBadgePlacement,
+  onStreamBadgePlacementChange,
 }: StremioPageProps) {
   const addons = useStremioAddonStore((s) => s.enabledAddons);
   const stremioView = useStremioView();
@@ -173,6 +181,8 @@ export function StremioPage({
               streamPickerMode={stremioStreamPickerMode}
               showStreamBadges={showStremioStreamBadges}
               compiledBadgeRules={compiledBadgeRules}
+              showFileSizeBadges={showFileSizeBadges}
+              streamBadgePlacement={streamBadgePlacement}
             />
           )}
 
@@ -197,6 +207,10 @@ export function StremioPage({
                 onStremioBadgeSizeChange={onStremioBadgeSizeChange}
                 showHoverDetails={showHoverDetails}
                 onShowHoverDetailsChange={onShowHoverDetailsChange}
+                showFileSizeBadges={showFileSizeBadges}
+                onShowFileSizeBadgesChange={onShowFileSizeBadgesChange || (() => {})}
+                streamBadgePlacement={streamBadgePlacement}
+                onStreamBadgePlacementChange={onStreamBadgePlacementChange || (() => {})}
               />
             </div>
           )}

@@ -1569,3 +1569,12 @@ select.nuvio-input option {
   .nuvio-detail-title { font-size: 1.4rem; }
 }
 
+.nuvio-page-hide-content {
+  display: none !important;
+}
+
+.nuvio-page .stremio-detail {
+  z-index: 150;
+}
+
+

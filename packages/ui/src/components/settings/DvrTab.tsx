@@ -8,6 +8,7 @@ export function DvrTab() {
     const [downloadsPath, setDownloadsPath] = useState('');
     const [startPadding, setStartPadding] = useState(60);
     const [endPadding, setEndPadding] = useState(300);
+    const [customEndPaddingInput, setCustomEndPaddingInput] = useState('');
     const [autoConvertFormat, setAutoConvertFormat] = useState('none');
     const [loading, setLoading] = useState(true);
 
@@ -21,7 +22,10 @@ export function DvrTab() {
             const settings = await getDvrSettings();
             setStoragePath(settings.storage_path || '');
             setStartPadding(settings.default_start_padding_sec || 60);
-            setEndPadding(settings.default_end_padding_sec || 300);
+            const endSec = settings.default_end_padding_sec || 300;
+            setEndPadding(endSec);
+            const mins = endSec / 60;
+            setCustomEndPaddingInput(Number(mins.toFixed(2)).toString());
             setAutoConvertFormat(settings.auto_convert_format || 'none');
 
             if (window.storage) {
@@ -82,7 +86,17 @@ export function DvrTab() {
 
     async function handleEndPaddingChange(value: number) {
         setEndPadding(value);
+        const mins = value / 60;
+        setCustomEndPaddingInput(Number(mins.toFixed(2)).toString());
         await saveDvrSetting('default_end_padding_sec', value);
+    }
+
+    async function handleSaveCustomEndPadding() {
+        const mins = parseFloat(customEndPaddingInput);
+        if (!isNaN(mins) && mins >= 0) {
+            const seconds = Math.round(mins * 60);
+            await handleEndPaddingChange(seconds);
+        }
     }
 
     async function handleAutoConvertChange(value: string) {
@@ -244,7 +258,7 @@ export function DvrTab() {
                     <input
                         type="range"
                         min="0"
-                        max="900"
+                        max={Math.max(900, endPadding)}
                         step="30"
                         value={endPadding}
                         onChange={(e) => handleEndPaddingChange(parseInt(e.target.value))}
@@ -259,7 +273,62 @@ export function DvrTab() {
                     />
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px', fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)' }}>
                         <span>None</span>
-                        <span>15 min</span>
+                        <span>{formatDuration(Math.max(900, endPadding))}</span>
+                    </div>
+
+                    {/* Custom End Padding Input */}
+                    <div style={{ 
+                        marginTop: '16px', 
+                        display: 'flex', 
+                        gap: '12px', 
+                        alignItems: 'center',
+                        background: 'rgba(255,255,255,0.02)',
+                        padding: '10px 14px',
+                        borderRadius: '6px',
+                        border: '1px solid rgba(255,255,255,0.05)'
+                    }}>
+                        <div style={{ flex: 1 }}>
+                            <label style={{ 
+                                display: 'block', 
+                                fontSize: '0.75rem', 
+                                color: 'rgba(255,255,255,0.5)',
+                                marginBottom: '4px'
+                            }}>
+                                Custom End Padding (minutes)
+                            </label>
+                            <input
+                                type="number"
+                                min="0"
+                                placeholder="Enter custom minutes"
+                                value={customEndPaddingInput}
+                                onChange={(e) => setCustomEndPaddingInput(e.target.value)}
+                                style={{
+                                    width: '100%',
+                                    background: 'transparent',
+                                    border: 'none',
+                                    color: '#fff',
+                                    fontSize: '0.85rem',
+                                    outline: 'none',
+                                    padding: '2px 0'
+                                }}
+                            />
+                        </div>
+                        <button
+                            type="button"
+                            onClick={handleSaveCustomEndPadding}
+                            disabled={customEndPaddingInput === '' || isNaN(parseFloat(customEndPaddingInput)) || parseFloat(customEndPaddingInput) < 0}
+                            className="sync-btn"
+                            style={{
+                                padding: '6px 12px',
+                                fontSize: '0.8rem',
+                                border: '1px solid rgba(0, 212, 255, 0.4)',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                outline: 'none'
+                            }}
+                        >
+                            Save
+                        </button>
                     </div>
                 </div>
             </div>

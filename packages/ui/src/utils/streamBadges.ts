@@ -563,3 +563,16 @@ export function mergeDefaultBadgeSources(loadedSources: BadgeSource[] | undefine
     return s;
   });
 }
+
+export function formatVideoSize(bytes?: number): string | null {
+  if (!bytes) return null;
+  const gib = bytes / (1024 * 1024 * 1024);
+  if (gib >= 1) {
+    const roundedGiB = Math.round(gib * 10) / 10;
+    return `${roundedGiB} GB`;
+  } else {
+    const mib = bytes / (1024 * 1024);
+    return `${Math.round(mib)} MB`;
+  }
+}
+

@@ -19,14 +19,25 @@ import { StremioCatalogRow } from '../stremio/StremioCatalogRow';
 import { StremioHoverProvider } from '../../contexts/StremioHoverContext';
 import { StremioHoverCard } from '../stremio/StremioHoverCard';
 import { NuvioDetailView, type NuvioMeta } from './NuvioDetailView';
-import type { StremioStream, StremioVideo, StremioMeta } from '../../types/stremio';
+import type { StremioStream, StremioVideo, StremioMeta, BadgeSource } from '../../types/stremio';
 import type { StremioMetaPreview, InstalledAddon } from '../../types/stremio';
+import { compileBadgeSources } from '../../utils/streamBadges';
 import { NuvioTab } from '../settings/NuvioTab';
 import '../Settings.css';
 import './NuvioPage.css';
 
 interface NuvioPageProps {
   onClose: () => void;
+  showNuvioStreamBadges?: boolean;
+  onShowNuvioStreamBadgesChange?: (show: boolean) => Promise<void> | void;
+  nuvioBadgeSources?: BadgeSource[];
+  onNuvioBadgeSourcesChange?: (sources: BadgeSource[]) => Promise<void> | void;
+  nuvioBadgeSize?: number;
+  onNuvioBadgeSizeChange?: (size: number) => Promise<void> | void;
+  nuvioShowFileSizeBadges?: boolean;
+  onNuvioShowFileSizeBadgesChange?: (show: boolean) => Promise<void> | void;
+  nuvioStreamBadgePlacement?: 'top' | 'bottom';
+  onNuvioStreamBadgePlacementChange?: (placement: 'top' | 'bottom') => Promise<void> | void;
 }
 
 const getFolderShapeClass = (folderShape: string | undefined): string => {
@@ -175,12 +186,25 @@ const getSourceLabel = (
   return `${catalogName} (${typeLabel})${genreSuffix}`;
 };
 
-export function NuvioPage({ onClose }: NuvioPageProps) {
+export function NuvioPage({
+  onClose,
+  showNuvioStreamBadges = true,
+  onShowNuvioStreamBadgesChange,
+  nuvioBadgeSources = [],
+  onNuvioBadgeSourcesChange,
+  nuvioBadgeSize = 100,
+  onNuvioBadgeSizeChange,
+  nuvioShowFileSizeBadges = true,
+  onNuvioShowFileSizeBadgesChange,
+  nuvioStreamBadgePlacement = 'bottom',
+  onNuvioStreamBadgePlacementChange,
+}: NuvioPageProps) {
+  const compiledBadgeRules = useMemo(() => compileBadgeSources(nuvioBadgeSources), [nuvioBadgeSources]);
+  const addonsStore = useNuvioAddonStore();
+  const addons = addonsStore.enabledAddons;
   const authStore = useNuvioAuthStore();
   const collectionStore = useNuvioCollectionStore();
-  const addonsStore = useNuvioAddonStore();
   const pluginStore = useNuvioPluginStore();
-  const addons = addonsStore.enabledAddons;
 
   const [library, setLibrary] = useState<NuvioLibrarySyncItem[]>([]);
   const libraryIds = useMemo(() => new Set(library.map(l => l.content_id)), [library]);
@@ -437,9 +461,9 @@ export function NuvioPage({ onClose }: NuvioPageProps) {
     return [];
   };
 
-  const loadSyncedData = async () => {
+  const loadSyncedData = async (background = false) => {
     if (!token || !profile) return;
-    setLoading(true);
+    if (!background) setLoading(true);
     try {
       const effectiveAddonProfileId =
         profile.profile_index !== 1 && profile.uses_primary_addons
@@ -463,7 +487,7 @@ export function NuvioPage({ onClose }: NuvioPageProps) {
     } catch (e) {
       console.error('[NuvioPage] Failed to fetch synced library/progress/addons:', e);
     } finally {
-      setLoading(false);
+      if (!background) setLoading(false);
     }
   };
 
@@ -508,6 +532,14 @@ export function NuvioPage({ onClose }: NuvioPageProps) {
     loadSyncedData();
   }, [token, profile?.profile_index]);
 
+  useEffect(() => {
+    const syncHandler = () => {
+      loadSyncedData(true);
+    };
+    window.addEventListener('ynotv:nuvio-sync-required', syncHandler);
+    return () => window.removeEventListener('ynotv:nuvio-sync-required', syncHandler);
+  }, [token, profile?.profile_index]);
+
   const handleAddToLibrary = async (item: { id: string; type: string; name: string; poster?: string | null; background?: string | null }) => {
     if (!token || !profile) return;
     if (libraryIds.has(item.id)) return;
@@ -525,9 +557,10 @@ export function NuvioPage({ onClose }: NuvioPageProps) {
       addon_base_url: null,
       added_at: Date.now(),
     };
+    const updatedLibrary = [libItem, ...library];
     try {
-      await pushNuvioLibrary(token, profile.profile_index, [libItem]);
-      setLibrary(prev => [libItem, ...prev]);
+      await pushNuvioLibrary(token, profile.profile_index, updatedLibrary);
+      setLibrary(updatedLibrary);
     } catch (e) {
       console.error('[NuvioPage] Failed to add to library:', e);
     }
@@ -546,7 +579,7 @@ export function NuvioPage({ onClose }: NuvioPageProps) {
 
   const handleNuvioPlay = (stream: StremioStream, meta: NuvioMeta, episodeVideo?: StremioVideo) => {
     window.dispatchEvent(new CustomEvent('ynotv:stremio-play', {
-      detail: { stream, meta: { id: meta.id, type: meta.type, name: meta.name, poster: meta.poster }, episodeVideo },
+      detail: { stream, meta: { id: meta.id, type: meta.type, name: meta.name, poster: meta.poster }, episodeVideo, isNuvio: true },
     }));
   };
 
@@ -896,7 +929,7 @@ export function NuvioPage({ onClose }: NuvioPageProps) {
     <StremioHoverProvider addons={addons}>
       <div className="nuvio-page">
       {/* Nuvio Dedicated Topbar */}
-      <div className="nuvio-topbar">
+      <div className={`nuvio-topbar ${nuvioActiveMeta ? 'nuvio-page-hide-content' : ''}`}>
         <div className="nuvio-topbar-left">
           <div className="nuvio-brand">
             <svg className="nuvio-brand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -1067,7 +1100,7 @@ export function NuvioPage({ onClose }: NuvioPageProps) {
       </div>
 
       {/* Main Content */}
-      <div className="nuvio-main">
+      <div className={`nuvio-main ${nuvioActiveMeta ? 'nuvio-page-hide-content' : ''}`}>
         {!token ? (
           <div className="nuvio-empty-state" style={{ maxWidth: '480px', margin: '80px auto' }}>
             <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#00d4ff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: '16px' }}>
@@ -1737,7 +1770,18 @@ export function NuvioPage({ onClose }: NuvioPageProps) {
             )}
 
             {nuvioView === 'settings' && (
-              <NuvioTab />
+              <NuvioTab
+                showNuvioStreamBadges={showNuvioStreamBadges}
+                onShowNuvioStreamBadgesChange={onShowNuvioStreamBadgesChange || (() => {})}
+                nuvioBadgeSources={nuvioBadgeSources}
+                onNuvioBadgeSourcesChange={onNuvioBadgeSourcesChange || (() => {})}
+                nuvioBadgeSize={nuvioBadgeSize}
+                onNuvioBadgeSizeChange={onNuvioBadgeSizeChange || (() => {})}
+                nuvioShowFileSizeBadges={nuvioShowFileSizeBadges}
+                onNuvioShowFileSizeBadgesChange={onNuvioShowFileSizeBadgesChange || (() => {})}
+                nuvioStreamBadgePlacement={nuvioStreamBadgePlacement}
+                onNuvioStreamBadgePlacementChange={onNuvioStreamBadgePlacementChange || (() => {})}
+              />
             )}
           </div>
         )}
@@ -1745,7 +1789,7 @@ export function NuvioPage({ onClose }: NuvioPageProps) {
 
       {/* Folder Detail Modal / Overlay */}
       {selectedFolder && (
-        <div className="nuvio-folder-detail-overlay" onClick={() => setSelectedFolder(null)}>
+        <div className={`nuvio-folder-detail-overlay ${nuvioActiveMeta ? 'nuvio-page-hide-content' : ''}`} onClick={() => setSelectedFolder(null)}>
           <div className="nuvio-folder-detail-content" onClick={(e) => e.stopPropagation()}>
             <div className="nuvio-folder-detail-header">
               <div>
@@ -1845,6 +1889,12 @@ export function NuvioPage({ onClose }: NuvioPageProps) {
           onBack={() => setNuvioActiveMeta(null)}
           onPlay={handleNuvioPlay}
           onNavigate={handleNuvioNavigate}
+          showStreamBadges={showNuvioStreamBadges}
+          compiledBadgeRules={compiledBadgeRules}
+          showFileSizeBadges={nuvioShowFileSizeBadges}
+          streamBadgePlacement={nuvioStreamBadgePlacement}
+          library={library}
+          onUpdateLibrary={setLibrary}
         />
       )}
 

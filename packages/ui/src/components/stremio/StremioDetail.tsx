@@ -14,7 +14,7 @@ import {
 import { useStremioLibraryStore } from '../../stores/stremioLibraryStore';
 import { useStremioWatchStore } from '../../stores/stremioWatchStore';
 import { fetchStreams, fetchMeta } from '../../services/stremio-addon';
-import { extractStreamBadges, isLightColor } from '../../utils/streamBadges';
+import { extractStreamBadges, isLightColor, formatVideoSize } from '../../utils/streamBadges';
 import { useLazyStremioCast, type StremioCastMember } from '../../hooks/useLazyStremioCast';
 import { useLazyStremioTrailer } from '../../hooks/useLazyStremioTrailer';
 import { useLazyStremioRecommendations, type RecommendationItem } from '../../hooks/useLazyStremioRecommendations';
@@ -30,6 +30,8 @@ interface StremioDetailProps {
   streamPickerMode: 'modal' | 'autoplay';
   showStreamBadges?: boolean;
   compiledBadgeRules?: { pattern: RegExp; badge: StremioStreamBadge }[];
+  showFileSizeBadges?: boolean;
+  streamBadgePlacement?: 'top' | 'bottom';
 }
 
 function formatReleaseDate(dStr?: string) {
@@ -43,7 +45,16 @@ function formatReleaseDate(dStr?: string) {
   }
 }
 
-export function StremioDetail({ meta, onBack, onPlay, streamPickerMode, showStreamBadges = false, compiledBadgeRules }: StremioDetailProps) {
+export function StremioDetail({
+  meta,
+  onBack,
+  onPlay,
+  streamPickerMode,
+  showStreamBadges = false,
+  compiledBadgeRules,
+  showFileSizeBadges = true,
+  streamBadgePlacement = 'bottom',
+}: StremioDetailProps) {
   const addons = useStremioAddonStore((s) => s.enabledAddons);
   const addonsKey = addons.map((a) => `${a.id}:${a.enabled !== false}`).join(',');
 
@@ -284,6 +295,50 @@ export function StremioDetail({ meta, onBack, onPlay, streamPickerMode, showStre
       const displayName = name.trim();
       const displayDesc = displayName ? desc : '';
       const badges = showStreamBadges ? extractStreamBadges(stream, compiledBadgeRules) : [];
+      if (showStreamBadges && showFileSizeBadges && stream.behaviorHints?.videoSize) {
+        const sizeStr = formatVideoSize(stream.behaviorHints.videoSize);
+        if (sizeStr) {
+          badges.push({
+            label: sizeStr,
+            color: '#4b5563',
+          });
+        }
+      }
+
+      const badgesContainer = badges.length > 0 && (
+        <div className="stremio-detail-stream-badges" style={{ marginBottom: streamBadgePlacement === 'top' ? '8px' : '0', marginTop: streamBadgePlacement === 'top' ? '4px' : '0' }}>
+          {badges.map((badge) => {
+            const bgColor = badge.color || '#1a1a1a';
+            const isLightBg = isLightColor(bgColor);
+            const textColor = badge.textColor || (isLightBg ? '#000000' : '#ffffff');
+            return badge.imageUrl ? (
+              <span
+                key={badge.label}
+                className="stremio-stream-badge-img"
+                style={{
+                  backgroundColor: bgColor,
+                  borderColor: badge.borderColor,
+                }}
+              >
+                <img src={badge.imageUrl} alt={badge.label} title={badge.label} />
+              </span>
+            ) : (
+              <span
+                key={badge.label}
+                className="stremio-stream-badge"
+                style={{
+                  backgroundColor: bgColor,
+                  color: textColor,
+                  borderColor: badge.borderColor,
+                }}
+              >
+                {badge.label}
+              </span>
+            );
+          })}
+        </div>
+      );
+
       return (
         <div
           key={`flat-${idx}`}
@@ -306,6 +361,7 @@ export function StremioDetail({ meta, onBack, onPlay, streamPickerMode, showStre
               </svg>
             </button>
           )}
+          {streamBadgePlacement === 'top' && badgesContainer}
           <div className="stremio-detail-stream-header-row">
             <div className="stremio-detail-stream-card-title">
               {displayName || desc || `Stream #${idx + 1}`}
@@ -316,39 +372,7 @@ export function StremioDetail({ meta, onBack, onPlay, streamPickerMode, showStre
               </span>
             )}
           </div>
-          {badges.length > 0 && (
-            <div className="stremio-detail-stream-badges">
-              {badges.map((badge) => {
-                const bgColor = badge.color || '#1a1a1a';
-                const isLightBg = isLightColor(bgColor);
-                const textColor = badge.textColor || (isLightBg ? '#000000' : '#ffffff');
-                return badge.imageUrl ? (
-                  <span
-                    key={badge.label}
-                    className="stremio-stream-badge-img"
-                    style={{
-                      backgroundColor: bgColor,
-                      borderColor: badge.borderColor,
-                    }}
-                  >
-                    <img src={badge.imageUrl} alt={badge.label} title={badge.label} />
-                  </span>
-                ) : (
-                  <span
-                    key={badge.label}
-                    className="stremio-stream-badge"
-                    style={{
-                      backgroundColor: bgColor,
-                      color: textColor,
-                      borderColor: badge.borderColor,
-                    }}
-                  >
-                    {badge.label}
-                  </span>
-                );
-              })}
-            </div>
-          )}
+          {streamBadgePlacement === 'bottom' && badgesContainer}
           {displayDesc && (
             <div className="stremio-detail-stream-description">
               {displayDesc}

@@ -3,7 +3,7 @@ import './BackButtonOverlay.css';
 
 interface BackButtonOverlayProps {
   visible: boolean;
-  sourceView: 'movies' | 'series' | 'dvr' | 'stremio' | null;
+  sourceView: 'movies' | 'series' | 'dvr' | 'stremio' | 'nuvio' | null;
   onBack: () => void;
 }
 
@@ -28,6 +28,7 @@ export function BackButtonOverlay({ visible, sourceView, onBack }: BackButtonOve
     series: 'Back to Series',
     dvr: 'Back to Recordings',
     stremio: 'Back to Stremio',
+    nuvio: 'Back to Nuvio',
   };
 
   const label = labelMap[sourceView] || 'Back';

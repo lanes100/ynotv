@@ -5,9 +5,9 @@ import { useNuvioPluginStore } from '../../stores/nuvioPluginStore';
 import { useNuvioAuthStore } from '../../stores/nuvioAuthStore';
 import { fetchMeta, fetchStreams } from '../../services/stremio-addon';
 import { executePlugin } from '../../services/nuvio-plugin-runtime';
-import { pushNuvioLibrary, fetchNuvioLibrary, fetchNuvioWatchProgress, pushNuvioWatchProgress } from '../../services/nuvio-api';
+import { pushNuvioLibrary, fetchNuvioLibrary, fetchNuvioWatchProgress, pushNuvioWatchProgress, type NuvioLibrarySyncItem } from '../../services/nuvio-api';
 import type { NuvioWatchProgressSyncEntry } from '../../services/nuvio-api';
-import { extractStreamBadges, isLightColor } from '../../utils/streamBadges';
+import { extractStreamBadges, isLightColor, formatVideoSize } from '../../utils/streamBadges';
 import { useLazyStremioCast, type StremioCastMember } from '../../hooks/useLazyStremioCast';
 import { useLazyStremioTrailer } from '../../hooks/useLazyStremioTrailer';
 import { useLazyStremioRecommendations, type RecommendationItem } from '../../hooks/useLazyStremioRecommendations';
@@ -29,6 +29,12 @@ interface NuvioDetailViewProps {
   onBack: () => void;
   onPlay: (stream: StremioStream, meta: NuvioMeta, episodeVideo?: StremioVideo) => void;
   onNavigate?: (meta: StremioMeta) => void;
+  showStreamBadges?: boolean;
+  compiledBadgeRules?: { pattern: RegExp; badge: StremioStreamBadge }[];
+  showFileSizeBadges?: boolean;
+  streamBadgePlacement?: 'top' | 'bottom';
+  library?: NuvioLibrarySyncItem[];
+  onUpdateLibrary?: (newLibrary: NuvioLibrarySyncItem[]) => void;
 }
 
 function formatReleaseDate(dStr?: string) {
@@ -42,7 +48,18 @@ function formatReleaseDate(dStr?: string) {
   }
 }
 
-export function NuvioDetailView({ meta, onBack, onPlay, onNavigate }: NuvioDetailViewProps) {
+export function NuvioDetailView({
+  meta,
+  onBack,
+  onPlay,
+  onNavigate,
+  showStreamBadges = true,
+  compiledBadgeRules = [],
+  showFileSizeBadges = true,
+  streamBadgePlacement = 'bottom',
+  library = [],
+  onUpdateLibrary,
+}: NuvioDetailViewProps) {
   const addons = useNuvioAddonStore((s) => s.enabledAddons);
   const pluginStore = useNuvioPluginStore();
   const token = useNuvioAuthStore((s) => s.token);
@@ -64,7 +81,7 @@ export function NuvioDetailView({ meta, onBack, onPlay, onNavigate }: NuvioDetai
   const [loadingMeta, setLoadingMeta] = useState(true);
 
   // Library & watch progress
-  const [inLibrary, setInLibrary] = useState(false);
+  const inLibrary = library.some((i) => i.content_id === meta.id);
   const [episodeProgress, setEpisodeProgress] = useState<Record<string, { progressFraction: number; finished: boolean }>>({});
 
   // Streams
@@ -181,25 +198,13 @@ export function NuvioDetailView({ meta, onBack, onPlay, onNavigate }: NuvioDetai
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [meta.id, meta.type, tmdbToken, addons.map((a) => `${a.id}:${a.enabled !== false}`).join(','), setFullMeta]);
 
-  // ─── Fetch library state ───────────────────────────────────
-  useEffect(() => {
-    if (!token || !profile) return;
-    let active = true;
-    fetchNuvioLibrary(token, profile.profile_index, 100).then((items) => {
-      if (!active) return;
-      setInLibrary(items.some((i) => i.content_id === meta.id));
-    }).catch(() => {});
-    return () => { active = false; };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [meta.id, token, profile?.profile_index]);
+  // (Library state is passed down as a prop)
 
   // ─── Fetch watch progress ──────────────────────────────────
-  useEffect(() => {
+  const loadWatchProgress = useCallback(() => {
     if (!token || !profile || meta.type !== 'series') return;
-    let active = true;
     fetchNuvioWatchProgress(token, profile.profile_index, null, 500)
       .then((items: NuvioWatchProgressSyncEntry[]) => {
-        if (!active) return;
         const map: Record<string, { progressFraction: number; finished: boolean }> = {};
         for (const item of items) {
           if (item.content_id === meta.id) {
@@ -210,9 +215,19 @@ export function NuvioDetailView({ meta, onBack, onPlay, onNavigate }: NuvioDetai
         setEpisodeProgress(map);
       })
       .catch(() => {});
-    return () => { active = false; };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [meta.id, token, profile?.profile_index]);
+  }, [token, profile?.profile_index, meta.id, meta.type]);
+
+  useEffect(() => {
+    loadWatchProgress();
+  }, [loadWatchProgress]);
+
+  useEffect(() => {
+    const syncHandler = () => {
+      loadWatchProgress();
+    };
+    window.addEventListener('ynotv:nuvio-sync-required', syncHandler);
+    return () => window.removeEventListener('ynotv:nuvio-sync-required', syncHandler);
+  }, [loadWatchProgress]);
 
   // ─── Fetch streams (addons + plugins) ──────────────────────
   const fetchStreamsWithPlugins = useCallback(async (
@@ -400,22 +415,27 @@ export function NuvioDetailView({ meta, onBack, onPlay, onNavigate }: NuvioDetai
   const handleLibraryToggle = async () => {
     if (inLibrary) return; // No remove API yet
     if (!token || !profile) return;
+
+    const libItem: NuvioLibrarySyncItem = {
+      content_id: meta.id,
+      content_type: meta.type === 'series' ? 'series' : 'movie',
+      name: meta.name,
+      poster: meta.poster || null,
+      poster_shape: 'POSTER',
+      background: meta.background || null,
+      description: null,
+      release_info: null,
+      imdb_rating: null,
+      genres: [],
+      addon_base_url: null,
+      added_at: Date.now(),
+    };
+
+    const updatedLibrary = [libItem, ...library.filter(i => i.content_id !== meta.id)];
+
     try {
-      await pushNuvioLibrary(token, profile.profile_index, [{
-        content_id: meta.id,
-        content_type: meta.type === 'series' ? 'series' : 'movie',
-        name: meta.name,
-        poster: meta.poster || null,
-        poster_shape: 'POSTER',
-        background: meta.background || null,
-        description: null,
-        release_info: null,
-        imdb_rating: null,
-        genres: [],
-        addon_base_url: null,
-        added_at: Date.now(),
-      }]);
-      setInLibrary(true);
+      await pushNuvioLibrary(token, profile.profile_index, updatedLibrary);
+      onUpdateLibrary?.(updatedLibrary);
     } catch (e) {
       console.error('[NuvioDetailView] Failed to add to library:', e);
     }
@@ -438,7 +458,7 @@ export function NuvioDetailView({ meta, onBack, onPlay, onNavigate }: NuvioDetai
           position: 0,
           duration: 0,
           last_watched: Date.now(),
-          progress_key: `${meta.id}:${ep.season}:${ep.episode}`,
+          progress_key: `${meta.id}_s${ep.season}e${ep.episode}`,
         }]);
       } catch {}
     }
@@ -481,6 +501,51 @@ export function NuvioDetailView({ meta, onBack, onPlay, onNavigate }: NuvioDetai
       const desc = stream.description || stream.title || '';
       const displayName = name.trim();
       const displayDesc = displayName ? desc : '';
+      const badges = showStreamBadges ? extractStreamBadges(stream, compiledBadgeRules) : [];
+      if (showStreamBadges && showFileSizeBadges && stream.behaviorHints?.videoSize) {
+        const sizeStr = formatVideoSize(stream.behaviorHints.videoSize);
+        if (sizeStr) {
+          badges.push({
+            label: sizeStr,
+            color: '#4b5563',
+          });
+        }
+      }
+
+      const badgesContainer = badges.length > 0 && (
+        <div className="stremio-detail-stream-badges" style={{ marginBottom: streamBadgePlacement === 'top' ? '8px' : '0', marginTop: streamBadgePlacement === 'top' ? '4px' : '0', '--stremio-badge-scale': 'var(--nuvio-badge-scale, 1)' } as React.CSSProperties}>
+          {badges.map((badge) => {
+            const bgColor = badge.color || '#1a1a1a';
+            const isLightBg = isLightColor(bgColor);
+            const textColor = badge.textColor || (isLightBg ? '#000000' : '#ffffff');
+            return badge.imageUrl ? (
+              <span
+                key={badge.label}
+                className="stremio-stream-badge-img"
+                style={{
+                  backgroundColor: bgColor,
+                  borderColor: badge.borderColor,
+                }}
+              >
+                <img src={badge.imageUrl} alt={badge.label} title={badge.label} />
+              </span>
+            ) : (
+              <span
+                key={badge.label}
+                className="stremio-stream-badge"
+                style={{
+                  backgroundColor: bgColor,
+                  color: textColor,
+                  borderColor: badge.borderColor,
+                }}
+              >
+                {badge.label}
+              </span>
+            );
+          })}
+        </div>
+      );
+
       return (
         <div
           key={`stream-${idx}`}
@@ -503,6 +568,7 @@ export function NuvioDetailView({ meta, onBack, onPlay, onNavigate }: NuvioDetai
               </svg>
             </button>
           )}
+          {streamBadgePlacement === 'top' && badgesContainer}
           <div className="stremio-detail-stream-header-row">
             <div className="stremio-detail-stream-card-title">
               {displayName || desc || `Stream #${idx + 1}`}
@@ -513,6 +579,7 @@ export function NuvioDetailView({ meta, onBack, onPlay, onNavigate }: NuvioDetai
               </span>
             )}
           </div>
+          {streamBadgePlacement === 'bottom' && badgesContainer}
           {displayDesc && (
             <div className="stremio-detail-stream-description">
               {displayDesc}

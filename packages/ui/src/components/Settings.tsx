@@ -66,6 +66,20 @@ interface SettingsProps {
   onStremioBadgeSizeChange?: (size: number) => void;
   showHoverDetails?: boolean;
   onShowHoverDetailsChange?: (show: boolean) => void;
+  showFileSizeBadges?: boolean;
+  onShowFileSizeBadgesChange?: (enabled: boolean) => void;
+  streamBadgePlacement?: 'top' | 'bottom';
+  onStreamBadgePlacementChange?: (placement: 'top' | 'bottom') => void;
+  showNuvioStreamBadges?: boolean;
+  onShowNuvioStreamBadgesChange?: (enabled: boolean) => void;
+  nuvioBadgeSources?: BadgeSource[];
+  onNuvioBadgeSourcesChange?: (sources: BadgeSource[]) => void;
+  nuvioBadgeSize?: number;
+  onNuvioBadgeSizeChange?: (size: number) => void;
+  nuvioShowFileSizeBadges?: boolean;
+  onNuvioShowFileSizeBadgesChange?: (enabled: boolean) => void;
+  nuvioStreamBadgePlacement?: 'top' | 'bottom';
+  onNuvioStreamBadgePlacementChange?: (placement: 'top' | 'bottom') => void;
 }
 
 export function Settings({
@@ -107,6 +121,20 @@ export function Settings({
   onStremioBadgeSizeChange,
   showHoverDetails: showHoverDetailsProp,
   onShowHoverDetailsChange,
+  showFileSizeBadges: showFileSizeBadgesProp,
+  onShowFileSizeBadgesChange,
+  streamBadgePlacement: streamBadgePlacementProp,
+  onStreamBadgePlacementChange,
+  showNuvioStreamBadges: showNuvioStreamBadgesProp,
+  onShowNuvioStreamBadgesChange,
+  nuvioBadgeSources: nuvioBadgeSourcesProp,
+  onNuvioBadgeSourcesChange,
+  nuvioBadgeSize: nuvioBadgeSizeProp,
+  onNuvioBadgeSizeChange,
+  nuvioShowFileSizeBadges: nuvioShowFileSizeBadgesProp,
+  onNuvioShowFileSizeBadgesChange,
+  nuvioStreamBadgePlacement: nuvioStreamBadgePlacementProp,
+  onNuvioStreamBadgePlacementChange,
 }: SettingsProps) {
   const [activeTab, setActiveTab] = useState<SettingsTabId>(initialTab);
   const [pendingSubTab, setPendingSubTab] = useState<string | null>(null);
@@ -210,6 +238,13 @@ export function Settings({
   const [badgeSources, setBadgeSources] = useState<BadgeSource[]>(DEFAULT_BADGE_SOURCES);
   const [stremioBadgeSize, setStremioBadgeSize] = useState(100);
   const [showHoverDetails, setShowHoverDetails] = useState(true);
+  const [showFileSizeBadges, setShowFileSizeBadges] = useState(true);
+  const [streamBadgePlacement, setStreamBadgePlacement] = useState<'top' | 'bottom'>('bottom');
+  const [showNuvioStreamBadges, setShowNuvioStreamBadges] = useState(true);
+  const [nuvioBadgeSources, setNuvioBadgeSources] = useState<BadgeSource[]>(DEFAULT_BADGE_SOURCES);
+  const [nuvioBadgeSize, setNuvioBadgeSize] = useState(100);
+  const [nuvioShowFileSizeBadges, setNuvioShowFileSizeBadges] = useState(true);
+  const [nuvioStreamBadgePlacement, setNuvioStreamBadgePlacement] = useState<'top' | 'bottom'>('bottom');
 
   useEffect(() => {
     if (stremioStreamPickerModeProp !== undefined) {
@@ -240,6 +275,48 @@ export function Settings({
       setShowHoverDetails(showHoverDetailsProp);
     }
   }, [showHoverDetailsProp]);
+
+  useEffect(() => {
+    if (showFileSizeBadgesProp !== undefined) {
+      setShowFileSizeBadges(showFileSizeBadgesProp);
+    }
+  }, [showFileSizeBadgesProp]);
+
+  useEffect(() => {
+    if (streamBadgePlacementProp !== undefined) {
+      setStreamBadgePlacement(streamBadgePlacementProp);
+    }
+  }, [streamBadgePlacementProp]);
+
+  useEffect(() => {
+    if (showNuvioStreamBadgesProp !== undefined) {
+      setShowNuvioStreamBadges(showNuvioStreamBadgesProp);
+    }
+  }, [showNuvioStreamBadgesProp]);
+
+  useEffect(() => {
+    if (nuvioBadgeSourcesProp !== undefined) {
+      setNuvioBadgeSources(mergeDefaultBadgeSources(nuvioBadgeSourcesProp));
+    }
+  }, [nuvioBadgeSourcesProp]);
+
+  useEffect(() => {
+    if (nuvioBadgeSizeProp !== undefined) {
+      setNuvioBadgeSize(nuvioBadgeSizeProp);
+    }
+  }, [nuvioBadgeSizeProp]);
+
+  useEffect(() => {
+    if (nuvioShowFileSizeBadgesProp !== undefined) {
+      setNuvioShowFileSizeBadges(nuvioShowFileSizeBadgesProp);
+    }
+  }, [nuvioShowFileSizeBadgesProp]);
+
+  useEffect(() => {
+    if (nuvioStreamBadgePlacementProp !== undefined) {
+      setNuvioStreamBadgePlacement(nuvioStreamBadgePlacementProp);
+    }
+  }, [nuvioStreamBadgePlacementProp]);
 
   // Category settings state
   const [showAllChannels, setShowAllChannels] = useState(true);
@@ -482,6 +559,13 @@ export function Settings({
         showStremioStreamBadges?: boolean;
         badgeSources?: BadgeSource[];
         stremioBadgeSize?: number;
+        showFileSizeBadges?: boolean;
+        streamBadgePlacement?: 'top' | 'bottom';
+        showNuvioStreamBadges?: boolean;
+        nuvioBadgeSources?: BadgeSource[];
+        nuvioBadgeSize?: number;
+        nuvioShowFileSizeBadges?: boolean;
+        nuvioStreamBadgePlacement?: 'top' | 'bottom';
         navHiddenTabs?: string[];
         castEnabled?: boolean;
         castRewriteTs?: boolean;
@@ -622,6 +706,23 @@ export function Settings({
       const loadedBadgeSize = settings.stremioBadgeSize ?? 100;
       setStremioBadgeSize(loadedBadgeSize);
       document.documentElement.style.setProperty('--stremio-badge-scale', String(loadedBadgeSize / 100));
+      if (settings.showFileSizeBadges !== undefined) {
+        setShowFileSizeBadges(settings.showFileSizeBadges);
+      }
+      if (settings.streamBadgePlacement !== undefined) {
+        setStreamBadgePlacement(settings.streamBadgePlacement as 'top' | 'bottom');
+      }
+      setShowNuvioStreamBadges(settings.showNuvioStreamBadges ?? true);
+      setNuvioBadgeSources(mergeDefaultBadgeSources(settings.nuvioBadgeSources as BadgeSource[] | undefined));
+      const loadedNuvioBadgeSize = settings.nuvioBadgeSize ?? 100;
+      setNuvioBadgeSize(loadedNuvioBadgeSize);
+      document.documentElement.style.setProperty('--nuvio-badge-scale', String(loadedNuvioBadgeSize / 100));
+      if (settings.nuvioShowFileSizeBadges !== undefined) {
+        setNuvioShowFileSizeBadges(settings.nuvioShowFileSizeBadges);
+      }
+      if (settings.nuvioStreamBadgePlacement !== undefined) {
+        setNuvioStreamBadgePlacement(settings.nuvioStreamBadgePlacement as 'top' | 'bottom');
+      }
 
       // Load LiveTV settings
       const darkenCurrent = settings.epgDarkenCurrent ?? false;
@@ -947,6 +1048,77 @@ export function Settings({
     }
     if (window.storage) {
       await window.storage.updateSettings({ showHoverDetails: show });
+    }
+  };
+
+  const handleShowFileSizeBadgesChange = async (show: boolean) => {
+    setShowFileSizeBadges(show);
+    if (onShowFileSizeBadgesChange) {
+      onShowFileSizeBadgesChange(show);
+    }
+    if (window.storage) {
+      await window.storage.updateSettings({ showFileSizeBadges: show });
+    }
+  };
+
+  const handleStreamBadgePlacementChange = async (placement: 'top' | 'bottom') => {
+    setStreamBadgePlacement(placement);
+    if (onStreamBadgePlacementChange) {
+      onStreamBadgePlacementChange(placement);
+    }
+    if (window.storage) {
+      await window.storage.updateSettings({ streamBadgePlacement: placement });
+    }
+  };
+
+  const handleShowNuvioStreamBadgesChange = async (show: boolean) => {
+    setShowNuvioStreamBadges(show);
+    if (onShowNuvioStreamBadgesChange) {
+      onShowNuvioStreamBadgesChange(show);
+    }
+    if (window.storage) {
+      await window.storage.updateSettings({ showNuvioStreamBadges: show });
+    }
+  };
+
+  const handleNuvioBadgeSourcesChange = async (sources: BadgeSource[]) => {
+    setNuvioBadgeSources(sources);
+    if (onNuvioBadgeSourcesChange) {
+      onNuvioBadgeSourcesChange(sources);
+    }
+    if (window.storage) {
+      await window.storage.updateSettings({ nuvioBadgeSources: sources });
+    }
+  };
+
+  const handleNuvioBadgeSizeChange = async (size: number) => {
+    setNuvioBadgeSize(size);
+    document.documentElement.style.setProperty('--nuvio-badge-scale', String(size / 100));
+    if (onNuvioBadgeSizeChange) {
+      onNuvioBadgeSizeChange(size);
+    }
+    if (window.storage) {
+      await window.storage.updateSettings({ nuvioBadgeSize: size });
+    }
+  };
+
+  const handleNuvioShowFileSizeBadgesChange = async (show: boolean) => {
+    setNuvioShowFileSizeBadges(show);
+    if (onNuvioShowFileSizeBadgesChange) {
+      onNuvioShowFileSizeBadgesChange(show);
+    }
+    if (window.storage) {
+      await window.storage.updateSettings({ nuvioShowFileSizeBadges: show });
+    }
+  };
+
+  const handleNuvioStreamBadgePlacementChange = async (placement: 'top' | 'bottom') => {
+    setNuvioStreamBadgePlacement(placement);
+    if (onNuvioStreamBadgePlacementChange) {
+      onNuvioStreamBadgePlacementChange(placement);
+    }
+    if (window.storage) {
+      await window.storage.updateSettings({ nuvioStreamBadgePlacement: placement });
     }
   };
 
@@ -1487,11 +1659,26 @@ export function Settings({
             onStremioBadgeSizeChange={handleStremioBadgeSizeChange}
             showHoverDetails={showHoverDetails}
             onShowHoverDetailsChange={handleShowHoverDetailsChange}
+            showFileSizeBadges={showFileSizeBadges}
+            onShowFileSizeBadgesChange={handleShowFileSizeBadgesChange}
+            streamBadgePlacement={streamBadgePlacement}
+            onStreamBadgePlacementChange={handleStreamBadgePlacementChange}
           />
         );
       case 'nuvio':
         return (
-          <NuvioTab />
+          <NuvioTab
+            showNuvioStreamBadges={showNuvioStreamBadges}
+            onShowNuvioStreamBadgesChange={handleShowNuvioStreamBadgesChange}
+            nuvioBadgeSources={nuvioBadgeSources}
+            onNuvioBadgeSourcesChange={handleNuvioBadgeSourcesChange}
+            nuvioBadgeSize={nuvioBadgeSize}
+            onNuvioBadgeSizeChange={handleNuvioBadgeSizeChange}
+            nuvioShowFileSizeBadges={nuvioShowFileSizeBadges}
+            onNuvioShowFileSizeBadgesChange={handleNuvioShowFileSizeBadgesChange}
+            nuvioStreamBadgePlacement={nuvioStreamBadgePlacement}
+            onNuvioStreamBadgePlacementChange={handleNuvioStreamBadgePlacementChange}
+          />
         );
       case 'security':
         return (

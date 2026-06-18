@@ -10,6 +10,8 @@ import { resolvePlayUrl } from '../services/stream-resolver';
 import { addToRecentChannels } from '../utils/recentChannels';
 import { db, recordVodWatch, updateVodWatchProgress, getVodWatchProgress, recordEpisodeWatch, getEpisodeProgress } from '../db';
 import { useStremioWatchStore } from '../stores/stremioWatchStore';
+import { useNuvioAuthStore } from '../stores/nuvioAuthStore';
+import { fetchNuvioWatchProgress } from '../services/nuvio-api';
 import type { useMpvListeners } from './useMpvListeners';
 import { logInfo, logWarn, logError } from '../utils/logger';
 import { toSubSourceLang, fromSubSourceLang, LANG_MAP } from '../services/subsource';
@@ -1959,6 +1961,32 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
             logInfo(`[Playback] Found Stremio synced progress fraction fallback: ${fraction}`);
             pendingStremioSeekFractionRef.current = fraction;
             isInitialSeekPendingRef.current = true;
+          }
+        }
+
+        // If still no progress found in DB and this is a Nuvio stream, check Nuvio Cloud for synced progress fallback
+        if (resumePosition === 0 && info.source_id === 'nuvio') {
+          console.log('[Playback] Checking Nuvio Cloud for synced progress fallback');
+          const nuvioAuth = useNuvioAuthStore.getState();
+          const nuvioToken = nuvioAuth.token;
+          const nuvioProfile = nuvioAuth.activeProfile;
+          if (nuvioToken && nuvioProfile) {
+            try {
+              const items = await fetchNuvioWatchProgress(nuvioToken, nuvioProfile.profile_index, null, 100);
+              const progressKey = info.type === 'series' && info.seasonNum != null && info.episodeNum != null
+                ? `${info.seriesId}_s${info.seasonNum}e${info.episodeNum}`
+                : info.mediaId;
+              const match = items.find(item => item.progress_key === progressKey || (item.content_id === info.seriesId && item.video_id === info.episodeId));
+              if (match && match.duration > 0) {
+                const progressPercent = (match.position / match.duration) * 100;
+                if (progressPercent > 5 && progressPercent < 95) {
+                  resumePosition = match.position / 1000; // convert to seconds
+                  logInfo('[Playback] Found Nuvio synced progress fallback:', resumePosition, 'seconds');
+                }
+              }
+            } catch (err) {
+              console.warn('[Playback] Failed to fetch Nuvio progress fallback:', err);
+            }
           }
         }
       }
