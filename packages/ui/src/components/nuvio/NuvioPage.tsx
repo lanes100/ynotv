@@ -185,7 +185,7 @@ export function NuvioPage({ onClose }: NuvioPageProps) {
   const [resolvedWatchProgress, setResolvedWatchProgress] = useState<(NuvioWatchProgressSyncEntry & { poster?: string; name?: string })[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const [nuvioView, setNuvioView] = useState<'home' | 'collections' | 'addons' | 'scrapers' | 'settings'>('home');
+  const [nuvioView, setNuvioView] = useState<'home' | 'library' | 'collections' | 'addons' | 'scrapers' | 'settings'>('home');
   // Internal Nuvio detail navigation — completely separate from StremioPage
   const [nuvioActiveMeta, setNuvioActiveMeta] = useState<NuvioMeta | null>(null);
   const [editableCollections, setEditableCollections] = useState<NuvioCollection[]>([]);
@@ -892,6 +892,19 @@ export function NuvioPage({ onClose }: NuvioPageProps) {
               <span>Home</span>
             </button>
 
+            <button
+              className={`nuvio-topbar-item ${nuvioView === 'library' ? 'active' : ''}`}
+              onClick={() => setNuvioView('library')}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="nuvio-topbar-icon">
+                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+                <line x1="8" y1="7" x2="16" y2="7" />
+                <line x1="8" y1="11" x2="14" y2="11" />
+              </svg>
+              <span>Library</span>
+            </button>
+
             {/* Collections tab hidden — code kept for future implementation
             <button
               className={`nuvio-topbar-item ${nuvioView === 'collections' ? 'active' : ''}`}
@@ -915,6 +928,7 @@ export function NuvioPage({ onClose }: NuvioPageProps) {
               <span>Addons</span>
             </button>
 
+            {/* Scrapers tab hidden — code kept for future implementation
             <button
               className={`nuvio-topbar-item ${nuvioView === 'scrapers' ? 'active' : ''}`}
               onClick={() => setNuvioView('scrapers')}
@@ -925,6 +939,7 @@ export function NuvioPage({ onClose }: NuvioPageProps) {
               </svg>
               <span>Scrapers</span>
             </button>
+            */}
 
             <button
               className={`nuvio-topbar-item ${nuvioView === 'settings' ? 'active' : ''}`}
@@ -1102,40 +1117,6 @@ export function NuvioPage({ onClose }: NuvioPageProps) {
                   </div>
                 )}
 
-                {/* Sync Library */}
-                <div className="nuvio-row">
-                  <div className="nuvio-row-header">
-                    <h3 className="nuvio-row-title">Library</h3>
-                  </div>
-                  {library.length > 0 ? (
-                    <div className="nuvio-scroll-rail">
-                      {library.map((item) => (
-                        <div
-                          key={item.content_id}
-                          className="nuvio-card"
-                          onClick={() => handleItemClick(item)}
-                        >
-                          {item.poster ? (
-                            <img src={item.poster} alt={item.name} className="nuvio-card-img" />
-                          ) : (
-                            <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.02)', color: 'rgba(255,255,255,0.3)', padding: '12px', boxSizing: 'border-box', textAlign: 'center', fontSize: '0.75rem' }}>
-                              {item.name}
-                            </div>
-                          )}
-                          <div className="nuvio-card-info">
-                            <div className="nuvio-card-title">{item.name}</div>
-                            <div className="nuvio-card-sub">{item.release_info} · {item.content_type}</div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="nuvio-empty-state">
-                      No items in library. Star movies or shows to see them here.
-                    </div>
-                  )}
-                </div>
-
                 {/* Unified Home Rows (Collections and Catalogs sorted/filtered) */}
                 {homeRows.length > 0 && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
@@ -1174,7 +1155,8 @@ export function NuvioPage({ onClose }: NuvioPageProps) {
                               }}
                             >
                               {coll.folders.map((folder: any) => {
-                                const tileShape = getFolderShapeClass(folder.tileShape);
+                                  const tileShape = getFolderShapeClass(folder.tileShape);
+                                  const folderImgUrl = (folder.focusGifEnabled && folder.focusGifUrl) || folder.coverImageUrl;
                                 return (
                                   <div
                                     key={folder.id}
@@ -1182,8 +1164,8 @@ export function NuvioPage({ onClose }: NuvioPageProps) {
                                     onClick={() => handleFolderClick(row.title, folder)}
                                   >
                                     <div className="nuvio-folder-card-inner">
-                                      {folder.coverImageUrl ? (
-                                        <img src={folder.coverImageUrl} alt={folder.title} className="nuvio-folder-card-img" />
+                                      {folderImgUrl ? (
+                                        <img src={folderImgUrl} alt={folder.title} className="nuvio-folder-card-img" />
                                       ) : folder.coverEmoji ? (
                                         <div className="nuvio-folder-card-emoji">{folder.coverEmoji}</div>
                                       ) : (
@@ -1218,6 +1200,44 @@ export function NuvioPage({ onClose }: NuvioPageProps) {
                     })}
                   </div>
                 )}
+              </div>
+            )}
+
+            {nuvioView === 'library' && (
+              <div>
+                {/* Sync Library */}
+                <div className="nuvio-row">
+                  <div className="nuvio-row-header">
+                    <h3 className="nuvio-row-title">Library</h3>
+                  </div>
+                  {library.length > 0 ? (
+                    <div className="nuvio-scroll-rail">
+                      {library.map((item) => (
+                        <div
+                          key={item.content_id}
+                          className="nuvio-card"
+                          onClick={() => handleItemClick(item)}
+                        >
+                          {item.poster ? (
+                            <img src={item.poster} alt={item.name} className="nuvio-card-img" />
+                          ) : (
+                            <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.02)', color: 'rgba(255,255,255,0.3)', padding: '12px', boxSizing: 'border-box', textAlign: 'center', fontSize: '0.75rem' }}>
+                              {item.name}
+                            </div>
+                          )}
+                          <div className="nuvio-card-info">
+                            <div className="nuvio-card-title">{item.name}</div>
+                            <div className="nuvio-card-sub">{item.release_info} · {item.content_type}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="nuvio-empty-state">
+                      No items in library. Star movies or shows to see them here.
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 
@@ -1473,7 +1493,8 @@ export function NuvioPage({ onClose }: NuvioPageProps) {
               </div>
             )}
 
-            {nuvioView === 'scrapers' && (
+            {/* Scrapers tab hidden — code kept for future implementation */}
+            {nuvioView === 'scrapers' && false && (
               <div className="nuvio-editor-container">
                 <div className="nuvio-editor-section">
                   <h4 className="nuvio-editor-title">Settings</h4>
