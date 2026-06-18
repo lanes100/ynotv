@@ -667,11 +667,13 @@
 
 /* Folder Detail Overlay Modal */
 .nuvio-folder-detail-overlay {
-  position: fixed;
-  top: 32px;
+  position: absolute;
+  top: 56px;
+  bottom: 0;
   left: 0;
-  width: 100%;
-  height: calc(100% - 32px);
+  right: 0;
+  width: auto;
+  height: auto;
   background: rgba(0, 0, 0, 0.85);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
@@ -899,82 +901,108 @@
   to { transform: translateY(0); opacity: 1; }
 }
 
-/* Topbar styling */
+/* Topbar styling - styled like Stremio's topbar */
 .nuvio-topbar {
   flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0 24px;
-  height: 54px;
-  background: rgba(20, 20, 25, 0.5);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  height: 56px;
+  background: var(--bg-secondary, #13131a);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  box-sizing: border-box;
+  z-index: 100;
+  position: relative;
 }
 
 .nuvio-topbar-left {
   display: flex;
   align-items: center;
+  flex: 1;
+  min-width: 150px;
 }
 
 .nuvio-brand {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
 }
 
 .nuvio-brand-icon {
-  width: 20px;
-  height: 20px;
-  color: #00d4ff;
+  width: 22px;
+  height: 22px;
+  color: var(--accent-primary, #00d4ff);
+  flex-shrink: 0;
 }
 
 .nuvio-brand-name {
-  font-size: 1.1rem;
+  font-size: 1.15rem;
   font-weight: 800;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.01em;
+  color: #ffffff;
+  text-transform: none;
 }
 
 .nuvio-topbar-center {
   display: flex;
   align-items: center;
-  gap: 4px;
+  justify-content: center;
+  gap: 8px;
+  height: 100%;
 }
 
 .nuvio-topbar-item {
+  position: relative;
+  height: 100%;
   display: flex;
   align-items: center;
   gap: 8px;
-  background: none;
+  background: transparent;
   border: none;
-  color: rgba(255, 255, 255, 0.65);
-  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.88rem;
   font-weight: 600;
-  padding: 8px 16px;
-  border-radius: 6px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  padding: 0 16px;
+  transition: color 0.15s ease, background 0.15s ease;
+  box-sizing: border-box;
 }
 
 .nuvio-topbar-item:hover {
-  background: rgba(255, 255, 255, 0.04);
-  color: #fff;
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.03);
 }
 
 .nuvio-topbar-item.active {
-  background: rgba(0, 212, 255, 0.08);
-  color: #00d4ff;
+  color: #ffffff;
+  background: transparent;
+}
+
+.nuvio-topbar-item.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 12px;
+  right: 12px;
+  height: 3px;
+  background: var(--accent-primary, #00d4ff);
+  border-radius: 3px 3px 0 0;
 }
 
 .nuvio-topbar-icon {
   width: 16px;
   height: 16px;
+  flex-shrink: 0;
+  opacity: 0.85;
 }
 
 .nuvio-topbar-right {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
+  flex: 1;
+  min-width: 200px;
   gap: 12px;
 }
 
@@ -1574,7 +1602,8 @@ select.nuvio-input option {
 }
 
 .nuvio-page .stremio-detail {
-  z-index: 150;
+  top: 56px;
+  z-index: 300;
 }
 
 

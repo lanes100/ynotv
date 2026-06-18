@@ -33,6 +33,7 @@ import { StremioHoverProvider } from '../../contexts/StremioHoverContext';
 import { StremioHoverCard } from '../stremio/StremioHoverCard';
 import { NuvioDetailView, type NuvioMeta } from './NuvioDetailView';
 import { NuvioPersonDetail } from './NuvioPersonDetail';
+import { NuvioPinModal } from './NuvioPinModal';
 import type { StremioStream, StremioVideo, StremioMeta, BadgeSource } from '../../types/stremio';
 import type { StremioMetaPreview, InstalledAddon } from '../../types/stremio';
 import { compileBadgeSources } from '../../utils/streamBadges';
@@ -233,6 +234,7 @@ export function NuvioPage({
   const nuvioActivePersonId = useNuvioActivePersonId();
   const setNuvioActivePersonId = useSetNuvioActivePersonId();
   const previousNuvioViewRef = useRef<'home' | 'library' | 'collections' | 'addons' | 'scrapers' | 'settings'>('home');
+  const [pinPromptProfile, setPinPromptProfile] = useState<any | null>(null);
 
   useEffect(() => {
     if (nuvioView && nuvioView !== 'person') {
@@ -969,7 +971,7 @@ export function NuvioPage({
     <StremioHoverProvider addons={addons}>
       <div className="nuvio-page">
       {/* Nuvio Dedicated Topbar */}
-      <div className={`nuvio-topbar ${nuvioActiveMeta ? 'nuvio-page-hide-content' : ''}`}>
+      <div className="nuvio-topbar">
         <div className="nuvio-topbar-left">
           <div className="nuvio-brand">
             <svg className="nuvio-brand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -1092,7 +1094,11 @@ export function NuvioPage({
                         className={`nuvio-profile-dropdown-item ${isActive ? 'active' : ''}`}
                         onClick={() => {
                           if (!isActive) {
-                            authStore.selectProfile(p.profile_index);
+                            if (p.pin_enabled) {
+                              setPinPromptProfile(p);
+                            } else {
+                              authStore.selectProfile(p.profile_index);
+                            }
                           }
                           setShowProfileMenu(false);
                         }}
@@ -1123,19 +1129,6 @@ export function NuvioPage({
               )}
             </div>
           )}
-          <button
-            onClick={onClose}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: 'rgba(255,255,255,0.5)',
-              fontSize: '1.2rem',
-              cursor: 'pointer',
-              padding: '4px 10px'
-            }}
-          >
-            ✕
-          </button>
         </div>
       </div>
 
@@ -1951,6 +1944,13 @@ export function NuvioPage({
             setNuvioActivePersonId(null);
             setNuvioView(previousNuvioViewRef.current);
           }}
+        />
+      )}
+
+      {pinPromptProfile && (
+        <NuvioPinModal
+          profile={pinPromptProfile}
+          onClose={() => setPinPromptProfile(null)}
         />
       )}
 

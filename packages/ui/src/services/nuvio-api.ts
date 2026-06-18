@@ -320,10 +320,15 @@ export async function deleteNuvioProfileData(token: string, profileId: number): 
 }
 
 export async function verifyNuvioProfilePin(token: string, profileId: number, pin: string): Promise<PinVerifyResult> {
-  return callNuvioApi<PinVerifyResult>('POST', 'rest/v1/rpc/verify_profile_pin', {
+  const res = await callNuvioApi<PinVerifyResult | PinVerifyResult[]>('POST', 'rest/v1/rpc/verify_profile_pin', {
     p_profile_id: profileId,
     p_pin: pin,
   }, token);
+
+  if (Array.isArray(res)) {
+    return res[0] || { unlocked: false, retry_after_seconds: 0, message: null };
+  }
+  return res;
 }
 
 export async function setNuvioProfilePin(token: string, profileId: number, pin: string, currentPin?: string | null): Promise<void> {

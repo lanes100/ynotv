@@ -3,6 +3,7 @@ import { useNuvioAuthStore } from '../../stores/nuvioAuthStore';
 import { useNuvioPluginStore } from '../../stores/nuvioPluginStore';
 import { useNuvioAddonStore } from '../../stores/nuvioAddonStore';
 import { useNuvioCollectionStore } from '../../stores/nuvioCollectionStore';
+import { NuvioPinModal } from '../nuvio/NuvioPinModal';
 import { getEffectiveNuvioUrl, getEffectiveNuvioKey } from '../../services/nuvio-api';
 import type { InstalledAddon, BadgeSource } from '../../types/stremio';
 import { parseBadgePayload, isLightColor, convertArgbToRgba } from '../../utils/streamBadges';
@@ -108,6 +109,7 @@ export function NuvioTab({
   onNuvioStreamBadgePlacementChange,
 }: NuvioTabProps) {
   const authStore = useNuvioAuthStore();
+  const [pinPromptProfile, setPinPromptProfile] = useState<any | null>(null);
   const pluginStore = useNuvioPluginStore();
   const addonsStore = useNuvioAddonStore();
   const collectionStore = useNuvioCollectionStore();
@@ -851,7 +853,15 @@ export function NuvioTab({
                       }}
                     >
                       <div
-                        onClick={() => !isActive && authStore.selectProfile(p.profile_index)}
+                        onClick={() => {
+                          if (!isActive) {
+                            if (p.pin_enabled) {
+                              setPinPromptProfile(p);
+                            } else {
+                              authStore.selectProfile(p.profile_index);
+                            }
+                          }
+                        }}
                         style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, cursor: isActive ? 'default' : 'pointer' }}
                       >
                         <div style={{
@@ -2057,6 +2067,13 @@ export function NuvioTab({
           )}
         </div>
       </div>
+
+      {pinPromptProfile && (
+        <NuvioPinModal
+          profile={pinPromptProfile}
+          onClose={() => setPinPromptProfile(null)}
+        />
+      )}
     </div>
   );
 }
