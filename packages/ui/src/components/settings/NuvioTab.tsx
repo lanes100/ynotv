@@ -3,7 +3,7 @@ import { useNuvioAuthStore } from '../../stores/nuvioAuthStore';
 import { useNuvioPluginStore } from '../../stores/nuvioPluginStore';
 import { useNuvioAddonStore } from '../../stores/nuvioAddonStore';
 import { useNuvioCollectionStore } from '../../stores/nuvioCollectionStore';
-import { getEffectiveNuvioUrl, getEffectiveNuvioKey, setNuvioCustomConfig } from '../../services/nuvio-api';
+import { getEffectiveNuvioUrl, getEffectiveNuvioKey } from '../../services/nuvio-api';
 import type { InstalledAddon } from '../../types/stremio';
 
 const isAioMetadataAddon = (addon: InstalledAddon): boolean => {
@@ -101,11 +101,6 @@ export function NuvioTab() {
   const [password, setPassword] = useState('');
   const [authError, setAuthError] = useState<string | null>(null);
 
-  // Self-hosting config state
-  const [customUrl, setCustomUrl] = useState('');
-  const [customKey, setCustomKey] = useState('');
-  const [isConfigExpanded, setIsConfigExpanded] = useState(false);
-
   // Profile creation state
   const [showCreateProfile, setShowCreateProfile] = useState(false);
   const [newProfileName, setNewProfileName] = useState('');
@@ -133,8 +128,6 @@ export function NuvioTab() {
   const [hideUnderline, setHideUnderline] = useState(false);
 
   useEffect(() => {
-    setCustomUrl(localStorage.getItem('ynotv_nuvio_url') || '');
-    setCustomKey(localStorage.getItem('ynotv_nuvio_key') || '');
     if (authStore.token) {
       authStore.fetchProfiles();
       if (authStore.activeProfile) {
@@ -396,20 +389,6 @@ export function NuvioTab() {
     }
   };
 
-  const handleSaveConfig = () => {
-    const trimmedUrl = customUrl.trim();
-    const trimmedKey = customKey.trim();
-    setNuvioCustomConfig(trimmedUrl || null, trimmedKey || null);
-    alert('Nuvio Supabase configuration saved! Please reload settings or restart app.');
-  };
-
-  const handleResetConfig = () => {
-    setNuvioCustomConfig(null, null);
-    setCustomUrl('');
-    setCustomKey('');
-    alert('Nuvio configuration reset to official defaults.');
-  };
-
   const handleCreateProfileSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newProfileName.trim()) return;
@@ -485,110 +464,7 @@ export function NuvioTab() {
           Nuvio is a media synchronization and plugin platform. Log in to sync collections, profiles, and run custom scrapers.
         </p>
 
-        {/* Self-Hosting Toggle */}
-        <div style={{ marginBottom: '20px' }}>
-          <button
-            onClick={() => setIsConfigExpanded(!isConfigExpanded)}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: '#00d4ff',
-              fontSize: '0.8rem',
-              cursor: 'pointer',
-              padding: 0,
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-            }}
-          >
-            <span>{isConfigExpanded ? '▼' : '▶'} Self-Hosting & Advanced Configuration</span>
-          </button>
-          {isConfigExpanded && (
-            <div style={{
-              background: 'rgba(255,255,255,0.03)',
-              border: '1px solid rgba(255,255,255,0.06)',
-              borderRadius: '8px',
-              padding: '14px',
-              marginTop: '10px',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '10px'
-            }}>
-              <div>
-                <label style={{ display: 'block', fontSize: '0.75rem', color: 'rgba(255,255,255,0.6)', marginBottom: '4px' }}>Supabase Project URL</label>
-                <input
-                  type="text"
-                  placeholder="https://nuvio-app.supabase.co"
-                  value={customUrl}
-                  onChange={(e) => setCustomUrl(e.target.value)}
-                  style={{
-                    width: '100%',
-                    background: 'rgba(0,0,0,0.25)',
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    borderRadius: '6px',
-                    padding: '8px',
-                    fontSize: '0.8rem',
-                    color: '#fff',
-                    outline: 'none',
-                    boxSizing: 'border-box'
-                  }}
-                />
-              </div>
-              <div>
-                <label style={{ display: 'block', fontSize: '0.75rem', color: 'rgba(255,255,255,0.6)', marginBottom: '4px' }}>Supabase Anon Key</label>
-                <input
-                  type="password"
-                  placeholder="eyJhbGciOiJIUzI1Ni..."
-                  value={customKey}
-                  onChange={(e) => setCustomKey(e.target.value)}
-                  style={{
-                    width: '100%',
-                    background: 'rgba(0,0,0,0.25)',
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    borderRadius: '6px',
-                    padding: '8px',
-                    fontSize: '0.8rem',
-                    color: '#fff',
-                    outline: 'none',
-                    boxSizing: 'border-box'
-                  }}
-                />
-              </div>
-              <div style={{ display: 'flex', gap: '8px', marginTop: '6px' }}>
-                <button
-                  onClick={handleSaveConfig}
-                  style={{
-                    background: '#00d4ff',
-                    border: 'none',
-                    color: '#000',
-                    borderRadius: '6px',
-                    padding: '6px 12px',
-                    fontSize: '0.75rem',
-                    fontWeight: 600,
-                    cursor: 'pointer'
-                  }}
-                >
-                  Save Config
-                </button>
-                <button
-                  onClick={handleResetConfig}
-                  style={{
-                    background: 'rgba(255,255,255,0.08)',
-                    border: '1px solid rgba(255,255,255,0.12)',
-                    color: '#fff',
-                    borderRadius: '6px',
-                    padding: '6px 12px',
-                    fontSize: '0.75rem',
-                    fontWeight: 600,
-                    cursor: 'pointer'
-                  }}
-                >
-                  Reset to Default
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
+
 
         {/* 2. AUTH STATUS OR LOGIN FORM */}
         {!authStore.token ? (
