@@ -141,6 +141,31 @@ const matchCatalogKey = (settingsKey: string, row: { key: string; addon: Install
   return normSettingsType === normRowType && settingsCatId === rowCatId;
 };
 
+const getHomeCatalogDefaultTitle = (catalogName: string, type: string): string => {
+  const cleanType = (type || '').trim().toLowerCase();
+  let mediaTypeLabel = '';
+  switch (cleanType) {
+    case 'movie':
+      mediaTypeLabel = 'Movies';
+      break;
+    case 'series':
+      mediaTypeLabel = 'Series';
+      break;
+    case 'anime':
+      mediaTypeLabel = 'Anime';
+      break;
+    case 'channel':
+      mediaTypeLabel = 'Channels';
+      break;
+    case 'tv':
+      mediaTypeLabel = 'TV';
+      break;
+    default:
+      mediaTypeLabel = cleanType ? cleanType.charAt(0).toUpperCase() + cleanType.slice(1) : '';
+  }
+  return mediaTypeLabel ? `${catalogName} - ${mediaTypeLabel}` : catalogName;
+};
+
 // Match a collection source's addonId against an installed addon.
 // Uses exact ID matching only to avoid selecting the wrong addon.
 const fuzzyMatchAddon = (source: NuvioCollectionSource, addon: InstalledAddon): boolean => {
@@ -266,7 +291,7 @@ export function NuvioPage({
         catalogRows.push({
           key,
           type: 'catalog',
-          title: catalog.name,
+          title: getHomeCatalogDefaultTitle(catalog.name, catalog.type),
           addon,
           catalog
         });
@@ -527,8 +552,49 @@ export function NuvioPage({
       progressItems.map(async (entry) => {
         try {
           const type = entry.content_type === 'series' || entry.content_type === 'show' ? 'series' : 'movie';
+          const isCompleted = entry.duration > 0 && (entry.position / entry.duration) >= 0.90;
+
+          // If a movie is completed, filter it out from continue watching
+          if (isCompleted && type === 'movie') {
+            return null;
+          }
+
           const meta = await fetchMeta(activeAddons, type, entry.content_id);
           if (meta) {
+            if (isCompleted && type === 'series') {
+              // Find the next episode
+              if (meta.videos && meta.videos.length > 0) {
+                const sortedVideos = [...meta.videos].sort((a, b) => {
+                  const aSeason = a.season ?? 0;
+                  const bSeason = b.season ?? 0;
+                  if (aSeason !== bSeason) return aSeason - bSeason;
+                  return (a.episode ?? 0) - (b.episode ?? 0);
+                });
+                const currentIndex = sortedVideos.findIndex(
+                  v => v.season === entry.season && v.episode === entry.episode
+                );
+                if (currentIndex !== -1 && currentIndex + 1 < sortedVideos.length) {
+                  const nextVideo = sortedVideos[currentIndex + 1];
+                  return {
+                    ...entry,
+                    video_id: nextVideo.id || `${entry.content_id}:${nextVideo.season ?? 0}:${nextVideo.episode ?? 0}`,
+                    season: nextVideo.season ?? null,
+                    episode: nextVideo.episode ?? null,
+                    position: 0,
+                    duration: 0,
+                    poster: meta.poster,
+                    background: meta.background,
+                    name: meta.name,
+                    episodeTitle: nextVideo.title,
+                    episodeThumbnail: nextVideo.thumbnail || meta.background || meta.poster,
+                    isUpNext: true,
+                  };
+                }
+              }
+              // If no next episode is found (last episode of series), filter it out
+              return null;
+            }
+
             let episodeTitle: string | undefined;
             let episodeThumbnail: string | undefined;
             if (entry.season != null && entry.episode != null && meta.videos) {
@@ -555,7 +621,8 @@ export function NuvioPage({
         return entry;
       })
     );
-    setResolvedWatchProgress(resolved);
+    const filtered = resolved.filter((item): item is NonNullable<typeof item> => item !== null);
+    setResolvedWatchProgress(filtered as any);
   };
 
   useEffect(() => {
@@ -1187,9 +1254,10 @@ export function NuvioPage({
                             const progressInt = Math.round(progressPct);
                             const imgUrl = entry.poster || entry.background;
                             const isEpisode = entry.season !== null && entry.episode !== null;
-                            const subtitle = isEpisode
-                              ? entry.episodeTitle || ''
-                              : entry.content_type === 'movie' ? 'Movie' : entry.content_type;
+                            const isUpNext = (entry as any).isUpNext;
+                            const subtitle = isUpNext
+                              ? `Up Next • ${entry.episodeTitle || ''}`
+                              : (isEpisode ? entry.episodeTitle || '' : (entry.content_type === 'movie' ? 'Movie' : entry.content_type));
                             return (
                               <div
                                 key={entry.progress_key}
@@ -1222,11 +1290,14 @@ export function NuvioPage({
                             const imgUrl = entry.poster || entry.background;
                             const remainingMs = entry.duration - entry.position;
                             const remainingMin = Math.max(1, Math.round(remainingMs / 60000));
-                            const badgeText = progressPct > 0
-                              ? remainingMin >= 60
-                                ? `${Math.floor(remainingMin / 60)}h ${remainingMin % 60}m`
-                                : `${remainingMin}m`
-                              : '';
+                            const isUpNext = (entry as any).isUpNext;
+                            const badgeText = isUpNext
+                              ? 'Up Next'
+                              : (progressPct > 0
+                                ? (remainingMin >= 60
+                                  ? `${Math.floor(remainingMin / 60)}h ${remainingMin % 60}m`
+                                  : `${remainingMin}m`)
+                                : '');
                             return (
                               <div
                                 key={entry.progress_key}
@@ -1257,11 +1328,14 @@ export function NuvioPage({
                           const progressPct = getProgressPercent(entry);
                           const remainingMs = entry.duration - entry.position;
                           const remainingMin = Math.max(1, Math.round(remainingMs / 60000));
-                          const badgeText = progressPct > 0
-                            ? remainingMin >= 60
-                              ? `${Math.floor(remainingMin / 60)}h ${remainingMin % 60}m left`
-                              : `${remainingMin}m left`
-                            : '';
+                          const isUpNext = (entry as any).isUpNext;
+                          const badgeText = isUpNext
+                            ? 'Up Next'
+                            : (progressPct > 0
+                              ? (remainingMin >= 60
+                                ? `${Math.floor(remainingMin / 60)}h ${remainingMin % 60}m left`
+                                : `${remainingMin}m left`)
+                              : '');
                           const cardImg = entry.episodeThumbnail || entry.background || entry.poster;
                           const isEpisode = entry.season !== null && entry.episode !== null;
                           const subtitle = isEpisode
