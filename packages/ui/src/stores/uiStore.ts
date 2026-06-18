@@ -9,6 +9,15 @@ import { create } from 'zustand';
 import type { SportsTabId } from '@ynotv/core';
 import type { MediaItem } from '../types/media';
 import type { StremioMetaPreview, StremioMeta } from '../types/stremio';
+import type { NuvioCollectionFolder } from '../services/nuvio-api';
+
+export interface NuvioMeta {
+  id: string;
+  type: string;
+  name: string;
+  poster: string | null;
+  background?: string | null;
+}
 
 export type StremioView = 'home' | 'library' | 'detail' | 'search' | 'calendar' | 'settings' | 'person';
 
@@ -105,6 +114,16 @@ interface UIState {
   // Cloud catalog selection (Trakt/Simkl) for detail view
   stremioSelectedCloudCatalogKey: string | null;
   setStremioSelectedCloudCatalogKey: (key: string | null) => void;
+
+  // Nuvio
+  nuvioView: 'home' | 'library' | 'collections' | 'addons' | 'scrapers' | 'settings';
+  setNuvioView: (view: 'home' | 'library' | 'collections' | 'addons' | 'scrapers' | 'settings') => void;
+  nuvioActiveMeta: NuvioMeta | null;
+  setNuvioActiveMeta: (meta: NuvioMeta | null) => void;
+  nuvioSelectedFolder: NuvioCollectionFolder | null;
+  setNuvioSelectedFolder: (folder: NuvioCollectionFolder | null) => void;
+  nuvioSelectedFolderCollectionTitle: string;
+  setNuvioSelectedFolderCollectionTitle: (title: string) => void;
 }
 
 export const useUIStore = create<UIState>((set) => ({
@@ -247,6 +266,16 @@ export const useUIStore = create<UIState>((set) => ({
 
   stremioSelectedCloudCatalogKey: null,
   setStremioSelectedCloudCatalogKey: (key) => set({ stremioSelectedCloudCatalogKey: key }),
+
+  // Nuvio
+  nuvioView: 'home',
+  setNuvioView: (view) => set({ nuvioView: view }),
+  nuvioActiveMeta: null,
+  setNuvioActiveMeta: (meta) => set({ nuvioActiveMeta: meta }),
+  nuvioSelectedFolder: null,
+  setNuvioSelectedFolder: (folder) => set({ nuvioSelectedFolder: folder }),
+  nuvioSelectedFolderCollectionTitle: '',
+  setNuvioSelectedFolderCollectionTitle: (title) => set({ nuvioSelectedFolderCollectionTitle: title }),
 }));
 
 // Selectors for cleaner component code
@@ -329,3 +358,13 @@ export const useStremioActivePersonId = () => useUIStore((s) => s.stremioActiveP
 export const useSetStremioActivePersonId = () => useUIStore((s) => s.setStremioActivePersonId);
 export const useStremioNavigate = () => useUIStore((s) => s.stremioNavigate);
 export const useStremioGoBack = () => useUIStore((s) => s.stremioGoBack);
+
+// Nuvio selectors
+export const useNuvioView = () => useUIStore((s) => s.nuvioView);
+export const useSetNuvioView = () => useUIStore((s) => s.setNuvioView);
+export const useNuvioActiveMeta = () => useUIStore((s) => s.nuvioActiveMeta);
+export const useSetNuvioActiveMeta = () => useUIStore((s) => s.setNuvioActiveMeta);
+export const useNuvioSelectedFolder = () => useUIStore((s) => s.nuvioSelectedFolder);
+export const useSetNuvioSelectedFolder = () => useUIStore((s) => s.setNuvioSelectedFolder);
+export const useNuvioSelectedFolderCollectionTitle = () => useUIStore((s) => s.nuvioSelectedFolderCollectionTitle);
+export const useSetNuvioSelectedFolderCollectionTitle = () => useUIStore((s) => s.setNuvioSelectedFolderCollectionTitle);

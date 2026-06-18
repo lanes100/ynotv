@@ -4,6 +4,16 @@ import { useNuvioCollectionStore } from '../../stores/nuvioCollectionStore';
 import { useNuvioAddonStore } from '../../stores/nuvioAddonStore';
 import { useNuvioPluginStore } from '../../stores/nuvioPluginStore';
 import {
+  useNuvioView,
+  useSetNuvioView,
+  useNuvioActiveMeta,
+  useSetNuvioActiveMeta,
+  useNuvioSelectedFolder,
+  useSetNuvioSelectedFolder,
+  useNuvioSelectedFolderCollectionTitle,
+  useSetNuvioSelectedFolderCollectionTitle
+} from '../../stores/uiStore';
+import {
   fetchNuvioLibrary,
   fetchNuvioWatchProgress,
   pushNuvioLibrary,
@@ -211,9 +221,10 @@ export function NuvioPage({
   const [resolvedWatchProgress, setResolvedWatchProgress] = useState<(NuvioWatchProgressSyncEntry & { poster?: string; name?: string; background?: string; episodeTitle?: string; episodeThumbnail?: string })[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const [nuvioView, setNuvioView] = useState<'home' | 'library' | 'collections' | 'addons' | 'scrapers' | 'settings'>('home');
-  // Internal Nuvio detail navigation — completely separate from StremioPage
-  const [nuvioActiveMeta, setNuvioActiveMeta] = useState<NuvioMeta | null>(null);
+  const nuvioView = useNuvioView();
+  const setNuvioView = useSetNuvioView();
+  const nuvioActiveMeta = useNuvioActiveMeta();
+  const setNuvioActiveMeta = useSetNuvioActiveMeta();
   const [editableCollections, setEditableCollections] = useState<NuvioCollection[]>([]);
 
   // Refs and controls for Collection rail horizontal scrolling
@@ -363,8 +374,10 @@ export function NuvioPage({
   const profileMenuRef = useRef<HTMLDivElement>(null);
 
   // Folder detail modal state
-  const [selectedFolder, setSelectedFolder] = useState<NuvioCollectionFolder | null>(null);
-  const [selectedFolderCollectionTitle, setSelectedFolderCollectionTitle] = useState('');
+  const selectedFolder = useNuvioSelectedFolder();
+  const setSelectedFolder = useSetNuvioSelectedFolder();
+  const selectedFolderCollectionTitle = useNuvioSelectedFolderCollectionTitle();
+  const setSelectedFolderCollectionTitle = useSetNuvioSelectedFolderCollectionTitle();
   const [folderItems, setFolderItems] = useState<StremioMetaPreview[]>([]);
   const [folderError, setFolderError] = useState<string | null>(null);
   const [loadingFolderItems, setLoadingFolderItems] = useState(false);
