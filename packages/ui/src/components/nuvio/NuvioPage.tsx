@@ -263,6 +263,30 @@ export function NuvioPage({
   const nuvioNavigate = useNuvioNavigate();
   const nuvioGoBack = useNuvioGoBack();
   const [pinPromptProfile, setPinPromptProfile] = useState<any | null>(null);
+  const [loginEmail, setLoginEmail] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+  const [loginError, setLoginError] = useState<string | null>(null);
+  const [isLoginMode, setIsLoginMode] = useState(true);
+
+  const handleAuthSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoginError(null);
+    if (!loginEmail || !loginPassword) {
+      setLoginError('Please fill in all fields.');
+      return;
+    }
+    try {
+      if (isLoginMode) {
+        await authStore.login(loginEmail, loginPassword);
+      } else {
+        await authStore.signup(loginEmail, loginPassword);
+      }
+      setLoginEmail('');
+      setLoginPassword('');
+    } catch (err: any) {
+      setLoginError(err.message || 'Authentication failed');
+    }
+  };
 
   const [catalogFilter, setCatalogFilter] = useState('');
   const [editableCollections, setEditableCollections] = useState<NuvioCollection[]>([]);
@@ -1241,26 +1265,130 @@ export function NuvioPage({
       </div>
 
       {/* Main Content */}
-      <div className={`nuvio-main ${nuvioActiveMeta ? 'nuvio-page-hide-content' : ''}`}>
+      <div className={`nuvio-main ${nuvioView === 'home' ? 'nuvio-main-home' : ''} ${nuvioActiveMeta ? 'nuvio-page-hide-content' : ''}`}>
         {!token ? (
-          <div className="nuvio-empty-state" style={{ maxWidth: '480px', margin: '80px auto' }}>
-            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#00d4ff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: '16px' }}>
-              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-              <circle cx="9" cy="7" r="4" />
-              <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
-              <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-            </svg>
-            <h3 style={{ color: '#fff', margin: '0 0 8px 0', fontSize: '1.05rem', fontWeight: 600 }}>Nuvio Sync Offline</h3>
-            <p style={{ margin: '0 0 20px 0', fontSize: '0.82rem', color: 'rgba(255,255,255,0.5)', lineHeight: 1.5 }}>
-              Sign in to Nuvio in Settings to synchronize your custom collections, starred library items, and continue watching progress across devices.
+          <div style={{ maxWidth: '420px', margin: '60px auto', display: 'flex', flexDirection: 'column', gap: '16px', padding: '0 20px' }}>
+            <div style={{ textAlign: 'center' }}>
+              <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#00d4ff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: '12px' }}>
+                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                <circle cx="9" cy="7" r="4" />
+                <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+                <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+              </svg>
+              <h3 style={{ color: '#fff', margin: '0 0 6px 0', fontSize: '1.05rem', fontWeight: 600 }}>Nuvio Sync Offline</h3>
+              <p style={{ margin: '0 0 16px 0', fontSize: '0.82rem', color: 'rgba(255,255,255,0.5)', lineHeight: 1.5 }}>
+                Sign in to synchronize your custom collections, starred library items, and continue watching progress across devices.
+              </p>
+            </div>
+
+            <div style={{
+              background: 'rgba(255,255,255,0.02)',
+              border: '1px solid rgba(255,255,255,0.05)',
+              borderRadius: '8px',
+              padding: '20px'
+            }}>
+              <h4 style={{ margin: '0 0 14px 0', fontSize: '0.9rem', fontWeight: 600 }}>
+                {isLoginMode ? 'Sign In to Nuvio' : 'Create a Nuvio Account'}
+              </h4>
+              <form onSubmit={handleAuthSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <input
+                  type="email"
+                  placeholder="Email Address"
+                  value={loginEmail}
+                  onChange={(e) => setLoginEmail(e.target.value)}
+                  style={{
+                    width: '100%',
+                    background: 'rgba(0,0,0,0.2)',
+                    border: '1px solid rgba(255,255,255,0.08)',
+                    borderRadius: '6px',
+                    padding: '10px',
+                    fontSize: '0.85rem',
+                    color: '#fff',
+                    outline: 'none',
+                    boxSizing: 'border-box'
+                  }}
+                />
+                <input
+                  type="password"
+                  placeholder="Password"
+                  value={loginPassword}
+                  onChange={(e) => setLoginPassword(e.target.value)}
+                  style={{
+                    width: '100%',
+                    background: 'rgba(0,0,0,0.2)',
+                    border: '1px solid rgba(255,255,255,0.08)',
+                    borderRadius: '6px',
+                    padding: '10px',
+                    fontSize: '0.85rem',
+                    color: '#fff',
+                    outline: 'none',
+                    boxSizing: 'border-box'
+                  }}
+                />
+                {loginError && (
+                  <div style={{ color: '#ff4f4f', fontSize: '0.75rem' }}>{loginError}</div>
+                )}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '6px' }}>
+                  <button
+                    type="submit"
+                    disabled={authStore.isSyncing}
+                    style={{
+                      background: 'linear-gradient(135deg, #00d4ff, #0088ff)',
+                      border: 'none',
+                      color: '#000',
+                      borderRadius: '6px',
+                      padding: '10px 20px',
+                      fontSize: '0.8rem',
+                      fontWeight: 700,
+                      cursor: authStore.isSyncing ? 'not-allowed' : 'pointer',
+                      opacity: authStore.isSyncing ? 0.7 : 1
+                    }}
+                  >
+                    {authStore.isSyncing ? 'Authenticating...' : isLoginMode ? 'Login' : 'Sign Up'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsLoginMode(!isLoginMode)}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: 'rgba(255,255,255,0.6)',
+                      fontSize: '0.75rem',
+                      cursor: 'pointer',
+                      textDecoration: 'underline'
+                    }}
+                  >
+                    {isLoginMode ? 'Need an account? Register' : 'Have an account? Login'}
+                  </button>
+                </div>
+              </form>
+            </div>
+
+            <p style={{
+              margin: '0',
+              fontSize: '0.7rem',
+              color: 'rgba(255,255,255,0.35)',
+              lineHeight: 1.5,
+              textAlign: 'center'
+            }}>
+              Disclaimer: ynoTV is an independent open source desktop client and is not affiliated with or endorsed by Nuvio. Your login credentials are only used to connect to Nuvio's servers directly to sync &mdash; ynoTV never stores or transmits them.
             </p>
-            <button
-              onClick={handleOpenSettings}
-              className="nuvio-btn nuvio-btn-primary"
-              style={{ padding: '10px 24px' }}
-            >
-              Log In Now
-            </button>
+
+            <div style={{ textAlign: 'center', marginTop: '4px' }}>
+              <button
+                onClick={handleOpenSettings}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: 'rgba(255,255,255,0.4)',
+                  fontSize: '0.75rem',
+                  cursor: 'pointer',
+                  textDecoration: 'underline'
+                }}
+              >
+                Advanced settings &rarr;
+              </button>
+            </div>
           </div>
         ) : !profile && authStore.profiles.length > 0 ? (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '80px 20px', minHeight: '400px' }}>

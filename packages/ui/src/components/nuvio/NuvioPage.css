@@ -1677,6 +1677,10 @@ select.nuvio-input option {
   transform: translateY(0) scale(0.95);
 }
 
+.nuvio-main.nuvio-main-home {
+  padding-top: 0;
+}
+
 /* ─── Catalog Filter Bar ──────────────────────────────────── */
 .nuvio-catalog-filter {
   position: sticky;
@@ -1686,7 +1690,7 @@ select.nuvio-input option {
   align-items: center;
   gap: 8px;
   width: calc(100% + 56px);
-  margin: -28px -28px 20px;
+  margin: 0 -28px 20px;
   padding: 12px 28px;
   background: rgba(8, 8, 12, 0.55);
   backdrop-filter: blur(14px);

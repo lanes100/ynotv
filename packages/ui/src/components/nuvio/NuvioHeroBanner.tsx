@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { StremioMetaPreview } from '../../types/stremio';
 import { fetchCatalog } from '../../services/stremio-addon';
+import { useNuvioAddonStore } from '../../stores/nuvioAddonStore';
 import '../stremio/StremioHeroBanner.css';
 
 interface NuvioHeroBannerProps {
@@ -34,6 +35,23 @@ export function NuvioHeroBanner({ onItemClick, onAddToLibrary, libraryIds }: Nuv
     const loadHeroItems = async () => {
       try {
         const raw: any[] = JSON.parse(localStorage.getItem('nuvio_hero_catalogs') || '[]');
+
+        if (raw.length === 0) {
+          // Auto-populate with first 2 non-parameterized catalogs from enabled addons
+          const addons = useNuvioAddonStore.getState().enabledAddons;
+          for (const addon of addons) {
+            if (raw.length >= 2) break;
+            for (const catalog of addon.manifest?.catalogs || []) {
+              if (raw.length >= 2) break;
+              if (catalog.extra?.some((e: any) => e.isRequired)) continue;
+              const key = `${addon.manifest?.id || addon.id}:${catalog.type}:${catalog.id}`;
+              raw.push({ key, baseUrl: addon.baseUrl });
+            }
+          }
+          if (raw.length > 0) {
+            localStorage.setItem('nuvio_hero_catalogs', JSON.stringify(raw));
+          }
+        }
 
         if (raw.length === 0) {
           if (active) { setItems([]); setLoading(false); }

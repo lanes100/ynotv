@@ -661,6 +661,15 @@ export function NuvioTab({
                 </button>
               </div>
             </form>
+            <p style={{
+              margin: '14px 0 0 0',
+              fontSize: '0.7rem',
+              color: 'rgba(255,255,255,0.35)',
+              lineHeight: 1.5,
+              textAlign: 'center'
+            }}>
+              Disclaimer: ynoTV is an independent open source desktop client and is not affiliated with or endorsed by Nuvio. Your login credentials are only used to connect to Nuvio's servers directly to sync &mdash; ynoTV never stores or transmits them.
+            </p>
           </div>
         ) : (
           <div>

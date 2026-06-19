@@ -164,6 +164,9 @@ export function StremioAccountModal({ onClose }: StremioAccountModalProps) {
               <button type="submit" className="stremio-login-btn" disabled={loading}>
                 {loading ? 'Logging in...' : 'Log In'}
               </button>
+              <p className="stremio-login-disclaimer">
+                Disclaimer: ynoTV is an independent open source desktop client and is not affiliated with or endorsed by Stremio. Your login credentials are only used to connect to Stremio's servers directly to sync &mdash; ynoTV never stores or transmits them.
+              </p>
             </form>
           ) : (
             <div className="stremio-account-details">
