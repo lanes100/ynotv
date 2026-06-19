@@ -158,7 +158,7 @@ export function StreamPickerModal({
                       {displayDesc && <div className="stremio-picker-item-desc">{displayDesc}</div>}
                       <div className="stremio-picker-item-source">{s.addonName}</div>
                     </button>
-                    {s.url && (
+                    {s.url && !s.url.startsWith('magnet:') && !s.url.startsWith('infoHash:') && (
                       <button
                         className={`stremio-picker-item-download ${downloadingUrl === s.url ? 'downloading' : ''}`}
                         onClick={(e) => handleDownloadStream(s, e)}

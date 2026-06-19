@@ -345,7 +345,7 @@ export function StremioDetail({
           className="stremio-detail-stream-card"
           onClick={() => onPlay(stream, meta, selectedVideo ?? undefined)}
         >
-          {stream.url && (
+          {stream.url && !stream.url.startsWith('magnet:') && !stream.url.startsWith('infoHash:') && (
             <button
               className={`stremio-detail-stream-download-btn ${downloadingUrl === stream.url ? 'downloading' : ''}`}
               onClick={(e) => handleDownloadStream(stream, e)}

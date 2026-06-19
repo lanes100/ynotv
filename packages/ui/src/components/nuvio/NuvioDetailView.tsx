@@ -301,7 +301,10 @@ export function NuvioDetailView({
             const scraperStreams: StremioStream[] = results.map((r: any) => ({
               name: r.title || scraper.name,
               title: r.quality || '',
-              url: r.url,
+              url: r.url || undefined,
+              infoHash: r.infoHash || undefined,
+              fileIdx: r.fileIdx !== null && r.fileIdx !== undefined ? r.fileIdx : undefined,
+              behaviorHints: r.headers ? { proxyHeaders: r.headers } : undefined,
               addonName: `⚙ ${scraper.name}`,
             }));
             collected.push(...scraperStreams);
@@ -682,7 +685,7 @@ export function NuvioDetailView({
             logo: effectiveMeta.logo ?? null,
           }, selectedVideo ?? undefined)}
         >
-          {stream.url && (
+          {stream.url && !stream.url.startsWith('magnet:') && !stream.url.startsWith('infoHash:') && (
             <button
               className={`stremio-detail-stream-download-btn ${downloadingUrl === stream.url ? 'downloading' : ''}`}
               onClick={(e) => handleDownloadStream(stream, e)}

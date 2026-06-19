@@ -13,6 +13,7 @@ export interface PluginRuntimeResult {
   seeders?: number | null;
   peers?: number | null;
   infoHash?: string | null;
+  fileIdx?: number | null;
   headers?: Record<string, string> | null;
 }
 
@@ -821,9 +822,10 @@ export async function executePlugin(
         seeders: typeof item.seeders === 'number' ? item.seeders : null,
         peers: typeof item.peers === 'number' ? item.peers : null,
         infoHash: item.infoHash || null,
+        fileIdx: typeof item.fileIdx === 'number' ? item.fileIdx : null,
         headers: item.headers || null,
       };
-    }).filter((r: any) => r.url);
+    }).filter((r: any) => r.url || r.infoHash);
   } catch (e) {
     console.error(`[NuvioPluginRuntime] Failed to parse results for scraper ${scraperId}:`, e);
     return [];
