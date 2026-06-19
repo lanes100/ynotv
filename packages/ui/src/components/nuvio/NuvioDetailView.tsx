@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import type { StremioMeta, StremioStream, StremioVideo, StremioStreamBadge } from '../../types/stremio';
+import type { StremioMeta, StremioStream, StremioVideo, StremioStreamBadge, StreamAutoPlayMode, StreamAutoPlaySourceScope } from '../../types/stremio';
 import { useNuvioAddonStore } from '../../stores/nuvioAddonStore';
 import { useNuvioPluginStore } from '../../stores/nuvioPluginStore';
 import { useNuvioAuthStore } from '../../stores/nuvioAuthStore';
@@ -36,6 +36,12 @@ interface NuvioDetailViewProps {
   streamBadgePlacement?: 'top' | 'bottom';
   library?: NuvioLibrarySyncItem[];
   onUpdateLibrary?: (newLibrary: NuvioLibrarySyncItem[]) => void;
+  nuvioAutoPlayMode?: StreamAutoPlayMode;
+  nuvioAutoPlayTimeout?: number;
+  nuvioAutoPlaySourceScope?: StreamAutoPlaySourceScope;
+  nuvioAutoPlayAllowedAddons?: string[];
+  nuvioAutoPlayAllowedPlugins?: string[];
+  nuvioAutoPlayRegex?: string;
 }
 
 function formatReleaseDate(dStr?: string) {
@@ -60,6 +66,12 @@ export function NuvioDetailView({
   streamBadgePlacement = 'bottom',
   library = [],
   onUpdateLibrary,
+  nuvioAutoPlayMode = 'manual',
+  nuvioAutoPlayTimeout = 0,
+  nuvioAutoPlaySourceScope = 'all',
+  nuvioAutoPlayAllowedAddons = [],
+  nuvioAutoPlayAllowedPlugins = [],
+  nuvioAutoPlayRegex = '',
 }: NuvioDetailViewProps) {
   const addons = useNuvioAddonStore((s) => s.enabledAddons);
   const pluginStore = useNuvioPluginStore();
@@ -95,6 +107,8 @@ export function NuvioDetailView({
   const [selectedAddonFilter, setSelectedAddonFilter] = useState('All');
   const [videoSearch, setVideoSearch] = useState('');
   const [downloadingUrl, setDownloadingUrl] = useState<string | null>(null);
+
+  const autoPlayTriggeredRef = useRef<string | null>(null);
 
   const startDownload = useDownloadStore((s) => s.startDownload);
 
@@ -517,6 +531,80 @@ export function NuvioDetailView({
     };
     onNavigate(newMeta);
   }, [meta.type, onNavigate]);
+
+  // ─── Auto-play stream selection ─────────────────────────────
+  useEffect(() => {
+    if (nuvioAutoPlayMode === 'manual') return;
+    if (loadingStreams || streams.length === 0) return;
+
+    const contentKey = `${meta.id}:${selectedVideo?.id || ''}`;
+    if (autoPlayTriggeredRef.current === contentKey) return;
+
+    const eligible = filteredStreams.filter((s) => {
+      if (nuvioAutoPlaySourceScope === 'installed-addons' && s.addonName?.startsWith('⚙ ')) return false;
+      if (nuvioAutoPlaySourceScope === 'enabled-plugins' && s.addonName && !s.addonName.startsWith('⚙ ')) return false;
+      if (nuvioAutoPlayAllowedAddons.length > 0 && s.addonName && !s.addonName.startsWith('⚙ ') && !nuvioAutoPlayAllowedAddons.includes(s.addonName)) return false;
+      if (nuvioAutoPlayAllowedPlugins.length > 0 && s.addonName?.startsWith('⚙ ') && !nuvioAutoPlayAllowedPlugins.includes(s.addonName.replace('⚙ ', ''))) return false;
+      return true;
+    });
+
+    if (eligible.length === 0) return;
+
+    let selected = eligible[0];
+    if (nuvioAutoPlayMode === 'regex-match') {
+      if (!nuvioAutoPlayRegex) return;
+      try {
+        const pattern = nuvioAutoPlayRegex.trim();
+        const userRegex = new RegExp(pattern, 'i');
+        
+        const exclusionMatches = [...pattern.matchAll(/\(\?!.*?\(([^)]+)\)\)/g)];
+        const exclusionWords: string[] = [];
+        for (const match of exclusionMatches) {
+          if (match[1]) {
+            match[1].split('|').forEach(word => {
+              const trimmed = word.trim();
+              if (trimmed) exclusionWords.push(trimmed);
+            });
+          }
+        }
+        
+        const excludeRegex = exclusionWords.length > 0
+          ? new RegExp(`\\b(${exclusionWords.join('|')})\\b`, 'i')
+          : null;
+
+        const matched = eligible.filter(stream => {
+          const streamUrl = stream.url || '';
+          const name = stream.name || '';
+          const title = stream.title || '';
+          const description = stream.description || '';
+          const addonName = stream.addonName || '';
+          
+          const searchableText = `${addonName} ${name} ${title} ${description} ${streamUrl}`;
+          
+          if (!userRegex.test(searchableText)) return false;
+          if (excludeRegex && excludeRegex.test(searchableText)) return false;
+          
+          return true;
+        });
+
+        if (matched.length === 0) return;
+        selected = matched[0];
+      } catch (err) {
+        console.error("Invalid autoplay regex:", err);
+        return;
+      }
+    }
+
+    autoPlayTriggeredRef.current = contentKey;
+
+    const timeoutMs = nuvioAutoPlayTimeout * 1000;
+    const timer = setTimeout(() => {
+      onPlayRef.current(selected, metaRef.current, selectedVideo ?? undefined);
+    }, timeoutMs);
+
+    return () => clearTimeout(timer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loadingStreams, streams.length, nuvioAutoPlayMode, nuvioAutoPlayTimeout, nuvioAutoPlaySourceScope, nuvioAutoPlayAllowedAddons.join(','), nuvioAutoPlayAllowedPlugins.join(','), nuvioAutoPlayRegex, meta.id, selectedVideo?.id]);
 
   const renderedStreams = useMemo(() => {
     return filteredStreams.map((stream, idx) => {

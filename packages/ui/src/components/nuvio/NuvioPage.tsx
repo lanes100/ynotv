@@ -36,7 +36,7 @@ import { StremioHoverCard } from '../stremio/StremioHoverCard';
 import { NuvioDetailView, type NuvioMeta } from './NuvioDetailView';
 import { NuvioPersonDetail } from './NuvioPersonDetail';
 import { NuvioPinModal } from './NuvioPinModal';
-import type { StremioStream, StremioVideo, StremioMeta, BadgeSource } from '../../types/stremio';
+import type { StremioStream, StremioVideo, StremioMeta, BadgeSource, StreamAutoPlayMode, StreamAutoPlaySourceScope } from '../../types/stremio';
 import type { StremioMetaPreview, InstalledAddon } from '../../types/stremio';
 import { compileBadgeSources } from '../../utils/streamBadges';
 import { NuvioTab } from '../settings/NuvioTab';
@@ -58,6 +58,18 @@ interface NuvioPageProps {
   onNuvioStreamBadgePlacementChange?: (placement: 'top' | 'bottom') => Promise<void> | void;
   showNuvioHoverDetails?: boolean;
   onShowNuvioHoverDetailsChange?: (show: boolean) => Promise<void> | void;
+  nuvioAutoPlayMode?: StreamAutoPlayMode;
+  onNuvioAutoPlayModeChange?: (mode: StreamAutoPlayMode) => void;
+  nuvioAutoPlayTimeout?: number;
+  onNuvioAutoPlayTimeoutChange?: (timeout: number) => void;
+  nuvioAutoPlaySourceScope?: StreamAutoPlaySourceScope;
+  onNuvioAutoPlaySourceScopeChange?: (scope: StreamAutoPlaySourceScope) => void;
+  nuvioAutoPlayAllowedAddons?: string[];
+  onNuvioAutoPlayAllowedAddonsChange?: (addonIds: string[]) => void;
+  nuvioAutoPlayAllowedPlugins?: string[];
+  onNuvioAutoPlayAllowedPluginsChange?: (pluginIds: string[]) => void;
+  nuvioAutoPlayRegex?: string;
+  onNuvioAutoPlayRegexChange?: (regex: string) => void;
 }
 
 const getFolderShapeClass = (folderShape: string | undefined): string => {
@@ -245,6 +257,18 @@ export function NuvioPage({
   onNuvioStreamBadgePlacementChange,
   showNuvioHoverDetails = true,
   onShowNuvioHoverDetailsChange,
+  nuvioAutoPlayMode = 'manual',
+  onNuvioAutoPlayModeChange,
+  nuvioAutoPlayTimeout = 0,
+  onNuvioAutoPlayTimeoutChange,
+  nuvioAutoPlaySourceScope = 'all',
+  onNuvioAutoPlaySourceScopeChange,
+  nuvioAutoPlayAllowedAddons = [],
+  onNuvioAutoPlayAllowedAddonsChange,
+  nuvioAutoPlayAllowedPlugins = [],
+  onNuvioAutoPlayAllowedPluginsChange,
+  nuvioAutoPlayRegex = '',
+  onNuvioAutoPlayRegexChange,
 }: NuvioPageProps) {
   const compiledBadgeRules = useMemo(() => compileBadgeSources(nuvioBadgeSources), [nuvioBadgeSources]);
   const addonsStore = useNuvioAddonStore();
@@ -614,20 +638,68 @@ export function NuvioPage({
 
   const resolveProgressMetadata = async (progressItems: NuvioWatchProgressSyncEntry[]) => {
     const activeAddons = useNuvioAddonStore.getState().enabledAddons;
-    const resolved = await Promise.all(
-      progressItems.map(async (entry) => {
-        try {
-          const type = entry.content_type === 'series' || entry.content_type === 'show' ? 'series' : 'movie';
-          const isCompleted = entry.duration > 0 && (entry.position / entry.duration) >= 0.90;
 
-          // If a movie is completed, filter it out from continue watching
-          if (isCompleted && type === 'movie') {
-            return null;
+    // Group progressItems by content_id (series or movie ID)
+    const groups: Record<string, NuvioWatchProgressSyncEntry[]> = {};
+    for (const item of progressItems) {
+      if (!groups[item.content_id]) {
+        groups[item.content_id] = [];
+      }
+      groups[item.content_id].push(item);
+    }
+
+    const resolvedItems = await Promise.all(
+      Object.keys(groups).map(async (contentId) => {
+        const items = groups[contentId];
+        const first = items[0];
+        const type = first.content_type === 'series' || first.content_type === 'show' ? 'series' : 'movie';
+
+        if (type === 'movie') {
+          // Find the latest in-progress entry for the movie
+          const inProgress = items
+            .filter(item => !(item.duration > 0 && (item.position / item.duration) >= 0.90))
+            .sort((a, b) => b.last_watched - a.last_watched);
+          if (inProgress.length > 0) {
+            return inProgress[0];
+          }
+          return null; // All completed or no entries
+        } else {
+          // Series: Check if any in-progress records exist
+          const inProgress = items
+            .filter(item => !(item.duration > 0 && (item.position / item.duration) >= 0.90))
+            .sort((a, b) => b.last_watched - a.last_watched);
+
+          if (inProgress.length > 0) {
+            // Keep only the latest in-progress entry (suppress any completed ones / "Up Next")
+            return inProgress[0];
           }
 
+          // No in-progress entries: find the latest completed episode
+          const completed = items
+            .filter(item => item.duration > 0 && (item.position / item.duration) >= 0.90)
+            .sort((a, b) => b.last_watched - a.last_watched);
+
+          if (completed.length > 0) {
+            const latestCompleted = completed[0];
+            return {
+              ...latestCompleted,
+              _generateNextEpisode: true, // Marker to generate next episode
+            } as any;
+          }
+          return null;
+        }
+      })
+    );
+
+    const filteredCandidates = resolvedItems.filter((item): item is NonNullable<typeof item> => item !== null);
+
+    const resolved = await Promise.all(
+      filteredCandidates.map(async (entry) => {
+        try {
+          const type = entry.content_type === 'series' || entry.content_type === 'show' ? 'series' : 'movie';
           const meta = await fetchMeta(activeAddons, type, entry.content_id);
           if (meta) {
-            if (isCompleted && type === 'series') {
+            if ((entry as any)._generateNextEpisode && type === 'series') {
               // Find the next episode
               if (meta.videos && meta.videos.length > 0) {
                 const sortedVideos = [...meta.videos].sort((a, b) => {
@@ -684,11 +756,17 @@ export function NuvioPage({
         } catch (e) {
           console.warn('[NuvioPage] Failed to resolve metadata for:', entry.content_id, e);
         }
-        return entry;
+        // Remove marker
+        const { _generateNextEpisode, ...rest } = entry as any;
+        return rest;
       })
     );
-    const filtered = resolved.filter((item): item is NonNullable<typeof item> => item !== null);
-    setResolvedWatchProgress(filtered as any);
+    const finalFiltered = resolved.filter((item): item is NonNullable<typeof item> => item !== null);
+
+    // Sort final list by last_watched descending to keep Continue Watching in correct chronological order
+    finalFiltered.sort((a, b) => b.last_watched - a.last_watched);
+
+    setResolvedWatchProgress(finalFiltered as any);
   };
 
   useEffect(() => {
@@ -2180,6 +2258,18 @@ export function NuvioPage({
                 onNuvioStreamBadgePlacementChange={onNuvioStreamBadgePlacementChange || (() => {})}
                 showNuvioHoverDetails={showNuvioHoverDetails}
                 onShowNuvioHoverDetailsChange={onShowNuvioHoverDetailsChange || (() => {})}
+                nuvioAutoPlayMode={nuvioAutoPlayMode}
+                onNuvioAutoPlayModeChange={onNuvioAutoPlayModeChange || (() => {})}
+                nuvioAutoPlayTimeout={nuvioAutoPlayTimeout}
+                onNuvioAutoPlayTimeoutChange={onNuvioAutoPlayTimeoutChange || (() => {})}
+                nuvioAutoPlaySourceScope={nuvioAutoPlaySourceScope}
+                onNuvioAutoPlaySourceScopeChange={onNuvioAutoPlaySourceScopeChange || (() => {})}
+                nuvioAutoPlayAllowedAddons={nuvioAutoPlayAllowedAddons}
+                onNuvioAutoPlayAllowedAddonsChange={onNuvioAutoPlayAllowedAddonsChange || (() => {})}
+                nuvioAutoPlayAllowedPlugins={nuvioAutoPlayAllowedPlugins}
+                onNuvioAutoPlayAllowedPluginsChange={onNuvioAutoPlayAllowedPluginsChange || (() => {})}
+                nuvioAutoPlayRegex={nuvioAutoPlayRegex}
+                onNuvioAutoPlayRegexChange={onNuvioAutoPlayRegexChange || (() => {})}
               />
             )}
           </div>
@@ -2305,6 +2395,12 @@ export function NuvioPage({
           streamBadgePlacement={nuvioStreamBadgePlacement}
           library={library}
           onUpdateLibrary={setLibrary}
+          nuvioAutoPlayMode={nuvioAutoPlayMode}
+          nuvioAutoPlayTimeout={nuvioAutoPlayTimeout}
+          nuvioAutoPlaySourceScope={nuvioAutoPlaySourceScope}
+          nuvioAutoPlayAllowedAddons={nuvioAutoPlayAllowedAddons}
+          nuvioAutoPlayAllowedPlugins={nuvioAutoPlayAllowedPlugins}
+          nuvioAutoPlayRegex={nuvioAutoPlayRegex}
         />
       )}
 

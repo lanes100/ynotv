@@ -23,7 +23,7 @@ import { NuvioTab } from './settings/NuvioTab';
 import { ProxyTab } from './settings/ProxyTab';
 import { TmdbTab } from './settings/TmdbTab';
 import type { ShortcutsMap, ThemeId } from '../types/app';
-import type { StremioStreamPickerMode, BadgeSource } from '../types/stremio';
+import type { StremioStreamPickerMode, BadgeSource, StreamAutoPlayMode, StreamAutoPlaySourceScope } from '../types/stremio';
 import { DEFAULT_BADGE_SOURCES, mergeDefaultBadgeSources } from '../utils/streamBadges';
 import './Settings.css';
 
@@ -250,6 +250,12 @@ export function Settings({
   const [nuvioShowFileSizeBadges, setNuvioShowFileSizeBadges] = useState(true);
   const [nuvioStreamBadgePlacement, setNuvioStreamBadgePlacement] = useState<'top' | 'bottom'>('bottom');
   const [showNuvioHoverDetails, setShowNuvioHoverDetails] = useState(true);
+  const [nuvioAutoPlayMode, setNuvioAutoPlayMode] = useState<StreamAutoPlayMode>('manual');
+  const [nuvioAutoPlayTimeout, setNuvioAutoPlayTimeout] = useState(0);
+  const [nuvioAutoPlaySourceScope, setNuvioAutoPlaySourceScope] = useState<StreamAutoPlaySourceScope>('all');
+  const [nuvioAutoPlayAllowedAddons, setNuvioAutoPlayAllowedAddons] = useState<string[]>([]);
+  const [nuvioAutoPlayAllowedPlugins, setNuvioAutoPlayAllowedPlugins] = useState<string[]>([]);
+  const [nuvioAutoPlayRegex, setNuvioAutoPlayRegex] = useState<string>('');
 
   useEffect(() => {
     if (stremioStreamPickerModeProp !== undefined) {
@@ -594,6 +600,12 @@ export function Settings({
         showWatchlist?: boolean;
         showRecentlyViewed?: boolean;
         showNuvioHoverDetails?: boolean;
+        nuvioAutoPlayMode?: StreamAutoPlayMode;
+        nuvioAutoPlayTimeout?: number;
+        nuvioAutoPlaySourceScope?: StreamAutoPlaySourceScope;
+        nuvioAutoPlayAllowedAddons?: string[];
+        nuvioAutoPlayAllowedPlugins?: string[];
+        nuvioAutoPlayRegex?: string;
       };
 
       setShowAllChannels(settings.showAllChannels ?? true);
@@ -737,6 +749,24 @@ export function Settings({
       }
       if (settings.showNuvioHoverDetails !== undefined) {
         setShowNuvioHoverDetails(settings.showNuvioHoverDetails);
+      }
+      if (settings.nuvioAutoPlayMode !== undefined) {
+        setNuvioAutoPlayMode(settings.nuvioAutoPlayMode as StreamAutoPlayMode);
+      }
+      if (settings.nuvioAutoPlayTimeout !== undefined) {
+        setNuvioAutoPlayTimeout(settings.nuvioAutoPlayTimeout as number);
+      }
+      if (settings.nuvioAutoPlaySourceScope !== undefined) {
+        setNuvioAutoPlaySourceScope(settings.nuvioAutoPlaySourceScope as StreamAutoPlaySourceScope);
+      }
+      if (settings.nuvioAutoPlayAllowedAddons !== undefined) {
+        setNuvioAutoPlayAllowedAddons(settings.nuvioAutoPlayAllowedAddons as string[]);
+      }
+      if (settings.nuvioAutoPlayAllowedPlugins !== undefined) {
+        setNuvioAutoPlayAllowedPlugins(settings.nuvioAutoPlayAllowedPlugins as string[]);
+      }
+      if (settings.nuvioAutoPlayRegex !== undefined) {
+        setNuvioAutoPlayRegex(settings.nuvioAutoPlayRegex as string);
       }
 
       // Load LiveTV settings
@@ -1144,6 +1174,48 @@ export function Settings({
     }
     if (window.storage) {
       await window.storage.updateSettings({ showNuvioHoverDetails: show });
+    }
+  };
+
+  const handleNuvioAutoPlayModeChange = async (mode: StreamAutoPlayMode) => {
+    setNuvioAutoPlayMode(mode);
+    if (window.storage) {
+      await window.storage.updateSettings({ nuvioAutoPlayMode: mode });
+    }
+  };
+
+  const handleNuvioAutoPlayTimeoutChange = async (timeout: number) => {
+    setNuvioAutoPlayTimeout(timeout);
+    if (window.storage) {
+      await window.storage.updateSettings({ nuvioAutoPlayTimeout: timeout });
+    }
+  };
+
+  const handleNuvioAutoPlaySourceScopeChange = async (scope: StreamAutoPlaySourceScope) => {
+    setNuvioAutoPlaySourceScope(scope);
+    if (window.storage) {
+      await window.storage.updateSettings({ nuvioAutoPlaySourceScope: scope });
+    }
+  };
+
+  const handleNuvioAutoPlayAllowedAddonsChange = async (addonIds: string[]) => {
+    setNuvioAutoPlayAllowedAddons(addonIds);
+    if (window.storage) {
+      await window.storage.updateSettings({ nuvioAutoPlayAllowedAddons: addonIds });
+    }
+  };
+
+  const handleNuvioAutoPlayAllowedPluginsChange = async (pluginIds: string[]) => {
+    setNuvioAutoPlayAllowedPlugins(pluginIds);
+    if (window.storage) {
+      await window.storage.updateSettings({ nuvioAutoPlayAllowedPlugins: pluginIds });
+    }
+  };
+
+  const handleNuvioAutoPlayRegexChange = async (regex: string) => {
+    setNuvioAutoPlayRegex(regex);
+    if (window.storage) {
+      await window.storage.updateSettings({ nuvioAutoPlayRegex: regex });
     }
   };
 
@@ -1705,6 +1777,18 @@ export function Settings({
             onNuvioStreamBadgePlacementChange={handleNuvioStreamBadgePlacementChange}
             showNuvioHoverDetails={showNuvioHoverDetails}
             onShowNuvioHoverDetailsChange={handleShowNuvioHoverDetailsChange}
+            nuvioAutoPlayMode={nuvioAutoPlayMode}
+            onNuvioAutoPlayModeChange={handleNuvioAutoPlayModeChange}
+            nuvioAutoPlayTimeout={nuvioAutoPlayTimeout}
+            onNuvioAutoPlayTimeoutChange={handleNuvioAutoPlayTimeoutChange}
+            nuvioAutoPlaySourceScope={nuvioAutoPlaySourceScope}
+            onNuvioAutoPlaySourceScopeChange={handleNuvioAutoPlaySourceScopeChange}
+            nuvioAutoPlayAllowedAddons={nuvioAutoPlayAllowedAddons}
+            onNuvioAutoPlayAllowedAddonsChange={handleNuvioAutoPlayAllowedAddonsChange}
+            nuvioAutoPlayAllowedPlugins={nuvioAutoPlayAllowedPlugins}
+            onNuvioAutoPlayAllowedPluginsChange={handleNuvioAutoPlayAllowedPluginsChange}
+            nuvioAutoPlayRegex={nuvioAutoPlayRegex}
+            onNuvioAutoPlayRegexChange={handleNuvioAutoPlayRegexChange}
           />
         );
       case 'security':

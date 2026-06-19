@@ -5,7 +5,7 @@ import { useNuvioAddonStore } from '../../stores/nuvioAddonStore';
 import { useNuvioCollectionStore } from '../../stores/nuvioCollectionStore';
 import { NuvioPinModal } from '../nuvio/NuvioPinModal';
 import { getEffectiveNuvioUrl, getEffectiveNuvioKey } from '../../services/nuvio-api';
-import type { InstalledAddon, BadgeSource } from '../../types/stremio';
+import type { InstalledAddon, BadgeSource, StreamAutoPlayMode, StreamAutoPlaySourceScope } from '../../types/stremio';
 import { parseBadgePayload, isLightColor, convertArgbToRgba } from '../../utils/streamBadges';
 
 const isAioMetadataAddon = (addon: InstalledAddon): boolean => {
@@ -96,6 +96,18 @@ interface NuvioTabProps {
   onNuvioStreamBadgePlacementChange: (placement: 'top' | 'bottom') => Promise<void> | void;
   showNuvioHoverDetails: boolean;
   onShowNuvioHoverDetailsChange: (show: boolean) => Promise<void> | void;
+  nuvioAutoPlayMode: StreamAutoPlayMode;
+  onNuvioAutoPlayModeChange: (mode: StreamAutoPlayMode) => void;
+  nuvioAutoPlayTimeout: number;
+  onNuvioAutoPlayTimeoutChange: (timeout: number) => void;
+  nuvioAutoPlaySourceScope: StreamAutoPlaySourceScope;
+  onNuvioAutoPlaySourceScopeChange: (scope: StreamAutoPlaySourceScope) => void;
+  nuvioAutoPlayAllowedAddons: string[];
+  onNuvioAutoPlayAllowedAddonsChange: (addonIds: string[]) => void;
+  nuvioAutoPlayAllowedPlugins: string[];
+  onNuvioAutoPlayAllowedPluginsChange: (pluginIds: string[]) => void;
+  nuvioAutoPlayRegex: string;
+  onNuvioAutoPlayRegexChange: (regex: string) => void;
 }
 
 export function NuvioTab({
@@ -111,9 +123,23 @@ export function NuvioTab({
   onNuvioStreamBadgePlacementChange,
   showNuvioHoverDetails,
   onShowNuvioHoverDetailsChange,
+  nuvioAutoPlayMode,
+  onNuvioAutoPlayModeChange,
+  nuvioAutoPlayTimeout,
+  onNuvioAutoPlayTimeoutChange,
+  nuvioAutoPlaySourceScope,
+  onNuvioAutoPlaySourceScopeChange,
+  nuvioAutoPlayAllowedAddons,
+  onNuvioAutoPlayAllowedAddonsChange,
+  nuvioAutoPlayAllowedPlugins,
+  onNuvioAutoPlayAllowedPluginsChange,
+  nuvioAutoPlayRegex,
+  onNuvioAutoPlayRegexChange,
 }: NuvioTabProps) {
   const authStore = useNuvioAuthStore();
   const [pinPromptProfile, setPinPromptProfile] = useState<any | null>(null);
+  const [showAddonDialog, setShowAddonDialog] = useState(false);
+  const [showPluginDialog, setShowPluginDialog] = useState(false);
   const pluginStore = useNuvioPluginStore();
   const addonsStore = useNuvioAddonStore();
   const collectionStore = useNuvioCollectionStore();
@@ -1767,6 +1793,160 @@ export function NuvioTab({
         </label>
       </div>
 
+      {/* Stream Auto-Play Settings for Nuvio */}
+      <div className="settings-section" style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '24px', marginTop: '24px' }}>
+        <h3 style={{ margin: '0 0 8px 0', fontSize: '0.95rem', fontWeight: 500, color: 'rgba(255,255,255,0.9)' }}>
+          Stream Auto-Play (Nuvio)
+        </h3>
+        <p style={{ margin: '0 0 12px 0', fontSize: '0.82rem', color: 'rgba(255,255,255,0.5)' }}>
+          Automatically select and play a stream when Nuvio detail page opens, or when a new episode is selected.
+        </p>
+
+        <div className="retry-setting-row" style={{ borderBottom: 'none', marginTop: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div className="timeshift-toggle-info">
+            <span className="timeshift-toggle-label">Auto Stream Selection</span>
+            <span className="timeshift-toggle-sub">How to pick a stream when auto-playing.</span>
+          </div>
+          <select
+            value={nuvioAutoPlayMode}
+            onChange={(e) => onNuvioAutoPlayModeChange(e.target.value as StreamAutoPlayMode)}
+            style={{
+              background: 'rgba(255,255,255,0.05)',
+              border: '1px solid rgba(255,255,255,0.08)',
+              color: 'rgba(255,255,255,0.85)',
+              borderRadius: '6px',
+              padding: '6px 10px',
+              fontSize: '0.8rem',
+              outline: 'none',
+              cursor: 'pointer',
+            }}
+          >
+            <option value="manual" style={{ background: '#1a1a1a' }}>Manual (Off)</option>
+            <option value="first-stream" style={{ background: '#1a1a1a' }}>First Stream</option>
+            <option value="regex-match" style={{ background: '#1a1a1a' }}>Regex Match</option>
+          </select>
+        </div>
+
+        {nuvioAutoPlayMode !== 'manual' && (
+          <>
+            <div className="retry-setting-row" style={{ borderBottom: 'none', marginTop: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div className="timeshift-toggle-info">
+                <span className="timeshift-toggle-label">Selection Timeout ({nuvioAutoPlayTimeout}s)</span>
+                <span className="timeshift-toggle-sub">Wait N seconds before auto-selecting a stream. 0 = instant.</span>
+              </div>
+              <input
+                type="range"
+                min="0"
+                max="30"
+                step="1"
+                value={nuvioAutoPlayTimeout}
+                onChange={(e) => onNuvioAutoPlayTimeoutChange(Number(e.target.value))}
+                style={{
+                  width: '120px',
+                  accentColor: '#00d4ff',
+                }}
+              />
+            </div>
+
+            <div className="retry-setting-row" style={{ borderBottom: 'none', marginTop: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div className="timeshift-toggle-info">
+                <span className="timeshift-toggle-label">Source Scope</span>
+                <span className="timeshift-toggle-sub">Which sources to consider for auto-play.</span>
+              </div>
+              <select
+                value={nuvioAutoPlaySourceScope}
+                onChange={(e) => onNuvioAutoPlaySourceScopeChange(e.target.value as StreamAutoPlaySourceScope)}
+                style={{
+                  background: 'rgba(255,255,255,0.05)',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  color: 'rgba(255,255,255,0.85)',
+                  borderRadius: '6px',
+                  padding: '6px 10px',
+                  fontSize: '0.8rem',
+                  outline: 'none',
+                  cursor: 'pointer',
+                }}
+              >
+                <option value="all" style={{ background: '#1a1a1a' }}>All Sources</option>
+                <option value="installed-addons" style={{ background: '#1a1a1a' }}>Installed Addons Only</option>
+                <option value="enabled-plugins" style={{ background: '#1a1a1a' }}>Enabled Plugins Only</option>
+              </select>
+            </div>
+
+            {nuvioAutoPlayMode === 'regex-match' && (
+              <div className="retry-setting-row" style={{ borderBottom: 'none', marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '6px', alignItems: 'flex-start' }}>
+                <div className="timeshift-toggle-info" style={{ width: '100%' }}>
+                  <span className="timeshift-toggle-label">Regex Pattern</span>
+                  <span className="timeshift-toggle-sub">Match stream title/description/URL against this regex (e.g. (?=.*1080p)(?!.*cam)).</span>
+                </div>
+                <input
+                  type="text"
+                  placeholder="Regex pattern (e.g. 1080p|720p)"
+                  value={nuvioAutoPlayRegex}
+                  onChange={(e) => onNuvioAutoPlayRegexChange(e.target.value)}
+                  style={{
+                    background: 'rgba(255,255,255,0.05)',
+                    border: '1px solid rgba(255,255,255,0.08)',
+                    color: 'rgba(255,255,255,0.85)',
+                    borderRadius: '6px',
+                    padding: '8px 12px',
+                    fontSize: '0.82rem',
+                    outline: 'none',
+                    width: '100%',
+                    boxSizing: 'border-box',
+                    marginTop: '4px'
+                  }}
+                />
+              </div>
+            )}
+
+            <div className="retry-setting-row" style={{ borderBottom: 'none', marginTop: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div className="timeshift-toggle-info">
+                <span className="timeshift-toggle-label">Allowed Addons ({nuvioAutoPlayAllowedAddons.length === 0 ? 'All' : nuvioAutoPlayAllowedAddons.length})</span>
+                <span className="timeshift-toggle-sub">Select which addons are allowed to auto-play.</span>
+              </div>
+              <button
+                onClick={() => setShowAddonDialog(true)}
+                style={{
+                  background: 'rgba(255,255,255,0.05)',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  color: 'rgba(255,255,255,0.85)',
+                  borderRadius: '6px',
+                  padding: '6px 12px',
+                  fontSize: '0.8rem',
+                  cursor: 'pointer',
+                  outline: 'none'
+                }}
+              >
+                Configure
+              </button>
+            </div>
+
+            <div className="retry-setting-row" style={{ borderBottom: 'none', marginTop: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div className="timeshift-toggle-info">
+                <span className="timeshift-toggle-label">Allowed Plugins ({nuvioAutoPlayAllowedPlugins.length === 0 ? 'All' : nuvioAutoPlayAllowedPlugins.length})</span>
+                <span className="timeshift-toggle-sub">Select which scraper plugins are allowed to auto-play.</span>
+              </div>
+              <button
+                onClick={() => setShowPluginDialog(true)}
+                style={{
+                  background: 'rgba(255,255,255,0.05)',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  color: 'rgba(255,255,255,0.85)',
+                  borderRadius: '6px',
+                  padding: '6px 12px',
+                  fontSize: '0.8rem',
+                  cursor: 'pointer',
+                  outline: 'none'
+                }}
+              >
+                Configure
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+
       {/* Stream Badges section for Nuvio */}
       <div className="settings-section" style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '24px', marginTop: '24px' }}>
         <h3 style={{ margin: '0 0 8px 0', fontSize: '0.95rem', fontWeight: 500, color: 'rgba(255,255,255,0.9)' }}>
@@ -2102,6 +2282,202 @@ export function NuvioTab({
           profile={pinPromptProfile}
           onClose={() => setPinPromptProfile(null)}
         />
+      )}
+
+      {showAddonDialog && (
+        <div className="nuvio-pin-modal-overlay" style={{ zIndex: 3000 }} onClick={() => setShowAddonDialog(false)}>
+          <div className="nuvio-pin-modal-card" style={{ width: '400px', maxHeight: '80vh', display: 'flex', flexDirection: 'column' }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', marginBottom: '10px' }}>
+              <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#fff' }}>Allowed Addons</h3>
+              <button
+                onClick={() => setShowAddonDialog(false)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: 'rgba(255,255,255,0.4)',
+                  fontSize: '1.2rem',
+                  cursor: 'pointer',
+                  padding: 0
+                }}
+              >
+                ✕
+              </button>
+            </div>
+            
+            <p style={{ margin: '0 0 16px 0', fontSize: '0.8rem', color: 'rgba(255,255,255,0.5)', width: '100%' }}>
+              Select which Stremio addons are allowed to be auto-played. If none are selected, all addons are allowed.
+            </p>
+
+            <div style={{
+              flex: 1,
+              width: '100%',
+              overflowY: 'auto',
+              minHeight: '200px',
+              maxHeight: '350px',
+              paddingRight: '4px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '6px'
+            }}>
+              {(() => {
+                const uniqueAddonNames = Array.from(new Set((addonsStore.enabledAddons || []).map(a => a.manifest?.name || a.id).filter(Boolean)));
+                if (uniqueAddonNames.length === 0) {
+                  return <div style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.3)', textAlign: 'center', padding: '40px 0' }}>No active addons found.</div>;
+                }
+                return uniqueAddonNames.map(name => {
+                  const isChecked = nuvioAutoPlayAllowedAddons.includes(name);
+                  return (
+                    <label
+                      key={name}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '10px 12px',
+                        background: isChecked ? 'rgba(0, 212, 255, 0.05)' : 'rgba(255,255,255,0.02)',
+                        border: `1px solid ${isChecked ? 'rgba(0, 212, 255, 0.2)' : 'rgba(255,255,255,0.06)'}`,
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease'
+                      }}
+                    >
+                      <span style={{ fontSize: '0.85rem', color: isChecked ? '#fff' : 'rgba(255,255,255,0.7)' }}>{name}</span>
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() => {
+                          const next = isChecked
+                            ? nuvioAutoPlayAllowedAddons.filter(n => n !== name)
+                            : [...nuvioAutoPlayAllowedAddons, name];
+                          onNuvioAutoPlayAllowedAddonsChange(next);
+                        }}
+                        style={{
+                          accentColor: '#00d4ff',
+                          cursor: 'pointer',
+                          width: '16px',
+                          height: '16px'
+                        }}
+                      />
+                    </label>
+                  );
+                });
+              })()}
+            </div>
+
+            <div style={{ marginTop: '20px', width: '100%', display: 'flex', gap: '10px' }}>
+              <button
+                className="nuvio-pin-btn nuvio-pin-btn-cancel"
+                onClick={() => onNuvioAutoPlayAllowedAddonsChange([])}
+              >
+                Clear All
+              </button>
+              <button
+                className="nuvio-pin-btn nuvio-pin-btn-submit"
+                onClick={() => setShowAddonDialog(false)}
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showPluginDialog && (
+        <div className="nuvio-pin-modal-overlay" style={{ zIndex: 3000 }} onClick={() => setShowPluginDialog(false)}>
+          <div className="nuvio-pin-modal-card" style={{ width: '400px', maxHeight: '80vh', display: 'flex', flexDirection: 'column' }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', marginBottom: '10px' }}>
+              <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#fff' }}>Allowed Plugins</h3>
+              <button
+                onClick={() => setShowPluginDialog(false)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: 'rgba(255,255,255,0.4)',
+                  fontSize: '1.2rem',
+                  cursor: 'pointer',
+                  padding: 0
+                }}
+              >
+                ✕
+              </button>
+            </div>
+            
+            <p style={{ margin: '0 0 16px 0', fontSize: '0.8rem', color: 'rgba(255,255,255,0.5)', width: '100%' }}>
+              Select which scraper plugins are allowed to be auto-played. If none are selected, all plugins are allowed.
+            </p>
+
+            <div style={{
+              flex: 1,
+              width: '100%',
+              overflowY: 'auto',
+              minHeight: '200px',
+              maxHeight: '350px',
+              paddingRight: '4px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '6px'
+            }}>
+              {(() => {
+                const uniquePluginNames = Array.from(new Set((pluginStore.scrapers || []).filter(s => s.enabled).map(s => s.name).filter(Boolean)));
+                if (uniquePluginNames.length === 0) {
+                  return <div style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.3)', textAlign: 'center', padding: '40px 0' }}>No active plugin scrapers found.</div>;
+                }
+                return uniquePluginNames.map(name => {
+                  const isChecked = nuvioAutoPlayAllowedPlugins.includes(name);
+                  return (
+                    <label
+                      key={name}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '10px 12px',
+                        background: isChecked ? 'rgba(0, 212, 255, 0.05)' : 'rgba(255,255,255,0.02)',
+                        border: `1px solid ${isChecked ? 'rgba(0, 212, 255, 0.2)' : 'rgba(255,255,255,0.06)'}`,
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease'
+                      }}
+                    >
+                      <span style={{ fontSize: '0.85rem', color: isChecked ? '#fff' : 'rgba(255,255,255,0.7)' }}>{name}</span>
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() => {
+                          const next = isChecked
+                            ? nuvioAutoPlayAllowedPlugins.filter(n => n !== name)
+                            : [...nuvioAutoPlayAllowedPlugins, name];
+                          onNuvioAutoPlayAllowedPluginsChange(next);
+                        }}
+                        style={{
+                          accentColor: '#00d4ff',
+                          cursor: 'pointer',
+                          width: '16px',
+                          height: '16px'
+                        }}
+                      />
+                    </label>
+                  );
+                });
+              })()}
+            </div>
+
+            <div style={{ marginTop: '20px', width: '100%', display: 'flex', gap: '10px' }}>
+              <button
+                className="nuvio-pin-btn nuvio-pin-btn-cancel"
+                onClick={() => onNuvioAutoPlayAllowedPluginsChange([])}
+              >
+                Clear All
+              </button>
+              <button
+                className="nuvio-pin-btn nuvio-pin-btn-submit"
+                onClick={() => setShowPluginDialog(false)}
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

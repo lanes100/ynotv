@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 const AUTO_SYNC_CHECK_INTERVAL_MS = 10 * 60 * 1000;
 let hasStartupAutoSyncTriggered = false;
 import { invoke } from '@tauri-apps/api/core';
-import type { StremioStreamPickerMode, StremioMeta, BadgeSource } from './types/stremio';
+import type { StremioStreamPickerMode, StremioMeta, BadgeSource, StreamAutoPlayMode, StreamAutoPlaySourceScope } from './types/stremio';
 import { checkForUpdates, checkForUpdatesSilent } from './services/updater';
 import { Settings } from './components/Settings';
 import type { SettingsTabId } from './components/settings/SettingsSidebar';
@@ -325,6 +325,54 @@ function App() {
     }
   }, []);
 
+  const [nuvioAutoPlayMode, setNuvioAutoPlayMode] = useState<StreamAutoPlayMode>('manual');
+  const handleNuvioAutoPlayModeChange = useCallback(async (mode: StreamAutoPlayMode) => {
+    setNuvioAutoPlayMode(mode);
+    if (window.storage) {
+      await window.storage.updateSettings({ nuvioAutoPlayMode: mode });
+    }
+  }, []);
+
+  const [nuvioAutoPlayTimeout, setNuvioAutoPlayTimeout] = useState(0);
+  const handleNuvioAutoPlayTimeoutChange = useCallback(async (timeout: number) => {
+    setNuvioAutoPlayTimeout(timeout);
+    if (window.storage) {
+      await window.storage.updateSettings({ nuvioAutoPlayTimeout: timeout });
+    }
+  }, []);
+
+  const [nuvioAutoPlaySourceScope, setNuvioAutoPlaySourceScope] = useState<StreamAutoPlaySourceScope>('all');
+  const handleNuvioAutoPlaySourceScopeChange = useCallback(async (scope: StreamAutoPlaySourceScope) => {
+    setNuvioAutoPlaySourceScope(scope);
+    if (window.storage) {
+      await window.storage.updateSettings({ nuvioAutoPlaySourceScope: scope });
+    }
+  }, []);
+
+  const [nuvioAutoPlayAllowedAddons, setNuvioAutoPlayAllowedAddons] = useState<string[]>([]);
+  const handleNuvioAutoPlayAllowedAddonsChange = useCallback(async (addonIds: string[]) => {
+    setNuvioAutoPlayAllowedAddons(addonIds);
+    if (window.storage) {
+      await window.storage.updateSettings({ nuvioAutoPlayAllowedAddons: addonIds });
+    }
+  }, []);
+
+  const [nuvioAutoPlayAllowedPlugins, setNuvioAutoPlayAllowedPlugins] = useState<string[]>([]);
+  const handleNuvioAutoPlayAllowedPluginsChange = useCallback(async (pluginIds: string[]) => {
+    setNuvioAutoPlayAllowedPlugins(pluginIds);
+    if (window.storage) {
+      await window.storage.updateSettings({ nuvioAutoPlayAllowedPlugins: pluginIds });
+    }
+  }, []);
+
+  const [nuvioAutoPlayRegex, setNuvioAutoPlayRegex] = useState<string>('');
+  const handleNuvioAutoPlayRegexChange = useCallback(async (regex: string) => {
+    setNuvioAutoPlayRegex(regex);
+    if (window.storage) {
+      await window.storage.updateSettings({ nuvioAutoPlayRegex: regex });
+    }
+  }, []);
+
   // Load stremioStreamPickerMode from storage
   useEffect(() => {
     if (!layoutSettingsLoaded) return;
@@ -376,6 +424,24 @@ function App() {
         }
         if (res.data?.showNuvioHoverDetails !== undefined) {
           setShowNuvioHoverDetails(res.data.showNuvioHoverDetails as boolean);
+        }
+        if (res.data?.nuvioAutoPlayMode) {
+          setNuvioAutoPlayMode(res.data.nuvioAutoPlayMode as StreamAutoPlayMode);
+        }
+        if (res.data?.nuvioAutoPlayTimeout !== undefined) {
+          setNuvioAutoPlayTimeout(res.data.nuvioAutoPlayTimeout as number);
+        }
+        if (res.data?.nuvioAutoPlaySourceScope) {
+          setNuvioAutoPlaySourceScope(res.data.nuvioAutoPlaySourceScope as StreamAutoPlaySourceScope);
+        }
+        if (res.data?.nuvioAutoPlayAllowedAddons !== undefined) {
+          setNuvioAutoPlayAllowedAddons(res.data.nuvioAutoPlayAllowedAddons as string[]);
+        }
+        if (res.data?.nuvioAutoPlayAllowedPlugins !== undefined) {
+          setNuvioAutoPlayAllowedPlugins(res.data.nuvioAutoPlayAllowedPlugins as string[]);
+        }
+        if (res.data?.nuvioAutoPlayRegex !== undefined) {
+          setNuvioAutoPlayRegex(res.data.nuvioAutoPlayRegex as string);
         }
         if (res.data?.popoutMode) {
           setPopoutMode(res.data.popoutMode as 'off' | 'popout' | 'external');
@@ -3565,6 +3631,18 @@ function App() {
           onNuvioStreamBadgePlacementChange={handleNuvioStreamBadgePlacementChange}
           showNuvioHoverDetails={showNuvioHoverDetails}
           onShowNuvioHoverDetailsChange={handleShowNuvioHoverDetailsChange}
+          nuvioAutoPlayMode={nuvioAutoPlayMode}
+          onNuvioAutoPlayModeChange={handleNuvioAutoPlayModeChange}
+          nuvioAutoPlayTimeout={nuvioAutoPlayTimeout}
+          onNuvioAutoPlayTimeoutChange={handleNuvioAutoPlayTimeoutChange}
+          nuvioAutoPlaySourceScope={nuvioAutoPlaySourceScope}
+          onNuvioAutoPlaySourceScopeChange={handleNuvioAutoPlaySourceScopeChange}
+          nuvioAutoPlayAllowedAddons={nuvioAutoPlayAllowedAddons}
+          onNuvioAutoPlayAllowedAddonsChange={handleNuvioAutoPlayAllowedAddonsChange}
+          nuvioAutoPlayAllowedPlugins={nuvioAutoPlayAllowedPlugins}
+          onNuvioAutoPlayAllowedPluginsChange={handleNuvioAutoPlayAllowedPluginsChange}
+          nuvioAutoPlayRegex={nuvioAutoPlayRegex}
+          onNuvioAutoPlayRegexChange={handleNuvioAutoPlayRegexChange}
         />
       </TransitionView>
 

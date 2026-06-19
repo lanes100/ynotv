@@ -146,3 +146,6 @@ export interface BadgeSource {
 }
 
 export type StremioStreamPickerMode = 'modal' | 'autoplay';
+
+export type StreamAutoPlayMode = 'manual' | 'first-stream' | 'regex-match';
+export type StreamAutoPlaySourceScope = 'all' | 'installed-addons' | 'enabled-plugins';
