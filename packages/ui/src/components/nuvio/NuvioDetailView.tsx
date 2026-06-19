@@ -302,35 +302,49 @@ export function NuvioDetailView({
     return collected;
   }, [addons, meta.id, meta.type, pluginStore, selectedSeason]);
 
+  // Stable ref to avoid re-running effects when fetchStreamsWithPlugins identity changes
+  const fetchStreamsRef = useRef(fetchStreamsWithPlugins);
+  useEffect(() => { fetchStreamsRef.current = fetchStreamsWithPlugins; }, [fetchStreamsWithPlugins]);
+
   // Movie streams on mount
   useEffect(() => {
     if (meta.type === 'series') return;
+    let active = true;
     const loadStreams = async () => {
       setStreams([]);
       setLoadingStreams(true);
-      await fetchStreamsWithPlugins(addons, meta.type, meta.id, (newStreams) => {
+      const currentAddons = useNuvioAddonStore.getState().enabledAddons;
+      await fetchStreamsRef.current(currentAddons, meta.type, meta.id, (newStreams) => {
+        if (!active) return;
         setStreams((prev) => [...prev, ...newStreams]);
       });
+      if (!active) return;
       setLoadingStreams(false);
     };
     loadStreams();
+    return () => { active = false; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [meta.id, meta.type, addons.map((a) => `${a.id}:${a.enabled !== false}`).join(','), fetchStreamsWithPlugins]);
+  }, [meta.id, meta.type, addons.map((a) => `${a.id}:${a.enabled !== false}`).join(',')]);
 
   // Series streams when episode selected
   useEffect(() => {
     if (meta.type !== 'series' || !selectedVideo) return;
+    let active = true;
     const loadStreams = async () => {
       setStreams([]);
       setLoadingStreams(true);
-      await fetchStreamsWithPlugins(addons, 'series', selectedVideo.id, (newStreams) => {
+      const currentAddons = useNuvioAddonStore.getState().enabledAddons;
+      await fetchStreamsRef.current(currentAddons, 'series', selectedVideo.id, (newStreams) => {
+        if (!active) return;
         setStreams((prev) => [...prev, ...newStreams]);
       });
+      if (!active) return;
       setLoadingStreams(false);
     };
     loadStreams();
+    return () => { active = false; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedVideo, addons.map((a) => `${a.id}:${a.enabled !== false}`).join(','), fetchStreamsWithPlugins]);
+  }, [selectedVideo, addons.map((a) => `${a.id}:${a.enabled !== false}`).join(',')]);
 
   // ─── Computed values ───────────────────────────────────────
   const isSeries = meta.type === 'series';
@@ -417,15 +431,9 @@ export function NuvioDetailView({
     [effectiveMeta, isSeries, selectedVideo, startDownload]
   );
 
-  const handleEpisodeClick = useCallback(async (ep: StremioVideo) => {
+  const handleEpisodeClick = useCallback((ep: StremioVideo) => {
     setSelectedVideo(ep);
-    setStreams([]);
-    setLoadingStreams(true);
-    const result = await fetchStreamsWithPlugins(addons, 'series', ep.id, (newStreams) => {
-      setStreams((prev) => [...prev, ...newStreams]);
-    });
-    setLoadingStreams(false);
-  }, [addons, fetchStreamsWithPlugins]);
+  }, []);
 
   const handleLibraryToggle = async () => {
     if (inLibrary) return; // No remove API yet
