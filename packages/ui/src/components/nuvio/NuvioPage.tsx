@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useNuvioAuthStore } from '../../stores/nuvioAuthStore';
 import { useNuvioCollectionStore } from '../../stores/nuvioCollectionStore';
 import { useNuvioAddonStore } from '../../stores/nuvioAddonStore';
@@ -275,6 +275,28 @@ export function NuvioPage({
     setNuvioActivePersonId(null);
     setNuvioView(view);
   };
+
+  // Scroll-to-top button state
+  const [showScrollTop, setShowScrollTop] = useState(false);
+  const scrollToTop = useCallback(() => {
+    const el = document.querySelector('.nuvio-main');
+    if (el) {
+      el.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, []);
+
+  useEffect(() => {
+    const el = document.querySelector('.nuvio-main');
+    if (!el) return;
+
+    setShowScrollTop(el.scrollTop > 400);
+
+    const handleScroll = () => {
+      setShowScrollTop(el.scrollTop > 400);
+    };
+    el.addEventListener('scroll', handleScroll, { passive: true });
+    return () => el.removeEventListener('scroll', handleScroll);
+  }, []);
 
   // Refs and controls for Collection rail horizontal scrolling
   const collectionScrollRefs = useRef<Record<string, HTMLDivElement>>({});
@@ -1968,6 +1990,17 @@ export function NuvioPage({
           </div>
         )}
       </div>
+
+      {/* Scroll to Top Button */}
+      <button
+        className={`nuvio-scroll-top ${showScrollTop ? 'visible' : ''}`}
+        onClick={scrollToTop}
+        aria-label="Scroll to top"
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M18 15l-6-6-6 6" />
+        </svg>
+      </button>
 
       {/* Folder Detail Modal / Overlay */}
       {selectedFolder && (
