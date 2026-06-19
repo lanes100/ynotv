@@ -1139,20 +1139,20 @@ select.nuvio-input option {
 }
 
 /* Toggle Switch */
-.toggle-switch {
+.nuvio-page .toggle-switch {
   position: relative;
   display: inline-block;
   width: 40px;
   height: 22px;
 }
 
-.toggle-switch input {
+.nuvio-page .toggle-switch input {
   opacity: 0;
   width: 0;
   height: 0;
 }
 
-.toggle-slider {
+.nuvio-page .toggle-slider {
   position: absolute;
   cursor: pointer;
   top: 0;
@@ -1165,7 +1165,7 @@ select.nuvio-input option {
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.toggle-slider:before {
+.nuvio-page .toggle-slider:before {
   position: absolute;
   content: "";
   height: 14px;
@@ -1177,12 +1177,12 @@ select.nuvio-input option {
   border-radius: 50%;
 }
 
-.toggle-switch input:checked + .toggle-slider {
+.nuvio-page .toggle-switch input:checked + .toggle-slider {
   background-color: rgba(0, 212, 255, 0.2);
   border-color: #00d4ff;
 }
 
-.toggle-switch input:checked + .toggle-slider:before {
+.nuvio-page .toggle-switch input:checked + .toggle-slider:before {
   transform: translateX(18px);
   background-color: #00d4ff;
   box-shadow: 0 0 6px rgba(0, 212, 255, 0.6);

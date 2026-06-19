@@ -3,6 +3,7 @@ import type { SportsEvent } from '@ynotv/core';
 import {
   getAvailableCategories,
   getLeaguesByCategory,
+  isEventLiveOrPastStart,
 } from '../../services/sports';
 import { useSportsSettingsStore } from '../../stores/sportsSettingsStore';
 import { useSportsPolling, formatLastUpdated } from '../../hooks/useSportsPolling';
@@ -51,7 +52,7 @@ export function LiveScoresTab({ onSearchChannels, onPlayChannel }: LiveScoresTab
         return leagueConfig.some(l => l.id === e.league.id);
       });
 
-  const liveCount = filteredEvents.filter(e => e.status === 'live').length;
+  const liveCount = filteredEvents.filter(isEventLiveOrPastStart).length;
 
   const groupedByLeague = filteredEvents.reduce((acc, event) => {
     const leagueName = event.league.name;
@@ -61,8 +62,8 @@ export function LiveScoresTab({ onSearchChannels, onPlayChannel }: LiveScoresTab
   }, {} as Record<string, SportsEvent[]>);
 
   const sortedLeagues = Object.keys(groupedByLeague).sort((a, b) => {
-    const aHasLive = groupedByLeague[a].some(e => e.status === 'live');
-    const bHasLive = groupedByLeague[b].some(e => e.status === 'live');
+    const aHasLive = groupedByLeague[a].some(isEventLiveOrPastStart);
+    const bHasLive = groupedByLeague[b].some(isEventLiveOrPastStart);
     if (aHasLive && !bHasLive) return -1;
     if (!aHasLive && bHasLive) return 1;
     return a.localeCompare(b);
@@ -188,7 +189,7 @@ export function LiveScoresTab({ onSearchChannels, onPlayChannel }: LiveScoresTab
       ) : (
         sortedLeagues.map(leagueName => {
           const leagueEvents = groupedByLeague[leagueName];
-          const hasLive = leagueEvents.some(e => e.status === 'live');
+          const hasLive = leagueEvents.some(isEventLiveOrPastStart);
           
           return (
             <section key={leagueName} className="sports-section">

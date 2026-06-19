@@ -406,7 +406,7 @@
   padding: 4px 0;
 }
 
-.toggle-switch {
+.advanced-search-modal .toggle-switch {
   width: 36px;
   height: 20px;
   border-radius: 10px;
@@ -416,11 +416,11 @@
   flex-shrink: 0;
 }
 
-.toggle-switch.on {
+.advanced-search-modal .toggle-switch.on {
   background: var(--accent-primary, #00d4ff);
 }
 
-.toggle-knob {
+.advanced-search-modal .toggle-knob {
   width: 16px;
   height: 16px;
   border-radius: 50%;
@@ -432,11 +432,11 @@
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 
-.toggle-switch.on .toggle-knob {
+.advanced-search-modal .toggle-switch.on .toggle-knob {
   transform: translateX(16px);
 }
 
-.toggle-label {
+.advanced-search-modal .toggle-label {
   font-size: 13px;
   color: rgba(255, 255, 255, 0.7);
   user-select: none;

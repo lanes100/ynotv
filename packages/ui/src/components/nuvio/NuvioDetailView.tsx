@@ -347,7 +347,7 @@ export function NuvioDetailView({
       const currentAddons = useNuvioAddonStore.getState().enabledAddons;
       await fetchStreamsRef.current(currentAddons, effectiveMeta.type, effectiveMeta.id, (newStreams) => {
         if (!active) return;
-        setStreams((prev) => [...prev, ...newStreams]);
+        setStreams(newStreams);
       });
       if (!active) return;
       setLoadingStreams(false);
@@ -367,7 +367,7 @@ export function NuvioDetailView({
       const currentAddons = useNuvioAddonStore.getState().enabledAddons;
       await fetchStreamsRef.current(currentAddons, 'series', selectedVideo.id, (newStreams) => {
         if (!active) return;
-        setStreams((prev) => [...prev, ...newStreams]);
+        setStreams(newStreams);
       });
       if (!active) return;
       setLoadingStreams(false);

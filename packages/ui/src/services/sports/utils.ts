@@ -71,6 +71,15 @@ export function isEventLive<T extends { status: string }>(event: T): boolean {
   return event.status === 'live';
 }
 
+export function isEventLiveOrPastStart<T extends { status: string; startTime?: Date | string }>(event: T): boolean {
+  if (event.status === 'live') return true;
+  if (event.status === 'scheduled' && event.startTime) {
+    const startTime = event.startTime instanceof Date ? event.startTime : new Date(event.startTime);
+    return startTime.getTime() <= Date.now();
+  }
+  return false;
+}
+
 export function isEventUpcoming<T extends { status: string; startTime: Date }>(event: T): boolean {
   return event.status === 'scheduled' && event.startTime.getTime() > Date.now();
 }

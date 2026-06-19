@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { SportsEvent } from '@ynotv/core';
-import { getLiveScores, getLiveScoresForLeagues } from '../services/sports';
+import { getLiveScores, getLiveScoresForLeagues, isEventLiveOrPastStart } from '../services/sports';
 import { DEFAULT_LIVE_LEAGUES } from '../services/sports/config';
 
 interface UseSportsPollingOptions {
@@ -95,7 +95,7 @@ const getLeaguesCache = (): Map<string, LeagueCacheEntry> => {
 function getLeaguesWithLiveGames(events: SportsEvent[]): Set<string> {
   const liveLeagues = new Set<string>();
   for (const event of events) {
-    if (event.status === 'live') {
+    if (isEventLiveOrPastStart(event)) {
       liveLeagues.add(event.league.id);
     }
   }
@@ -205,7 +205,7 @@ export function useSportsPolling(options: UseSportsPollingOptions = {}): UseSpor
   const eventsRef = useRef(events);
   eventsRef.current = events;
 
-  const hasLiveGames = events.some(e => e.status === 'live');
+  const hasLiveGames = events.some(isEventLiveOrPastStart);
 
   // Sync with cache on mount (in case cache was populated by another instance)
   useEffect(() => {
@@ -360,7 +360,7 @@ function leaguesEqual(a: string[], b: string[]): boolean {
     const cache = getSportsCache();
     if (!cache.lastUpdated) return false;
     const age = Date.now() - cache.lastUpdated.getTime();
-    const hasLive = cache.events.some(e => e.status === 'live');
+    const hasLive = cache.events.some(isEventLiveOrPastStart);
     const freshDuration = hasLive ? CACHE_FRESH_LIVE : CACHE_FRESH_NO_LIVE;
     const isFresh = age < freshDuration;
     console.log('[SportsPolling] Cache check:', {
@@ -486,7 +486,7 @@ function leaguesEqual(a: string[], b: string[]): boolean {
           return;
         }
         const age = Date.now() - cache.lastUpdated.getTime();
-        const hasLive = cache.events.some(e => e.status === 'live');
+        const hasLive = cache.events.some(isEventLiveOrPastStart);
         const isFresh = age < (hasLive ? CACHE_FRESH_LIVE : CACHE_FRESH_NO_LIVE);
 
         if (!isFresh) {

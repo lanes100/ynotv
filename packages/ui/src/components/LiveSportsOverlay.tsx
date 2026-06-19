@@ -4,8 +4,12 @@ import { useSportsPolling } from '../hooks/useSportsPolling';
 import { useSportsSettingsStore } from '../stores/sportsSettingsStore';
 import { GameDetail } from './sports/GameDetail';
 import { getHiddenEventIds, hideEvent, clearHiddenEvents } from '../utils/hiddenSportsEvents';
+import { isEventLiveOrPastStart } from '../services/sports';
 
 function getStatusDisplay(event: SportsEvent): string {
+  if (event.status === 'scheduled' && isEventLiveOrPastStart(event)) {
+    return event.timeElapsed || 'LIVE';
+  }
   if (event.status !== 'live') return '';
   const sport = event.league.sport.toLowerCase();
   const period = event.period ? parseInt(event.period, 10) : 0;
@@ -74,7 +78,7 @@ export function LiveSportsOverlay({ mode, showControls, activeView }: LiveSports
 
   // Keep our local liveEvents in sync with the polled events
   useEffect(() => {
-    const live = events.filter(e => e.status === 'live');
+    const live = events.filter(isEventLiveOrPastStart);
     setLiveEvents(live);
   }, [events]);
 

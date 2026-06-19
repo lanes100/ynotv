@@ -160,6 +160,7 @@ export {
   formatLastUpdated,
   formatRelativeDate,
   isEventLive,
+  isEventLiveOrPastStart,
   isEventUpcoming,
   isEventFinished,
   getAvailableSports,

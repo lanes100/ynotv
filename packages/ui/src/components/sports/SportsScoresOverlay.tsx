@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { SportsEvent } from '@ynotv/core';
 import { GameDetail } from './GameDetail';
+import { isEventLiveOrPastStart } from '../../services/sports';
 
 interface SportsCache {
   events: SportsEvent[];
@@ -14,6 +15,9 @@ function getSportsCache(): SportsCache {
 }
 
 function getStatusDisplay(event: SportsEvent): string {
+  if (event.status === 'scheduled' && isEventLiveOrPastStart(event)) {
+    return event.timeElapsed || 'LIVE';
+  }
   if (event.status !== 'live') return '';
   const sport = event.league.sport.toLowerCase();
   const period = event.period ? parseInt(event.period, 10) : 0;
@@ -50,7 +54,7 @@ export function SportsScoresOverlay() {
 
   const updateFromCache = useCallback(() => {
     const cache = getSportsCache();
-    const live = cache.events.filter(e => e.status === 'live');
+    const live = cache.events.filter(isEventLiveOrPastStart);
     setLiveEvents(live);
   }, []);
 

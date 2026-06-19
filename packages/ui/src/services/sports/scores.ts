@@ -8,6 +8,7 @@ import type { ESPNEvent, SportsEvent } from './types';
 import { SPORT_CONFIG, DEFAULT_LIVE_LEAGUES, DEFAULT_UPCOMING_LEAGUES } from './config';
 import { fetchJson, buildScoreboardUrl, buildDateRangeUrl } from './client';
 import { mapESPNEvent } from './mappers';
+import { isEventLiveOrPastStart } from './utils';
 
 export interface ScoreboardFilters {
   leagues?: string[];
@@ -95,9 +96,11 @@ function filterLiveEvents(events: SportsEvent[]): SportsEvent[] {
  */
 function sortEvents(events: SportsEvent[]): SportsEvent[] {
   return events.sort((a, b) => {
-    // Live games first
-    if (a.status === 'live' && b.status !== 'live') return -1;
-    if (b.status === 'live' && a.status !== 'live') return 1;
+    const aLive = isEventLiveOrPastStart(a);
+    const bLive = isEventLiveOrPastStart(b);
+    // Live or past-start-time games first
+    if (aLive && !bLive) return -1;
+    if (bLive && !aLive) return 1;
     // Then by start time
     return a.startTime.getTime() - b.startTime.getTime();
   });
