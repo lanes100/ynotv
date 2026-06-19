@@ -26,6 +26,11 @@ export type StremioHistoryFrame =
   | { view: 'detail'; meta: StremioMeta }
   | { view: 'person'; personId: number };
 
+export type NuvioHistoryFrame =
+  | { view: 'home' | 'library' | 'collections' | 'addons' | 'scrapers' | 'settings' }
+  | { view: 'detail'; meta: NuvioMeta }
+  | { view: 'person'; personId: number };
+
 interface UIState {
   // Movies page
   moviesSelectedCategory: string | null;  // null = home, 'all' = all, string = category id
@@ -120,6 +125,9 @@ interface UIState {
   setNuvioView: (view: 'home' | 'library' | 'collections' | 'addons' | 'scrapers' | 'settings' | 'person') => void;
   nuvioActiveMeta: NuvioMeta | null;
   setNuvioActiveMeta: (meta: NuvioMeta | null) => void;
+  nuvioHistory: NuvioHistoryFrame[];
+  nuvioNavigate: (frame: NuvioHistoryFrame) => void;
+  nuvioGoBack: () => void;
   nuvioSelectedFolder: NuvioCollectionFolder | null;
   setNuvioSelectedFolder: (folder: NuvioCollectionFolder | null) => void;
   nuvioSelectedFolderCollectionTitle: string;
@@ -273,9 +281,57 @@ export const useUIStore = create<UIState>((set) => ({
 
   // Nuvio
   nuvioView: 'home',
-  setNuvioView: (view) => set({ nuvioView: view }),
+  setNuvioView: (view) => set((state) => {
+    const mainViews = ['home', 'library', 'collections', 'addons', 'scrapers', 'settings'];
+    if (mainViews.includes(view)) {
+      return {
+        nuvioView: view,
+        nuvioHistory: [{ view } as any],
+        nuvioActiveMeta: null,
+        nuvioActivePersonId: null,
+      };
+    }
+    return { nuvioView: view };
+  }),
   nuvioActiveMeta: null,
   setNuvioActiveMeta: (meta) => set({ nuvioActiveMeta: meta }),
+  nuvioHistory: [{ view: 'home' } as any],
+  nuvioNavigate: (frame) => set((state) => {
+    const nextHistory = [...state.nuvioHistory, frame];
+    const updates: Partial<UIState> = { nuvioHistory: nextHistory };
+    if (frame.view === 'detail') {
+      updates.nuvioActiveMeta = frame.meta;
+      updates.nuvioActivePersonId = null;
+    } else if (frame.view === 'person') {
+      updates.nuvioActiveMeta = null;
+      updates.nuvioActivePersonId = frame.personId;
+      updates.nuvioView = 'person';
+    } else {
+      updates.nuvioActiveMeta = null;
+      updates.nuvioActivePersonId = null;
+      updates.nuvioView = frame.view;
+    }
+    return updates;
+  }),
+  nuvioGoBack: () => set((state) => {
+    if (state.nuvioHistory.length <= 1) return {};
+    const nextHistory = state.nuvioHistory.slice(0, -1);
+    const top = nextHistory[nextHistory.length - 1];
+    const updates: Partial<UIState> = { nuvioHistory: nextHistory };
+    if (top.view === 'detail') {
+      updates.nuvioActiveMeta = top.meta;
+      updates.nuvioActivePersonId = null;
+    } else if (top.view === 'person') {
+      updates.nuvioActiveMeta = null;
+      updates.nuvioActivePersonId = top.personId;
+      updates.nuvioView = 'person';
+    } else {
+      updates.nuvioActiveMeta = null;
+      updates.nuvioActivePersonId = null;
+      updates.nuvioView = top.view;
+    }
+    return updates;
+  }),
   nuvioSelectedFolder: null,
   setNuvioSelectedFolder: (folder) => set({ nuvioSelectedFolder: folder }),
   nuvioSelectedFolderCollectionTitle: '',
@@ -380,3 +436,6 @@ export const useNuvioPreselectVideoId = () => useUIStore((s) => s.nuvioPreselect
 export const useSetNuvioPreselectVideoId = () => useUIStore((s) => s.setNuvioPreselectVideoId);
 export const useNuvioActivePersonId = () => useUIStore((s) => s.nuvioActivePersonId);
 export const useSetNuvioActivePersonId = () => useUIStore((s) => s.setNuvioActivePersonId);
+export const useNuvioNavigate = () => useUIStore((s) => s.nuvioNavigate);
+export const useNuvioGoBack = () => useUIStore((s) => s.nuvioGoBack);
+export const useNuvioHistory = () => useUIStore((s) => s.nuvioHistory);

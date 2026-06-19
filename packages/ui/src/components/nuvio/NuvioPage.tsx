@@ -14,7 +14,9 @@ import {
   useSetNuvioSelectedFolderCollectionTitle,
   useSetNuvioPreselectVideoId,
   useNuvioActivePersonId,
-  useSetNuvioActivePersonId
+  useSetNuvioActivePersonId,
+  useNuvioNavigate,
+  useNuvioGoBack
 } from '../../stores/uiStore';
 import {
   fetchNuvioLibrary,
@@ -258,14 +260,9 @@ export function NuvioPage({
   const setNuvioPreselectVideoId = useSetNuvioPreselectVideoId();
   const nuvioActivePersonId = useNuvioActivePersonId();
   const setNuvioActivePersonId = useSetNuvioActivePersonId();
-  const previousNuvioViewRef = useRef<'home' | 'library' | 'collections' | 'addons' | 'scrapers' | 'settings'>('home');
+  const nuvioNavigate = useNuvioNavigate();
+  const nuvioGoBack = useNuvioGoBack();
   const [pinPromptProfile, setPinPromptProfile] = useState<any | null>(null);
-
-  useEffect(() => {
-    if (nuvioView && nuvioView !== 'person') {
-      previousNuvioViewRef.current = nuvioView;
-    }
-  }, [nuvioView]);
 
   const [editableCollections, setEditableCollections] = useState<NuvioCollection[]>([]);
 
@@ -696,13 +693,15 @@ export function NuvioPage({
     if ((item.content_type === 'series' || item.content_type === 'show') && item.video_id) {
       setNuvioPreselectVideoId(item.video_id);
     }
-    // Navigate within Nuvio — no Stremio page involved
-    setNuvioActiveMeta({
-      id: item.content_id,
-      type: item.content_type === 'series' || item.content_type === 'show' ? 'series' : 'movie',
-      name: item.name,
-      poster: item.poster,
-      background: item.background ?? item.poster ?? null,
+    nuvioNavigate({
+      view: 'detail',
+      meta: {
+        id: item.content_id,
+        type: item.content_type === 'series' || item.content_type === 'show' ? 'series' : 'movie',
+        name: item.name,
+        poster: item.poster,
+        background: item.background ?? item.poster ?? null,
+      },
     });
   };
 
@@ -716,18 +715,20 @@ export function NuvioPage({
     if (newMeta.type === 'person') {
       const idNum = parseInt(newMeta.id.replace('tmdb:', ''), 10);
       if (!isNaN(idNum)) {
-        setNuvioActivePersonId(idNum);
-        setNuvioView('person');
+        nuvioNavigate({ view: 'person', personId: idNum });
       }
       return;
     }
 
-    setNuvioActiveMeta({
-      id: newMeta.id,
-      type: newMeta.type,
-      name: newMeta.name,
-      poster: newMeta.poster ?? null,
-      background: newMeta.background ?? newMeta.poster ?? null,
+    nuvioNavigate({
+      view: 'detail',
+      meta: {
+        id: newMeta.id,
+        type: newMeta.type,
+        name: newMeta.name,
+        poster: newMeta.poster ?? null,
+        background: newMeta.background ?? newMeta.poster ?? null,
+      },
     });
   };
 
@@ -2101,7 +2102,7 @@ export function NuvioPage({
       {nuvioActiveMeta && (
         <NuvioDetailView
           meta={nuvioActiveMeta}
-          onBack={() => setNuvioActiveMeta(null)}
+          onBack={() => nuvioGoBack()}
           onPlay={handleNuvioPlay}
           onNavigate={handleNuvioNavigate}
           showStreamBadges={showNuvioStreamBadges}
@@ -2117,15 +2118,8 @@ export function NuvioPage({
       {nuvioView === 'person' && nuvioActivePersonId && (
         <NuvioPersonDetail
           personId={nuvioActivePersonId}
-          onBack={() => {
-            setNuvioActivePersonId(null);
-            setNuvioView(previousNuvioViewRef.current);
-          }}
-          onItemClick={(meta) => {
-            handleNuvioNavigate(meta);
-            setNuvioActivePersonId(null);
-            setNuvioView(previousNuvioViewRef.current);
-          }}
+          onBack={() => nuvioGoBack()}
+          onItemClick={handleNuvioNavigate}
         />
       )}
 

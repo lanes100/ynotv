@@ -100,7 +100,7 @@ export function useSkipIntro(options: UseSkipIntroOptions) {
       let season: number | undefined;
       let episode: number | undefined;
 
-      if (vodInfo.source_id === 'stremio' && stremioEpisodeRef?.current) {
+      if ((vodInfo.source_id === 'stremio' || vodInfo.source_id === 'nuvio') && stremioEpisodeRef?.current) {
         imdbId = stremioEpisodeRef.current.metaId;
         season = stremioEpisodeRef.current.season;
         episode = stremioEpisodeRef.current.episode;
