@@ -269,6 +269,13 @@ export function NuvioPage({
 
   const [editableCollections, setEditableCollections] = useState<NuvioCollection[]>([]);
 
+  // Helper to navigate to a top-level view and clear any detail overlay
+  const navigateToView = (view: 'home' | 'library' | 'collections' | 'addons' | 'scrapers' | 'settings') => {
+    setNuvioActiveMeta(null);
+    setNuvioActivePersonId(null);
+    setNuvioView(view);
+  };
+
   // Refs and controls for Collection rail horizontal scrolling
   const collectionScrollRefs = useRef<Record<string, HTMLDivElement>>({});
   const scrollCollection = (key: string, direction: 'left' | 'right') => {
@@ -1056,7 +1063,7 @@ export function NuvioPage({
           <div className="nuvio-topbar-center">
             <button
               className={`nuvio-topbar-item ${nuvioView === 'home' ? 'active' : ''}`}
-              onClick={() => setNuvioView('home')}
+              onClick={() => navigateToView('home')}
             >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="nuvio-topbar-icon">
                 <rect x="3" y="3" width="7" height="7" />
@@ -1069,7 +1076,7 @@ export function NuvioPage({
 
             <button
               className={`nuvio-topbar-item ${nuvioView === 'library' ? 'active' : ''}`}
-              onClick={() => setNuvioView('library')}
+              onClick={() => navigateToView('library')}
             >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="nuvio-topbar-icon">
                 <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
@@ -1094,7 +1101,7 @@ export function NuvioPage({
 
             <button
               className={`nuvio-topbar-item ${nuvioView === 'addons' ? 'active' : ''}`}
-              onClick={() => setNuvioView('addons')}
+              onClick={() => navigateToView('addons')}
             >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="nuvio-topbar-icon">
                 <circle cx="12" cy="12" r="3" />
@@ -1118,7 +1125,7 @@ export function NuvioPage({
 
             <button
               className={`nuvio-topbar-item ${nuvioView === 'settings' ? 'active' : ''}`}
-              onClick={() => setNuvioView('settings')}
+              onClick={() => navigateToView('settings')}
             >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="nuvio-topbar-icon">
                 <circle cx="12" cy="12" r="3" />
@@ -1189,7 +1196,7 @@ export function NuvioPage({
                       </div>
                     );
                   })}
-                  <div className="nuvio-profile-dropdown-footer" onClick={() => { setShowProfileMenu(false); setNuvioView('settings'); }}>
+                  <div className="nuvio-profile-dropdown-footer" onClick={() => { setShowProfileMenu(false); navigateToView('settings'); }}>
                     Manage Profiles...
                   </div>
                 </div>
@@ -1220,6 +1227,74 @@ export function NuvioPage({
             >
               Log In Now
             </button>
+          </div>
+        ) : !profile && authStore.profiles.length > 0 ? (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '80px 20px', minHeight: '400px' }}>
+            <h2 style={{ color: '#fff', fontSize: '1.3rem', fontWeight: 700, margin: '0 0 8px 0' }}>Select Profile</h2>
+            <p style={{ margin: '0 0 36px 0', fontSize: '0.82rem', color: 'rgba(255,255,255,0.4)' }}>
+              Choose a profile to start using Nuvio
+            </p>
+            <div style={{ display: 'flex', gap: '28px', flexWrap: 'wrap', justifyContent: 'center' }}>
+              {authStore.profiles.map((p) => (
+                <div
+                  key={p.profile_index}
+                  onClick={() => {
+                    if (p.pin_enabled) {
+                      setPinPromptProfile(p);
+                    } else {
+                      authStore.selectProfile(p.profile_index);
+                    }
+                  }}
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: '10px',
+                    cursor: 'pointer',
+                    transition: 'transform 0.2s ease',
+                    padding: '16px',
+                    borderRadius: '12px',
+                    background: 'rgba(255,255,255,0.02)',
+                    border: '1px solid rgba(255,255,255,0.06)',
+                    minWidth: '100px',
+                  }}
+                  onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.transform = 'translateY(-4px)'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(0,212,255,0.3)'; (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.04)'; }}
+                  onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.transform = ''; (e.currentTarget as HTMLElement).style.borderColor = ''; (e.currentTarget as HTMLElement).style.background = ''; }}
+                >
+                  <div style={{
+                    width: '64px',
+                    height: '64px',
+                    borderRadius: '50%',
+                    backgroundColor: p.avatar_color_hex || '#00d4ff',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontWeight: 700,
+                    fontSize: '1.3rem',
+                    color: '#000',
+                    position: 'relative',
+                  }}>
+                    {p.name.charAt(0).toUpperCase()}
+                    {p.pin_enabled && (
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{
+                        position: 'absolute', bottom: '-2px', right: '-2px', width: '18px', height: '18px',
+                        background: 'rgba(0,0,0,0.7)', borderRadius: '50%', padding: '2px', color: '#ffc800'
+                      }}>
+                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                        <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                      </svg>
+                    )}
+                  </div>
+                  <span style={{ fontSize: '0.9rem', fontWeight: 600, color: '#fff' }}>{p.name}</span>
+                  {p.pin_enabled && (
+                    <span style={{ fontSize: '0.72rem', color: 'rgba(255,200,0,0.6)', fontWeight: 500 }}>PIN required</span>
+                  )}
+                </div>
+              ))}
+            </div>
+            <div style={{ marginTop: '36px', fontSize: '0.75rem', color: 'rgba(255,255,255,0.3)' }}>
+              Manage profiles in <span onClick={() => navigateToView('settings')} style={{ color: '#00d4ff', cursor: 'pointer', textDecoration: 'underline' }}>Settings</span>
+            </div>
           </div>
         ) : loading && resolvedWatchProgress.length === 0 && library.length === 0 ? (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '200px', color: 'rgba(255,255,255,0.4)', gap: '10px' }}>

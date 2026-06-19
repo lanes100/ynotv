@@ -95,12 +95,7 @@ export const useNuvioAuthStore = create<NuvioAuthStore>()(
             user: { id: session.user.id, email: session.user.email },
           });
           await get().fetchProfiles();
-          // Select default first profile if available
-          const profiles = get().profiles;
-          if (profiles.length > 0) {
-            const defaultProfile = profiles.find((p) => p.profile_index === 1) || profiles[0];
-            await get().selectProfile(defaultProfile.profile_index);
-          }
+          // Don't auto-select — the UI shows a profile picker and handles PIN prompts
           set({ error: null });
         } catch (e: any) {
           set({ error: e.message || 'Login failed' });
@@ -161,18 +156,15 @@ export const useNuvioAuthStore = create<NuvioAuthStore>()(
           const sortedProfiles = profiles.sort((a, b) => a.profile_index - b.profile_index);
           set({ profiles: sortedProfiles });
           
-          // Update active profile copy or select first profile
+          // Update active profile copy if it still exists, otherwise leave null (UI shows picker)
           const active = get().activeProfile;
           if (active) {
             const updatedActive = sortedProfiles.find((p) => p.profile_index === active.profile_index);
             if (updatedActive) {
               set({ activeProfile: updatedActive });
-            } else if (sortedProfiles.length > 0) {
-              set({ activeProfile: sortedProfiles[0] });
+            } else {
+              set({ activeProfile: null });
             }
-          } else if (sortedProfiles.length > 0) {
-            const defaultProfile = sortedProfiles.find((p) => p.profile_index === 1) || sortedProfiles[0];
-            set({ activeProfile: defaultProfile });
           }
         } catch (e: any) {
           console.error('[NuvioAuthStore] Failed to fetch profiles:', e);
