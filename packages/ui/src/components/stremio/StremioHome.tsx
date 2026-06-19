@@ -293,6 +293,15 @@ export function StremioHome({ addons, onItemClick }: StremioHomeProps) {
     });
   }, [renderedRows, catalogFilter]);
 
+  const filteredCloudRows = useMemo(() => {
+    if (!catalogFilter.trim()) return cloudCatalogRows;
+    const lower = catalogFilter.toLowerCase().trim();
+    return cloudCatalogRows.filter((row) => {
+      const name = row.title || '';
+      return name.toLowerCase().includes(lower);
+    });
+  }, [cloudCatalogRows, catalogFilter]);
+
   const doSearch = useCallback(async (query: string) => {
     if (!query || query.length < 2) {
       setSearchRows([]);
@@ -708,7 +717,7 @@ export function StremioHome({ addons, onItemClick }: StremioHomeProps) {
           </div>
         )}
 
-        {traktCatalogsBeforeAddon && cloudCatalogRows.map((row) => (
+        {traktCatalogsBeforeAddon && filteredCloudRows.map((row) => (
           <StremioCatalogRow
             key={row.key}
             title={row.title}
@@ -723,11 +732,7 @@ export function StremioHome({ addons, onItemClick }: StremioHomeProps) {
           />
         ))}
 
-        {filteredRows.length === 0 ? (
-          <div className="stremio-loading-text">
-            {catalogFilter.trim() ? 'No catalogs match your filter.' : 'No catalogs available. Install an addon to get started.'}
-          </div>
-        ) : (
+        {filteredRows.length > 0 && (
           filteredRows.map(({ addon, catalog }) => (
             <StremioCatalogRow
               key={`${addon.id}:${catalog.type}:${catalog.id}`}
@@ -745,7 +750,13 @@ export function StremioHome({ addons, onItemClick }: StremioHomeProps) {
           ))
         )}
 
-        {!traktCatalogsBeforeAddon && cloudCatalogRows.map((row) => (
+        {filteredRows.length === 0 && filteredCloudRows.length === 0 && (
+          <div className="stremio-loading-text">
+            {catalogFilter.trim() ? 'No catalogs match your filter.' : 'No catalogs available. Install an addon to get started.'}
+          </div>
+        )}
+
+        {!traktCatalogsBeforeAddon && filteredCloudRows.map((row) => (
           <StremioCatalogRow
             key={row.key}
             title={row.title}
