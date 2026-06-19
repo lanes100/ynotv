@@ -535,6 +535,10 @@ export function NuvioPage({
   useEffect(() => { selectedFolderRef.current = selectedFolder; }, [selectedFolder]);
   useEffect(() => { activeSourceIndexRef.current = activeSourceIndex; }, [activeSourceIndex]);
 
+  // Scroll restoration refs
+  const homeScrollPosRef = useRef<number>(0);
+  const folderScrollPosRef = useRef<number>(0);
+
   // Add addon states
   const [addonUrl, setAddonUrl] = useState('');
   const [addonError, setAddonError] = useState<string | null>(null);
@@ -591,6 +595,19 @@ export function NuvioPage({
     observer.observe(sentinel);
     return () => observer.disconnect();
   }, [folderItems, loadingFolderItems]);
+
+  // Restore folder grid scroll position when returning from detail view
+  useEffect(() => {
+    if (!nuvioActiveMeta && selectedFolder) {
+      const el = document.querySelector('.nuvio-main');
+      if (el && folderScrollPosRef.current > 0) {
+        const timer = setTimeout(() => {
+          el.scrollTop = folderScrollPosRef.current;
+        }, 50);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [nuvioActiveMeta, selectedFolder]);
 
   // Helper to resolve folder sources
   const getResolvedSources = (folder: NuvioCollectionFolder): NuvioCollectionSource[] => {
@@ -809,6 +826,11 @@ export function NuvioPage({
   };
 
   const handleItemClick = (item: { content_id: string; content_type: string; name: string; poster: string | null; background?: string | null; video_id?: string | null }) => {
+    const el = document.querySelector('.nuvio-main');
+    if (el && selectedFolder) {
+      folderScrollPosRef.current = el.scrollTop;
+    }
+
     if ((item.content_type === 'series' || item.content_type === 'show') && item.video_id) {
       setNuvioPreselectVideoId(item.video_id);
     }
@@ -862,6 +884,11 @@ export function NuvioPage({
   };
 
   const handleFolderClick = async (collectionTitle: string, folder: NuvioCollectionFolder) => {
+    const el = document.querySelector('.nuvio-main');
+    if (el) {
+      homeScrollPosRef.current = el.scrollTop;
+    }
+
     setSelectedFolder(folder);
     setSelectedFolderCollectionTitle(collectionTitle);
     setActiveSourceIndex(0);
@@ -870,10 +897,20 @@ export function NuvioPage({
     setLoadingMoreFolderItems(false);
     loadFolderSourceItems(folder, 0, false);
     
-    const el = document.querySelector('.nuvio-main');
     if (el) {
       el.scrollTop = 0;
     }
+    folderScrollPosRef.current = 0;
+  };
+
+  const handleBackFromFolder = () => {
+    setSelectedFolder(null);
+    setTimeout(() => {
+      const el = document.querySelector('.nuvio-main');
+      if (el) {
+        el.scrollTop = homeScrollPosRef.current;
+      }
+    }, 0);
   };
 
   const loadFolderSourceItems = async (folder: NuvioCollectionFolder, sourceIndex: number, append = false) => {
@@ -1581,7 +1618,7 @@ export function NuvioPage({
                     <div className="nuvio-folder-detail-banner-gradient" />
                     
                     {/* Floating Back Button */}
-                    <button className="nuvio-folder-detail-back-btn" onClick={() => setSelectedFolder(null)}>
+                    <button className="nuvio-folder-detail-back-btn" onClick={handleBackFromFolder}>
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                         <line x1="19" y1="12" x2="5" y2="12" />
                         <polyline points="12 19 5 12 12 5" />
