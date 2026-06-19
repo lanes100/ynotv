@@ -1758,7 +1758,7 @@ function App() {
                   const filePath = await join(appDir, relPath);
 
                   await writeTextFile(relPath, text, { baseDir: BaseDirectory.AppLocalData });
-                  window.mpv.addSubtitleFile(filePath, 'auto').catch(() => {});
+                  window.mpv.addSubtitleFile(filePath, 'cached').catch(() => {});
                 }
               } catch (err) {
                 console.error('[Stremio] Failed to load or save subtitle:', sub.url, err);
