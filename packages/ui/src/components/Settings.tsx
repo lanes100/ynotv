@@ -80,6 +80,8 @@ interface SettingsProps {
   onNuvioShowFileSizeBadgesChange?: (enabled: boolean) => void;
   nuvioStreamBadgePlacement?: 'top' | 'bottom';
   onNuvioStreamBadgePlacementChange?: (placement: 'top' | 'bottom') => void;
+  showNuvioHoverDetails?: boolean;
+  onShowNuvioHoverDetailsChange?: (show: boolean) => void;
 }
 
 export function Settings({
@@ -135,6 +137,8 @@ export function Settings({
   onNuvioShowFileSizeBadgesChange,
   nuvioStreamBadgePlacement: nuvioStreamBadgePlacementProp,
   onNuvioStreamBadgePlacementChange,
+  showNuvioHoverDetails: showNuvioHoverDetailsProp,
+  onShowNuvioHoverDetailsChange,
 }: SettingsProps) {
   const [activeTab, setActiveTab] = useState<SettingsTabId>(initialTab);
   const [pendingSubTab, setPendingSubTab] = useState<string | null>(null);
@@ -245,6 +249,7 @@ export function Settings({
   const [nuvioBadgeSize, setNuvioBadgeSize] = useState(100);
   const [nuvioShowFileSizeBadges, setNuvioShowFileSizeBadges] = useState(true);
   const [nuvioStreamBadgePlacement, setNuvioStreamBadgePlacement] = useState<'top' | 'bottom'>('bottom');
+  const [showNuvioHoverDetails, setShowNuvioHoverDetails] = useState(true);
 
   useEffect(() => {
     if (stremioStreamPickerModeProp !== undefined) {
@@ -317,6 +322,12 @@ export function Settings({
       setNuvioStreamBadgePlacement(nuvioStreamBadgePlacementProp);
     }
   }, [nuvioStreamBadgePlacementProp]);
+
+  useEffect(() => {
+    if (showNuvioHoverDetailsProp !== undefined) {
+      setShowNuvioHoverDetails(showNuvioHoverDetailsProp);
+    }
+  }, [showNuvioHoverDetailsProp]);
 
   // Category settings state
   const [showAllChannels, setShowAllChannels] = useState(true);
@@ -582,6 +593,7 @@ export function Settings({
         showFavorites?: boolean;
         showWatchlist?: boolean;
         showRecentlyViewed?: boolean;
+        showNuvioHoverDetails?: boolean;
       };
 
       setShowAllChannels(settings.showAllChannels ?? true);
@@ -722,6 +734,9 @@ export function Settings({
       }
       if (settings.nuvioStreamBadgePlacement !== undefined) {
         setNuvioStreamBadgePlacement(settings.nuvioStreamBadgePlacement as 'top' | 'bottom');
+      }
+      if (settings.showNuvioHoverDetails !== undefined) {
+        setShowNuvioHoverDetails(settings.showNuvioHoverDetails);
       }
 
       // Load LiveTV settings
@@ -1119,6 +1134,16 @@ export function Settings({
     }
     if (window.storage) {
       await window.storage.updateSettings({ nuvioStreamBadgePlacement: placement });
+    }
+  };
+
+  const handleShowNuvioHoverDetailsChange = async (show: boolean) => {
+    setShowNuvioHoverDetails(show);
+    if (onShowNuvioHoverDetailsChange) {
+      onShowNuvioHoverDetailsChange(show);
+    }
+    if (window.storage) {
+      await window.storage.updateSettings({ showNuvioHoverDetails: show });
     }
   };
 
@@ -1678,6 +1703,8 @@ export function Settings({
             onNuvioShowFileSizeBadgesChange={handleNuvioShowFileSizeBadgesChange}
             nuvioStreamBadgePlacement={nuvioStreamBadgePlacement}
             onNuvioStreamBadgePlacementChange={handleNuvioStreamBadgePlacementChange}
+            showNuvioHoverDetails={showNuvioHoverDetails}
+            onShowNuvioHoverDetailsChange={handleShowNuvioHoverDetailsChange}
           />
         );
       case 'security':

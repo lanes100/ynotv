@@ -121,8 +121,8 @@ interface UIState {
   setStremioSelectedCloudCatalogKey: (key: string | null) => void;
 
   // Nuvio
-  nuvioView: 'home' | 'library' | 'collections' | 'addons' | 'scrapers' | 'settings' | 'person';
-  setNuvioView: (view: 'home' | 'library' | 'collections' | 'addons' | 'scrapers' | 'settings' | 'person') => void;
+  nuvioView: 'home' | 'library' | 'search' | 'collections' | 'addons' | 'scrapers' | 'settings' | 'person';
+  setNuvioView: (view: 'home' | 'library' | 'search' | 'collections' | 'addons' | 'scrapers' | 'settings' | 'person') => void;
   nuvioActiveMeta: NuvioMeta | null;
   setNuvioActiveMeta: (meta: NuvioMeta | null) => void;
   nuvioHistory: NuvioHistoryFrame[];

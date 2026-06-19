@@ -7,9 +7,9 @@
   z-index: 100;
   display: flex;
   flex-direction: column;
-  background: rgba(8, 8, 12, 0.98);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  background: var(--bg-overlay, rgba(0, 0, 0, 0.85));
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   overflow: hidden;
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
 }
@@ -990,7 +990,8 @@
 
 .nuvio-topbar-item.active {
   color: #ffffff;
-  background: transparent;
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .nuvio-topbar-item.active::after {
@@ -1677,7 +1678,8 @@ select.nuvio-input option {
   transform: translateY(0) scale(0.95);
 }
 
-.nuvio-main.nuvio-main-home {
+.nuvio-main.nuvio-main-home,
+.nuvio-main.nuvio-main-search {
   padding-top: 0;
 }
 

@@ -28,7 +28,7 @@ interface StremioHoverContextType {
 
 const StremioHoverContext = createContext<StremioHoverContextType | undefined>(undefined);
 
-export function StremioHoverProvider({ children, addons }: { children: React.ReactNode; addons?: InstalledAddon[] }) {
+export function StremioHoverProvider({ children, addons, disabled }: { children: React.ReactNode; addons?: InstalledAddon[]; disabled?: boolean }) {
   const [activeItem, setActiveItem] = useState<StremioMetaPreview | null>(null);
   const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null);
   const [mouseY, setMouseY] = useState<number | null>(null);
@@ -140,6 +140,7 @@ export function StremioHoverProvider({ children, addons }: { children: React.Rea
 
   const onCardMouseEnter = (item: StremioMetaPreview, element: HTMLElement, event?: React.MouseEvent) => {
     if (document.documentElement.hasAttribute('data-hover-details-disabled')) return;
+    if (disabled) return;
 
     if (hideTimerRef.current) {
       clearTimeout(hideTimerRef.current);

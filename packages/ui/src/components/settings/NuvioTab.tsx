@@ -94,6 +94,8 @@ interface NuvioTabProps {
   onNuvioShowFileSizeBadgesChange: (show: boolean) => Promise<void> | void;
   nuvioStreamBadgePlacement: 'top' | 'bottom';
   onNuvioStreamBadgePlacementChange: (placement: 'top' | 'bottom') => Promise<void> | void;
+  showNuvioHoverDetails: boolean;
+  onShowNuvioHoverDetailsChange: (show: boolean) => Promise<void> | void;
 }
 
 export function NuvioTab({
@@ -107,6 +109,8 @@ export function NuvioTab({
   onNuvioShowFileSizeBadgesChange,
   nuvioStreamBadgePlacement,
   onNuvioStreamBadgePlacementChange,
+  showNuvioHoverDetails,
+  onShowNuvioHoverDetailsChange,
 }: NuvioTabProps) {
   const authStore = useNuvioAuthStore();
   const [pinPromptProfile, setPinPromptProfile] = useState<any | null>(null);
@@ -1745,6 +1749,22 @@ export function NuvioTab({
             </div>
           </div>
         )}
+      </div>
+
+      {/* Hover Details toggle for Nuvio */}
+      <div className="retry-setting-row">
+        <div className="timeshift-toggle-info">
+          <span className="timeshift-toggle-label">Hover Details</span>
+          <span className="timeshift-toggle-sub">Show hover cards with details when hovering over items in Nuvio catalogs.</span>
+        </div>
+        <label className="toggle-switch">
+          <input
+            type="checkbox"
+            checked={showNuvioHoverDetails}
+            onChange={(e) => onShowNuvioHoverDetailsChange(e.target.checked)}
+          />
+          <span className="toggle-slider" />
+        </label>
       </div>
 
       {/* Stream Badges section for Nuvio */}

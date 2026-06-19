@@ -40,6 +40,7 @@ import type { StremioStream, StremioVideo, StremioMeta, BadgeSource } from '../.
 import type { StremioMetaPreview, InstalledAddon } from '../../types/stremio';
 import { compileBadgeSources } from '../../utils/streamBadges';
 import { NuvioTab } from '../settings/NuvioTab';
+import { NuvioSearchPage } from './NuvioSearchPage';
 import '../Settings.css';
 import './NuvioPage.css';
 
@@ -55,6 +56,8 @@ interface NuvioPageProps {
   onNuvioShowFileSizeBadgesChange?: (show: boolean) => Promise<void> | void;
   nuvioStreamBadgePlacement?: 'top' | 'bottom';
   onNuvioStreamBadgePlacementChange?: (placement: 'top' | 'bottom') => Promise<void> | void;
+  showNuvioHoverDetails?: boolean;
+  onShowNuvioHoverDetailsChange?: (show: boolean) => Promise<void> | void;
 }
 
 const getFolderShapeClass = (folderShape: string | undefined): string => {
@@ -240,6 +243,8 @@ export function NuvioPage({
   onNuvioShowFileSizeBadgesChange,
   nuvioStreamBadgePlacement = 'bottom',
   onNuvioStreamBadgePlacementChange,
+  showNuvioHoverDetails = true,
+  onShowNuvioHoverDetailsChange,
 }: NuvioPageProps) {
   const compiledBadgeRules = useMemo(() => compileBadgeSources(nuvioBadgeSources), [nuvioBadgeSources]);
   const addonsStore = useNuvioAddonStore();
@@ -292,7 +297,7 @@ export function NuvioPage({
   const [editableCollections, setEditableCollections] = useState<NuvioCollection[]>([]);
 
   // Helper to navigate to a top-level view and clear any detail overlay
-  const navigateToView = (view: 'home' | 'library' | 'collections' | 'addons' | 'scrapers' | 'settings') => {
+  const navigateToView = (view: 'home' | 'library' | 'search' | 'collections' | 'addons' | 'scrapers' | 'settings') => {
     setNuvioActiveMeta(null);
     setNuvioActivePersonId(null);
     setNuvioView(view);
@@ -1100,7 +1105,7 @@ export function NuvioPage({
   };
 
   return (
-    <StremioHoverProvider addons={addons}>
+    <StremioHoverProvider addons={addons} disabled={!showNuvioHoverDetails}>
       <div className="nuvio-page">
       {/* Nuvio Dedicated Topbar */}
       <div className="nuvio-topbar">
@@ -1143,6 +1148,17 @@ export function NuvioPage({
                 <line x1="8" y1="11" x2="14" y2="11" />
               </svg>
               <span>Library</span>
+            </button>
+
+            <button
+              className={`nuvio-topbar-item ${nuvioView === 'search' ? 'active' : ''}`}
+              onClick={() => navigateToView('search')}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="nuvio-topbar-icon">
+                <circle cx="11" cy="11" r="8" />
+                <path d="m21 21-4.3-4.3" />
+              </svg>
+              <span>Search</span>
             </button>
 
             {/* Collections tab hidden — code kept for future implementation
@@ -1265,7 +1281,7 @@ export function NuvioPage({
       </div>
 
       {/* Main Content */}
-      <div className={`nuvio-main ${nuvioView === 'home' ? 'nuvio-main-home' : ''} ${nuvioActiveMeta ? 'nuvio-page-hide-content' : ''}`}>
+      <div className={`nuvio-main ${nuvioView === 'home' ? 'nuvio-main-home' : ''} ${nuvioView === 'search' ? 'nuvio-main-search' : ''} ${nuvioActiveMeta ? 'nuvio-page-hide-content' : ''}`}>
         {!token ? (
           <div style={{ maxWidth: '420px', margin: '60px auto', display: 'flex', flexDirection: 'column', gap: '16px', padding: '0 20px' }}>
             <div style={{ textAlign: 'center' }}>
@@ -1767,6 +1783,13 @@ export function NuvioPage({
               </div>
             )}
 
+            {nuvioView === 'search' && (
+              <NuvioSearchPage
+                addons={addons}
+                onItemClick={(item) => handleItemClick(item)}
+              />
+            )}
+
             {/* Collections tab hidden — code kept for future implementation */}
             {nuvioView === 'collections' && false && (
               <div className="nuvio-editor-container">
@@ -2155,6 +2178,8 @@ export function NuvioPage({
                 onNuvioShowFileSizeBadgesChange={onNuvioShowFileSizeBadgesChange || (() => {})}
                 nuvioStreamBadgePlacement={nuvioStreamBadgePlacement}
                 onNuvioStreamBadgePlacementChange={onNuvioStreamBadgePlacementChange || (() => {})}
+                showNuvioHoverDetails={showNuvioHoverDetails}
+                onShowNuvioHoverDetailsChange={onShowNuvioHoverDetailsChange || (() => {})}
               />
             )}
           </div>

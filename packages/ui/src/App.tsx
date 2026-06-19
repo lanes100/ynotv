@@ -317,6 +317,14 @@ function App() {
     }
   }, []);
 
+  const [showNuvioHoverDetails, setShowNuvioHoverDetails] = useState(true);
+  const handleShowNuvioHoverDetailsChange = useCallback(async (enabled: boolean) => {
+    setShowNuvioHoverDetails(enabled);
+    if (window.storage) {
+      await window.storage.updateSettings({ showNuvioHoverDetails: enabled });
+    }
+  }, []);
+
   // Load stremioStreamPickerMode from storage
   useEffect(() => {
     if (!layoutSettingsLoaded) return;
@@ -365,6 +373,9 @@ function App() {
         }
         if (res.data?.nuvioStreamBadgePlacement) {
           setNuvioStreamBadgePlacement(res.data.nuvioStreamBadgePlacement as 'top' | 'bottom');
+        }
+        if (res.data?.showNuvioHoverDetails !== undefined) {
+          setShowNuvioHoverDetails(res.data.showNuvioHoverDetails as boolean);
         }
         if (res.data?.popoutMode) {
           setPopoutMode(res.data.popoutMode as 'off' | 'popout' | 'external');
@@ -3552,6 +3563,8 @@ function App() {
           onNuvioShowFileSizeBadgesChange={handleNuvioShowFileSizeBadgesChange}
           nuvioStreamBadgePlacement={nuvioStreamBadgePlacement}
           onNuvioStreamBadgePlacementChange={handleNuvioStreamBadgePlacementChange}
+          showNuvioHoverDetails={showNuvioHoverDetails}
+          onShowNuvioHoverDetailsChange={handleShowNuvioHoverDetailsChange}
         />
       </TransitionView>
 
