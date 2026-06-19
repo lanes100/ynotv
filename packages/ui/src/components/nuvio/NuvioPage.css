@@ -679,93 +679,110 @@
   text-overflow: ellipsis;
 }
 
-/* Folder Detail Overlay Modal */
-.nuvio-folder-detail-overlay {
-  position: absolute;
-  top: 56px;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  width: auto;
-  height: auto;
-  background: rgba(0, 0, 0, 0.85);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  z-index: 120;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 40px;
-  box-sizing: border-box;
-  animation: fadeIn 0.2s ease-out;
-}
-
-.nuvio-folder-detail-content {
-  width: 90%;
-  max-width: 960px;
-  height: 85%;
-  background: #111116;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 12px;
+/* Folder Detail Same-Page View */
+.nuvio-folder-detail-page-container {
+  margin: -28px -28px 0 -28px;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
-  animation: slideUp 0.25s cubic-bezier(0.25, 0.8, 0.25, 1);
+  animation: fadeIn 0.25s ease-out;
 }
 
-.nuvio-folder-detail-header {
-  flex-shrink: 0;
+.nuvio-folder-detail-banner {
+  position: relative;
+  height: 280px;
+  width: 100%;
+  overflow: hidden;
+  background: #000;
+}
+
+.nuvio-folder-detail-banner-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.55;
+  filter: brightness(0.95);
+  animation: scaleDown 8s ease-out;
+}
+
+.nuvio-folder-detail-banner-fallback {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #0e0e12 0%, #171720 50%, #0a0a0d 100%);
+}
+
+.nuvio-folder-detail-banner-gradient {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(to bottom, rgba(10, 10, 16, 0.2) 0%, rgba(10, 10, 16, 0.5) 60%, rgba(10, 10, 16, 1) 100%);
+}
+
+.nuvio-folder-detail-back-btn {
+  position: absolute;
+  top: 36px;
+  left: 28px;
+  z-index: 10;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 20px 28px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  background: rgba(255, 255, 255, 0.01);
+  gap: 8px;
+  padding: 8px 16px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.nuvio-folder-detail-back-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: translateX(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.nuvio-folder-detail-back-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.nuvio-folder-detail-banner-meta {
+  position: absolute;
+  bottom: 24px;
+  left: 28px;
+  right: 28px;
+  z-index: 5;
 }
 
 .nuvio-folder-detail-coll-title {
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   font-weight: 700;
   text-transform: uppercase;
   color: #00d4ff;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.08em;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
 }
 
 .nuvio-folder-detail-title {
-  font-size: 1.4rem;
-  font-weight: 700;
+  font-size: 1.8rem;
+  font-weight: 800;
   color: #fff;
-  margin: 4px 0 0 0;
-}
-
-.nuvio-folder-detail-close {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  color: rgba(255, 255, 255, 0.5);
-  font-size: 1.1rem;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background 0.2s, color 0.2s, border-color 0.2s;
-}
-
-.nuvio-folder-detail-close:hover {
-  background: rgba(255, 79, 79, 0.15);
-  border-color: rgba(255, 79, 79, 0.3);
-  color: #ff4f4f;
+  margin: 6px 0 0 0;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
 }
 
 .nuvio-folder-detail-tabs {
   flex-shrink: 0;
   display: flex;
   gap: 8px;
-  padding: 12px 28px;
-  background: rgba(0, 0, 0, 0.2);
+  padding: 16px 28px;
+  background: rgba(0, 0, 0, 0.15);
   border-bottom: 1px solid rgba(255, 255, 255, 0.04);
   overflow-x: auto;
   scrollbar-width: none;
@@ -799,21 +816,13 @@
   color: #00d4ff;
 }
 
-.nuvio-folder-detail-grid-container {
-  flex: 1;
-  overflow-y: auto;
+.nuvio-folder-detail-grid-wrapper {
   padding: 28px;
-  background: rgba(0, 0, 0, 0.1);
-  scrollbar-width: thin;
 }
 
-.nuvio-folder-detail-grid-container::-webkit-scrollbar {
-  width: 6px;
-}
-
-.nuvio-folder-detail-grid-container::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 3px;
+@keyframes scaleDown {
+  from { transform: scale(1.05); }
+  to { transform: scale(1); }
 }
 
 .nuvio-folder-detail-grid {

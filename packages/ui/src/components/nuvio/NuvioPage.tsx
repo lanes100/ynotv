@@ -324,6 +324,7 @@ export function NuvioPage({
   const navigateToView = (view: 'home' | 'library' | 'search' | 'collections' | 'addons' | 'scrapers' | 'settings') => {
     setNuvioActiveMeta(null);
     setNuvioActivePersonId(null);
+    setSelectedFolder(null);
     setNuvioView(view);
   };
 
@@ -577,7 +578,7 @@ export function NuvioPage({
   // IntersectionObserver for folder detail infinite scroll
   useEffect(() => {
     const sentinel = folderSentinelRef.current;
-    const container = folderGridContainerRef.current;
+    const container = document.querySelector('.nuvio-main');
     if (!sentinel || !container || loadingFolderItems) return;
 
     const observer = new IntersectionObserver((entries) => {
@@ -585,7 +586,7 @@ export function NuvioPage({
         if (loadingMoreFolderRef.current || !hasMoreFolderRef.current || !selectedFolderRef.current) return;
         loadFolderSourceItems(selectedFolderRef.current, activeSourceIndexRef.current, true);
       }
-    }, { root: container, rootMargin: '400px' });
+    }, { root: container, rootMargin: '600px' });
 
     observer.observe(sentinel);
     return () => observer.disconnect();
@@ -868,6 +869,11 @@ export function NuvioPage({
     setHasMoreFolderItems(true);
     setLoadingMoreFolderItems(false);
     loadFolderSourceItems(folder, 0, false);
+    
+    const el = document.querySelector('.nuvio-main');
+    if (el) {
+      el.scrollTop = 0;
+    }
   };
 
   const loadFolderSourceItems = async (folder: NuvioCollectionFolder, sourceIndex: number, append = false) => {
@@ -1560,89 +1566,229 @@ export function NuvioPage({
         ) : (
           <div>
             {nuvioView === 'home' && (
-              <div>
-                {/* Catalog Filter Bar */}
-                {(homeRows.some((r: any) => r.type === 'catalog') || homeRows.some((r: any) => r.type === 'collection')) && (
-                  <div className="nuvio-catalog-filter">
-                    <svg className="nuvio-catalog-filter-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <circle cx="11" cy="11" r="8" />
-                      <path d="m21 21-4.3-4.3" />
-                    </svg>
-                    <input
-                      className="nuvio-catalog-filter-input"
-                      type="text"
-                      placeholder="Filter catalogs..."
-                      value={catalogFilter}
-                      onChange={(e) => setCatalogFilter(e.target.value)}
-                    />
-                    {catalogFilter && (
-                      <button className="nuvio-catalog-filter-clear" onClick={() => setCatalogFilter('')}>
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <path d="M18 6L6 18M6 6l12 12" />
+              selectedFolder ? (
+                <div className="nuvio-folder-detail-page-container">
+                  {/* Hero Banner with backdrop image */}
+                  <div className="nuvio-folder-detail-banner">
+                    {/* Backdrop Image */}
+                    {(() => {
+                      const backdropImg = selectedFolder.heroBackdropUrl || selectedFolder.coverImageUrl || null;
+                      if (backdropImg) {
+                        return <img src={backdropImg} alt={selectedFolder.title} className="nuvio-folder-detail-banner-img" />;
+                      }
+                      return <div className="nuvio-folder-detail-banner-fallback" />;
+                    })()}
+                    <div className="nuvio-folder-detail-banner-gradient" />
+                    
+                    {/* Floating Back Button */}
+                    <button className="nuvio-folder-detail-back-btn" onClick={() => setSelectedFolder(null)}>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <line x1="19" y1="12" x2="5" y2="12" />
+                        <polyline points="12 19 5 12 12 5" />
+                      </svg>
+                      <span>Back</span>
+                    </button>
+
+                    {/* Metadata overlay */}
+                    <div className="nuvio-folder-detail-banner-meta">
+                      <div className="nuvio-folder-detail-coll-title">{selectedFolderCollectionTitle}</div>
+                      <h2 className="nuvio-folder-detail-title">{selectedFolder.title}</h2>
+                    </div>
+                  </div>
+
+                  {/* Sources Tabs if there are multiple sources */}
+                  {getResolvedSources(selectedFolder).length > 1 && (
+                    <div className="nuvio-folder-detail-tabs">
+                      {getResolvedSources(selectedFolder).map((source, idx) => (
+                        <button
+                          key={idx}
+                          className={`nuvio-folder-detail-tab-btn ${activeSourceIndex === idx ? 'active' : ''}`}
+                          onClick={() => {
+                            setActiveSourceIndex(idx);
+                            setFolderSkip(0);
+                            setHasMoreFolderItems(true);
+                            setLoadingMoreFolderItems(false);
+                            loadFolderSourceItems(selectedFolder, idx, false);
+                          }}
+                        >
+                          {getSourceLabel(source, idx, addons)}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Grid Container */}
+                  <div className="nuvio-folder-detail-grid-wrapper">
+                    {loadingFolderItems ? (
+                      <div className="nuvio-folder-detail-loading">
+                        <div className="spinner" style={{ width: '28px', height: '28px', borderRadius: '50%', border: '3px solid rgba(0,212,255,0.1)', borderTopColor: '#00d4ff', animation: 'spin 1s linear infinite' }} />
+                        <span>Loading catalog items...</span>
+                      </div>
+                    ) : folderError ? (
+                      <div className="nuvio-folder-detail-empty" style={{ flexDirection: 'column', gap: '12px', padding: '40px 24px' }}>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="#ff9900" strokeWidth="1.5" width="36" height="36">
+                          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                          <line x1="12" y1="9" x2="12" y2="13"/>
+                          <line x1="12" y1="17" x2="12.01" y2="17"/>
                         </svg>
-                      </button>
+                        <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.85rem', textAlign: 'center', maxWidth: '360px', lineHeight: 1.5 }}>{folderError}</span>
+                      </div>
+                    ) : folderItems.length > 0 ? (
+                      <>
+                        <div className="nuvio-folder-detail-grid">
+                          {folderItems.map((item) => (
+                            <div
+                              key={item.id}
+                              className="nuvio-folder-detail-item"
+                              onClick={() => handleItemClick({ content_id: item.id, content_type: item.type, name: item.name, poster: item.poster ?? null })}
+                            >
+                              <div className="nuvio-folder-detail-poster-wrapper">
+                                {item.poster ? (
+                                  <img src={item.poster} alt={item.name} className="nuvio-folder-detail-poster" />
+                                ) : (
+                                  <div className="nuvio-folder-detail-poster-placeholder">{item.name}</div>
+                                )}
+                              </div>
+                              <div className="nuvio-folder-detail-item-title">{item.name}</div>
+                            </div>
+                          ))}
+                        </div>
+                        {/* Sentinel for infinite scroll */}
+                        {hasMoreFolderItems && (
+                          <div ref={folderSentinelRef} style={{ height: '1px' }} />
+                        )}
+                        {loadingMoreFolderItems && (
+                          <div className="nuvio-folder-detail-loading" style={{ padding: '20px 0' }}>
+                            <div className="spinner" style={{ width: '20px', height: '20px', borderRadius: '50%', border: '2px solid rgba(0,212,255,0.1)', borderTopColor: '#00d4ff', animation: 'spin 1s linear infinite' }} />
+                            <span style={{ fontSize: '0.78rem' }}>Loading more...</span>
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <div className="nuvio-folder-detail-empty">No items found in this catalog source.</div>
                     )}
                   </div>
-                )}
-
-                {/* Hero banner — fed from selected catalogs in settings */}
-                <div style={{ marginBottom: '24px' }}>
-                  <NuvioHeroBanner
-                    libraryIds={libraryIds}
-                    onItemClick={(item) => handleItemClick({ content_id: item.id, content_type: item.type, name: item.name, poster: item.poster ?? null })}
-                    onAddToLibrary={handleAddToLibrary}
-                  />
                 </div>
-
-                {/* Continue Watching (Watch Progress) — 3 styles configurable from Settings */}
-                {resolvedWatchProgress.length > 0 && (
-                  <div className="nuvio-row">
-                    <div className="nuvio-row-header">
-                      <h3 className="nuvio-row-title">Continue Watching</h3>
+              ) : (
+                <div>
+                  {/* Catalog Filter Bar */}
+                  {(homeRows.some((r: any) => r.type === 'catalog') || homeRows.some((r: any) => r.type === 'collection')) && (
+                    <div className="nuvio-catalog-filter">
+                      <svg className="nuvio-catalog-filter-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <circle cx="11" cy="11" r="8" />
+                        <path d="m21 21-4.3-4.3" />
+                      </svg>
+                      <input
+                        className="nuvio-catalog-filter-input"
+                        type="text"
+                        placeholder="Filter catalogs..."
+                        value={catalogFilter}
+                        onChange={(e) => setCatalogFilter(e.target.value)}
+                      />
+                      {catalogFilter && (
+                        <button className="nuvio-catalog-filter-clear" onClick={() => setCatalogFilter('')}>
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M18 6L6 18M6 6l12 12" />
+                          </svg>
+                        </button>
+                      )}
                     </div>
-                    <div className="nuvio-scroll-rail">
-                      {(() => {
-                        const cwStyle = localStorage.getItem('nuvio_cw_style') || 'card';
-                        if (cwStyle === 'wide') {
-                          return resolvedWatchProgress.map((entry) => {
-                            const progressPct = getProgressPercent(entry);
-                            const progressInt = Math.round(progressPct);
-                            const imgUrl = entry.poster || entry.background;
-                            const isEpisode = entry.season !== null && entry.episode !== null;
-                            const isUpNext = (entry as any).isUpNext;
-                            const subtitle = isUpNext
-                              ? `Up Next • ${entry.episodeTitle || ''}`
-                              : (isEpisode ? entry.episodeTitle || '' : (entry.content_type === 'movie' ? 'Movie' : entry.content_type));
-                            return (
-                              <div
-                                key={entry.progress_key}
-                                className="nuvio-cw-wide-card"
-                                onClick={() => handleItemClick({ content_id: entry.content_id, content_type: entry.content_type, name: entry.name || entry.progress_key, poster: entry.poster || null, video_id: entry.video_id })}
-                              >
-                                {imgUrl ? (
-                                  <img src={imgUrl} alt={entry.name} className="nuvio-cw-wide-poster" />
-                                ) : (
-                                  <div className="nuvio-cw-wide-poster" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', color: 'rgba(255,255,255,0.3)' }}>{entry.name?.[0]}</div>
-                                )}
-                                <div className="nuvio-cw-wide-body">
-                                  <div className="nuvio-cw-wide-title">{entry.name || entry.content_id}</div>
-                                  {isEpisode && <div className="nuvio-cw-wide-ep">S{entry.season}:E{entry.episode}</div>}
-                                  <div className="nuvio-cw-wide-meta">{subtitle}</div>
-                                  <div className="nuvio-cw-wide-progress-row">
+                  )}
+
+                  {/* Hero banner — fed from selected catalogs in settings */}
+                  <div style={{ marginBottom: '24px' }}>
+                    <NuvioHeroBanner
+                      libraryIds={libraryIds}
+                      onItemClick={(item) => handleItemClick({ content_id: item.id, content_type: item.type, name: item.name, poster: item.poster ?? null })}
+                      onAddToLibrary={handleAddToLibrary}
+                    />
+                  </div>
+
+                  {/* Continue Watching (Watch Progress) — 3 styles configurable from Settings */}
+                  {resolvedWatchProgress.length > 0 && (
+                    <div className="nuvio-row">
+                      <div className="nuvio-row-header">
+                        <h3 className="nuvio-row-title">Continue Watching</h3>
+                      </div>
+                      <div className="nuvio-scroll-rail">
+                        {(() => {
+                          const cwStyle = localStorage.getItem('nuvio_cw_style') || 'card';
+                          if (cwStyle === 'wide') {
+                            return resolvedWatchProgress.map((entry) => {
+                              const progressPct = getProgressPercent(entry);
+                              const progressInt = Math.round(progressPct);
+                              const imgUrl = entry.poster || entry.background;
+                              const isEpisode = entry.season !== null && entry.episode !== null;
+                              const isUpNext = (entry as any).isUpNext;
+                              const subtitle = isUpNext
+                                ? `Up Next • ${entry.episodeTitle || ''}`
+                                : (isEpisode ? entry.episodeTitle || '' : (entry.content_type === 'movie' ? 'Movie' : entry.content_type));
+                              return (
+                                <div
+                                  key={entry.progress_key}
+                                  className="nuvio-cw-wide-card"
+                                  onClick={() => handleItemClick({ content_id: entry.content_id, content_type: entry.content_type, name: entry.name || entry.progress_key, poster: entry.poster || null, video_id: entry.video_id })}
+                                >
+                                  {imgUrl ? (
+                                    <img src={imgUrl} alt={entry.name} className="nuvio-cw-wide-poster" />
+                                  ) : (
+                                    <div className="nuvio-cw-wide-poster" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', color: 'rgba(255,255,255,0.3)' }}>{entry.name?.[0]}</div>
+                                  )}
+                                  <div className="nuvio-cw-wide-body">
+                                    <div className="nuvio-cw-wide-title">{entry.name || entry.content_id}</div>
+                                    {isEpisode && <div className="nuvio-cw-wide-ep">S{entry.season}:E{entry.episode}</div>}
+                                    <div className="nuvio-cw-wide-meta">{subtitle}</div>
                                     <div className="nuvio-cw-wide-progress-track">
                                       <div className="nuvio-cw-wide-progress-fill" style={{ width: `${progressPct}%` }} />
                                     </div>
-                                    <span className="nuvio-cw-wide-pct">{progressInt}%</span>
                                   </div>
+                                  <div className="nuvio-cw-wide-pct-badge">{progressInt}%</div>
                                 </div>
-                              </div>
-                            );
-                          });
-                        }
-                        if (cwStyle === 'poster') {
+                              );
+                            });
+                          }
+                          if (cwStyle === 'poster') {
+                            return resolvedWatchProgress.map((entry) => {
+                              const progressPct = getProgressPercent(entry);
+                              const imgUrl = entry.poster;
+                              const isUpNext = (entry as any).isUpNext;
+                              const remainingMs = entry.duration - entry.position;
+                              const remainingMin = Math.max(1, Math.round(remainingMs / 60000));
+                              const badgeText = isUpNext
+                                ? 'Up Next'
+                                : (progressPct > 0
+                                  ? (remainingMin >= 60
+                                    ? `${Math.floor(remainingMin / 60)}h ${remainingMin % 60}m`
+                                    : `${remainingMin}m`)
+                                  : '');
+                              return (
+                                <div
+                                  key={entry.progress_key}
+                                  className="nuvio-cw-poster-card"
+                                  onClick={() => handleItemClick({ content_id: entry.content_id, content_type: entry.content_type, name: entry.name || entry.progress_key, poster: entry.poster || null, video_id: entry.video_id })}
+                                >
+                                  {imgUrl ? (
+                                    <img src={imgUrl} alt={entry.name} className="nuvio-cw-poster-img" />
+                                  ) : (
+                                    <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', color: 'rgba(255,255,255,0.3)', padding: '12px', boxSizing: 'border-box', textAlign: 'center' }}>{entry.name}</div>
+                                  )}
+                                  {entry.season !== null && entry.episode !== null && (
+                                    <div className="nuvio-cw-poster-badge">S{entry.season}:E{entry.episode}</div>
+                                  )}
+                                  <div className="nuvio-cw-poster-progress-pill">
+                                    <div className="nuvio-cw-poster-progress-track">
+                                      <div className="nuvio-cw-poster-progress-fill" style={{ width: `${progressPct}%` }} />
+                                    </div>
+                                    {badgeText && <span className="nuvio-cw-poster-pct">{badgeText}</span>}
+                                  </div>
+                                  <div className="nuvio-cw-poster-title">{entry.name || entry.content_id}</div>
+                                </div>
+                              );
+                            });
+                          }
+                          // Default: Card style (landscape with gradient overlay)
                           return resolvedWatchProgress.map((entry) => {
                             const progressPct = getProgressPercent(entry);
-                            const imgUrl = entry.poster || entry.background;
                             const remainingMs = entry.duration - entry.position;
                             const remainingMin = Math.max(1, Math.round(remainingMs / 60000));
                             const isUpNext = (entry as any).isUpNext;
@@ -1650,177 +1796,140 @@ export function NuvioPage({
                               ? 'Up Next'
                               : (progressPct > 0
                                 ? (remainingMin >= 60
-                                  ? `${Math.floor(remainingMin / 60)}h ${remainingMin % 60}m`
-                                  : `${remainingMin}m`)
+                                  ? `${Math.floor(remainingMin / 60)}h ${remainingMin % 60}m left`
+                                  : `${remainingMin}m left`)
                                 : '');
+                            const cardImg = entry.episodeThumbnail || entry.background || entry.poster;
+                            const isEpisode = entry.season !== null && entry.episode !== null;
+                            const subtitle = isEpisode
+                              ? entry.episodeTitle || ''
+                              : entry.content_type === 'movie' ? 'Movie' : entry.content_type;
                             return (
                               <div
                                 key={entry.progress_key}
-                                className="nuvio-cw-poster-card"
+                                className="nuvio-cw-card"
                                 onClick={() => handleItemClick({ content_id: entry.content_id, content_type: entry.content_type, name: entry.name || entry.progress_key, poster: entry.poster || null, video_id: entry.video_id })}
                               >
-                                {imgUrl ? (
-                                  <img src={imgUrl} alt={entry.name} className="nuvio-cw-poster-img" />
+                                {cardImg ? (
+                                  <img src={cardImg} alt={entry.name} className="nuvio-cw-card-img" />
                                 ) : (
-                                  <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', color: 'rgba(255,255,255,0.3)', padding: '12px', boxSizing: 'border-box', textAlign: 'center' }}>{entry.name}</div>
-                                )}
-                                {entry.season !== null && entry.episode !== null && (
-                                  <div className="nuvio-cw-poster-badge">S{entry.season}:E{entry.episode}</div>
-                                )}
-                                <div className="nuvio-cw-poster-progress-pill">
-                                  <div className="nuvio-cw-poster-progress-track">
-                                    <div className="nuvio-cw-poster-progress-fill" style={{ width: `${progressPct}%` }} />
+                                  <div style={{ width: '100%', height: '100%', background: 'rgba(255,255,255,0.03)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '12px', boxSizing: 'border-box', fontSize: '0.85rem', fontWeight: 600, color: 'rgba(255,255,255,0.5)' }}>
+                                    {entry.name || entry.content_id}
                                   </div>
-                                  {badgeText && <span className="nuvio-cw-poster-pct">{badgeText}</span>}
+                                )}
+                                {isEpisode && (
+                                  <div className="nuvio-cw-card-ep-top">S{entry.season}:E{entry.episode}</div>
+                                )}
+                                <div className="nuvio-cw-card-gradient" />
+                                <div className="nuvio-cw-card-body">
+                                  <div className="nuvio-cw-card-title">{entry.name || entry.content_id}</div>
+                                  {subtitle && <div className="nuvio-cw-card-meta">{subtitle}</div>}
                                 </div>
-                                <div className="nuvio-cw-poster-title">{entry.name || entry.content_id}</div>
+                                {badgeText && (
+                                  <div className="nuvio-cw-card-badge">{badgeText}</div>
+                                )}
+                                <div className="nuvio-cw-progress-track">
+                                  <div className="nuvio-cw-progress-fill" style={{ width: `${progressPct}%` }} />
+                                </div>
                               </div>
                             );
                           });
-                        }
-                        // Default: Card style (landscape with gradient overlay)
-                        return resolvedWatchProgress.map((entry) => {
-                          const progressPct = getProgressPercent(entry);
-                          const remainingMs = entry.duration - entry.position;
-                          const remainingMin = Math.max(1, Math.round(remainingMs / 60000));
-                          const isUpNext = (entry as any).isUpNext;
-                          const badgeText = isUpNext
-                            ? 'Up Next'
-                            : (progressPct > 0
-                              ? (remainingMin >= 60
-                                ? `${Math.floor(remainingMin / 60)}h ${remainingMin % 60}m left`
-                                : `${remainingMin}m left`)
-                              : '');
-                          const cardImg = entry.episodeThumbnail || entry.background || entry.poster;
-                          const isEpisode = entry.season !== null && entry.episode !== null;
-                          const subtitle = isEpisode
-                            ? entry.episodeTitle || ''
-                            : entry.content_type === 'movie' ? 'Movie' : entry.content_type;
+                        })()}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Unified Home Rows (Collections and Catalogs sorted/filtered) */}
+                  {filteredRows.length === 0 ? (
+                    <div className="nuvio-catalog-filter-empty">
+                      {catalogFilter.trim()
+                        ? 'No catalogs match your filter.'
+                        : 'No catalogs available. Add one in the Addons tab.'}
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                      {filteredRows.map((row: any) => {
+                        if (row.type === 'collection') {
+                          const coll = row.collection;
                           return (
-                            <div
-                              key={entry.progress_key}
-                              className="nuvio-cw-card"
-                              onClick={() => handleItemClick({ content_id: entry.content_id, content_type: entry.content_type, name: entry.name || entry.progress_key, poster: entry.poster || null, video_id: entry.video_id })}
-                            >
-                              {cardImg ? (
-                                <img src={cardImg} alt={entry.name} className="nuvio-cw-card-img" />
-                              ) : (
-                                <div style={{ width: '100%', height: '100%', background: 'rgba(255,255,255,0.03)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '12px', boxSizing: 'border-box', fontSize: '0.85rem', fontWeight: 600, color: 'rgba(255,255,255,0.5)' }}>
-                                  {entry.name || entry.content_id}
+                            <div key={row.key} className="nuvio-row">
+                              <div className="nuvio-row-header">
+                                <h3 className="nuvio-row-title">{row.title}</h3>
+                                <div className="nuvio-chevron-controls">
+                                  <button
+                                    className="nuvio-chevron-btn"
+                                    onClick={() => scrollCollection(row.key, 'left')}
+                                    aria-label="Scroll left"
+                                  >
+                                    &lsaquo;
+                                  </button>
+                                  <button
+                                    className="nuvio-chevron-btn"
+                                    onClick={() => scrollCollection(row.key, 'right')}
+                                    aria-label="Scroll right"
+                                  >
+                                    &rsaquo;
+                                  </button>
                                 </div>
-                              )}
-                              {isEpisode && (
-                                <div className="nuvio-cw-card-ep-top">S{entry.season}:E{entry.episode}</div>
-                              )}
-                              <div className="nuvio-cw-card-gradient" />
-                              <div className="nuvio-cw-card-body">
-                                <div className="nuvio-cw-card-title">{entry.name || entry.content_id}</div>
-                                {subtitle && <div className="nuvio-cw-card-meta">{subtitle}</div>}
                               </div>
-                              {badgeText && (
-                                <div className="nuvio-cw-card-badge">{badgeText}</div>
-                              )}
-                              <div className="nuvio-cw-progress-track">
-                                <div className="nuvio-cw-progress-fill" style={{ width: `${progressPct}%` }} />
+                              <div
+                                className="nuvio-scroll-rail"
+                                ref={(el) => {
+                                  if (el) {
+                                    collectionScrollRefs.current[row.key] = el;
+                                  } else {
+                                    delete collectionScrollRefs.current[row.key];
+                                  }
+                                }}
+                              >
+                                {coll.folders.map((folder: any) => {
+                                  const tileShape = getFolderShapeClass(folder.tileShape);
+                                  const folderImgUrl = (folder.focusGifEnabled && folder.focusGifUrl) || folder.coverImageUrl;
+                                  return (
+                                    <div
+                                      key={folder.id}
+                                      className={`nuvio-folder-card nuvio-folder-card-${tileShape}`}
+                                      onClick={() => handleFolderClick(row.title, folder)}
+                                    >
+                                      <div className="nuvio-folder-card-inner">
+                                        {folderImgUrl ? (
+                                          <img src={folderImgUrl} alt={folder.title} className="nuvio-folder-card-img" />
+                                        ) : folder.coverEmoji ? (
+                                          <div className="nuvio-folder-card-emoji">{folder.coverEmoji}</div>
+                                        ) : (
+                                          <div className="nuvio-folder-card-abbrev">
+                                            {folder.title.slice(0, 2).toUpperCase()}
+                                          </div>
+                                        )}
+                                        {!folder.hideTitle && (
+                                          <div className="nuvio-folder-card-overlay-title">
+                                            {folder.title}
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  );
+                                })}
                               </div>
                             </div>
                           );
-                        });
-                      })()}
+                        } else {
+                          // row.type === 'catalog'
+                          return (
+                            <StremioCatalogRow
+                              key={row.key}
+                              title={row.title}
+                              addon={row.addon}
+                              catalog={row.catalog}
+                              onItemClick={(item) => handleItemClick({ content_id: item.id, content_type: item.type, name: item.name, poster: item.poster ?? null })}
+                            />
+                          );
+                        }
+                      })}
                     </div>
-                  </div>
-                )}
-
-                {/* Unified Home Rows (Collections and Catalogs sorted/filtered) */}
-                {filteredRows.length === 0 ? (
-                  <div className="nuvio-catalog-filter-empty">
-                    {catalogFilter.trim()
-                      ? 'No catalogs match your filter.'
-                      : 'No catalogs available. Add one in the Addons tab.'}
-                  </div>
-                ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                    {filteredRows.map((row: any) => {
-                      if (row.type === 'collection') {
-                        const coll = row.collection;
-                        return (
-                          <div key={row.key} className="nuvio-row">
-                            <div className="nuvio-row-header">
-                              <h3 className="nuvio-row-title">{row.title}</h3>
-                              <div className="nuvio-chevron-controls">
-                                <button
-                                  className="nuvio-chevron-btn"
-                                  onClick={() => scrollCollection(row.key, 'left')}
-                                  aria-label="Scroll left"
-                                >
-                                  &lsaquo;
-                                </button>
-                                <button
-                                  className="nuvio-chevron-btn"
-                                  onClick={() => scrollCollection(row.key, 'right')}
-                                  aria-label="Scroll right"
-                                >
-                                  &rsaquo;
-                                </button>
-                              </div>
-                            </div>
-                            <div
-                              className="nuvio-scroll-rail"
-                              ref={(el) => {
-                                if (el) {
-                                  collectionScrollRefs.current[row.key] = el;
-                                } else {
-                                  delete collectionScrollRefs.current[row.key];
-                                }
-                              }}
-                            >
-                              {coll.folders.map((folder: any) => {
-                                  const tileShape = getFolderShapeClass(folder.tileShape);
-                                  const folderImgUrl = (folder.focusGifEnabled && folder.focusGifUrl) || folder.coverImageUrl;
-                                return (
-                                  <div
-                                    key={folder.id}
-                                    className={`nuvio-folder-card nuvio-folder-card-${tileShape}`}
-                                    onClick={() => handleFolderClick(row.title, folder)}
-                                  >
-                                    <div className="nuvio-folder-card-inner">
-                                      {folderImgUrl ? (
-                                        <img src={folderImgUrl} alt={folder.title} className="nuvio-folder-card-img" />
-                                      ) : folder.coverEmoji ? (
-                                        <div className="nuvio-folder-card-emoji">{folder.coverEmoji}</div>
-                                      ) : (
-                                        <div className="nuvio-folder-card-abbrev">
-                                          {folder.title.slice(0, 2).toUpperCase()}
-                                        </div>
-                                      )}
-                                      {!folder.hideTitle && (
-                                        <div className="nuvio-folder-card-overlay-title">
-                                          {folder.title}
-                                        </div>
-                                      )}
-                                    </div>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        );
-                      } else {
-                        // row.type === 'catalog'
-                        return (
-                          <StremioCatalogRow
-                            key={row.key}
-                            title={row.title}
-                            addon={row.addon}
-                            catalog={row.catalog}
-                            onItemClick={(item) => handleItemClick({ content_id: item.id, content_type: item.type, name: item.name, poster: item.poster ?? null })}
-                          />
-                        );
-                      }
-                    })}
-                  </div>
-                )}
-              </div>
+                  )}
+                </div>
+              )
             )}
 
             {nuvioView === 'library' && (
@@ -2287,92 +2396,7 @@ export function NuvioPage({
         </svg>
       </button>
 
-      {/* Folder Detail Modal / Overlay */}
-      {selectedFolder && (
-        <div className={`nuvio-folder-detail-overlay ${nuvioActiveMeta ? 'nuvio-page-hide-content' : ''}`} onClick={() => setSelectedFolder(null)}>
-          <div className="nuvio-folder-detail-content" onClick={(e) => e.stopPropagation()}>
-            <div className="nuvio-folder-detail-header">
-              <div>
-                <div className="nuvio-folder-detail-coll-title">{selectedFolderCollectionTitle}</div>
-                <h2 className="nuvio-folder-detail-title">{selectedFolder.title}</h2>
-              </div>
-              <button className="nuvio-folder-detail-close" onClick={() => setSelectedFolder(null)}>✕</button>
-            </div>
-            
-            {/* Sources Tabs if there are multiple sources */}
-            {getResolvedSources(selectedFolder).length > 1 && (
-              <div className="nuvio-folder-detail-tabs">
-                {getResolvedSources(selectedFolder).map((source, idx) => (
-                  <button
-                    key={idx}
-                    className={`nuvio-folder-detail-tab-btn ${activeSourceIndex === idx ? 'active' : ''}`}
-                    onClick={() => {
-                      setActiveSourceIndex(idx);
-                      setFolderSkip(0);
-                      setHasMoreFolderItems(true);
-                      setLoadingMoreFolderItems(false);
-                      loadFolderSourceItems(selectedFolder, idx, false);
-                    }}
-                  >
-                    {getSourceLabel(source, idx, addons)}
-                  </button>
-                ))}
-              </div>
-            )}
-            
-            <div className="nuvio-folder-detail-grid-container" ref={folderGridContainerRef}>
-              {loadingFolderItems ? (
-                <div className="nuvio-folder-detail-loading">
-                  <div className="spinner" style={{ width: '28px', height: '28px', borderRadius: '50%', border: '3px solid rgba(0,212,255,0.1)', borderTopColor: '#00d4ff', animation: 'spin 1s linear infinite' }} />
-                  <span>Loading catalog items...</span>
-                </div>
-              ) : folderError ? (
-                <div className="nuvio-folder-detail-empty" style={{ flexDirection: 'column', gap: '12px', padding: '40px 24px' }}>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="#ff9900" strokeWidth="1.5" width="36" height="36">
-                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
-                    <line x1="12" y1="9" x2="12" y2="13"/>
-                    <line x1="12" y1="17" x2="12.01" y2="17"/>
-                  </svg>
-                  <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.85rem', textAlign: 'center', maxWidth: '360px', lineHeight: 1.5 }}>{folderError}</span>
-                </div>
-              ) : folderItems.length > 0 ? (
-                <>
-                  <div className="nuvio-folder-detail-grid">
-                    {folderItems.map((item) => (
-                      <div
-                        key={item.id}
-                        className="nuvio-folder-detail-item"
-                        onClick={() => handleItemClick({ content_id: item.id, content_type: item.type, name: item.name, poster: item.poster ?? null })}
-                      >
-                        <div className="nuvio-folder-detail-poster-wrapper">
-                          {item.poster ? (
-                            <img src={item.poster} alt={item.name} className="nuvio-folder-detail-poster" />
-                          ) : (
-                            <div className="nuvio-folder-detail-poster-placeholder">{item.name}</div>
-                          )}
-                        </div>
-                        <div className="nuvio-folder-detail-item-title">{item.name}</div>
-                      </div>
-                    ))}
-                  </div>
-                  {/* Sentinel for infinite scroll */}
-                  {hasMoreFolderItems && (
-                    <div ref={folderSentinelRef} style={{ height: '1px' }} />
-                  )}
-                  {loadingMoreFolderItems && (
-                    <div className="nuvio-folder-detail-loading" style={{ padding: '20px 0' }}>
-                      <div className="spinner" style={{ width: '20px', height: '20px', borderRadius: '50%', border: '2px solid rgba(0,212,255,0.1)', borderTopColor: '#00d4ff', animation: 'spin 1s linear infinite' }} />
-                      <span style={{ fontSize: '0.78rem' }}>Loading more...</span>
-                    </div>
-                  )}
-                </>
-              ) : (
-                <div className="nuvio-folder-detail-empty">No items found in this catalog source.</div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+
 
       {/* Spinner animation definition */}
       <style>{`
