@@ -23,6 +23,7 @@ export interface NuvioMeta {
   name: string;
   poster?: string | null;
   background?: string | null;
+  logo?: string | null;
 }
 
 interface NuvioDetailViewProps {
@@ -369,6 +370,10 @@ export function NuvioDetailView({
     poster: meta.poster || undefined,
     background: meta.background || undefined,
   };
+  const effectiveMetaRef = useRef<StremioMeta>(effectiveMeta);
+  useEffect(() => {
+    effectiveMetaRef.current = effectiveMeta;
+  }, [effectiveMeta]);
   const effectiveTrailerUrl = effectiveMeta.trailer || tmdbTrailerUrl;
 
   const seasons = useMemo(() => {
@@ -599,7 +604,14 @@ export function NuvioDetailView({
 
     const timeoutMs = nuvioAutoPlayTimeout * 1000;
     const timer = setTimeout(() => {
-      onPlayRef.current(selected, metaRef.current, selectedVideo ?? undefined);
+      onPlayRef.current(selected, {
+        id: effectiveMetaRef.current.id,
+        type: effectiveMetaRef.current.type,
+        name: effectiveMetaRef.current.name,
+        poster: effectiveMetaRef.current.poster ?? null,
+        background: effectiveMetaRef.current.background ?? null,
+        logo: effectiveMetaRef.current.logo ?? null,
+      }, selectedVideo ?? undefined);
     }, timeoutMs);
 
     return () => clearTimeout(timer);
@@ -661,7 +673,14 @@ export function NuvioDetailView({
         <div
           key={`stream-${idx}`}
           className="stremio-detail-stream-card"
-          onClick={() => onPlay(stream, meta, selectedVideo ?? undefined)}
+          onClick={() => onPlay(stream, {
+            id: effectiveMeta.id,
+            type: effectiveMeta.type,
+            name: effectiveMeta.name,
+            poster: effectiveMeta.poster ?? null,
+            background: effectiveMeta.background ?? null,
+            logo: effectiveMeta.logo ?? null,
+          }, selectedVideo ?? undefined)}
         >
           {stream.url && (
             <button

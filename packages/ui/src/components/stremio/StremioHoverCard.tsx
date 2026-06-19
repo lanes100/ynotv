@@ -11,6 +11,7 @@ export function StremioHoverCard() {
     cast,
     loading,
     isVisible,
+    disabled,
     onHoverCardMouseEnter,
     onHoverCardMouseLeave,
   } = useStremioHover();
@@ -84,7 +85,7 @@ export function StremioHoverCard() {
   }, [isVisible, anchorRect, mouseY]);
 
   if (!isVisible || !activeItem || !style) return null;
-  if (document.documentElement.hasAttribute('data-hover-details-disabled')) return null;
+  if (disabled) return null;
 
   const title = activeItem.name;
   const year = details?.year ?? activeItem.year;

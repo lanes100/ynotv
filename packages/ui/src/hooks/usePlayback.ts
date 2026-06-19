@@ -430,10 +430,15 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
 
   // Clear loader overlay when playback starts or an error is encountered
   const loaderLastPositionRef = useRef(position);
+  const isPlayLoadingRef = useRef(false);
   useEffect(() => {
     if (vodLoadingInfo) {
       if (error) {
         setVodLoadingInfo(null);
+        isPlayLoadingRef.current = false;
+      } else if (isPlayLoadingRef.current) {
+        loaderLastPositionRef.current = position;
+        isPlayLoadingRef.current = false;
       } else if (position !== loaderLastPositionRef.current) {
         setVodLoadingInfo(null);
       }
@@ -1844,6 +1849,7 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
     setCatchupInfo(null);
     clearPendingSeeks();
     setVodLoadingInfo(info);
+    isPlayLoadingRef.current = true;
 
     let resolved;
     let sourceData: { type?: string } | undefined;

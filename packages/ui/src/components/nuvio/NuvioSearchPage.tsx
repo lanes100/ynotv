@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { fetchCatalog } from '../../services/stremio-addon';
 import type { InstalledAddon, StremioManifestCatalog, StremioMetaPreview } from '../../types/stremio';
+import { useStremioHover } from '../../contexts/StremioHoverContext';
 import './NuvioSearchPage.css';
 
 interface NuvioSearchPageProps {
@@ -98,6 +99,7 @@ function getDiscoverCatalogs(addons: InstalledAddon[]): DiscoverCatalogInfo[] {
 }
 
 export function NuvioSearchPage({ addons, onItemClick }: NuvioSearchPageProps) {
+  const { onCardMouseEnter, onCardMouseLeave, onCardClick } = useStremioHover();
   const [query, setQuery] = useState('');
   const [selectedType, setSelectedType] = useState<string | null>(null);
   const [selectedCatalogKey, setSelectedCatalogKey] = useState<string | null>(null);
@@ -382,7 +384,12 @@ export function NuvioSearchPage({ addons, onItemClick }: NuvioSearchPageProps) {
                   <div
                     key={item.id}
                     className="nuvio-discover-item"
-                    onClick={() => onItemClick({ content_id: item.id, content_type: item.type, name: item.name, poster: item.poster ?? null })}
+                    onMouseEnter={(e) => onCardMouseEnter(item, e.currentTarget, e)}
+                    onMouseLeave={onCardMouseLeave}
+                    onClick={() => {
+                      onCardClick();
+                      onItemClick({ content_id: item.id, content_type: item.type, name: item.name, poster: item.poster ?? null });
+                    }}
                   >
                     <div className="nuvio-discover-poster-wrap">
                       {item.poster ? (
@@ -432,7 +439,12 @@ export function NuvioSearchPage({ addons, onItemClick }: NuvioSearchPageProps) {
                     <div
                       key={item.id}
                       className="nuvio-card"
-                      onClick={() => onItemClick({ content_id: item.id, content_type: item.type, name: item.name, poster: item.poster ?? null })}
+                      onMouseEnter={(e) => onCardMouseEnter(item, e.currentTarget, e)}
+                      onMouseLeave={onCardMouseLeave}
+                      onClick={() => {
+                        onCardClick();
+                        onItemClick({ content_id: item.id, content_type: item.type, name: item.name, poster: item.poster ?? null });
+                      }}
                     >
                       {item.poster ? (
                         <img src={item.poster} alt={item.name} className="nuvio-card-img" />

@@ -17,6 +17,7 @@ export interface NuvioMeta {
   name: string;
   poster: string | null;
   background?: string | null;
+  logo?: string | null;
 }
 
 export type StremioView = 'home' | 'library' | 'detail' | 'search' | 'calendar' | 'settings' | 'person';

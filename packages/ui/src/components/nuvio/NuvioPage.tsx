@@ -31,7 +31,7 @@ import {
 import { fetchCatalog, fetchMeta } from '../../services/stremio-addon';
 import { NuvioHeroBanner } from './NuvioHeroBanner';
 import { StremioCatalogRow } from '../stremio/StremioCatalogRow';
-import { StremioHoverProvider } from '../../contexts/StremioHoverContext';
+import { StremioHoverProvider, useStremioHover } from '../../contexts/StremioHoverContext';
 import { StremioHoverCard } from '../stremio/StremioHoverCard';
 import { NuvioDetailView, type NuvioMeta } from './NuvioDetailView';
 import { NuvioPersonDetail } from './NuvioPersonDetail';
@@ -243,7 +243,17 @@ const getSourceLabel = (
   return `${catalogName} (${typeLabel})${genreSuffix}`;
 };
 
-export function NuvioPage({
+export function NuvioPage(props: NuvioPageProps) {
+  const addonsStore = useNuvioAddonStore();
+  const addons = addonsStore.enabledAddons;
+  return (
+    <StremioHoverProvider addons={addons} disabled={!props.showNuvioHoverDetails}>
+      <NuvioPageContent {...props} />
+    </StremioHoverProvider>
+  );
+}
+
+function NuvioPageContent({
   onClose,
   showNuvioStreamBadges = true,
   onShowNuvioStreamBadgesChange,
@@ -291,6 +301,7 @@ export function NuvioPage({
   const setNuvioActivePersonId = useSetNuvioActivePersonId();
   const nuvioNavigate = useNuvioNavigate();
   const nuvioGoBack = useNuvioGoBack();
+  const { onCardMouseEnter, onCardMouseLeave, onCardClick } = useStremioHover();
   const [pinPromptProfile, setPinPromptProfile] = useState<any | null>(null);
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
@@ -848,7 +859,19 @@ export function NuvioPage({
 
   const handleNuvioPlay = (stream: StremioStream, meta: NuvioMeta, episodeVideo?: StremioVideo) => {
     window.dispatchEvent(new CustomEvent('ynotv:stremio-play', {
-      detail: { stream, meta: { id: meta.id, type: meta.type, name: meta.name, poster: meta.poster }, episodeVideo, isNuvio: true },
+      detail: { 
+        stream, 
+        meta: { 
+          id: meta.id, 
+          type: meta.type, 
+          name: meta.name, 
+          poster: meta.poster,
+          background: meta.background,
+          logo: meta.logo,
+        }, 
+        episodeVideo, 
+        isNuvio: true 
+      },
     }));
   };
 
@@ -1226,8 +1249,7 @@ export function NuvioPage({
   };
 
   return (
-    <StremioHoverProvider addons={addons} disabled={!showNuvioHoverDetails}>
-      <div className="nuvio-page">
+    <div className="nuvio-page">
       {/* Nuvio Dedicated Topbar */}
       <div className="nuvio-topbar">
         <div className="nuvio-topbar-left">
@@ -1677,7 +1699,12 @@ export function NuvioPage({
                             <div
                               key={item.id}
                               className="nuvio-folder-detail-item"
-                              onClick={() => handleItemClick({ content_id: item.id, content_type: item.type, name: item.name, poster: item.poster ?? null })}
+                              onMouseEnter={(e) => onCardMouseEnter(item, e.currentTarget, e)}
+                              onMouseLeave={onCardMouseLeave}
+                              onClick={() => {
+                                onCardClick();
+                                handleItemClick({ content_id: item.id, content_type: item.type, name: item.name, poster: item.poster ?? null });
+                              }}
                             >
                               <div className="nuvio-folder-detail-poster-wrapper">
                                 {item.poster ? (
@@ -1978,25 +2005,43 @@ export function NuvioPage({
                   </div>
                   {library.length > 0 ? (
                     <div className="nuvio-scroll-rail">
-                      {library.map((item) => (
-                        <div
-                          key={item.content_id}
-                          className="nuvio-card"
-                          onClick={() => handleItemClick(item)}
-                        >
-                          {item.poster ? (
-                            <img src={item.poster} alt={item.name} className="nuvio-card-img" />
-                          ) : (
-                            <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.02)', color: 'rgba(255,255,255,0.3)', padding: '12px', boxSizing: 'border-box', textAlign: 'center', fontSize: '0.75rem' }}>
-                              {item.name}
+                      {library.map((item) => {
+                        const previewItem = {
+                          id: item.content_id,
+                          type: item.content_type,
+                          name: item.name,
+                          poster: item.poster || undefined,
+                          background: item.background || undefined,
+                          description: item.description || undefined,
+                          releaseInfo: item.release_info || undefined,
+                          imdbRating: item.imdb_rating ? String(item.imdb_rating) : undefined,
+                          genres: item.genres,
+                        };
+                        return (
+                          <div
+                            key={item.content_id}
+                            className="nuvio-card"
+                            onMouseEnter={(e) => onCardMouseEnter(previewItem, e.currentTarget, e)}
+                            onMouseLeave={onCardMouseLeave}
+                            onClick={() => {
+                              onCardClick();
+                              handleItemClick(item);
+                            }}
+                          >
+                            {item.poster ? (
+                              <img src={item.poster} alt={item.name} className="nuvio-card-img" />
+                            ) : (
+                              <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.02)', color: 'rgba(255,255,255,0.3)', padding: '12px', boxSizing: 'border-box', textAlign: 'center', fontSize: '0.75rem' }}>
+                                {item.name}
+                              </div>
+                            )}
+                            <div className="nuvio-card-info">
+                              <div className="nuvio-card-title">{item.name}</div>
+                              <div className="nuvio-card-sub">{item.release_info} · {item.content_type}</div>
                             </div>
-                          )}
-                          <div className="nuvio-card-info">
-                            <div className="nuvio-card-title">{item.name}</div>
-                            <div className="nuvio-card-sub">{item.release_info} · {item.content_type}</div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   ) : (
                     <div className="nuvio-empty-state">
@@ -2483,6 +2528,5 @@ export function NuvioPage({
 
       <StremioHoverCard />
       </div>
-    </StremioHoverProvider>
   );
 }

@@ -19,6 +19,7 @@ interface StremioHoverContextType {
   cast: StremioCastMember[];
   loading: boolean;
   isVisible: boolean;
+  disabled: boolean;
   onCardMouseEnter: (item: StremioMetaPreview, element: HTMLElement, event?: React.MouseEvent) => void;
   onCardMouseLeave: () => void;
   onCardClick: () => void;
@@ -52,6 +53,19 @@ export function StremioHoverProvider({ children, addons, disabled }: { children:
       if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
     };
   }, []);
+
+  // Resolve disabled status reactively from document attribute
+  const [domDisabled, setDomDisabled] = useState(() => document.documentElement.hasAttribute('data-hover-details-disabled'));
+
+  useEffect(() => {
+    const observer = new MutationObserver(() => {
+      setDomDisabled(document.documentElement.hasAttribute('data-hover-details-disabled'));
+    });
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-hover-details-disabled'] });
+    return () => observer.disconnect();
+  }, []);
+
+  const isCurrentlyDisabled = disabled !== undefined ? disabled : domDisabled;
 
   const fetchDetails = async (item: StremioMetaPreview, fetchId: number) => {
     setLoading(true);
@@ -139,8 +153,7 @@ export function StremioHoverProvider({ children, addons, disabled }: { children:
   };
 
   const onCardMouseEnter = (item: StremioMetaPreview, element: HTMLElement, event?: React.MouseEvent) => {
-    if (document.documentElement.hasAttribute('data-hover-details-disabled')) return;
-    if (disabled) return;
+    if (isCurrentlyDisabled) return;
 
     if (hideTimerRef.current) {
       clearTimeout(hideTimerRef.current);
@@ -241,6 +254,7 @@ export function StremioHoverProvider({ children, addons, disabled }: { children:
         cast,
         loading,
         isVisible,
+        disabled: isCurrentlyDisabled,
         onCardMouseEnter,
         onCardMouseLeave,
         onCardClick,

@@ -1740,7 +1740,8 @@ function App() {
             for (let i = 0; i < subs.length; i++) {
               const sub = subs[i];
               try {
-                const res = await window.fetchProxy.fetch(sub.url);
+                const safeUrl = sub.url ? (sub.url.includes('%') ? encodeURI(decodeURI(sub.url)) : encodeURI(sub.url)) : '';
+                const res = await window.fetchProxy.fetch(safeUrl);
                 if (res.data?.ok) {
                   const text = res.data.text;
                   const isVtt = sub.url.toLowerCase().includes('.vtt') || text.includes('WEBVTT');
