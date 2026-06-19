@@ -264,6 +264,7 @@ export function NuvioPage({
   const nuvioGoBack = useNuvioGoBack();
   const [pinPromptProfile, setPinPromptProfile] = useState<any | null>(null);
 
+  const [catalogFilter, setCatalogFilter] = useState('');
   const [editableCollections, setEditableCollections] = useState<NuvioCollection[]>([]);
 
   // Helper to navigate to a top-level view and clear any detail overlay
@@ -436,6 +437,16 @@ export function NuvioPage({
 
     return orderedRows;
   }, [collectionStore.collections, addons, authStore.homeCatalogSettings]);
+
+  // Derived: filter catalog rows by user-provided text
+  const filteredRows = useMemo(() => {
+    if (!catalogFilter.trim()) return homeRows;
+    const lower = catalogFilter.toLowerCase().trim();
+    return homeRows.filter((row: any) => {
+      const name = row.title || '';
+      return name.toLowerCase().includes(lower);
+    });
+  }, [homeRows, catalogFilter]);
 
   // Profile selection dropdown state
   const [showProfileMenu, setShowProfileMenu] = useState(false);
@@ -1328,6 +1339,30 @@ export function NuvioPage({
           <div>
             {nuvioView === 'home' && (
               <div>
+                {/* Catalog Filter Bar */}
+                {(homeRows.some((r: any) => r.type === 'catalog') || homeRows.some((r: any) => r.type === 'collection')) && (
+                  <div className="nuvio-catalog-filter">
+                    <svg className="nuvio-catalog-filter-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <circle cx="11" cy="11" r="8" />
+                      <path d="m21 21-4.3-4.3" />
+                    </svg>
+                    <input
+                      className="nuvio-catalog-filter-input"
+                      type="text"
+                      placeholder="Filter catalogs..."
+                      value={catalogFilter}
+                      onChange={(e) => setCatalogFilter(e.target.value)}
+                    />
+                    {catalogFilter && (
+                      <button className="nuvio-catalog-filter-clear" onClick={() => setCatalogFilter('')}>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M18 6L6 18M6 6l12 12" />
+                        </svg>
+                      </button>
+                    )}
+                  </div>
+                )}
+
                 {/* Hero banner — fed from selected catalogs in settings */}
                 <div style={{ marginBottom: '24px' }}>
                   <NuvioHeroBanner
@@ -1475,9 +1510,15 @@ export function NuvioPage({
                 )}
 
                 {/* Unified Home Rows (Collections and Catalogs sorted/filtered) */}
-                {homeRows.length > 0 && (
+                {filteredRows.length === 0 ? (
+                  <div className="nuvio-catalog-filter-empty">
+                    {catalogFilter.trim()
+                      ? 'No catalogs match your filter.'
+                      : 'No catalogs available. Add one in the Addons tab.'}
+                  </div>
+                ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                    {homeRows.map((row) => {
+                    {filteredRows.map((row: any) => {
                       if (row.type === 'collection') {
                         const coll = row.collection;
                         return (

@@ -1677,4 +1677,75 @@ select.nuvio-input option {
   transform: translateY(0) scale(0.95);
 }
 
+/* ─── Catalog Filter Bar ──────────────────────────────────── */
+.nuvio-catalog-filter {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: calc(100% + 56px);
+  margin: -28px -28px 20px;
+  padding: 12px 28px;
+  background: rgba(8, 8, 12, 0.55);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  box-sizing: border-box;
+}
+
+.nuvio-catalog-filter-icon {
+  width: 16px;
+  height: 16px;
+  color: rgba(255, 255, 255, 0.35);
+  flex-shrink: 0;
+}
+
+.nuvio-catalog-filter-input {
+  flex: 1;
+  background: none;
+  border: none;
+  outline: none;
+  color: #fff;
+  font-size: 0.88rem;
+  padding: 0;
+  min-width: 0;
+}
+
+.nuvio-catalog-filter-input::placeholder {
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.nuvio-catalog-filter-clear {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.4);
+  cursor: pointer;
+  padding: 2px;
+  margin-left: 4px;
+  display: flex;
+  align-items: center;
+  border-radius: 50%;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+
+.nuvio-catalog-filter-clear svg {
+  width: 14px;
+  height: 14px;
+}
+
+.nuvio-catalog-filter-clear:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.nuvio-catalog-filter-empty {
+  text-align: center;
+  padding: 60px 24px;
+  color: rgba(255, 255, 255, 0.35);
+  font-size: 0.85rem;
+}
+
 
