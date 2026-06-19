@@ -264,6 +264,7 @@ class ScrobblerService {
         traktScrobbleEnabled: true,
         traktSyncEnabled: false,
         traktCatalogsEnabled: {},
+        traktNuvioCatalogsEnabled: {},
       });
       logInfo('Trakt linked successfully.');
       return { success: true };
@@ -327,6 +328,13 @@ class ScrobblerService {
       traktScrobbleEnabled: false,
       traktSyncEnabled: false,
       traktCatalogsEnabled: undefined,
+      traktCatalogOrder: undefined,
+      traktCatalogsBeforeAddon: undefined,
+      traktEnabledLists: undefined,
+      traktNuvioCatalogsEnabled: undefined,
+      traktNuvioCatalogOrder: undefined,
+      traktNuvioCatalogsBeforeAddon: undefined,
+      traktNuvioEnabledLists: undefined,
     });
     logInfo('Trakt unlinked successfully.');
   }

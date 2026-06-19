@@ -324,11 +324,11 @@ export function StremioLibrary({ onItemClick }: StremioLibraryProps) {
           </div>
         ) : (
           <div className="stremio-library-grid">
-            {filteredItems.map((item) => {
+            {filteredItems.map((item, idx) => {
               const newCount = item.type === 'series' ? getNewCount(item) : 0;
               return (
                 <div
-                  key={item.id}
+                  key={`${item.id}-${idx}`}
                   className="stremio-meta-card"
                   onMouseEnter={(e) => onCardMouseEnter(item as StremioMetaPreview, e.currentTarget, e)}
                   onMouseLeave={onCardMouseLeave}

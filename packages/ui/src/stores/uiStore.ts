@@ -28,7 +28,7 @@ export type StremioHistoryFrame =
   | { view: 'person'; personId: number };
 
 export type NuvioHistoryFrame =
-  | { view: 'home' | 'library' | 'collections' | 'addons' | 'scrapers' | 'settings' }
+  | { view: 'home' | 'library' | 'search' | 'collections' | 'addons' | 'scrapers' | 'settings'; catalogKey?: string | null }
   | { view: 'detail'; meta: NuvioMeta }
   | { view: 'person'; personId: number };
 

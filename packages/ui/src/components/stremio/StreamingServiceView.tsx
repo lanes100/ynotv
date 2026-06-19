@@ -321,7 +321,7 @@ export function StreamingServiceView({ service, onBack, onItemClick, type }: Str
               <StreamingCatalogRow title={`Top 10 Movies on ${svcMeta.name}`}>
                 {movies.slice(0, 10).map((item, idx) => (
                   <StremioTopRankCard
-                    key={item.id}
+                    key={`${item.id}-${idx}`}
                     item={item}
                     rank={idx + 1}
                     onItemClick={onItemClick}
@@ -336,9 +336,9 @@ export function StreamingServiceView({ service, onBack, onItemClick, type }: Str
             {/* More Movies Row */}
             {movies.length > 10 && (
               <StreamingCatalogRow title="More Movies">
-                {movies.slice(10, 30).map((item) => (
+                {movies.slice(10, 30).map((item, idx) => (
                   <div
-                    key={item.id}
+                    key={`${item.id}-${idx}`}
                     className="stremio-row-card"
                     onMouseEnter={(e) => onCardMouseEnter(item, e.currentTarget, e)}
                     onMouseLeave={onCardMouseLeave}
@@ -369,7 +369,7 @@ export function StreamingServiceView({ service, onBack, onItemClick, type }: Str
               <StreamingCatalogRow title={`Top 10 Series on ${svcMeta.name}`}>
                 {series.slice(0, 10).map((item, idx) => (
                   <StremioTopRankCard
-                    key={item.id}
+                    key={`${item.id}-${idx}`}
                     item={item}
                     rank={idx + 1}
                     onItemClick={onItemClick}
@@ -384,9 +384,9 @@ export function StreamingServiceView({ service, onBack, onItemClick, type }: Str
             {/* More Series Row */}
             {series.length > 10 && (
               <StreamingCatalogRow title="More TV Shows">
-                {series.slice(10, 30).map((item) => (
+                {series.slice(10, 30).map((item, idx) => (
                   <div
-                    key={item.id}
+                    key={`${item.id}-${idx}`}
                     className="stremio-row-card"
                     onMouseEnter={(e) => onCardMouseEnter(item, e.currentTarget, e)}
                     onMouseLeave={onCardMouseLeave}
@@ -419,9 +419,9 @@ export function StreamingServiceView({ service, onBack, onItemClick, type }: Str
               <div className="stremio-service-empty">No items match this filter in your region.</div>
             ) : (
               <div className="stremio-service-grid">
-                {gridItems.map((item) => (
+                {gridItems.map((item, idx) => (
                   <div
-                    key={item.id}
+                    key={`${item.id}-${idx}`}
                     className="stremio-row-card"
                     onMouseEnter={(e) => onCardMouseEnter(item, e.currentTarget, e)}
                     onMouseLeave={onCardMouseLeave}

@@ -94,8 +94,20 @@ export function NuvioDetailView({
   const [fullMeta, setFullMeta] = useState<StremioMeta | null>(null);
   const [loadingMeta, setLoadingMeta] = useState(true);
 
+  const effectiveMeta: StremioMeta = fullMeta ?? {
+    id: meta.id,
+    type: meta.type,
+    name: meta.name,
+    poster: meta.poster || undefined,
+    background: meta.background || undefined,
+  };
+  const effectiveMetaRef = useRef<StremioMeta>(effectiveMeta);
+  useEffect(() => {
+    effectiveMetaRef.current = effectiveMeta;
+  }, [effectiveMeta]);
+
   // Library & watch progress
-  const inLibrary = library.some((i) => i.content_id === meta.id);
+  const inLibrary = library.some((i) => i.content_id === meta.id || i.content_id === effectiveMeta.id);
   const [episodeProgress, setEpisodeProgress] = useState<Record<string, { progressFraction: number; finished: boolean }>>({});
 
   // Streams
@@ -223,7 +235,7 @@ export function NuvioDetailView({
       .then((items: NuvioWatchProgressSyncEntry[]) => {
         const map: Record<string, { progressFraction: number; finished: boolean }> = {};
         for (const item of items) {
-          if (item.content_id === meta.id) {
+          if (item.content_id === meta.id || item.content_id === effectiveMeta.id) {
             const fraction = item.duration > 0 ? item.position / item.duration : 0;
             map[item.video_id] = { progressFraction: Math.min(1, Math.max(0, fraction)), finished: fraction >= 0.92 };
           }
@@ -231,7 +243,7 @@ export function NuvioDetailView({
         setEpisodeProgress(map);
       })
       .catch(() => {});
-  }, [token, profile?.profile_index, meta.id, meta.type]);
+  }, [token, profile?.profile_index, meta.id, meta.type, effectiveMeta.id]);
 
   useEffect(() => {
     loadWatchProgress();
@@ -286,12 +298,13 @@ export function NuvioDetailView({
             const season = type === 'series' ? (selectedSeason ?? null) : null;
             const episode = type === 'series' ? null : null;
             const parts = id.split(':');
+            const parentId = parts[0];
             const epSeason = parts.length >= 3 ? parseInt(parts[1], 10) : null;
             const epEpisode = parts.length >= 3 ? parseInt(parts[2], 10) : null;
             const results = await executePlugin(
               scraper.code,
-              meta.id,
-              meta.type,
+              parentId,
+              type,
               epSeason ?? season,
               epEpisode ?? episode,
               scraper.id,
@@ -318,7 +331,7 @@ export function NuvioDetailView({
 
     await Promise.all([addonPromise, scraperPromise]);
     return collected;
-  }, [addons, meta.id, meta.type, pluginStore, selectedSeason]);
+  }, [addons, pluginStore, selectedSeason]);
 
   // Stable ref to avoid re-running effects when fetchStreamsWithPlugins identity changes
   const fetchStreamsRef = useRef(fetchStreamsWithPlugins);
@@ -332,7 +345,7 @@ export function NuvioDetailView({
       setStreams([]);
       setLoadingStreams(true);
       const currentAddons = useNuvioAddonStore.getState().enabledAddons;
-      await fetchStreamsRef.current(currentAddons, meta.type, meta.id, (newStreams) => {
+      await fetchStreamsRef.current(currentAddons, effectiveMeta.type, effectiveMeta.id, (newStreams) => {
         if (!active) return;
         setStreams((prev) => [...prev, ...newStreams]);
       });
@@ -342,7 +355,7 @@ export function NuvioDetailView({
     loadStreams();
     return () => { active = false; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [meta.id, meta.type, addons.map((a) => `${a.id}:${a.enabled !== false}`).join(',')]);
+  }, [effectiveMeta.id, effectiveMeta.type, addons.map((a) => `${a.id}:${a.enabled !== false}`).join(',')]);
 
   // Series streams when episode selected
   useEffect(() => {
@@ -366,17 +379,6 @@ export function NuvioDetailView({
 
   // ─── Computed values ───────────────────────────────────────
   const isSeries = meta.type === 'series';
-  const effectiveMeta: StremioMeta = fullMeta ?? {
-    id: meta.id,
-    type: meta.type,
-    name: meta.name,
-    poster: meta.poster || undefined,
-    background: meta.background || undefined,
-  };
-  const effectiveMetaRef = useRef<StremioMeta>(effectiveMeta);
-  useEffect(() => {
-    effectiveMetaRef.current = effectiveMeta;
-  }, [effectiveMeta]);
   const effectiveTrailerUrl = effectiveMeta.trailer || tmdbTrailerUrl;
 
   const seasons = useMemo(() => {
@@ -462,12 +464,12 @@ export function NuvioDetailView({
     if (!token || !profile) return;
 
     const libItem: NuvioLibrarySyncItem = {
-      content_id: meta.id,
-      content_type: meta.type === 'series' ? 'series' : 'movie',
-      name: meta.name,
-      poster: meta.poster || null,
+      content_id: effectiveMeta.id,
+      content_type: effectiveMeta.type === 'series' ? 'series' : 'movie',
+      name: effectiveMeta.name,
+      poster: effectiveMeta.poster || null,
       poster_shape: 'POSTER',
-      background: meta.background || null,
+      background: effectiveMeta.background || null,
       description: null,
       release_info: null,
       imdb_rating: null,
@@ -476,7 +478,7 @@ export function NuvioDetailView({
       added_at: Date.now(),
     };
 
-    const updatedLibrary = [libItem, ...library.filter(i => i.content_id !== meta.id)];
+    const updatedLibrary = [libItem, ...library.filter(i => i.content_id !== meta.id && i.content_id !== effectiveMeta.id)];
 
     try {
       await pushNuvioLibrary(token, profile.profile_index, updatedLibrary);
@@ -495,15 +497,15 @@ export function NuvioDetailView({
     if (!wasFinished && token && profile) {
       try {
         await pushNuvioWatchProgress(token, profile.profile_index, [{
-          content_id: meta.id,
-          content_type: meta.type,
+          content_id: effectiveMeta.id,
+          content_type: effectiveMeta.type,
           video_id: ep.id,
           season: ep.season ?? null,
           episode: ep.episode ?? null,
           position: 0,
           duration: 0,
           last_watched: Date.now(),
-          progress_key: `${meta.id}_s${ep.season}e${ep.episode}`,
+          progress_key: `${effectiveMeta.id}_s${ep.season}e${ep.episode}`,
         }]);
       } catch {}
     }

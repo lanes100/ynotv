@@ -7,6 +7,8 @@ import './NuvioSearchPage.css';
 interface NuvioSearchPageProps {
   addons: InstalledAddon[];
   onItemClick: (item: { content_id: string; content_type: string; name: string; poster: string | null }) => void;
+  initialCatalogKey?: string | null;
+  onBack?: () => void;
 }
 
 const TYPE_OPTIONS = [
@@ -98,11 +100,16 @@ function getDiscoverCatalogs(addons: InstalledAddon[]): DiscoverCatalogInfo[] {
   return results;
 }
 
-export function NuvioSearchPage({ addons, onItemClick }: NuvioSearchPageProps) {
+export function NuvioSearchPage({
+  addons,
+  onItemClick,
+  initialCatalogKey,
+  onBack
+}: NuvioSearchPageProps) {
   const { onCardMouseEnter, onCardMouseLeave, onCardClick } = useStremioHover();
   const [query, setQuery] = useState('');
   const [selectedType, setSelectedType] = useState<string | null>(null);
-  const [selectedCatalogKey, setSelectedCatalogKey] = useState<string | null>(null);
+  const [selectedCatalogKey, setSelectedCatalogKey] = useState<string | null>(initialCatalogKey || null);
   const [selectedGenre, setSelectedGenre] = useState<string | null>(null);
   const [discoverItems, setDiscoverItems] = useState<StremioMetaPreview[]>([]);
   const [discoverLoading, setDiscoverLoading] = useState(false);
@@ -225,6 +232,20 @@ export function NuvioSearchPage({ addons, onItemClick }: NuvioSearchPageProps) {
     loadDiscover(false);
   }, [loadDiscover, query]);
 
+  useEffect(() => {
+    if (initialCatalogKey) {
+      setSelectedCatalogKey(initialCatalogKey);
+      const cat = discoverCatalogs.find(dc => dc.key === initialCatalogKey);
+      if (cat) {
+        setSelectedType(cat.type === 'tv' ? 'series' : cat.type);
+      }
+      setQuery('');
+      setDiscoverItems([]);
+      discoverSkipRef.current = 0;
+      hasMoreDiscoverRef.current = true;
+    }
+  }, [initialCatalogKey, discoverCatalogs]);
+
   // Search execution
   const executeSearch = useCallback(async (searchQuery: string) => {
     if (searchQuery.length < 2 || searchCatalogs.length === 0) {
@@ -315,7 +336,42 @@ export function NuvioSearchPage({ addons, onItemClick }: NuvioSearchPageProps) {
       {!query ? (
         /* DISCOVER SECTION */
         <div className="nuvio-discover-section">
-          <h2 className="nuvio-discover-title">Discover</h2>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px' }}>
+            {initialCatalogKey && onBack && (
+              <button
+                onClick={onBack}
+                style={{
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  borderRadius: '20px',
+                  color: '#fff',
+                  fontSize: '0.8rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  padding: '6px 14px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  transition: 'all 0.2s',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.12)';
+                  e.currentTarget.style.transform = 'translateX(-2px)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
+                  e.currentTarget.style.transform = 'none';
+                }}
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ width: '14px', height: '14px' }}>
+                  <line x1="19" y1="12" x2="5" y2="12" />
+                  <polyline points="12 19 5 12 12 5" />
+                </svg>
+                <span>Back</span>
+              </button>
+            )}
+            <h2 className="nuvio-discover-title" style={{ margin: 0 }}>Discover</h2>
+          </div>
 
           {/* 3 Dropdown Filters */}
           <div className="nuvio-discover-filters">
@@ -380,9 +436,9 @@ export function NuvioSearchPage({ addons, onItemClick }: NuvioSearchPageProps) {
           ) : discoverItems.length > 0 ? (
             <>
               <div className="nuvio-discover-grid">
-                {discoverItems.map((item) => (
+                {discoverItems.map((item, idx) => (
                   <div
-                    key={item.id}
+                    key={`${item.id}-${idx}`}
                     className="nuvio-discover-item"
                     onMouseEnter={(e) => onCardMouseEnter(item, e.currentTarget, e)}
                     onMouseLeave={onCardMouseLeave}
@@ -435,9 +491,9 @@ export function NuvioSearchPage({ addons, onItemClick }: NuvioSearchPageProps) {
                   <h3 className="nuvio-row-title">{addon.manifest?.name || addon.id} - {catalog.name} ({getTypeLabel(catalog.type)})</h3>
                 </div>
                 <div className="nuvio-scroll-rail">
-                  {items.map((item) => (
+                  {items.map((item, idx) => (
                     <div
-                      key={item.id}
+                      key={`${item.id}-${idx}`}
                       className="nuvio-card"
                       onMouseEnter={(e) => onCardMouseEnter(item, e.currentTarget, e)}
                       onMouseLeave={onCardMouseLeave}

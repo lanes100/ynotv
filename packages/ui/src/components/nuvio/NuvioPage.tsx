@@ -16,7 +16,9 @@ import {
   useNuvioActivePersonId,
   useSetNuvioActivePersonId,
   useNuvioNavigate,
-  useNuvioGoBack
+  useNuvioGoBack,
+  useTraktCatalogRefreshToken,
+  useUIStore
 } from '../../stores/uiStore';
 import {
   fetchNuvioLibrary,
@@ -38,6 +40,9 @@ import { NuvioPersonDetail } from './NuvioPersonDetail';
 import { NuvioPinModal } from './NuvioPinModal';
 import type { StremioStream, StremioVideo, StremioMeta, BadgeSource, StreamAutoPlayMode, StreamAutoPlaySourceScope } from '../../types/stremio';
 import type { StremioMetaPreview, InstalledAddon } from '../../types/stremio';
+import { scrobbler, TRAKT_CATALOG_DEFINITIONS } from '../../services/scrobbler';
+import { SERVICES, type StreamingService } from '../../constants/streamingProviders';
+import { StreamingServiceView } from '../stremio/StreamingServiceView';
 import { compileBadgeSources } from '../../utils/streamBadges';
 import { NuvioTab } from '../settings/NuvioTab';
 import { NuvioSearchPage } from './NuvioSearchPage';
@@ -70,6 +75,7 @@ interface NuvioPageProps {
   onNuvioAutoPlayAllowedPluginsChange?: (pluginIds: string[]) => void;
   nuvioAutoPlayRegex?: string;
   onNuvioAutoPlayRegexChange?: (regex: string) => void;
+  onNavigateToSettingsTab?: (tab: string) => void;
 }
 
 const getFolderShapeClass = (folderShape: string | undefined): string => {
@@ -279,6 +285,7 @@ function NuvioPageContent({
   onNuvioAutoPlayAllowedPluginsChange,
   nuvioAutoPlayRegex = '',
   onNuvioAutoPlayRegexChange,
+  onNavigateToSettingsTab,
 }: NuvioPageProps) {
   const compiledBadgeRules = useMemo(() => compileBadgeSources(nuvioBadgeSources), [nuvioBadgeSources]);
   const addonsStore = useNuvioAddonStore();
@@ -301,6 +308,9 @@ function NuvioPageContent({
   const setNuvioActivePersonId = useSetNuvioActivePersonId();
   const nuvioNavigate = useNuvioNavigate();
   const nuvioGoBack = useNuvioGoBack();
+  const nuvioHistory = useUIStore((s) => s.nuvioHistory);
+  const currentFrame = nuvioHistory[nuvioHistory.length - 1];
+  const initialCatalogKey = (currentFrame && currentFrame.view === 'search') ? (currentFrame as any).catalogKey : null;
   const { onCardMouseEnter, onCardMouseLeave, onCardClick } = useStremioHover();
   const [pinPromptProfile, setPinPromptProfile] = useState<any | null>(null);
   const [loginEmail, setLoginEmail] = useState('');
@@ -331,11 +341,36 @@ function NuvioPageContent({
   const [catalogFilter, setCatalogFilter] = useState('');
   const [editableCollections, setEditableCollections] = useState<NuvioCollection[]>([]);
 
+  const [tmdbApiKey, setTmdbApiKey] = useState('');
+  const [streamingNuvioCatalogsEnabled, setStreamingNuvioCatalogsEnabled] = useState(false);
+  const [enabledStreamingServices, setEnabledStreamingServices] = useState<string[]>([]);
+  const [selectedService, setSelectedService] = useState<string | null>(null);
+  const nuvioServiceScrollRef = useRef<HTMLDivElement>(null);
+  const scrollNuvioServices = (dir: 'left' | 'right') => {
+    const el = nuvioServiceScrollRef.current;
+    if (!el) return;
+    const amount = el.clientWidth * 0.75;
+    el.scrollTo({ left: el.scrollLeft + (dir === 'left' ? -amount : amount), behavior: 'smooth' });
+  };
+
+  const refreshToken = useTraktCatalogRefreshToken();
+  interface TraktNuvioCatalogRow {
+    key: string;
+    type: 'trakt-catalog';
+    title: string;
+    items: StremioMetaPreview[];
+    page: number;
+    hasMore: boolean;
+  }
+  const [traktNuvioCatalogRows, setTraktNuvioCatalogRows] = useState<TraktNuvioCatalogRow[]>([]);
+  const [traktNuvioCatalogsBeforeAddon, setTraktNuvioCatalogsBeforeAddon] = useState(false);
+
   // Helper to navigate to a top-level view and clear any detail overlay
   const navigateToView = (view: 'home' | 'library' | 'search' | 'collections' | 'addons' | 'scrapers' | 'settings') => {
     setNuvioActiveMeta(null);
     setNuvioActivePersonId(null);
     setSelectedFolder(null);
+    useUIStore.setState({ nuvioHistory: [{ view } as any] });
     setNuvioView(view);
   };
 
@@ -512,6 +547,12 @@ function NuvioPageContent({
       return name.toLowerCase().includes(lower);
     });
   }, [homeRows, catalogFilter]);
+
+  const filteredTraktRows = useMemo(() => {
+    if (!catalogFilter.trim()) return traktNuvioCatalogRows;
+    const lower = catalogFilter.toLowerCase().trim();
+    return traktNuvioCatalogRows.filter(row => row.title.toLowerCase().includes(lower));
+  }, [traktNuvioCatalogRows, catalogFilter]);
 
   // Profile selection dropdown state
   const [showProfileMenu, setShowProfileMenu] = useState(false);
@@ -801,6 +842,105 @@ function NuvioPageContent({
   useEffect(() => {
     loadSyncedData();
   }, [token, profile?.profile_index]);
+
+  useEffect(() => {
+    let active = true;
+    const loadNuvioTraktCatalogs = async () => {
+      if (!window.storage) return;
+      try {
+        const res = await window.storage.getSettings();
+        const s = res.data || {};
+        if (!active) return;
+
+        const rows: TraktNuvioCatalogRow[] = [];
+        if (s.traktEnabled && s.traktAccessToken) {
+          const enabledCatalogs: Record<string, boolean> = s.traktNuvioCatalogsEnabled || {};
+          const enabledDefs = TRAKT_CATALOG_DEFINITIONS.filter(
+            (def) => enabledCatalogs[def.type] === true
+          );
+
+          const results = await Promise.all(
+            enabledDefs.map((def) =>
+              scrobbler.fetchTraktCatalog(def.type, 1).then(({ items, hasMore }) => ({
+                key: `trakt-${def.type}`,
+                type: 'trakt-catalog' as const,
+                title: `Trakt ${def.label}`,
+                items,
+                page: 1,
+                hasMore,
+              }))
+            )
+          );
+          rows.push(...results.filter((r) => r.items.length > 0));
+
+          // Load Trakt custom lists
+          const enabledLists: { id: string; name: string }[] = s.traktNuvioEnabledLists || [];
+          const listResults = await Promise.all(
+            enabledLists.map((list) =>
+              scrobbler.fetchTraktListCatalog(list.id, 1).then(({ items, hasMore }) => ({
+                key: `trakt-list-${list.id}`,
+                type: 'trakt-catalog' as const,
+                title: `Trakt \u2014 ${list.name}`,
+                items,
+                page: 1,
+                hasMore,
+              }))
+            )
+          );
+          rows.push(...listResults.filter((r) => r.items.length > 0));
+
+          // Apply catalog order from settings
+          const order = s.traktNuvioCatalogOrder || [];
+          if (order.length > 0) {
+            rows.sort((a, b) => {
+              const keyA = a.key.replace('trakt-', '');
+              const keyB = b.key.replace('trakt-', '');
+              const iA = order.indexOf(keyA);
+              const iB = order.indexOf(keyB);
+              return (iA === -1 ? 999 : iA) - (iB === -1 ? 999 : iB);
+            });
+          }
+        }
+
+        if (active) {
+          setTraktNuvioCatalogRows(rows);
+          setTraktNuvioCatalogsBeforeAddon(s.traktNuvioCatalogsBeforeAddon ?? false);
+        }
+      } catch (e) {
+        console.error('Failed to load Trakt Nuvio catalogs:', e);
+      }
+    };
+
+    loadNuvioTraktCatalogs();
+    return () => {
+      active = false;
+    };
+  }, [refreshToken]);
+
+  const loadTmdbSettings = useCallback(async () => {
+    if (!window.storage) return;
+    try {
+      const res = await window.storage.getSettings();
+      const s = res.data || {};
+      setTmdbApiKey(s.tmdbApiKey || '');
+      setStreamingNuvioCatalogsEnabled(s.streamingNuvioCatalogsEnabled ?? true);
+      setEnabledStreamingServices(s.enabledStreamingServices || ['netflix', 'disney', 'hulu', 'prime', 'apple', 'max', 'paramount', 'peacock']);
+    } catch (e) {
+      console.error('Failed to load TMDB Nuvio settings:', e);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadTmdbSettings();
+  }, [loadTmdbSettings]);
+
+  useEffect(() => {
+    const handleChanged = () => {
+      loadTmdbSettings();
+    };
+    window.addEventListener('ynotv:streaming-catalogs-changed', handleChanged);
+    return () => window.removeEventListener('ynotv:streaming-catalogs-changed', handleChanged);
+  }, [loadTmdbSettings]);
 
   useEffect(() => {
     const syncHandler = () => {
@@ -1695,9 +1835,9 @@ function NuvioPageContent({
                     ) : folderItems.length > 0 ? (
                       <>
                         <div className="nuvio-folder-detail-grid">
-                          {folderItems.map((item) => (
+                          {folderItems.map((item, idx) => (
                             <div
-                              key={item.id}
+                              key={`${item.id}-${idx}`}
                               className="nuvio-folder-detail-item"
                               onMouseEnter={(e) => onCardMouseEnter(item, e.currentTarget, e)}
                               onMouseLeave={onCardMouseLeave}
@@ -1732,6 +1872,15 @@ function NuvioPageContent({
                       <div className="nuvio-folder-detail-empty">No items found in this catalog source.</div>
                     )}
                   </div>
+                </div>
+              ) : selectedService ? (
+                <div style={{ padding: '0 24px 24px 24px' }}>
+                  <StreamingServiceView
+                    service={selectedService}
+                    onBack={() => setSelectedService(null)}
+                    onItemClick={(item) => handleItemClick({ content_id: item.id, content_type: item.type, name: item.name, poster: item.poster ?? null })}
+                    addons={addons}
+                  />
                 </div>
               ) : (
                 <div>
@@ -1903,8 +2052,61 @@ function NuvioPageContent({
                     </div>
                   )}
 
+                  {tmdbApiKey && streamingNuvioCatalogsEnabled && enabledStreamingServices.length > 0 && (
+                    <div className="nuvio-row" style={{ marginBottom: '24px', position: 'relative' }}>
+                      <div className="nuvio-row-header">
+                        <h3 className="nuvio-row-title">Streaming Platforms</h3>
+                        <div className="nuvio-chevron-controls">
+                          <button
+                            className="nuvio-chevron-btn"
+                            onClick={() => scrollNuvioServices('left')}
+                            aria-label="Scroll left"
+                          >
+                            &lsaquo;
+                          </button>
+                          <button
+                            className="nuvio-chevron-btn"
+                            onClick={() => scrollNuvioServices('right')}
+                            aria-label="Scroll right"
+                          >
+                            &rsaquo;
+                          </button>
+                        </div>
+                      </div>
+                      <div
+                        className="nuvio-service-rail-scroll"
+                        ref={nuvioServiceScrollRef}
+                      >
+                        <div className="nuvio-service-rail-track">
+                          {Object.keys(SERVICES)
+                            .filter((svcKey) => enabledStreamingServices.includes(svcKey))
+                            .map((svcKey) => {
+                              const svc = SERVICES[svcKey as StreamingService];
+                              return (
+                                <button
+                                  key={svcKey}
+                                  className="nuvio-service-tile-btn"
+                                  onClick={() => setSelectedService(svcKey)}
+                                >
+                                  <img
+                                    src={svc.logo}
+                                    alt={svc.name}
+                                    style={{
+                                      height: svc.logoHeightHome ? `${svc.logoHeightHome}px` : '24px',
+                                      width: 'auto',
+                                      filter: svc.logoFilter || 'none',
+                                    }}
+                                  />
+                                </button>
+                              );
+                            })}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Unified Home Rows (Collections and Catalogs sorted/filtered) */}
-                  {filteredRows.length === 0 ? (
+                  {filteredRows.length === 0 && filteredTraktRows.length === 0 ? (
                     <div className="nuvio-catalog-filter-empty">
                       {catalogFilter.trim()
                         ? 'No catalogs match your filter.'
@@ -1912,6 +2114,15 @@ function NuvioPageContent({
                     </div>
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                      {traktNuvioCatalogsBeforeAddon && filteredTraktRows.map((row) => (
+                        <StremioCatalogRow
+                          key={row.key}
+                          title={row.title}
+                          items={row.items}
+                          onItemClick={(item) => handleItemClick({ content_id: item.id, content_type: item.type, name: item.name, poster: item.poster ?? null })}
+                        />
+                      ))}
+
                       {filteredRows.map((row: any) => {
                         if (row.type === 'collection') {
                           const coll = row.collection;
@@ -1986,10 +2197,22 @@ function NuvioPageContent({
                               addon={row.addon}
                               catalog={row.catalog}
                               onItemClick={(item) => handleItemClick({ content_id: item.id, content_type: item.type, name: item.name, poster: item.poster ?? null })}
+                              onSeeAll={() => {
+                                nuvioNavigate({ view: 'search', catalogKey: row.key } as any);
+                              }}
                             />
                           );
                         }
                       })}
+
+                      {!traktNuvioCatalogsBeforeAddon && filteredTraktRows.map((row) => (
+                        <StremioCatalogRow
+                          key={row.key}
+                          title={row.title}
+                          items={row.items}
+                          onItemClick={(item) => handleItemClick({ content_id: item.id, content_type: item.type, name: item.name, poster: item.poster ?? null })}
+                        />
+                      ))}
                     </div>
                   )}
                 </div>
@@ -2056,6 +2279,8 @@ function NuvioPageContent({
               <NuvioSearchPage
                 addons={addons}
                 onItemClick={(item) => handleItemClick(item)}
+                initialCatalogKey={initialCatalogKey}
+                onBack={() => nuvioGoBack()}
               />
             )}
 
@@ -2461,6 +2686,7 @@ function NuvioPageContent({
                 onNuvioAutoPlayAllowedPluginsChange={onNuvioAutoPlayAllowedPluginsChange || (() => {})}
                 nuvioAutoPlayRegex={nuvioAutoPlayRegex}
                 onNuvioAutoPlayRegexChange={onNuvioAutoPlayRegexChange || (() => {})}
+                onNavigateToSettingsTab={onNavigateToSettingsTab}
               />
             )}
           </div>

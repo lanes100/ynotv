@@ -108,6 +108,7 @@ interface NuvioTabProps {
   onNuvioAutoPlayAllowedPluginsChange: (pluginIds: string[]) => void;
   nuvioAutoPlayRegex: string;
   onNuvioAutoPlayRegexChange: (regex: string) => void;
+  onNavigateToSettingsTab?: (tab: string) => void;
 }
 
 export function NuvioTab({
@@ -135,6 +136,7 @@ export function NuvioTab({
   onNuvioAutoPlayAllowedPluginsChange,
   nuvioAutoPlayRegex,
   onNuvioAutoPlayRegexChange,
+  onNavigateToSettingsTab,
 }: NuvioTabProps) {
   const authStore = useNuvioAuthStore();
   const [pinPromptProfile, setPinPromptProfile] = useState<any | null>(null);
@@ -146,6 +148,21 @@ export function NuvioTab({
 
   const token = authStore.token;
   const profile = authStore.activeProfile;
+
+  const [traktConnected, setTraktConnected] = useState(false);
+  useEffect(() => {
+    const checkTraktStatus = async () => {
+      if (!window.storage) return;
+      try {
+        const res = await window.storage.getSettings();
+        const s = res.data || {};
+        setTraktConnected(!!s.traktAccessToken);
+      } catch (e) {
+        console.error('Failed to get Trakt status:', e);
+      }
+    };
+    checkTraktStatus();
+  }, []);
 
   // Badge import states
   const [badgeUrl, setBadgeUrl] = useState('');
@@ -1791,6 +1808,38 @@ export function NuvioTab({
           />
           <span className="toggle-slider" />
         </label>
+      </div>
+
+      {/* Trakt Integration Section for Nuvio */}
+      <div className="settings-section" style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '24px', marginTop: '24px' }}>
+        <h3 style={{ margin: '0 0 8px 0', fontSize: '0.95rem', fontWeight: 500, color: 'rgba(255,255,255,0.9)' }}>
+          Trakt Integration (Nuvio)
+        </h3>
+        <p style={{ margin: '0 0 12px 0', fontSize: '0.82rem', color: 'rgba(255,255,255,0.5)' }}>
+          Check your Trakt connection status and configure Trakt catalogs for Nuvio.
+        </p>
+
+        <div className="retry-setting-row" style={{ borderBottom: 'none', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div className="timeshift-toggle-info">
+            <span className="timeshift-toggle-label">Connection Status</span>
+            <span className="timeshift-toggle-sub">
+              {traktConnected ? '✓ Connected to Trakt' : 'Not connected to Trakt'}
+            </span>
+          </div>
+          {!traktConnected ? (
+            <button
+              onClick={() => onNavigateToSettingsTab?.('scrobbling')}
+              className="sync-btn"
+              style={{ padding: '6px 12px', fontSize: '0.8rem' }}
+            >
+              Connect Trakt Account
+            </button>
+          ) : (
+            <span style={{ fontSize: '0.75rem', color: '#2ed573', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', padding: '4px 8px', borderRadius: '4px', background: 'rgba(46,213,115,0.1)' }}>
+              Connected
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Stream Auto-Play Settings for Nuvio */}

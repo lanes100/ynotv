@@ -117,6 +117,10 @@ export interface AppSettings {
     traktCatalogOrder?: string[];
     traktCatalogsBeforeAddon?: boolean;
     traktEnabledLists?: { id: string; name: string }[];
+    traktNuvioCatalogsEnabled?: Record<string, boolean>;
+    traktNuvioCatalogOrder?: string[];
+    traktNuvioCatalogsBeforeAddon?: boolean;
+    traktNuvioEnabledLists?: { id: string; name: string }[];
     simklEnabled?: boolean;
     simklAccessToken?: string | null;
     simklScrobbleEnabled?: boolean;

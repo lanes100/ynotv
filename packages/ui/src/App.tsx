@@ -3644,6 +3644,10 @@ function App() {
           onNuvioAutoPlayAllowedPluginsChange={handleNuvioAutoPlayAllowedPluginsChange}
           nuvioAutoPlayRegex={nuvioAutoPlayRegex}
           onNuvioAutoPlayRegexChange={handleNuvioAutoPlayRegexChange}
+          onNavigateToSettingsTab={(tab) => {
+            setSettingsTab(tab as any);
+            setShowSettingsPopup(true);
+          }}
         />
       </TransitionView>
 

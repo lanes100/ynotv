@@ -1763,4 +1763,57 @@ select.nuvio-input option {
   font-size: 0.85rem;
 }
 
+/* Nuvio Streaming Platforms Rail */
+.nuvio-service-rail-scroll {
+  position: relative;
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 8px 4px 16px 4px;
+  scrollbar-width: none;
+}
+
+.nuvio-service-rail-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.nuvio-service-rail-track {
+  display: flex;
+  gap: 12px;
+}
+
+.nuvio-service-tile-btn {
+  flex-shrink: 0;
+  width: 200px;
+  height: 90px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.32, 0.72, 0.24, 1);
+}
+
+.nuvio-service-tile-btn:hover {
+  background: rgba(255, 255, 255, 0.05);
+  transform: translateY(-4px);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.55), 0 0 12px rgba(0, 212, 255, 0.2);
+  border-color: #00d4ff;
+}
+
+.nuvio-service-tile-btn img {
+  width: auto;
+  opacity: 0.75;
+  filter: brightness(0) invert(1) !important;
+  transition: all 0.2s ease;
+  pointer-events: none;
+}
+
+.nuvio-service-tile-btn:hover img {
+  opacity: 1;
+  transform: scale(1.05);
+}
+
 

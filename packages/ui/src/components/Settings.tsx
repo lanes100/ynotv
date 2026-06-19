@@ -161,6 +161,7 @@ export function Settings({
 
   // Streaming Catalogs state
   const [streamingCatalogsEnabled, setStreamingCatalogsEnabled] = useState(true);
+  const [streamingNuvioCatalogsEnabled, setStreamingNuvioCatalogsEnabled] = useState(true);
   const [enabledStreamingServices, setEnabledStreamingServices] = useState<string[]>(['netflix', 'disney', 'hulu', 'prime', 'apple', 'max', 'paramount', 'peacock']);
 
   // Refresh settings state
@@ -513,6 +514,7 @@ export function Settings({
         rpdbBackdropsEnabled?: boolean;
         allowLanSources?: boolean;
         streamingCatalogsEnabled?: boolean;
+        streamingNuvioCatalogsEnabled?: boolean;
         enabledStreamingServices?: string[];
         debugLoggingEnabled?: boolean;
         logRetentionDays?: number;
@@ -628,6 +630,7 @@ export function Settings({
       }
 
       setStreamingCatalogsEnabled(settings.streamingCatalogsEnabled ?? true);
+      setStreamingNuvioCatalogsEnabled(settings.streamingNuvioCatalogsEnabled ?? true);
       setEnabledStreamingServices(settings.enabledStreamingServices ?? ['netflix', 'disney', 'hulu', 'prime', 'apple', 'max', 'paramount', 'peacock']);
 
       // Load refresh settings
@@ -1709,6 +1712,14 @@ export function Settings({
     }
   };
 
+  const handleStreamingNuvioCatalogsEnabledChange = async (enabled: boolean) => {
+    setStreamingNuvioCatalogsEnabled(enabled);
+    if (window.storage) {
+      await window.storage.updateSettings({ streamingNuvioCatalogsEnabled: enabled });
+      window.dispatchEvent(new CustomEvent('ynotv:streaming-catalogs-changed'));
+    }
+  };
+
   const handleEnabledStreamingServicesChange = async (services: string[]) => {
     setEnabledStreamingServices(services);
     if (window.storage) {
@@ -1929,6 +1940,8 @@ export function Settings({
             onRpdbBackdropsEnabledChange={setRpdbBackdropsEnabled}
             streamingCatalogsEnabled={streamingCatalogsEnabled}
             onStreamingCatalogsEnabledChange={handleStreamingCatalogsEnabledChange}
+            streamingNuvioCatalogsEnabled={streamingNuvioCatalogsEnabled}
+            onStreamingNuvioCatalogsEnabledChange={handleStreamingNuvioCatalogsEnabledChange}
             enabledStreamingServices={enabledStreamingServices}
             onEnabledStreamingServicesChange={handleEnabledStreamingServicesChange}
           />

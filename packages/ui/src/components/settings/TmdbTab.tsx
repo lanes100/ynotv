@@ -20,6 +20,8 @@ interface TmdbTabProps {
   onRpdbBackdropsEnabledChange: (enabled: boolean) => void;
   streamingCatalogsEnabled: boolean;
   onStreamingCatalogsEnabledChange: (enabled: boolean) => void;
+  streamingNuvioCatalogsEnabled: boolean;
+  onStreamingNuvioCatalogsEnabledChange: (enabled: boolean) => void;
   enabledStreamingServices: string[];
   onEnabledStreamingServicesChange: (services: string[]) => void;
 }
@@ -38,6 +40,8 @@ export function TmdbTab({
   onRpdbBackdropsEnabledChange,
   streamingCatalogsEnabled,
   onStreamingCatalogsEnabledChange,
+  streamingNuvioCatalogsEnabled,
+  onStreamingNuvioCatalogsEnabledChange,
   enabledStreamingServices,
   onEnabledStreamingServicesChange,
 }: TmdbTabProps) {
@@ -186,38 +190,57 @@ export function TmdbTab({
                     <span className="toggle-slider" />
                   </label>
                 </div>
+
+                <div className="timeshift-toggle-row" style={{ padding: '8px 0', borderBottom: 'none', marginTop: '8px' }}>
+                  <div className="timeshift-toggle-info">
+                    <span className="timeshift-toggle-label" style={{ color: tmdbKeyValid === true ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.4)' }}>Enable Streaming Catalogs in Nuvio</span>
+                    <span className="timeshift-toggle-sub">Show "Streaming Platforms" catalog row on the Nuvio Home page.</span>
+                  </div>
+                  <label className="toggle-switch" style={{ opacity: tmdbKeyValid === true ? 1 : 0.5, cursor: tmdbKeyValid === true ? 'pointer' : 'not-allowed' }}>
+                    <input
+                      type="checkbox"
+                      checked={streamingNuvioCatalogsEnabled}
+                      disabled={tmdbKeyValid !== true}
+                      onChange={(e) => onStreamingNuvioCatalogsEnabledChange(e.target.checked)}
+                    />
+                    <span className="toggle-slider" />
+                  </label>
+                </div>
               </div>
 
               {/* Streaming providers checkboxes grid */}
-              <div 
-                className="streaming-providers-grid" 
-                style={{ 
-                  display: 'grid', 
-                  gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', 
-                  gap: '10px', 
-                  marginTop: '1.2rem',
-                  opacity: (streamingCatalogsEnabled && tmdbKeyValid === true) ? 1 : 0.5,
-                  pointerEvents: (streamingCatalogsEnabled && tmdbKeyValid === true) ? 'auto' : 'none',
-                  transition: 'opacity 0.2s ease',
-                }}
-              >
-                {Object.keys(SERVICES).map((svcKey) => {
-                  const svc = SERVICES[svcKey as StreamingService];
-                  const isEnabled = enabledStreamingServices.includes(svcKey);
-                  return (
-                    <label 
-                      key={svcKey}
-                      className={`streaming-provider-card ${isEnabled ? 'checked' : ''}`}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '10px',
-                        padding: '8px 12px',
-                        background: '#000000',
-                        border: isEnabled ? '1px solid rgba(0, 212, 255, 0.4)' : '1px solid rgba(255, 255, 255, 0.08)',
-                        borderRadius: '8px',
-                        cursor: (streamingCatalogsEnabled && tmdbKeyValid === true) ? 'pointer' : 'default',
-                        transition: 'all 0.2s ease',
+              {(() => {
+                const catalogsEnabled = streamingCatalogsEnabled || streamingNuvioCatalogsEnabled;
+                return (
+                  <div 
+                    className="streaming-providers-grid" 
+                    style={{ 
+                      display: 'grid', 
+                      gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', 
+                      gap: '10px', 
+                      marginTop: '1.2rem',
+                      opacity: (catalogsEnabled && tmdbKeyValid === true) ? 1 : 0.5,
+                      pointerEvents: (catalogsEnabled && tmdbKeyValid === true) ? 'auto' : 'none',
+                      transition: 'opacity 0.2s ease',
+                    }}
+                  >
+                    {Object.keys(SERVICES).map((svcKey) => {
+                      const svc = SERVICES[svcKey as StreamingService];
+                      const isEnabled = enabledStreamingServices.includes(svcKey);
+                      return (
+                        <label 
+                          key={svcKey}
+                          className={`streaming-provider-card ${isEnabled ? 'checked' : ''}`}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '10px',
+                            padding: '8px 12px',
+                            background: '#000000',
+                            border: isEnabled ? '1px solid rgba(0, 212, 255, 0.4)' : '1px solid rgba(255, 255, 255, 0.08)',
+                            borderRadius: '8px',
+                            cursor: (catalogsEnabled && tmdbKeyValid === true) ? 'pointer' : 'default',
+                            transition: 'all 0.2s ease',
                         userSelect: 'none',
                       }}
                     >
@@ -271,6 +294,8 @@ export function TmdbTab({
                   );
                 })}
               </div>
+            );
+          })()}
 
               {tmdbKeyValid !== true && (
                 <p className="form-hint" style={{ color: 'rgba(255,255,255,0.4)', marginTop: '0.5rem' }}>
