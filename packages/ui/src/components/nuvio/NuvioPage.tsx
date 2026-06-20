@@ -1073,18 +1073,11 @@ function NuvioPageContent({
     });
   };
 
-  const handleNuvioPlay = (stream: StremioStream, meta: NuvioMeta, episodeVideo?: StremioVideo) => {
+  const handleNuvioPlay = (stream: StremioStream, meta: any, episodeVideo?: StremioVideo) => {
     window.dispatchEvent(new CustomEvent('ynotv:stremio-play', {
       detail: { 
         stream, 
-        meta: { 
-          id: meta.id, 
-          type: meta.type, 
-          name: meta.name, 
-          poster: meta.poster,
-          background: meta.background,
-          logo: meta.logo,
-        }, 
+        meta: meta, 
         episodeVideo, 
         isNuvio: true 
       },

@@ -29,7 +29,7 @@ export interface NuvioMeta {
 interface NuvioDetailViewProps {
   meta: NuvioMeta;
   onBack: () => void;
-  onPlay: (stream: StremioStream, meta: NuvioMeta, episodeVideo?: StremioVideo) => void;
+  onPlay: (stream: StremioStream, meta: any, episodeVideo?: StremioVideo) => void;
   onNavigate?: (meta: StremioMeta) => void;
   showStreamBadges?: boolean;
   compiledBadgeRules?: { pattern: RegExp; badge: StremioStreamBadge }[];
@@ -616,14 +616,7 @@ export function NuvioDetailView({
 
     const timeoutMs = nuvioAutoPlayTimeout * 1000;
     const timer = setTimeout(() => {
-      onPlayRef.current(selected, {
-        id: effectiveMetaRef.current.id,
-        type: effectiveMetaRef.current.type,
-        name: effectiveMetaRef.current.name,
-        poster: effectiveMetaRef.current.poster ?? null,
-        background: effectiveMetaRef.current.background ?? null,
-        logo: effectiveMetaRef.current.logo ?? null,
-      }, selectedVideo ?? undefined);
+      onPlayRef.current(selected, effectiveMetaRef.current, selectedVideo ?? undefined);
     }, timeoutMs);
 
     return () => clearTimeout(timer);
@@ -685,14 +678,7 @@ export function NuvioDetailView({
         <div
           key={`stream-${idx}`}
           className="stremio-detail-stream-card"
-          onClick={() => onPlay(stream, {
-            id: effectiveMeta.id,
-            type: effectiveMeta.type,
-            name: effectiveMeta.name,
-            poster: effectiveMeta.poster ?? null,
-            background: effectiveMeta.background ?? null,
-            logo: effectiveMeta.logo ?? null,
-          }, selectedVideo ?? undefined)}
+          onClick={() => onPlay(stream, effectiveMeta, selectedVideo ?? undefined)}
         >
           {stream.url && !stream.url.startsWith('magnet:') && !stream.url.startsWith('infoHash:') && (
             <button

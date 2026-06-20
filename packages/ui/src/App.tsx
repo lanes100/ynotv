@@ -2207,7 +2207,7 @@ function App() {
             store.setStremioActiveMeta(meta);
             store.setStremioSelectedSeason(prevVideo.season);
             store.setStremioPreselectVideoId(prevVideo.id);
-            setActiveViewRef.current('stremio');
+            await handleStop();
             return;
           }
         }
@@ -2234,7 +2234,7 @@ function App() {
                 background: meta.background ?? meta.poster ?? null,
               }
             });
-            setActiveViewRef.current('nuvio');
+            await handleStop();
             return;
           }
         }
@@ -2305,7 +2305,7 @@ function App() {
         handlePlayChannel(currentChannels[currentChannels.length - 1]);
       }
     }
-  }, [currentChannels, currentChannel, handlePlayChannel, vodInfo, handlePlayVod]);
+  }, [currentChannels, currentChannel, handlePlayChannel, vodInfo, handlePlayVod, handleStop]);
 
   const handleChannelDown = useCallback(async () => {
     // Check if we're watching a series with episode info
@@ -2325,7 +2325,7 @@ function App() {
             store.setStremioActiveMeta(meta);
             store.setStremioSelectedSeason(nextVideo.season);
             store.setStremioPreselectVideoId(nextVideo.id);
-            setActiveViewRef.current('stremio');
+            await handleStop();
             return;
           }
         }
@@ -2352,7 +2352,7 @@ function App() {
                 background: meta.background ?? meta.poster ?? null,
               }
             });
-            setActiveViewRef.current('nuvio');
+            await handleStop();
             return;
           }
         }
@@ -2423,7 +2423,7 @@ function App() {
         handlePlayChannel(currentChannels[0]);
       }
     }
-  }, [currentChannels, currentChannel, handlePlayChannel, vodInfo, handlePlayVod]);
+  }, [currentChannels, currentChannel, handlePlayChannel, vodInfo, handlePlayVod, handleStop]);
 
   // ==========================================================================
   // Keyboard Shortcuts (using latest ref pattern)
