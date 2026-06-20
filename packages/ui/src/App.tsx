@@ -1788,45 +1788,57 @@ function App() {
         }
 
         try {
-          const addons = useStremioAddonStore.getState().enabledAddons;
-          const subtitleId = isSeries && episodeVideo?.id ? episodeVideo.id : meta.id;
-          const subtitleExtra: Record<string, string> = {};
-          if (stream.behaviorHints?.videoHash) subtitleExtra.videoHash = stream.behaviorHints.videoHash;
-          if (stream.behaviorHints?.videoSize) subtitleExtra.videoSize = String(stream.behaviorHints.videoSize);
-          if (stream.behaviorHints?.filename) subtitleExtra.filename = stream.behaviorHints.filename;
-          const subs = await fetchSubtitles(addons, meta.type, subtitleId, Object.keys(subtitleExtra).length > 0 ? subtitleExtra : undefined);
-          if (subs.length > 0 && window.mpv?.addSubtitleFile) {
-            const { writeTextFile, mkdir, BaseDirectory } = await import('@tauri-apps/plugin-fs');
-            const { appLocalDataDir, join } = await import('@tauri-apps/api/path');
-            const appDir = await appLocalDataDir();
+          let defaultLanguage = 'en';
+          if (window.storage) {
+            const settingsRes = await window.storage.getSettings();
+            if (settingsRes.data?.subtitleSettings?.defaultLanguage) {
+              defaultLanguage = settingsRes.data.subtitleSettings.defaultLanguage;
+            }
+          }
 
-            await mkdir('subtitles', { baseDir: BaseDirectory.AppLocalData, recursive: true }).catch(() => {});
+          if (defaultLanguage === 'off') {
+            console.log('[Stremio] Subtitle default language is off. Skipping external subtitles fetch.');
+          } else {
+            const addons = useStremioAddonStore.getState().enabledAddons;
+            const subtitleId = isSeries && episodeVideo?.id ? episodeVideo.id : meta.id;
+            const subtitleExtra: Record<string, string> = {};
+            if (stream.behaviorHints?.videoHash) subtitleExtra.videoHash = stream.behaviorHints.videoHash;
+            if (stream.behaviorHints?.videoSize) subtitleExtra.videoSize = String(stream.behaviorHints.videoSize);
+            if (stream.behaviorHints?.filename) subtitleExtra.filename = stream.behaviorHints.filename;
+            const subs = await fetchSubtitles(addons, meta.type, subtitleId, Object.keys(subtitleExtra).length > 0 ? subtitleExtra : undefined);
+            if (subs.length > 0 && window.mpv?.addSubtitleFile) {
+              const { writeTextFile, mkdir, BaseDirectory } = await import('@tauri-apps/plugin-fs');
+              const { appLocalDataDir, join } = await import('@tauri-apps/api/path');
+              const appDir = await appLocalDataDir();
 
-            for (let i = 0; i < subs.length; i++) {
-              const sub = subs[i];
-              try {
-                const safeUrl = sub.url ? (sub.url.includes('%') ? encodeURI(decodeURI(sub.url)) : encodeURI(sub.url)) : '';
-                const res = await window.fetchProxy.fetch(safeUrl);
-                if (res.data?.ok) {
-                  const text = res.data.text;
-                  const isVtt = sub.url.toLowerCase().includes('.vtt') || text.includes('WEBVTT');
-                  const ext = isVtt ? 'vtt' : 'srt';
-                  const sanitizePart = (val?: string) => {
-                    if (!val) return 'unknown';
-                    return val.replace(/__/g, '_').replace(/ /g, '_').replace(/[^a-zA-Z0-9_]/g, '');
-                  };
-                  const cleanAddon = sanitizePart(sub.addonName || 'Addon').slice(0, 30);
-                  const cleanLabel = sanitizePart(sub.label || sub.lang.toUpperCase()).slice(0, 40);
-                  const cleanMetaId = sanitizePart(meta.id).slice(0, 30);
-                  const cleanLang = sanitizePart(sub.lang).slice(0, 10);
-                  const relPath = `subtitles/stremio__${cleanAddon}__${cleanLabel}__${cleanMetaId}__${cleanLang}__${i}.${ext}`;
-                  const filePath = await join(appDir, relPath);
+              await mkdir('subtitles', { baseDir: BaseDirectory.AppLocalData, recursive: true }).catch(() => {});
 
-                  await writeTextFile(relPath, text, { baseDir: BaseDirectory.AppLocalData });
-                  window.mpv.addSubtitleFile(filePath, 'cached').catch(() => {});
+              for (let i = 0; i < subs.length; i++) {
+                const sub = subs[i];
+                try {
+                  const safeUrl = sub.url ? (sub.url.includes('%') ? encodeURI(decodeURI(sub.url)) : encodeURI(sub.url)) : '';
+                  const res = await window.fetchProxy.fetch(safeUrl);
+                  if (res.data?.ok) {
+                    const text = res.data.text;
+                    const isVtt = sub.url.toLowerCase().includes('.vtt') || text.includes('WEBVTT');
+                    const ext = isVtt ? 'vtt' : 'srt';
+                    const sanitizePart = (val?: string) => {
+                      if (!val) return 'unknown';
+                      return val.replace(/__/g, '_').replace(/ /g, '_').replace(/[^a-zA-Z0-9_]/g, '');
+                    };
+                    const cleanAddon = sanitizePart(sub.addonName || 'Addon').slice(0, 30);
+                    const cleanLabel = sanitizePart(sub.label || sub.lang.toUpperCase()).slice(0, 40);
+                    const cleanMetaId = sanitizePart(meta.id).slice(0, 30);
+                    const cleanLang = sanitizePart(sub.lang).slice(0, 10);
+                    const relPath = `subtitles/stremio__${cleanAddon}__${cleanLabel}__${cleanMetaId}__${cleanLang}__${i}.${ext}`;
+                    const filePath = await join(appDir, relPath);
+
+                    await writeTextFile(relPath, text, { baseDir: BaseDirectory.AppLocalData });
+                    window.mpv.addSubtitleFile(filePath, 'cached').catch(() => {});
+                  }
+                } catch (err) {
+                  console.error('[Stremio] Failed to load or save subtitle:', sub.url, err);
                 }
-              } catch (err) {
-                console.error('[Stremio] Failed to load or save subtitle:', sub.url, err);
               }
             }
           }
@@ -2184,6 +2196,32 @@ function App() {
           }
         }
         // Fall through to channel nav if no prev episode found
+      } else if (vodInfo.source_id === 'nuvio') {
+        const meta = stremioMetaRef.current;
+        if (meta?.videos) {
+          const sorted = [...meta.videos].sort((a: any, b: any) => {
+            if ((a.season ?? 0) !== (b.season ?? 0)) return (a.season ?? 0) - (b.season ?? 0);
+            return (a.episode ?? 0) - (b.episode ?? 0);
+          });
+          const currentIdx = sorted.findIndex((v: any) => v.id === vodInfo.episodeId);
+          if (currentIdx > 0) {
+            const prevVideo = sorted[currentIdx - 1];
+            const store = useUIStore.getState();
+            store.setNuvioPreselectVideoId(prevVideo.id);
+            store.nuvioNavigate({
+              view: 'detail',
+              meta: {
+                id: meta.id,
+                type: 'series',
+                name: meta.name,
+                poster: meta.poster ?? null,
+                background: meta.background ?? meta.poster ?? null,
+              }
+            });
+            setActiveViewRef.current('nuvio');
+            return;
+          }
+        }
       } else {
         // VOD series: navigate via DB episodes
         const prevEpisode = await getAdjacentEpisode(
@@ -2276,6 +2314,32 @@ function App() {
           }
         }
         // Fall through to channel nav if no next episode found
+      } else if (vodInfo.source_id === 'nuvio') {
+        const meta = stremioMetaRef.current;
+        if (meta?.videos) {
+          const sorted = [...meta.videos].sort((a: any, b: any) => {
+            if ((a.season ?? 0) !== (b.season ?? 0)) return (a.season ?? 0) - (b.season ?? 0);
+            return (a.episode ?? 0) - (b.episode ?? 0);
+          });
+          const currentIdx = sorted.findIndex((v: any) => v.id === vodInfo.episodeId);
+          if (currentIdx >= 0 && currentIdx < sorted.length - 1) {
+            const nextVideo = sorted[currentIdx + 1];
+            const store = useUIStore.getState();
+            store.setNuvioPreselectVideoId(nextVideo.id);
+            store.nuvioNavigate({
+              view: 'detail',
+              meta: {
+                id: meta.id,
+                type: 'series',
+                name: meta.name,
+                poster: meta.poster ?? null,
+                background: meta.background ?? meta.poster ?? null,
+              }
+            });
+            setActiveViewRef.current('nuvio');
+            return;
+          }
+        }
       } else {
         // VOD series: navigate via DB episodes
         const nextEpisode = await getAdjacentEpisode(

@@ -477,7 +477,7 @@ export function Settings({
   const [subtitleSettings, setSubtitleSettings] = useState<SubtitleSettings>({
     subsourceApiKey: '',
     defaultLanguage: 'en',
-    defaultAudioLanguage: 'en',
+    defaultAudioLanguage: 'default',
     defaultSize: 35,
     subColor: '#FFFFFF',
     subBackgroundColor: '#000000',

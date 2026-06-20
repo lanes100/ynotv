@@ -1625,11 +1625,22 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
     if (!window.storage) return;
     const result = await window.storage.getSettings();
     const ss = result.data?.subtitleSettings;
-    const defaultLanguage = normalizeLangCode(ss?.defaultLanguage || 'en');
-    if (!defaultLanguage) return;
+    const rawDefaultLanguage = ss?.defaultLanguage || 'en';
 
     const trackList = await Bridge.getTrackList();
     const subTracks = trackList.filter((t: any) => t.type === 'sub');
+
+    if (rawDefaultLanguage === 'off') {
+      logInfo(`[Playback] Subtitle language set to off. Disabling subtitles. (found ${subTracks.length} tracks, attempt ${autoSelectAttemptsRef.current})`);
+      await Bridge.setSubtitleTrack(0);
+      if (subTracks.length > 0 || autoSelectAttemptsRef.current >= 5) {
+        hasAutoSelectedSubRef.current = true;
+      }
+      return;
+    }
+
+    const defaultLanguage = normalizeLangCode(rawDefaultLanguage);
+    if (!defaultLanguage) return;
 
     // Filter tracks matching target language
     const matchingTracks = subTracks.filter((t: any) => getTrackLanguage(t) === defaultLanguage);
@@ -1670,7 +1681,15 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
     if (!window.storage) return;
     const result = await window.storage.getSettings();
     const ss = result.data?.subtitleSettings;
-    const defaultAudioLanguage = normalizeLangCode(ss?.defaultAudioLanguage || 'en');
+    const rawDefaultAudioLanguage = ss?.defaultAudioLanguage || 'default';
+
+    if (rawDefaultAudioLanguage === 'default') {
+      logInfo('[Playback] Audio language set to default. Keeping player default audio track.');
+      hasAutoSelectedAudioRef.current = true;
+      return;
+    }
+
+    const defaultAudioLanguage = normalizeLangCode(rawDefaultAudioLanguage);
     if (!defaultAudioLanguage) return;
 
     const trackList = await Bridge.getTrackList();

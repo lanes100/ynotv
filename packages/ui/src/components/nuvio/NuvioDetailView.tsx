@@ -128,6 +128,13 @@ export function NuvioDetailView({
   const activeRef = useRef(true);
   const fetchedIdsRef = useRef<Set<string>>(new Set());
 
+  const addonsKey = addons.map((a) => `${a.id}:${a.enabled !== false}`).join(',');
+
+  // Clear fetched cache when addons change to allow re-fetching metadata
+  useEffect(() => {
+    fetchedIdsRef.current.clear();
+  }, [addonsKey]);
+
   // ─── Fetch full metadata ───────────────────────────────────
   useEffect(() => {
     if (!meta.id || fetchedIdsRef.current.has(meta.id)) return;
@@ -224,7 +231,7 @@ export function NuvioDetailView({
 
     return () => { active = false; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [meta.id, meta.type, tmdbToken, addons.map((a) => `${a.id}:${a.enabled !== false}`).join(','), setFullMeta]);
+  }, [meta.id, meta.type, tmdbToken, addonsKey, setFullMeta]);
 
   // (Library state is passed down as a prop)
 

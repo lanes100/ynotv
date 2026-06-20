@@ -308,6 +308,7 @@ function NuvioPageContent({
   const libraryIds = useMemo(() => new Set(library.map(l => l.content_id)), [library]);
   const isLandscapePosters = !!authStore.homeCatalogSettings?.landscape_posters;
   const [resolvedWatchProgress, setResolvedWatchProgress] = useState<(NuvioWatchProgressSyncEntry & { poster?: string; name?: string; background?: string; episodeTitle?: string; episodeThumbnail?: string })[]>([]);
+  const [rawWatchProgress, setRawWatchProgress] = useState<NuvioWatchProgressSyncEntry[]>([]);
   const [loading, setLoading] = useState(false);
 
   const nuvioView = useNuvioView();
@@ -740,9 +741,11 @@ function NuvioPageContent({
       setLibrary(lib || []);
 
       if (progress && progress.length > 0) {
+        setRawWatchProgress(progress);
         setResolvedWatchProgress(progress.map(p => ({ ...p, name: `Content ID: ${p.content_id}` })));
         resolveProgressMetadata(progress);
       } else {
+        setRawWatchProgress([]);
         setResolvedWatchProgress([]);
       }
     } catch (e) {
@@ -888,6 +891,12 @@ function NuvioPageContent({
   useEffect(() => {
     loadSyncedData();
   }, [token, profile?.profile_index]);
+
+  useEffect(() => {
+    if (rawWatchProgress.length > 0) {
+      resolveProgressMetadata(rawWatchProgress);
+    }
+  }, [rawWatchProgress, addons]);
 
   useEffect(() => {
     let active = true;

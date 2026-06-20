@@ -203,10 +203,10 @@ export function SubtitleControlModal({
   useEffect(() => {
     if (isOpen) {
       loadTracks();
-      loadSettings().then((key) => {
-        if (!autoSearchRef.current && vodTitle && key) {
+      loadSettings().then(({ key, defaultLanguage }) => {
+        if (!autoSearchRef.current && vodTitle && key && defaultLanguage !== 'off') {
           autoSearchRef.current = true;
-          const cacheKey = `${vodTitle}|${vodYear || ''}|${seasonNum || ''}|${searchLang}`;
+          const cacheKey = `${vodTitle}|${vodYear || ''}|${seasonNum || ''}|${defaultLanguage}`;
           if (
             searchCache &&
             searchCache.query === cacheKey &&
@@ -217,7 +217,7 @@ export function SubtitleControlModal({
             setSubtitles(searchCache.subtitles);
             setViewState(searchCache.viewState);
           } else {
-            doAutoSearch(vodTitle, vodYear, seasonNum, key);
+            doAutoSearch(vodTitle, vodYear, seasonNum, key, defaultLanguage);
           }
         }
       });
@@ -239,16 +239,18 @@ export function SubtitleControlModal({
     return () => document.removeEventListener('keydown', handleKey);
   }, [isOpen, onClose]);
 
-  const loadSettings = async (): Promise<string> => {
+  const loadSettings = async (): Promise<{ key: string; defaultLanguage: string }> => {
     try {
       const result = window.storage ? await window.storage.getSettings() : { data: {} };
       const settings: any = result.data || {};
       let key = '';
+      let defaultLanguage = 'en';
       if (settings.subtitleSettings) {
         const ss = settings.subtitleSettings;
         key = ss.subsourceApiKey || '';
         setApiKey(key);
-        setSearchLang(ss.defaultLanguage || 'en');
+        defaultLanguage = ss.defaultLanguage || 'en';
+        setSearchLang(defaultLanguage);
         setSize(ss.defaultSize || 35);
         setSubBackgroundEnabled(ss.subBackgroundEnabled ?? false);
         setSubBackgroundColor(ss.subBackgroundColor || '#000000');
@@ -263,19 +265,31 @@ export function SubtitleControlModal({
         setSearchQuery(clean + (vodYear ? ` ${vodYear}` : ''));
       }
       loadedRef.current = true;
-      return key;
+      return { key, defaultLanguage };
     } catch (e) {
       console.error('Failed to load subtitle settings:', e);
-      return '';
+      return { key: '', defaultLanguage: 'en' };
     }
   };
 
-  const doAutoSearch = async (title: string, year?: string, season?: number, providedKey?: string) => {
+  const doAutoSearch = async (
+    title: string,
+    year?: string,
+    season?: number,
+    providedKey?: string,
+    langCode?: string
+  ) => {
     const key = providedKey || apiKey;
     if (!key || !title.trim()) return;
 
+    const targetLang = langCode || searchLang;
+    if (targetLang === 'off') {
+      console.log('[SubtitleModal] Subtitle language is off. Skipping auto-search.');
+      return;
+    }
+
     const cleanTitle = cleanTitleForSearch(title);
-    console.log('[SubtitleModal] Auto-searching:', { original: title, clean: cleanTitle, year, season });
+    console.log('[SubtitleModal] Auto-searching:', { original: title, clean: cleanTitle, year, season, lang: targetLang });
     setSearching(true);
     setSearchError('');
     setEpisodeFilter(null);
@@ -315,7 +329,7 @@ export function SubtitleControlModal({
       }
 
       setSelectedMovie(targetMovie);
-      const subResult = await searchSubSourceSubtitles(key, targetMovie.movieId, searchLang);
+      const subResult = await searchSubSourceSubtitles(key, targetMovie.movieId, targetLang);
 
       if (subResult.success && subResult.subtitles && subResult.subtitles.length > 0) {
         setSubtitles(subResult.subtitles);
@@ -336,9 +350,9 @@ export function SubtitleControlModal({
 
         setViewState('subtitles');
         searchCache = {
-          query: `${cleanTitle}|${year || ''}|${season || ''}|${searchLang}`,
+          query: `${cleanTitle}|${year || ''}|${season || ''}|${targetLang}`,
           year,
-          lang: searchLang,
+          lang: targetLang,
           movies: result.movies,
           selectedMovie: targetMovie,
           subtitles: subResult.subtitles,
@@ -349,9 +363,9 @@ export function SubtitleControlModal({
         // No subtitles for target movie, show movie list so user can pick another
         setViewState('movies');
         searchCache = {
-          query: `${cleanTitle}|${year || ''}|${season || ''}|${searchLang}`,
+          query: `${cleanTitle}|${year || ''}|${season || ''}|${targetLang}`,
           year,
-          lang: searchLang,
+          lang: targetLang,
           movies: result.movies,
           selectedMovie: null,
           subtitles: [],

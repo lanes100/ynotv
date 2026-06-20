@@ -141,6 +141,7 @@ export async function fetchMeta(
         // Try next addon
       }
     }
+    META_CACHE.delete(cacheKey);
     return null;
   })();
 

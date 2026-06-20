@@ -21,7 +21,7 @@ export interface SubtitleSettings {
 const DEFAULT_SETTINGS: SubtitleSettings = {
   subsourceApiKey: '',
   defaultLanguage: 'en',
-  defaultAudioLanguage: 'en',
+  defaultAudioLanguage: 'default',
   defaultSize: 35,
   subColor: '#FFFFFF',
   subBackgroundColor: '#000000',
@@ -207,6 +207,7 @@ export function SubtitlesTab({ initialSubTab, settings, onSettingsChange }: Subt
                   value={merged.defaultLanguage}
                   onChange={(e) => update({ defaultLanguage: e.target.value })}
                 >
+                  <option value="off">Off</option>
                   {LANGUAGE_OPTIONS.map((lang) => (
                     <option key={lang.code} value={lang.code}>
                       {lang.label}
@@ -415,9 +416,10 @@ export function SubtitlesTab({ initialSubTab, settings, onSettingsChange }: Subt
                   <span className="timeshift-toggle-sub">Whichever is selected will be automatically chosen when playing streams if available.</span>
                 </div>
                 <select
-                  value={merged.defaultAudioLanguage || 'en'}
+                  value={merged.defaultAudioLanguage || 'default'}
                   onChange={(e) => update({ defaultAudioLanguage: e.target.value })}
                 >
+                  <option value="default">Default</option>
                   {LANGUAGE_OPTIONS.map((lang) => (
                     <option key={lang.code} value={lang.code}>
                       {lang.label}
