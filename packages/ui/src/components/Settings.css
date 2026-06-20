@@ -1707,4 +1707,52 @@
 .settings-content small,
 .settings-section p.section-description {
   color: rgba(255, 255, 255, 0.5) !important;
+}
+
+/* Fullscreen Settings Mode */
+.settings-overlay--fullscreen {
+  padding: 0 !important;
+}
+
+.settings-panel.settings-panel--fullscreen {
+  width: 100vw !important;
+  height: 100vh !important;
+  max-width: 100% !important;
+  max-height: 100% !important;
+  min-height: 100% !important;
+  border-radius: 0 !important;
+  border: none !important;
+}
+
+.settings-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.settings-fullscreen-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+  padding: 0;
+}
+
+.settings-fullscreen-btn:hover {
+  border-color: rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.05);
+  color: white;
+}
+
+.settings-fullscreen-icon {
+  width: 14px;
+  height: 14px;
+  display: block;
 }

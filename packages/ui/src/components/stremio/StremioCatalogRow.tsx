@@ -16,6 +16,7 @@ interface StremioCatalogRowProps {
   currentPage?: number;
   hasMore?: boolean;
   onPageChange?: (dir: -1 | 1) => void;
+  landscape?: boolean;
 }
 
 export function StremioCatalogRow({
@@ -29,6 +30,7 @@ export function StremioCatalogRow({
   currentPage,
   hasMore,
   onPageChange,
+  landscape,
 }: StremioCatalogRowProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
@@ -135,8 +137,8 @@ export function StremioCatalogRow({
         <div className="stremio-row-scroll" style={{ overflowX: 'hidden' }}>
           <div className="stremio-row-track">
             {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="stremio-row-card skeleton-card" style={{ pointerEvents: 'none' }}>
-                <div className="stremio-row-poster skeleton-poster" />
+              <div key={i} className={`stremio-row-card skeleton-card ${landscape ? 'landscape' : ''}`} style={{ pointerEvents: 'none' }}>
+                <div className={`stremio-row-poster skeleton-poster ${landscape ? 'landscape' : ''}`} />
                 <div className="stremio-row-card-info" style={{ marginTop: '8px' }}>
                   <div className="skeleton-line" style={{ height: '14px', background: 'rgba(255,255,255,0.04)', borderRadius: '4px', width: '80%', marginBottom: '6px' }} />
                   <div className="skeleton-line" style={{ height: '10px', background: 'rgba(255,255,255,0.04)', borderRadius: '3px', width: '40%' }} />
@@ -187,44 +189,62 @@ export function StremioCatalogRow({
       </div>
       <div className="stremio-row-scroll" ref={scrollRef} onScroll={handleScroll}>
         <div className="stremio-row-track">
-          {items.map((item, idx) => (
-            <div
-              key={`${item.id}-${idx}`}
-              className="stremio-row-card"
-              onMouseEnter={(e) => onCardMouseEnter(item, e.currentTarget, e)}
-              onMouseLeave={onCardMouseLeave}
-              onClick={() => {
-                onCardClick();
-                onItemClick(item);
-              }}
-            >
-              {item.poster || (item as any).progress != null ? (
-                <div style={{ position: 'relative' }}>
-                  {item.poster && (
-                    <img
-                      className="stremio-row-poster"
-                      src={item.poster}
-                      alt={item.name}
-                      loading="lazy"
-                      onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                    />
-                  )}
-                  {item.releaseInfo && /^S\d/i.test(item.releaseInfo) && (
-                    <div className="stremio-rw-ep-badge">{item.releaseInfo}</div>
-                  )}
-                  {(() => {
-                    const pct = (item as any).progress;
-                    if (typeof pct === 'number' && pct > 2 && pct < 98) {
-                      return (
-                        <div className="stremio-rw-progress-track">
-                          <div className="stremio-rw-progress-fill" style={{ width: `${pct}%` }} />
-                        </div>
-                      );
-                    }
-                    return null;
-                  })()}
-                </div>
-              ) : null}
+          {items.map((item, idx) => {
+            const cardImg = landscape ? (item.background || item.poster) : item.poster;
+            return (
+              <div
+                key={`${item.id}-${idx}`}
+                className={`stremio-row-card ${landscape ? 'landscape' : ''}`}
+                onMouseEnter={(e) => onCardMouseEnter(item, e.currentTarget, e)}
+                onMouseLeave={onCardMouseLeave}
+                onClick={() => {
+                  onCardClick();
+                  onItemClick(item);
+                }}
+              >
+                {cardImg || (item as any).progress != null ? (
+                  <div style={{ position: 'relative', overflow: 'hidden', borderRadius: landscape ? '8px' : '0' }}>
+                    {cardImg && (
+                      <img
+                        className={`stremio-row-poster ${landscape ? 'landscape' : ''}`}
+                        src={cardImg}
+                        alt={item.name}
+                        loading="lazy"
+                        onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                      />
+                    )}
+                    
+                    {landscape && (
+                      <div className="stremio-row-landscape-overlay">
+                        {item.logo ? (
+                          <img 
+                            src={item.logo} 
+                            alt="" 
+                            className="stremio-row-landscape-logo" 
+                            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                          />
+                        ) : (
+                          <span className="stremio-row-landscape-title-fallback">{item.name}</span>
+                        )}
+                      </div>
+                    )}
+                    
+                    {item.releaseInfo && /^S\d/i.test(item.releaseInfo) && (
+                      <div className="stremio-rw-ep-badge">{item.releaseInfo}</div>
+                    )}
+                    {(() => {
+                      const pct = (item as any).progress;
+                      if (typeof pct === 'number' && pct > 2 && pct < 98) {
+                        return (
+                          <div className="stremio-rw-progress-track">
+                            <div className="stremio-rw-progress-fill" style={{ width: `${pct}%` }} />
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
+                  </div>
+                ) : null}
               <div className="stremio-row-card-info">
                 <div className="stremio-row-card-title">{item.name}</div>
                 {(() => {
@@ -234,9 +254,10 @@ export function StremioCatalogRow({
                   }
                   return null;
                 })()}
-              </div>
             </div>
-          ))}
+          </div>
+        );
+      })}
         </div>
       </div>
       {!isPageMode && canScrollLeft && <div className="stremio-row-fade stremio-row-fade-left" />}

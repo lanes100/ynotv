@@ -8,6 +8,7 @@ import type { StremioStreamPickerMode, StremioMeta, BadgeSource, StreamAutoPlayM
 import { checkForUpdates, checkForUpdatesSilent } from './services/updater';
 import { Settings } from './components/Settings';
 import type { SettingsTabId } from './components/settings/SettingsSidebar';
+import { useModal } from './components/Modal';
 
 import { NowPlayingBar } from './components/NowPlayingBar';
 import { ChannelInfoOverlay } from './components/ChannelInfoOverlay';
@@ -885,10 +886,10 @@ function App() {
     titleBarSearchRef,
     activeViewRef,
     categoriesOpenRef,
-    setActiveView,
+    setActiveView: rawSetActiveView,
     setSettingsTab,
     setEditSourceId,
-    setShowSettingsPopup,
+    setShowSettingsPopup: rawSetShowSettingsPopup,
     setCategoriesOpen,
     setSearchQuery,
     setIsWatchlistMode,
@@ -896,6 +897,66 @@ function App() {
     handleSelectCategory,
     handleMouseMove,
   } = nav;
+
+  const { showConfirm, ModalComponent } = useModal();
+  const nuvioHasUnsavedHomeLayout = useUIStore((s) => s.nuvioHasUnsavedHomeLayout);
+  const nuvioTabSaveFn = useUIStore((s) => s.nuvioTabSaveFn);
+
+  const setActiveView = useCallback((newView: any) => {
+    const nextView = typeof newView === 'function' ? newView(activeView) : newView;
+    const isCurrentlyNuvioSettings = (activeView === 'nuvio' && useUIStore.getState().nuvioView === 'settings') || (showSettingsPopup && settingsTab === 'nuvio');
+    if (isCurrentlyNuvioSettings && nuvioHasUnsavedHomeLayout) {
+      showConfirm(
+        'Unsaved Changes',
+        "Changes aren't saved, would you like to save homepage layout?",
+        async () => {
+          try {
+            await nuvioTabSaveFn?.();
+            useUIStore.setState({ nuvioHasUnsavedHomeLayout: false });
+            rawSetActiveView(nextView);
+          } catch (err) {
+            // Error was already alerted inside child component
+          }
+        },
+        () => {
+          useUIStore.setState({ nuvioHasUnsavedHomeLayout: false });
+          rawSetActiveView(nextView);
+        },
+        'Save',
+        'Discard Changes'
+      );
+    } else {
+      rawSetActiveView(nextView);
+    }
+  }, [activeView, showSettingsPopup, settingsTab, nuvioHasUnsavedHomeLayout, nuvioTabSaveFn, rawSetActiveView, showConfirm]);
+
+  const setShowSettingsPopup = useCallback((val: boolean | ((prev: boolean) => boolean)) => {
+    const nextVal = typeof val === 'function' ? val(showSettingsPopup) : val;
+    const isCurrentlyNuvioSettings = showSettingsPopup && settingsTab === 'nuvio';
+    if (isCurrentlyNuvioSettings && !nextVal && nuvioHasUnsavedHomeLayout) {
+      showConfirm(
+        'Unsaved Changes',
+        "Changes aren't saved, would you like to save homepage layout?",
+        async () => {
+          try {
+            await nuvioTabSaveFn?.();
+            useUIStore.setState({ nuvioHasUnsavedHomeLayout: false });
+            rawSetShowSettingsPopup(nextVal);
+          } catch (err) {
+            // Error was already alerted inside child component
+          }
+        },
+        () => {
+          useUIStore.setState({ nuvioHasUnsavedHomeLayout: false });
+          rawSetShowSettingsPopup(nextVal);
+        },
+        'Save',
+        'Discard Changes'
+      );
+    } else {
+      rawSetShowSettingsPopup(nextVal);
+    }
+  }, [showSettingsPopup, settingsTab, nuvioHasUnsavedHomeLayout, nuvioTabSaveFn, rawSetShowSettingsPopup, showConfirm]);
 
   // Wrap handleStop to restore Stremio/Nuvio page if stopped from a media context
   const handleStop = useCallback(async () => {
@@ -3842,6 +3903,7 @@ function App() {
         onClose={() => setWhatsNewModalOpen(false)}
         version={appVersion}
       />
+      <ModalComponent />
     </div>
   );
 }

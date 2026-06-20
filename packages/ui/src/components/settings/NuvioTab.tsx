@@ -1,8 +1,9 @@
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef, forwardRef, useImperativeHandle } from 'react';
 import { useNuvioAuthStore } from '../../stores/nuvioAuthStore';
 import { useNuvioPluginStore } from '../../stores/nuvioPluginStore';
 import { useNuvioAddonStore } from '../../stores/nuvioAddonStore';
 import { useNuvioCollectionStore } from '../../stores/nuvioCollectionStore';
+import { useUIStore } from '../../stores/uiStore';
 import { NuvioPinModal } from '../nuvio/NuvioPinModal';
 import { TraktCatalogsModal } from './TraktCatalogsModal';
 import { getEffectiveNuvioUrl, getEffectiveNuvioKey } from '../../services/nuvio-api';
@@ -110,35 +111,38 @@ interface NuvioTabProps {
   nuvioAutoPlayRegex: string;
   onNuvioAutoPlayRegexChange: (regex: string) => void;
   onNavigateToSettingsTab?: (tab: string) => void;
+  onUnsavedChangesChange?: (dirty: boolean) => void;
 }
 
-export function NuvioTab({
-  showNuvioStreamBadges,
-  onShowNuvioStreamBadgesChange,
-  nuvioBadgeSources,
-  onNuvioBadgeSourcesChange,
-  nuvioBadgeSize,
-  onNuvioBadgeSizeChange,
-  nuvioShowFileSizeBadges,
-  onNuvioShowFileSizeBadgesChange,
-  nuvioStreamBadgePlacement,
-  onNuvioStreamBadgePlacementChange,
-  showNuvioHoverDetails,
-  onShowNuvioHoverDetailsChange,
-  nuvioAutoPlayMode,
-  onNuvioAutoPlayModeChange,
-  nuvioAutoPlayTimeout,
-  onNuvioAutoPlayTimeoutChange,
-  nuvioAutoPlaySourceScope,
-  onNuvioAutoPlaySourceScopeChange,
-  nuvioAutoPlayAllowedAddons,
-  onNuvioAutoPlayAllowedAddonsChange,
-  nuvioAutoPlayAllowedPlugins,
-  onNuvioAutoPlayAllowedPluginsChange,
-  nuvioAutoPlayRegex,
-  onNuvioAutoPlayRegexChange,
-  onNavigateToSettingsTab,
-}: NuvioTabProps) {
+export const NuvioTab = forwardRef<{ save: () => Promise<void> }, NuvioTabProps>(
+  function NuvioTab({
+    showNuvioStreamBadges,
+    onShowNuvioStreamBadgesChange,
+    nuvioBadgeSources,
+    onNuvioBadgeSourcesChange,
+    nuvioBadgeSize,
+    onNuvioBadgeSizeChange,
+    nuvioShowFileSizeBadges,
+    onNuvioShowFileSizeBadgesChange,
+    nuvioStreamBadgePlacement,
+    onNuvioStreamBadgePlacementChange,
+    showNuvioHoverDetails,
+    onShowNuvioHoverDetailsChange,
+    nuvioAutoPlayMode,
+    onNuvioAutoPlayModeChange,
+    nuvioAutoPlayTimeout,
+    onNuvioAutoPlayTimeoutChange,
+    nuvioAutoPlaySourceScope,
+    onNuvioAutoPlaySourceScopeChange,
+    nuvioAutoPlayAllowedAddons,
+    onNuvioAutoPlayAllowedAddonsChange,
+    nuvioAutoPlayAllowedPlugins,
+    onNuvioAutoPlayAllowedPluginsChange,
+    nuvioAutoPlayRegex,
+    onNuvioAutoPlayRegexChange,
+    onNavigateToSettingsTab,
+    onUnsavedChangesChange,
+  }, ref) {
   const authStore = useNuvioAuthStore();
   const [pinPromptProfile, setPinPromptProfile] = useState<any | null>(null);
   const [showAddonDialog, setShowAddonDialog] = useState(false);
@@ -286,6 +290,7 @@ export function NuvioTab({
   const catalogListRef = useRef<HTMLDivElement>(null);
   const [hideUnreleased, setHideUnreleased] = useState(false);
   const [hideUnderline, setHideUnderline] = useState(false);
+  const [landscapePosters, setLandscapePosters] = useState(false);
 
   useEffect(() => {
     if (authStore.token) {
@@ -306,8 +311,11 @@ export function NuvioTab({
     if (authStore.homeCatalogSettings) {
       setHideUnreleased(authStore.homeCatalogSettings.hide_unreleased_content || false);
       setHideUnderline(authStore.homeCatalogSettings.hide_catalog_underline || false);
+      setLandscapePosters(authStore.homeCatalogSettings.landscape_posters || false);
     }
   }, [authStore.homeCatalogSettings]);
+
+
 
 
   useEffect(() => {
@@ -424,6 +432,29 @@ export function NuvioTab({
     setLocalCatalogItems(mergedItems);
   }, [mergedItems]);
 
+  const isDirty = useMemo(() => {
+    if (!authStore.homeCatalogSettings) return false;
+    const savedHideUnreleased = authStore.homeCatalogSettings.hide_unreleased_content || false;
+    const savedHideUnderline = authStore.homeCatalogSettings.hide_catalog_underline || false;
+    const savedLandscapePosters = authStore.homeCatalogSettings.landscape_posters || false;
+    
+    if (hideUnreleased !== savedHideUnreleased) return true;
+    if (hideUnderline !== savedHideUnderline) return true;
+    if (landscapePosters !== savedLandscapePosters) return true;
+    
+    if (localCatalogItems.length !== mergedItems.length) return true;
+    for (let i = 0; i < localCatalogItems.length; i++) {
+      const loc = localCatalogItems[i];
+      const orig = mergedItems[i];
+      if (loc.key !== orig.key) return true;
+      if (loc.enabled !== orig.enabled) return true;
+      if ((loc.customTitle || '').trim() !== (orig.customTitle || '').trim()) return true;
+      if (loc.order !== orig.order) return true;
+    }
+    return false;
+  }, [hideUnreleased, hideUnderline, landscapePosters, localCatalogItems, mergedItems, authStore.homeCatalogSettings]);
+
+
   const handleToggleItem = (key: string) => {
     const updated = localCatalogItems.map(item => 
       item.key === key ? { ...item, enabled: !item.enabled } : item
@@ -499,7 +530,7 @@ export function NuvioTab({
     setDraggingIndex(null);
   }, []);
 
-  const handleSaveCatalogSettings = async () => {
+  const handleSaveCatalogSettings = useCallback(async () => {
     try {
       const itemsPayload = localCatalogItems.map(item => {
         if (item.isCollection) {
@@ -530,6 +561,7 @@ export function NuvioTab({
       const payload = {
         hide_unreleased_content: hideUnreleased,
         hide_catalog_underline: hideUnderline,
+        landscape_posters: landscapePosters,
         items: itemsPayload
       };
       
@@ -537,8 +569,28 @@ export function NuvioTab({
       alert('Homepage catalog settings saved and synced successfully!');
     } catch (e: any) {
       alert(e.message || 'Failed to save homepage catalog settings');
+      throw e;
     }
-  };
+  }, [localCatalogItems, hideUnreleased, hideUnderline, landscapePosters, authStore]);
+
+  useEffect(() => {
+    onUnsavedChangesChange?.(isDirty);
+    useUIStore.setState({ nuvioHasUnsavedHomeLayout: isDirty });
+    return () => {
+      useUIStore.setState({ nuvioHasUnsavedHomeLayout: false });
+    };
+  }, [isDirty, onUnsavedChangesChange]);
+
+  useEffect(() => {
+    useUIStore.setState({ nuvioTabSaveFn: handleSaveCatalogSettings });
+    return () => {
+      useUIStore.setState({ nuvioTabSaveFn: null });
+    };
+  }, [handleSaveCatalogSettings]);
+
+  useImperativeHandle(ref, () => ({
+    save: handleSaveCatalogSettings
+  }), [handleSaveCatalogSettings]);
 
   const handleResetCatalogSettings = async () => {
     if (confirm('Are you sure you want to reset homepage catalog settings to defaults?')) {
@@ -546,6 +598,7 @@ export function NuvioTab({
         const payload = {
           hide_unreleased_content: false,
           hide_catalog_underline: false,
+          landscape_posters: false,
           items: []
         };
         await authStore.updateHomeCatalogSettings(payload);
@@ -1253,6 +1306,21 @@ export function NuvioTab({
                       type="checkbox"
                       checked={hideUnderline}
                       onChange={(e) => setHideUnderline(e.target.checked)}
+                    />
+                    <span className="toggle-slider" />
+                  </label>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'rgba(255,255,255,0.9)' }}>Landscape Posters</span>
+                    <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.4)', marginTop: '2px' }}>Display posters in catalogs in landscape aspect ratio.</div>
+                  </div>
+                  <label className="toggle-switch" style={{ transform: 'scale(0.85)' }}>
+                    <input
+                      type="checkbox"
+                      checked={landscapePosters}
+                      onChange={(e) => setLandscapePosters(e.target.checked)}
                     />
                     <span className="toggle-slider" />
                   </label>
@@ -2661,4 +2729,4 @@ export function NuvioTab({
       )}
     </div>
   );
-}
+});

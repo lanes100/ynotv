@@ -18,7 +18,9 @@ import {
   useNuvioNavigate,
   useNuvioGoBack,
   useTraktCatalogRefreshToken,
-  useUIStore
+  useUIStore,
+  useNuvioHasUnsavedHomeLayout,
+  useNuvioTabSaveFn
 } from '../../stores/uiStore';
 import {
   fetchNuvioLibrary,
@@ -38,6 +40,7 @@ import { StremioHoverCard } from '../stremio/StremioHoverCard';
 import { NuvioDetailView, type NuvioMeta } from './NuvioDetailView';
 import { NuvioPersonDetail } from './NuvioPersonDetail';
 import { NuvioPinModal } from './NuvioPinModal';
+import { useModal } from '../Modal';
 import type { StremioStream, StremioVideo, StremioMeta, BadgeSource, StreamAutoPlayMode, StreamAutoPlaySourceScope } from '../../types/stremio';
 import type { StremioMetaPreview, InstalledAddon } from '../../types/stremio';
 import { scrobbler, TRAKT_CATALOG_DEFINITIONS } from '../../services/scrobbler';
@@ -293,9 +296,13 @@ function NuvioPageContent({
   const authStore = useNuvioAuthStore();
   const collectionStore = useNuvioCollectionStore();
   const pluginStore = useNuvioPluginStore();
+  const { showConfirm, ModalComponent } = useModal();
+  const nuvioHasUnsavedHomeLayout = useNuvioHasUnsavedHomeLayout();
+  const nuvioTabSaveFn = useNuvioTabSaveFn();
 
   const [library, setLibrary] = useState<NuvioLibrarySyncItem[]>([]);
   const libraryIds = useMemo(() => new Set(library.map(l => l.content_id)), [library]);
+  const isLandscapePosters = !!authStore.homeCatalogSettings?.landscape_posters;
   const [resolvedWatchProgress, setResolvedWatchProgress] = useState<(NuvioWatchProgressSyncEntry & { poster?: string; name?: string; background?: string; episodeTitle?: string; episodeThumbnail?: string })[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -375,6 +382,32 @@ function NuvioPageContent({
 
   // Helper to navigate to a top-level view and clear any detail overlay
   const navigateToView = (view: 'home' | 'library' | 'search' | 'collections' | 'addons' | 'scrapers' | 'settings') => {
+    if (nuvioView === 'settings' && nuvioHasUnsavedHomeLayout) {
+      showConfirm(
+        'Unsaved Changes',
+        "Changes aren't saved, would you like to save homepage layout?",
+        async () => {
+          try {
+            await nuvioTabSaveFn?.();
+            useUIStore.setState({ nuvioHasUnsavedHomeLayout: false });
+            performNavigation(view);
+          } catch (err) {
+            // Error was already alerted inside child component
+          }
+        },
+        () => {
+          useUIStore.setState({ nuvioHasUnsavedHomeLayout: false });
+          performNavigation(view);
+        },
+        'Save',
+        'Discard Changes'
+      );
+    } else {
+      performNavigation(view);
+    }
+  };
+
+  const performNavigation = (view: 'home' | 'library' | 'search' | 'collections' | 'addons' | 'scrapers' | 'settings') => {
     setNuvioActiveMeta(null);
     setNuvioActivePersonId(null);
     setSelectedFolder(null);
@@ -2143,6 +2176,7 @@ function NuvioPageContent({
                           key={row.key}
                           title={row.title}
                           items={row.items}
+                          landscape={isLandscapePosters}
                           onItemClick={(item) => handleItemClick({ content_id: item.id, content_type: item.type, name: item.name, poster: item.poster ?? null })}
                         />
                       ))}
@@ -2220,6 +2254,7 @@ function NuvioPageContent({
                               title={row.title}
                               addon={row.addon}
                               catalog={row.catalog}
+                              landscape={isLandscapePosters}
                               onItemClick={(item) => handleItemClick({ content_id: item.id, content_type: item.type, name: item.name, poster: item.poster ?? null })}
                               onSeeAll={() => {
                                 nuvioNavigate({ view: 'search', catalogKey: row.key } as any);
@@ -2234,6 +2269,7 @@ function NuvioPageContent({
                           key={row.key}
                           title={row.title}
                           items={row.items}
+                          landscape={isLandscapePosters}
                           onItemClick={(item) => handleItemClick({ content_id: item.id, content_type: item.type, name: item.name, poster: item.poster ?? null })}
                         />
                       ))}
@@ -2777,6 +2813,7 @@ function NuvioPageContent({
       )}
 
       <StremioHoverCard />
+      <ModalComponent />
       </div>
   );
 }

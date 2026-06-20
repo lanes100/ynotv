@@ -137,6 +137,10 @@ interface UIState {
   setNuvioPreselectVideoId: (id: string | null) => void;
   nuvioActivePersonId: number | null;
   setNuvioActivePersonId: (id: number | null) => void;
+  nuvioHasUnsavedHomeLayout: boolean;
+  setNuvioHasUnsavedHomeLayout: (value: boolean) => void;
+  nuvioTabSaveFn: (() => Promise<void>) | null;
+  setNuvioTabSaveFn: (fn: (() => Promise<void>) | null) => void;
 }
 
 export const useUIStore = create<UIState>((set) => ({
@@ -341,6 +345,10 @@ export const useUIStore = create<UIState>((set) => ({
   setNuvioPreselectVideoId: (id) => set({ nuvioPreselectVideoId: id }),
   nuvioActivePersonId: null,
   setNuvioActivePersonId: (id) => set({ nuvioActivePersonId: id }),
+  nuvioHasUnsavedHomeLayout: false,
+  setNuvioHasUnsavedHomeLayout: (value) => set({ nuvioHasUnsavedHomeLayout: value }),
+  nuvioTabSaveFn: null,
+  setNuvioTabSaveFn: (fn) => set({ nuvioTabSaveFn: fn }),
 }));
 
 // Selectors for cleaner component code
@@ -440,3 +448,7 @@ export const useSetNuvioActivePersonId = () => useUIStore((s) => s.setNuvioActiv
 export const useNuvioNavigate = () => useUIStore((s) => s.nuvioNavigate);
 export const useNuvioGoBack = () => useUIStore((s) => s.nuvioGoBack);
 export const useNuvioHistory = () => useUIStore((s) => s.nuvioHistory);
+export const useNuvioHasUnsavedHomeLayout = () => useUIStore((s) => s.nuvioHasUnsavedHomeLayout);
+export const useSetNuvioHasUnsavedHomeLayout = () => useUIStore((s) => s.setNuvioHasUnsavedHomeLayout);
+export const useNuvioTabSaveFn = () => useUIStore((s) => s.nuvioTabSaveFn);
+export const useSetNuvioTabSaveFn = () => useUIStore((s) => s.setNuvioTabSaveFn);

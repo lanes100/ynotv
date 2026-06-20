@@ -21,6 +21,7 @@ import { ScrobblingTab } from './settings/ScrobblingTab';
 import { StremTab } from './settings/StremTab';
 import { NuvioTab } from './settings/NuvioTab';
 import { ProxyTab } from './settings/ProxyTab';
+import { useModal } from './Modal';
 import { TmdbTab } from './settings/TmdbTab';
 import type { ShortcutsMap, ThemeId } from '../types/app';
 import type { StremioStreamPickerMode, BadgeSource, StreamAutoPlayMode, StreamAutoPlaySourceScope } from '../types/stremio';
@@ -141,6 +142,71 @@ export function Settings({
   onShowNuvioHoverDetailsChange,
 }: SettingsProps) {
   const [activeTab, setActiveTab] = useState<SettingsTabId>(initialTab);
+  const { showConfirm, ModalComponent } = useModal();
+  const nuvioHasUnsavedHomeLayout = useUIStore((s) => s.nuvioHasUnsavedHomeLayout);
+  const nuvioTabSaveFn = useUIStore((s) => s.nuvioTabSaveFn);
+
+  const handleTabChange = (newTab: SettingsTabId) => {
+    if (activeTab === 'nuvio' && nuvioHasUnsavedHomeLayout) {
+      showConfirm(
+        'Unsaved Changes',
+        "Changes aren't saved, would you like to save homepage layout?",
+        async () => {
+          try {
+            await nuvioTabSaveFn?.();
+            useUIStore.setState({ nuvioHasUnsavedHomeLayout: false });
+            setActiveTab(newTab);
+          } catch (err) {
+            // Error was already alerted inside child component
+          }
+        },
+        () => {
+          useUIStore.setState({ nuvioHasUnsavedHomeLayout: false });
+          setActiveTab(newTab);
+        },
+        'Save',
+        'Discard Changes'
+      );
+    } else {
+      setActiveTab(newTab);
+    }
+  };
+
+  const handleClose = () => {
+    if (activeTab === 'nuvio' && nuvioHasUnsavedHomeLayout) {
+      showConfirm(
+        'Unsaved Changes',
+        "Changes aren't saved, would you like to save homepage layout?",
+        async () => {
+          try {
+            await nuvioTabSaveFn?.();
+            useUIStore.setState({ nuvioHasUnsavedHomeLayout: false });
+            onClose();
+          } catch (err) {
+            // Error was already alerted inside child component
+          }
+        },
+        () => {
+          useUIStore.setState({ nuvioHasUnsavedHomeLayout: false });
+          onClose();
+        },
+        'Save',
+        'Discard Changes'
+      );
+    } else {
+      onClose();
+    }
+  };
+  const [isFullScreen, setIsFullScreen] = useState<boolean>(() => {
+    return localStorage.getItem('settings_fullscreen') === 'true';
+  });
+
+  const toggleFullScreen = () => {
+    const nextVal = !isFullScreen;
+    setIsFullScreen(nextVal);
+    localStorage.setItem('settings_fullscreen', String(nextVal));
+  };
+
   const [pendingSubTab, setPendingSubTab] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -911,7 +977,7 @@ export function Settings({
   }, [searchQuery]);
 
   function handleSearchResultClick(result: SettingsSearchResult) {
-    setActiveTab(result.tabId);
+    handleTabChange(result.tabId);
     if (result.subTabId) {
       setPendingSubTab(result.subTabId);
     }
@@ -2031,8 +2097,8 @@ export function Settings({
   }
 
   return (
-    <div className="settings-overlay">
-      <div className="settings-panel settings-panel--sidebar">
+    <div className={`settings-overlay${isFullScreen ? ' settings-overlay--fullscreen' : ''}`}>
+      <div className={`settings-panel settings-panel--sidebar${isFullScreen ? ' settings-panel--fullscreen' : ''}`}>
         <div className="settings-header">
           <h2>Settings</h2>
           <div className="settings-search" ref={searchRef}>
@@ -2079,7 +2145,31 @@ export function Settings({
             </div>
           )}
           </div>
-          <button className="close-btn" onClick={onClose}>✕</button>
+          <div className="settings-header-actions">
+            <button
+              className="settings-fullscreen-btn"
+              type="button"
+              onClick={toggleFullScreen}
+              title={isFullScreen ? "Exit Fullscreen" : "Fullscreen"}
+            >
+              {isFullScreen ? (
+                <svg className="settings-fullscreen-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="4 14 10 14 10 20" />
+                  <polyline points="20 10 14 10 14 4" />
+                  <line x1="14" y1="10" x2="21" y2="3" />
+                  <line x1="10" y1="14" x2="3" y2="21" />
+                </svg>
+              ) : (
+                <svg className="settings-fullscreen-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="15 3 21 3 21 9" />
+                  <polyline points="9 21 3 21 3 15" />
+                  <line x1="21" y1="3" x2="14" y2="10" />
+                  <line x1="3" y1="21" x2="10" y2="14" />
+                </svg>
+              )}
+            </button>
+            <button className="close-btn" onClick={handleClose}>✕</button>
+          </div>
         </div>
 
         {/* Encryption Warning */}
@@ -2098,7 +2188,7 @@ export function Settings({
           {/* Sidebar Navigation */}
           <SettingsSidebar
             activeTab={activeTab}
-            onTabChange={setActiveTab}
+            onTabChange={handleTabChange}
             hasVodSource={hasVodSource}
           />
 
@@ -2108,6 +2198,7 @@ export function Settings({
           </div>
         </div>
       </div>
+      <ModalComponent />
     </div>
   );
 }
