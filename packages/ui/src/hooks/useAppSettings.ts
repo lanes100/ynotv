@@ -54,6 +54,9 @@ export interface AppSettings {
   // Navigation tab visibility
   navHiddenTabs: string[];
 
+  // EPG button visibility
+  epgHiddenButtons: string[];
+
   // UI visibility
   categoriesHidden: boolean;
   categoriesHiddenTransparent: boolean;
@@ -72,6 +75,7 @@ export interface AppSettings {
 
   // Actions
   setNavHiddenTabs: (tabs: string[]) => void;
+  setEpgHiddenButtons: (buttons: string[]) => void;
   setTheme: (theme: ThemeId) => void;
   setShortcuts: (shortcuts: ShortcutsMap) => void;
   setCategoriesHidden: (hidden: boolean) => void;
@@ -169,6 +173,9 @@ export function useAppSettings(): AppSettings {
 
   // Navigation tab visibility — hidden tabs start empty (all visible)
   const [navHiddenTabs, setNavHiddenTabsState] = useState<string[]>([]);
+
+  // EPG button visibility — hidden buttons start empty (all visible)
+  const [epgHiddenButtons, setEpgHiddenButtonsState] = useState<string[]>([]);
 
   // UI visibility
   const [categoriesHidden, setCategoriesHiddenState] = useState(false);
@@ -274,6 +281,9 @@ export function useAppSettings(): AppSettings {
 
           // Load navigation hidden tabs
           setNavHiddenTabsState(result.data.navHiddenTabs ?? []);
+
+          // Load EPG hidden buttons
+          setEpgHiddenButtonsState(result.data.epgHiddenButtons ?? []);
 
           // Load startup view
           setStartupViewState(result.data.startupView ?? 'none');
@@ -581,6 +591,17 @@ export function useAppSettings(): AppSettings {
     }
   }, []);
 
+  const setEpgHiddenButtons = useCallback(async (buttons: string[]) => {
+    setEpgHiddenButtonsState(buttons);
+    if (window.storage) {
+      try {
+        await window.storage.updateSettings({ epgHiddenButtons: buttons });
+      } catch (e) {
+        console.error('[useAppSettings] Failed to save epgHiddenButtons:', e);
+      }
+    }
+  }, []);
+
   const setStartupView = useCallback(async (view: 'none' | 'guide' | 'movies' | 'series' | 'dvr' | 'sports' | 'calendar') => {
     setStartupViewState(view);
     if (window.storage) {
@@ -680,12 +701,14 @@ export function useAppSettings(): AppSettings {
     categoriesHidden,
     categoriesHiddenTransparent,
     navHiddenTabs,
+    epgHiddenButtons,
     overlayAutohideTimer,
     widgetScale,
     widgetBgOpacity,
     sportsScale,
     sportsBgOpacity,
     setNavHiddenTabs,
+    setEpgHiddenButtons,
     setTheme,
     setShortcuts,
     setCategoriesHidden,

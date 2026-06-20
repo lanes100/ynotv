@@ -204,6 +204,7 @@ function App() {
     popoutStopMain,
     popoutAlwaysOnTop,
     navHiddenTabs: settingsNavHiddenTabs,
+    epgHiddenButtons: settingsEpgHiddenButtons,
     startupView,
     castEnabled,
     setCastEnabled,
@@ -212,6 +213,8 @@ function App() {
   } = useAppSettings();
   const navHiddenTabs = useUIStore((s) => s.navHiddenTabs);
   const setNavHiddenStore = useUIStore((s) => s.setNavHiddenTabs);
+
+  const setEpgHiddenStore = useUIStore((s) => s.setEpgHiddenButtons);
 
   // Stremio stream picker mode
   const [stremioStreamPickerMode, setStremioStreamPickerMode] = useState<StremioStreamPickerMode>('modal');
@@ -1123,13 +1126,14 @@ function App() {
     }
   }, [layoutSettingsLoaded, startupView, setActiveView, setCategoriesOpen, categoriesHidden]);
 
-  // Initialize navHiddenTabs in the shared store once settings are loaded
+  // Initialize navHiddenTabs and epgHiddenButtons in the shared store once settings are loaded
   const navStoreInitRef = useRef(false);
   useEffect(() => {
     if (!layoutSettingsLoaded || navStoreInitRef.current) return;
     navStoreInitRef.current = true;
     setNavHiddenStore(settingsNavHiddenTabs);
-  }, [layoutSettingsLoaded, settingsNavHiddenTabs, setNavHiddenStore]);
+    setEpgHiddenStore(settingsEpgHiddenButtons);
+  }, [layoutSettingsLoaded, settingsNavHiddenTabs, settingsEpgHiddenButtons, setNavHiddenStore, setEpgHiddenStore]);
 
   // ==========================================================================
   // Initialize Stremio addons

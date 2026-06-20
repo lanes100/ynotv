@@ -294,15 +294,23 @@ export const NuvioTab = forwardRef<{ save: () => Promise<void> }, NuvioTabProps>
 
   useEffect(() => {
     if (authStore.token) {
-      authStore.fetchProfiles();
+      if (authStore.profiles.length === 0) {
+        authStore.fetchProfiles();
+      }
       if (authStore.activeProfile) {
-        authStore.fetchSettings();
-        authStore.fetchHomeCatalogSettings();
+        if (!authStore.settings) {
+          authStore.fetchSettings();
+        }
+        if (!authStore.homeCatalogSettings) {
+          authStore.fetchHomeCatalogSettings();
+        }
         const effectiveAddonProfileId =
           authStore.activeProfile.profile_index !== 1 && authStore.activeProfile.uses_primary_addons
             ? 1
             : authStore.activeProfile.profile_index;
-        addonsStore.pullAddons(authStore.token, effectiveAddonProfileId);
+        if (!addonsStore.initialized) {
+          addonsStore.pullAddons(authStore.token, effectiveAddonProfileId);
+        }
       }
     }
   }, [authStore.token, authStore.activeProfile?.profile_index]);

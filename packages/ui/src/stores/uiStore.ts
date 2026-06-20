@@ -87,6 +87,10 @@ interface UIState {
   navHiddenTabs: string[];
   setNavHiddenTabs: (tabs: string[]) => void;
 
+  // EPG button visibility (shared reactive state)
+  epgHiddenButtons: string[];
+  setEpgHiddenButtons: (buttons: string[]) => void;
+
   // Stremio
   stremioView: StremioView;
   setStremioView: (view: StremioView) => void;
@@ -209,6 +213,10 @@ export const useUIStore = create<UIState>((set) => ({
   // Navigation tab visibility
   navHiddenTabs: [],
   setNavHiddenTabs: (tabs) => set({ navHiddenTabs: tabs }),
+
+  // EPG button visibility
+  epgHiddenButtons: [],
+  setEpgHiddenButtons: (buttons) => set({ epgHiddenButtons: buttons }),
 
   // Stremio
   stremioView: 'home',

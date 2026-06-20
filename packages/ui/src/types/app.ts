@@ -108,6 +108,8 @@ export interface AppSettings {
     globalEpgLinks?: GlobalEpgLink[];
     // Navigation tab visibility — tabs hidden from titlebar
     navHiddenTabs?: string[];
+    // EPG button visibility — buttons hidden from LiveTV EPG header
+    epgHiddenButtons?: string[];
     // Trakt & Simkl integration settings
     traktEnabled?: boolean;
     traktAccessToken?: string | null;

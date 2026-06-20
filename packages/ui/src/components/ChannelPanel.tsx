@@ -14,7 +14,7 @@ import { CustomGroupManager } from './CustomGroupManager';
 import { FailoverGroupListModal } from './FailoverGroupListModal';
 import { PlaylistListModal } from './PlaylistListModal';
 
-import { useChannelSortOrder, useEpgView, useEpgVisibleHours } from '../stores/uiStore';
+import { useChannelSortOrder, useEpgView, useEpgVisibleHours, useUIStore } from '../stores/uiStore';
 import { NowPlayingBar } from './NowPlayingBar';
 import type { StoredChannel, StoredProgram, WatchlistItem } from '../db';
 import { db } from '../db';
@@ -245,6 +245,7 @@ export function ChannelPanel({
   }, [error]);
 
   const channelSortOrder = useChannelSortOrder();
+  const epgHiddenButtons = useUIStore((s) => s.epgHiddenButtons);
   // Optimization: Skip loading the main channel grid when in Search or Watchlist mode
   // This prevents loading 40k+ channels in the background which causes UI lag
   const shouldSkipGrid = isSearchMode || isWatchlistMode;
@@ -1939,16 +1940,18 @@ export function ChannelPanel({
                 )}
                 {canManageChannels && (
                   <>
-                    <button
-                      className="guide-manage-channels-btn"
-                      onClick={isCustomGroup ? () => setManagingCustomGroup({ id: categoryId!, name: customGroupName }) : handleManageChannels}
-                      title={isCustomGroup ? "Manage custom group" : "Manage channels in this category"}
-                    >
-                      {isCustomGroup ? '📂 Manage Custom Group' : '📺 Manage Channels'}
-                    </button>
+                    {!epgHiddenButtons.includes('manage-channels') && (
+                      <button
+                        className="guide-manage-channels-btn"
+                        onClick={isCustomGroup ? () => setManagingCustomGroup({ id: categoryId!, name: customGroupName }) : handleManageChannels}
+                        title={isCustomGroup ? "Manage custom group" : "Manage channels in this category"}
+                      >
+                        {isCustomGroup ? '📂 Manage Custom Group' : '📺 Manage Channels'}
+                      </button>
+                    )}
                     {!isCustomGroup && (
                       <>
-                        {!sourceId?.startsWith('playlist:') && (
+                        {!sourceId?.startsWith('playlist:') && !epgHiddenButtons.includes('refresh-source') && (
                           <button
                             className="guide-refresh-source-btn"
                             onClick={handleRefreshSource}
@@ -1970,7 +1973,7 @@ export function ChannelPanel({
                             )}
                           </button>
                         )}
-                        {!sourceId?.startsWith('playlist:') && (
+                        {!sourceId?.startsWith('playlist:') && !epgHiddenButtons.includes('epg-shift') && (
                           <button
                             className="guide-epg-shift-btn"
                             onClick={() => setShowEpgShiftModal(true)}
@@ -1983,33 +1986,37 @@ export function ChannelPanel({
                             {currentEpgOffset === 0 ? 'EPG Shift' : `Shift ${currentEpgOffset > 0 ? '+' : ''}${currentEpgOffset}h`}
                           </button>
                         )}
-                        <button
-                          className="guide-epg-shift-btn"
-                          onClick={() => setShowPlaylistListModal(true)}
-                          title="Playlist Editor"
-                        >
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <line x1="8" y1="6" x2="21" y2="6"></line>
-                            <line x1="8" y1="12" x2="21" y2="12"></line>
-                            <line x1="8" y1="18" x2="21" y2="18"></line>
-                            <line x1="3" y1="6" x2="3.01" y2="6"></line>
-                            <line x1="3" y1="12" x2="3.01" y2="12"></line>
-                            <line x1="3" y1="18" x2="3.01" y2="18"></line>
-                          </svg>
-                          Playlist Editor
-                        </button>
-                        <button
-                          className="guide-epg-shift-btn"
-                          onClick={() => setShowFailoverGroupModal(true)}
-                          title="Manage failover groups"
-                        >
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <path d="M12 2L2 7l10 5 10-5-10-5z"/>
-                            <path d="M2 17l10 5 10-5"/>
-                            <path d="M2 12l10 5 10-5"/>
-                          </svg>
-                          Failover Group
-                        </button>
+                        {!epgHiddenButtons.includes('playlist-editor') && (
+                          <button
+                            className="guide-epg-shift-btn"
+                            onClick={() => setShowPlaylistListModal(true)}
+                            title="Playlist Editor"
+                          >
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <line x1="8" y1="6" x2="21" y2="6"></line>
+                              <line x1="8" y1="12" x2="21" y2="12"></line>
+                              <line x1="8" y1="18" x2="21" y2="18"></line>
+                              <line x1="3" y1="6" x2="3.01" y2="6"></line>
+                              <line x1="3" y1="12" x2="3.01" y2="12"></line>
+                              <line x1="3" y1="18" x2="3.01" y2="18"></line>
+                            </svg>
+                            Playlist Editor
+                          </button>
+                        )}
+                        {!epgHiddenButtons.includes('failover-group') && (
+                          <button
+                            className="guide-epg-shift-btn"
+                            onClick={() => setShowFailoverGroupModal(true)}
+                            title="Manage failover groups"
+                          >
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                              <path d="M2 17l10 5 10-5"/>
+                              <path d="M2 12l10 5 10-5"/>
+                            </svg>
+                            Failover Group
+                          </button>
+                        )}
                         {epgSyncStatus && epgSyncStatus.total > 0 && (
                           <span className="guide-epg-sync-status">
                             <span className="sync-spinner">⟳</span>

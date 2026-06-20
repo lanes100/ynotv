@@ -290,6 +290,8 @@ export function Settings({
   const [startupView, setStartupView] = useState<'none' | 'guide' | 'movies' | 'series' | 'dvr' | 'sports' | 'calendar' | 'stremio'>('none');
   const navHiddenTabs = useUIStore((s) => s.navHiddenTabs);
   const navHiddenTabsStore = useUIStore((s) => s.setNavHiddenTabs);
+  const epgHiddenButtons = useUIStore((s) => s.epgHiddenButtons);
+  const epgHiddenButtonsStore = useUIStore((s) => s.setEpgHiddenButtons);
 
   // Playback settings state
   const [mpvParams, setMpvParams] = useState<string>('');
@@ -652,6 +654,7 @@ export function Settings({
         nuvioShowFileSizeBadges?: boolean;
         nuvioStreamBadgePlacement?: 'top' | 'bottom';
         navHiddenTabs?: string[];
+        epgHiddenButtons?: string[];
         castEnabled?: boolean;
         castRewriteTs?: boolean;
         transparentGuideHeight?: number;
@@ -781,6 +784,7 @@ export function Settings({
       setSavedLayoutState(settings.savedLayoutState ?? null);
       setStartupView(settings.startupView ?? 'none');
       navHiddenTabsStore(settings.navHiddenTabs ?? []);
+      epgHiddenButtonsStore(settings.epgHiddenButtons ?? []);
 
       // Load playback settings
       setMpvParams(settings.mpvParams ?? '');
@@ -1735,6 +1739,13 @@ export function Settings({
     }
   };
 
+  const handleEpgHiddenButtonsChange = async (buttons: string[]) => {
+    epgHiddenButtonsStore(buttons);
+    if (window.storage) {
+      await window.storage.updateSettings({ epgHiddenButtons: buttons });
+    }
+  };
+
   const handleStartupViewChange = async (value: 'none' | 'guide' | 'movies' | 'series' | 'dvr' | 'sports' | 'calendar' | 'stremio') => {
     setStartupView(value);
     if (window.storage) {
@@ -1921,6 +1932,8 @@ export function Settings({
           <NavigationTab
             navHiddenTabs={navHiddenTabs}
             onNavHiddenTabsChange={handleNavHiddenTabsChange}
+            epgHiddenButtons={epgHiddenButtons}
+            onEpgHiddenButtonsChange={handleEpgHiddenButtonsChange}
             showAllChannels={showAllChannels}
             onShowAllChannelsChange={handleShowAllChannelsChange}
             showFavorites={showFavorites}

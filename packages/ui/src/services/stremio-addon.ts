@@ -5,10 +5,14 @@ const CACHE_TTL = 5 * 60 * 1000;
 
 const CATALOG_CACHE = new Map<string, Promise<StremioCatalogResponse>>();
 const CATALOG_RESPONSE_CACHE = new Map<string, StremioCatalogResponse>();
+const META_CACHE = new Map<string, Promise<StremioMeta | null>>();
+const META_RESPONSE_CACHE = new Map<string, StremioMeta>();
 
 export function clearCatalogCache() {
   CATALOG_CACHE.clear();
   CATALOG_RESPONSE_CACHE.clear();
+  META_CACHE.clear();
+  META_RESPONSE_CACHE.clear();
 }
 
 async function fetchJson(url: string): Promise<any> {
@@ -113,17 +117,40 @@ export async function fetchMeta(
   type: string,
   id: string
 ): Promise<StremioMeta | null> {
-  for (const addon of addons) {
-    if (!addonHasResource(addon, 'meta')) continue;
-    try {
-      const url = `${normalizeBaseUrl(addon.baseUrl)}/meta/${type}/${id}.json`;
-      const data = await fetchJson(url) as { meta: StremioMeta };
-      if (data?.meta) return data.meta;
-    } catch {
-      // Try next addon
-    }
+  const cacheKey = `${type}:${id}`;
+  const cachedResponse = META_RESPONSE_CACHE.get(cacheKey);
+  if (cachedResponse) {
+    return cachedResponse;
   }
-  return null;
+  const cachedPromise = META_CACHE.get(cacheKey);
+  if (cachedPromise) {
+    return cachedPromise;
+  }
+
+  const promise = (async () => {
+    for (const addon of addons) {
+      if (!addonHasResource(addon, 'meta')) continue;
+      try {
+        const url = `${normalizeBaseUrl(addon.baseUrl)}/meta/${type}/${id}.json`;
+        const data = await fetchJson(url) as { meta: StremioMeta };
+        if (data?.meta) {
+          META_RESPONSE_CACHE.set(cacheKey, data.meta);
+          return data.meta;
+        }
+      } catch {
+        // Try next addon
+      }
+    }
+    return null;
+  })();
+
+  META_CACHE.set(cacheKey, promise);
+
+  promise.catch(() => {
+    META_CACHE.delete(cacheKey);
+  });
+
+  return promise;
 }
 
 export async function fetchStreams(

@@ -56,6 +56,13 @@ export function AboutTab() {
             >
               Documentation
             </button>
+            <button
+              className="sync-btn"
+              onClick={() => openLink('https://discord.com/invite/e5eGa5QETB')}
+              style={{ maxWidth: '140px' }}
+            >
+              Discord
+            </button>
           </div>
 
           <div className="about-section" style={{ marginTop: '24px', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '24px' }}>

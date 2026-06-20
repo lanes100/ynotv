@@ -4,6 +4,8 @@ import './PlaybackTab.css'; // Reuse existing tab styles
 interface NavigationTabProps {
   navHiddenTabs: string[];
   onNavHiddenTabsChange: (tabs: string[]) => void;
+  epgHiddenButtons: string[];
+  onEpgHiddenButtonsChange: (buttons: string[]) => void;
   // Category props
   showAllChannels: boolean;
   onShowAllChannelsChange: (enabled: boolean) => void;
@@ -26,9 +28,19 @@ const NAV_ITEMS = [
   { id: 'cast', label: 'Cast' },
 ];
 
+const EPG_BUTTONS = [
+  { id: 'manage-channels', label: 'Manage Channels' },
+  { id: 'refresh-source', label: 'Refresh Source' },
+  { id: 'epg-shift', label: 'EPG Shift' },
+  { id: 'playlist-editor', label: 'Playlist Editor' },
+  { id: 'failover-group', label: 'Failover Group' },
+];
+
 export function NavigationTab({
   navHiddenTabs,
   onNavHiddenTabsChange,
+  epgHiddenButtons,
+  onEpgHiddenButtonsChange,
   showAllChannels,
   onShowAllChannelsChange,
   showFavorites,
@@ -38,16 +50,24 @@ export function NavigationTab({
   showRecentlyViewed,
   onShowRecentlyViewedChange,
 }: NavigationTabProps) {
-  const [activeSubTab, setActiveSubTab] = useState<'titlebar' | 'category'>('titlebar');
+  const [activeSubTab, setActiveSubTab] = useState<'titlebar' | 'category' | 'epg'>('titlebar');
   const isVisible = (id: string) => !navHiddenTabs.includes(id);
 
   const handleToggle = (id: string, checked: boolean) => {
     if (checked) {
-      // Show — remove from hidden list
       onNavHiddenTabsChange(navHiddenTabs.filter((t) => t !== id));
     } else {
-      // Hide — add to hidden list
       onNavHiddenTabsChange([...navHiddenTabs, id]);
+    }
+  };
+
+  const isEpgButtonVisible = (id: string) => !epgHiddenButtons.includes(id);
+
+  const handleEpgToggle = (id: string, checked: boolean) => {
+    if (checked) {
+      onEpgHiddenButtonsChange(epgHiddenButtons.filter((b) => b !== id));
+    } else {
+      onEpgHiddenButtonsChange([...epgHiddenButtons, id]);
     }
   };
 
@@ -65,6 +85,12 @@ export function NavigationTab({
           onClick={() => setActiveSubTab('category')}
         >
           Category
+        </button>
+        <button
+          className={`settings-tab ${activeSubTab === 'epg' ? 'active' : ''}`}
+          onClick={() => setActiveSubTab('epg')}
+        >
+          EPG
         </button>
       </div>
 
@@ -180,6 +206,43 @@ export function NavigationTab({
                 </label>
               </div>
             </div>
+          </div>
+        )}
+
+        {activeSubTab === 'epg' && (
+          <div className="settings-section" style={{ paddingBottom: '8px' }}>
+            <div className="section-header">
+              <h3>EPG Button Visibility</h3>
+            </div>
+
+            <p className="section-description" style={{ marginBottom: '12px' }}>
+              Show or hide buttons in the LiveTV EPG header.
+            </p>
+
+            {EPG_BUTTONS.map((item) => (
+              <div
+                key={item.id}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '0.75rem 0',
+                  borderBottom: '1px solid rgba(255,255,255,0.08)',
+                }}
+              >
+                <div style={{ flex: 1 }}>
+                  <div style={{ color: 'rgba(255,255,255,0.9)', fontSize: '0.95rem' }}>
+                    {item.label}
+                  </div>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={isEpgButtonVisible(item.id)}
+                  onChange={(e) => handleEpgToggle(item.id, e.target.checked)}
+                  style={{ cursor: 'pointer', marginLeft: '1rem' }}
+                />
+              </div>
+            ))}
           </div>
         )}
       </div>
