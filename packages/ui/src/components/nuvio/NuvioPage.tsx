@@ -819,31 +819,30 @@ function NuvioPageContent({
     if (!token || !profile) return;
     if (!background) setLoading(true);
     try {
-      const effectiveAddonProfileId =
-        profile.profile_index !== 1 && profile.uses_primary_addons
-          ? 1
-          : profile.profile_index;
+      // Start both fetches concurrently
+      const progressPromise = fetchNuvioWatchProgress(token, profile.profile_index, null, 100);
+      const libraryPromise = fetchNuvioLibrary(token, profile.profile_index, 500);
 
-      // Fetch Watch Progress (addons already synced by syncNow)
-      const progress = await fetchNuvioWatchProgress(token, profile.profile_index, null, 100);
+      // Handle progress promise resolution as soon as it resolves
+      progressPromise.then((progress) => {
+        if (progress && progress.length > 0) {
+          setRawWatchProgress(progress);
+          setResolvedWatchProgress(progress.map(p => ({ ...p, name: `Content ID: ${p.content_id}` })));
+          resolveProgressMetadata(progress);
+        } else {
+          setRawWatchProgress([]);
+          setResolvedWatchProgress([]);
+        }
+      }).catch(e => console.error('[NuvioPage] Failed to fetch progress:', e));
 
-      if (nuvioView === 'library') {
-        const lib = await fetchNuvioLibrary(token, profile.profile_index, 500);
+      // Handle library promise resolution as soon as it resolves
+      libraryPromise.then((lib) => {
         setLibrary(lib || []);
         setLibraryLoaded(true);
-      } else {
-        setLibrary([]);
-        setLibraryLoaded(false);
-      }
+      }).catch(e => console.error('[NuvioPage] Failed to fetch library:', e));
 
-      if (progress && progress.length > 0) {
-        setRawWatchProgress(progress);
-        setResolvedWatchProgress(progress.map(p => ({ ...p, name: `Content ID: ${p.content_id}` })));
-        resolveProgressMetadata(progress);
-      } else {
-        setRawWatchProgress([]);
-        setResolvedWatchProgress([]);
-      }
+      // Wait for both to complete to turn off loading state
+      await Promise.allSettled([progressPromise, libraryPromise]);
     } catch (e) {
       console.error('[NuvioPage] Failed to fetch synced progress/addons:', e);
     } finally {
@@ -1103,7 +1102,22 @@ function NuvioPageContent({
 
   const handleAddToLibrary = async (item: { id: string; type: string; name: string; poster?: string | null; background?: string | null }) => {
     if (!token || !profile) return;
-    if (libraryIds.has(item.id)) return;
+
+    let currentLibrary = library;
+    if (!libraryLoaded) {
+      try {
+        const lib = await fetchNuvioLibrary(token, profile.profile_index, 500);
+        currentLibrary = lib || [];
+        setLibrary(currentLibrary);
+        setLibraryLoaded(true);
+      } catch (e) {
+        console.error('[NuvioPage] Failed to fetch library before adding:', e);
+        return;
+      }
+    }
+
+    if (currentLibrary.some(x => x.content_id === item.id)) return;
+
     const libItem: NuvioLibrarySyncItem = {
       content_id: item.id,
       content_type: item.type === 'series' || item.type === 'show' ? 'series' : 'movie',
@@ -1118,7 +1132,7 @@ function NuvioPageContent({
       addon_base_url: null,
       added_at: Date.now(),
     };
-    const updatedLibrary = [libItem, ...library];
+    const updatedLibrary = [libItem, ...currentLibrary];
     try {
       await pushNuvioLibrary(token, profile.profile_index, updatedLibrary);
       setLibrary(updatedLibrary);
