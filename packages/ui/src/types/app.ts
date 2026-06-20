@@ -97,7 +97,7 @@ export interface AppSettings {
     epgVisibleHours?: 'auto' | number;
     rememberLastChannels?: boolean;
     savedLayoutState?: SavedLayoutState;
-    startupView?: 'none' | 'guide' | 'movies' | 'series' | 'dvr' | 'sports' | 'calendar' | 'stremio';
+    startupView?: 'none' | 'guide' | 'movies' | 'series' | 'dvr' | 'sports' | 'calendar' | 'stremio' | 'nuvio';
     searchResultsOrder?: 'default' | 'alphabetical';
     // Advanced search settings
     advancedSearchScope?: 'channels' | 'epg' | 'both';

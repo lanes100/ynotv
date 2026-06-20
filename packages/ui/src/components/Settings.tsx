@@ -287,7 +287,7 @@ export function Settings({
   const [rememberLastChannels, setRememberLastChannels] = useState(false);
   const [reopenLastOnStartup, setReopenLastOnStartup] = useState(false);
   const [savedLayoutState, setSavedLayoutState] = useState<SavedLayoutState | null>(null);
-  const [startupView, setStartupView] = useState<'none' | 'guide' | 'movies' | 'series' | 'dvr' | 'sports' | 'calendar' | 'stremio'>('none');
+  const [startupView, setStartupView] = useState<'none' | 'guide' | 'movies' | 'series' | 'dvr' | 'sports' | 'calendar' | 'stremio' | 'nuvio'>('none');
   const navHiddenTabs = useUIStore((s) => s.navHiddenTabs);
   const navHiddenTabsStore = useUIStore((s) => s.setNavHiddenTabs);
   const epgHiddenButtons = useUIStore((s) => s.epgHiddenButtons);
@@ -600,7 +600,7 @@ export function Settings({
         rememberLastChannels?: boolean;
         reopenLastOnStartup?: boolean;
         savedLayoutState?: SavedLayoutState;
-        startupView?: 'none' | 'guide' | 'movies' | 'series' | 'dvr' | 'sports' | 'calendar';
+        startupView?: 'none' | 'guide' | 'movies' | 'series' | 'dvr' | 'sports' | 'calendar' | 'stremio' | 'nuvio';
         mpvParams?: string;
         mpvDisableWhitelist?: boolean;
         timeshiftEnabled?: boolean;
@@ -1746,7 +1746,7 @@ export function Settings({
     }
   };
 
-  const handleStartupViewChange = async (value: 'none' | 'guide' | 'movies' | 'series' | 'dvr' | 'sports' | 'calendar' | 'stremio') => {
+  const handleStartupViewChange = async (value: 'none' | 'guide' | 'movies' | 'series' | 'dvr' | 'sports' | 'calendar' | 'stremio' | 'nuvio') => {
     setStartupView(value);
     if (window.storage) {
       await window.storage.updateSettings({ startupView: value });

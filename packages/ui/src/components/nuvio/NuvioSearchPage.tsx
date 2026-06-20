@@ -9,6 +9,8 @@ interface NuvioSearchPageProps {
   onItemClick: (item: { content_id: string; content_type: string; name: string; poster: string | null }) => void;
   initialCatalogKey?: string | null;
   onBack?: () => void;
+  query: string;
+  onQueryChange: (query: string) => void;
 }
 
 const TYPE_OPTIONS = [
@@ -104,10 +106,11 @@ export function NuvioSearchPage({
   addons,
   onItemClick,
   initialCatalogKey,
-  onBack
+  onBack,
+  query,
+  onQueryChange
 }: NuvioSearchPageProps) {
   const { onCardMouseEnter, onCardMouseLeave, onCardClick } = useStremioHover();
-  const [query, setQuery] = useState('');
   const [selectedType, setSelectedType] = useState<string | null>(null);
   const [selectedCatalogKey, setSelectedCatalogKey] = useState<string | null>(initialCatalogKey || null);
   const [selectedGenre, setSelectedGenre] = useState<string | null>(null);
@@ -239,7 +242,7 @@ export function NuvioSearchPage({
       if (cat) {
         setSelectedType(cat.type === 'tv' ? 'series' : cat.type);
       }
-      setQuery('');
+      onQueryChange('');
       setDiscoverItems([]);
       discoverSkipRef.current = 0;
       hasMoreDiscoverRef.current = true;
@@ -273,21 +276,25 @@ export function NuvioSearchPage({
     }
   }, [searchCatalogs]);
 
-  const handleQueryChange = (value: string) => {
-    setQuery(value);
+  useEffect(() => {
     if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
-    if (value.length >= 2) {
-      searchTimeoutRef.current = setTimeout(() => executeSearch(value), 350);
+    if (query.length >= 2) {
+      searchTimeoutRef.current = setTimeout(() => executeSearch(query), 350);
     } else {
       setSearchResults([]);
       setSearchDone(false);
     }
+    return () => {
+      if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+    };
+  }, [query, executeSearch]);
+
+  const handleQueryChange = (value: string) => {
+    onQueryChange(value);
   };
 
   const handleClear = () => {
-    setQuery('');
-    setSearchResults([]);
-    setSearchDone(false);
+    onQueryChange('');
     focusRef.current?.focus();
   };
 

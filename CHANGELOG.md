@@ -1,5 +1,26 @@
 # Changelog
 
+## v2.1.2
+
+### Added
+
+- **Nuvio integration** - New Nuvio tab in Titlebar Navigation. Sign in to your Nuvio account for two-way sync of add-ons, plugins, collections, settings, watch history, and library. The Nuvio button can be hidden from the title bar under `Settings → Navigation`.
+- **UI scaling** - Application UI scale can be adjusted under `Settings → UI → Application UI Scale`. Recommended for users running Windows display scaling or very high-resolution displays. Consider adjusting EPG visible hours alongside this setting.
+- **Configurable EPG grid hours** - The number of hours displayed in the EPG grid can be customized under `Settings → Live TV → EPG → EPG Visible Hours`.
+- **Channel loading overlay** - A loading overlay is now displayed while a Live TV channel is buffering. Enable under `Settings → Playback → Reconnect`.
+- **Move to Top in Manage Categories** - Press `↑↑` on a category in Manage Categories to move it to the top of the list instantly, or use the new `Select to Move to Top` button to multi-select and move multiple categories at once.
+- **Shortcut keys for Stremio and Nuvio** - Keyboard shortcuts for Stremio and Nuvio can be configured under `Settings → Shortcuts` (defaults: Stremio `X`, Nuvio `N`).
+- **Custom recording end padding** - The end padding applied to recordings can now be set to a custom duration, replacing the previous fixed maximum of 15 minutes. Useful for events that tend to run over their scheduled end time.
+- **Expanded settings menu** - A button in the top-right corner of the Settings page allows the settings menu to be expanded to full screen.
+- **Poster Scaling for Strem/Nuvio** - Scale poster sizes using the slider scale in top left of navigation bar.
+- **Hide EPG buttons** - Individual EPG toolbar buttons (`Manage Channels`, `Refresh Source`, `EPG Shift`, `Playlist Editor`, `Failover Group`) can be hidden under `Settings → Navigation → EPG`.
+- **Discord button** - Added a Discord button in `Settings → About` to join the ynoTV discord.
+
+### Fixed
+
+- **Late-starting sport matches not auto-refreshing** - Resolved an issue where matches that kicked off after their scheduled start time would fail to refresh automatically every 30 seconds.
+
+
 ## v2.1.1
 
 ### Added

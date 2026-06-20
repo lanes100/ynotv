@@ -350,6 +350,7 @@ function NuvioPageContent({
   };
 
   const [catalogFilter, setCatalogFilter] = useState('');
+  const [nuvioSearchQuery, setNuvioSearchQuery] = useState('');
   const [editableCollections, setEditableCollections] = useState<NuvioCollection[]>([]);
 
   const [tmdbApiKey, setTmdbApiKey] = useState('');
@@ -1487,7 +1488,7 @@ function NuvioPageContent({
                 <circle cx="11" cy="11" r="8" />
                 <path d="m21 21-4.3-4.3" />
               </svg>
-              <span>Search</span>
+              <span>Discover</span>
             </button>
 
             {/* Collections tab hidden — code kept for future implementation
@@ -1541,7 +1542,38 @@ function NuvioPageContent({
 
         <div className="nuvio-topbar-right">
           {profile && (
-            <div className="nuvio-profile-badge-wrapper" ref={profileMenuRef}>
+            <>
+              <div className="nuvio-topbar-search">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="nuvio-topbar-search-icon">
+                  <circle cx="11" cy="11" r="8" />
+                  <path d="m21 21-4.3-4.3" />
+                </svg>
+                <input
+                  type="text"
+                  placeholder="Quick search..."
+                  value={nuvioSearchQuery}
+                  onChange={(e) => {
+                    setNuvioSearchQuery(e.target.value);
+                    if (nuvioView !== 'search') {
+                      navigateToView('search');
+                    }
+                  }}
+                  className="nuvio-topbar-search-input"
+                />
+                {nuvioSearchQuery && (
+                  <button
+                    className="nuvio-topbar-search-clear"
+                    onClick={() => setNuvioSearchQuery('')}
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <line x1="18" y1="6" x2="6" y2="18"></line>
+                      <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                  </button>
+                )}
+              </div>
+
+              <div className="nuvio-profile-badge-wrapper" ref={profileMenuRef}>
               <div className="nuvio-profile-badge" onClick={() => setShowProfileMenu(!showProfileMenu)}>
                 <div style={{
                   width: '18px',
@@ -1605,7 +1637,8 @@ function NuvioPageContent({
                 </div>
               )}
             </div>
-          )}
+          </>
+        )}
         </div>
       </div>
 
@@ -2346,6 +2379,8 @@ function NuvioPageContent({
                 onItemClick={(item) => handleItemClick(item)}
                 initialCatalogKey={initialCatalogKey}
                 onBack={() => nuvioGoBack()}
+                query={nuvioSearchQuery}
+                onQueryChange={setNuvioSearchQuery}
               />
             )}
 

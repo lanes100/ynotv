@@ -71,7 +71,7 @@ export interface AppSettings {
   sportsBgOpacity: number; // 0–1
 
   // Startup view
-  startupView: 'none' | 'guide' | 'movies' | 'series' | 'dvr' | 'sports' | 'calendar' | 'stremio';
+  startupView: 'none' | 'guide' | 'movies' | 'series' | 'dvr' | 'sports' | 'calendar' | 'stremio' | 'nuvio';
 
   // Actions
   setNavHiddenTabs: (tabs: string[]) => void;
@@ -101,7 +101,7 @@ export interface AppSettings {
     setWidgetBgOpacity: (opacity: number) => void;
     setSportsScale: (scale: number) => void;
     setSportsBgOpacity: (opacity: number) => void;
-    setStartupView: (view: 'none' | 'guide' | 'movies' | 'series' | 'dvr' | 'sports' | 'calendar') => void;
+    setStartupView: (view: 'none' | 'guide' | 'movies' | 'series' | 'dvr' | 'sports' | 'calendar' | 'stremio' | 'nuvio') => void;
     castEnabled: boolean;
     setCastEnabled: (enabled: boolean) => void;
     castRewriteTs: boolean;
@@ -191,7 +191,7 @@ export function useAppSettings(): AppSettings {
   const [sportsBgOpacity, setSportsBgOpacityState] = useState(0.7);
 
   // Startup view
-  const [startupView, setStartupViewState] = useState<'none' | 'guide' | 'movies' | 'series' | 'dvr' | 'sports' | 'calendar' | 'stremio'>('none');
+  const [startupView, setStartupViewState] = useState<'none' | 'guide' | 'movies' | 'series' | 'dvr' | 'sports' | 'calendar' | 'stremio' | 'nuvio'>('none');
 
   // Google Cast setting
   const [castEnabled, setCastEnabledState] = useState(false);
@@ -602,7 +602,7 @@ export function useAppSettings(): AppSettings {
     }
   }, []);
 
-  const setStartupView = useCallback(async (view: 'none' | 'guide' | 'movies' | 'series' | 'dvr' | 'sports' | 'calendar') => {
+  const setStartupView = useCallback(async (view: 'none' | 'guide' | 'movies' | 'series' | 'dvr' | 'sports' | 'calendar' | 'stremio' | 'nuvio') => {
     setStartupViewState(view);
     if (window.storage) {
       try {

@@ -42,6 +42,7 @@ A feature-rich, open source IPTV player for Windows built on [Tauri v2](https://
 
 - **M3U, Xtream Codes & Stalker Support** - multiple EPG sources supported
 - **Stremio Integration & Addons support** - Integrated optional stremio login to sync watchlist/addons or add addons directly
+- **Nuvio Integration** - Integrated login for 2 way sync with watchlist, addons, plugins, collections, settings
 - **Playlist Editor** - Create Custom playlist from your sources, move categories/channels from one into another
 - **Grid-style EPG** - with an integrated preview window
 - **Catchup & Cache Time Shift** - instant replays on supported channels
@@ -267,6 +268,7 @@ Metadata displayed within the application is sourced from publicly available thi
 
 ynoTV builds on the following open source projects and services:
 
+
 - [sbtlTV](https://github.com/thesubtleties/sbtlTV) — original foundation
 - [Tauri](https://tauri.app) — desktop application framework
 - [mpv](https://mpv.io) — video playback engine
@@ -274,8 +276,10 @@ ynoTV builds on the following open source projects and services:
 - [TVMaze](https://www.tvmaze.com) — TV schedule and show metadata
 - [TMDB](https://www.themoviedb.org) — movie and series metadata
 - [Trakt.tv](https://app.trakt.tv/) - Scrobble support & catalogs
-- [Harbor](https://github.com/harborstremio/harbor) - Stremio integration and various features
-- [MY-1 Mac Stalker Player](https://github.com/Cyogenus/IPTV-MAC-STALKER-PLAYER-BY-MY-1) - Stalker integration
+- [Stremio](https://www.stremio.com/) — for building an open addon ecosystem that makes third-party integration possible
+- [Nuvio](https://nuvio.tv/) — for creating a fantastic open source media platform and making their codebase publicly available
+- [Harbor](https://github.com/harborstremio/harbor) — Stremio integration and various features
+- [MY-1 Mac Stalker Player](https://github.com/Cyogenus/IPTV-MAC-STALKER-PLAYER-BY-MY-1) — Stalker integration
 
 ---
 
