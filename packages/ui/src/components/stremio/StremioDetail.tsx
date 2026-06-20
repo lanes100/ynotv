@@ -18,7 +18,7 @@ import { extractStreamBadges, isLightColor, formatVideoSize } from '../../utils/
 import { useLazyStremioCast, type StremioCastMember } from '../../hooks/useLazyStremioCast';
 import { useLazyStremioTrailer } from '../../hooks/useLazyStremioTrailer';
 import { useLazyStremioRecommendations, type RecommendationItem } from '../../hooks/useLazyStremioRecommendations';
-import { useTmdbAccessToken } from '../../hooks/useTmdbLists';
+import { useActiveTmdbToken } from '../../hooks/useTmdbLists';
 import { getMovieDetails, getTvShowDetails, getTmdbImageUrl, tmdbPersonIdByName } from '../../services/tmdb';
 import { useDownloadStore } from '../../stores/downloadStore';
 import './StremioDetail.css';
@@ -94,7 +94,7 @@ export function StremioDetail({
   const setStremioSearchQuery = useSetStremioSearchQuery();
   const setStremioView = useSetStremioView();
   const setStremioActiveMeta = useSetStremioActiveMeta();
-  const tmdbToken = useTmdbAccessToken();
+  const tmdbToken = useActiveTmdbToken();
 
   const { cast, loading: castLoading } = useLazyStremioCast(meta, tmdbToken);
   const { trailerUrl: tmdbTrailerUrl } = useLazyStremioTrailer(meta, tmdbToken);

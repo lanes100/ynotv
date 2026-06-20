@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import type { StremioMeta } from '../../types/stremio';
-import { useTmdbAccessToken } from '../../hooks/useTmdbLists';
+import { useActiveTmdbToken } from '../../hooks/useTmdbLists';
 import { getPersonDetails, getTmdbImageUrl } from '../../services/tmdb';
 import { useStremioNavigate } from '../../stores/uiStore';
 import './StremioPersonDetail.css';
@@ -137,7 +137,7 @@ function creditToStremioMeta(c: PersonCredit): StremioMeta {
 }
 
 export function StremioPersonDetail({ personId, onBack, onItemClick }: StremioPersonDetailProps) {
-  const tmdbToken = useTmdbAccessToken();
+  const tmdbToken = useActiveTmdbToken();
   const [person, setPerson] = useState<PersonDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);

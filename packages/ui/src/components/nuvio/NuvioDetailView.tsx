@@ -11,7 +11,7 @@ import { extractStreamBadges, isLightColor, formatVideoSize } from '../../utils/
 import { useLazyStremioCast, type StremioCastMember } from '../../hooks/useLazyStremioCast';
 import { useLazyStremioTrailer } from '../../hooks/useLazyStremioTrailer';
 import { useLazyStremioRecommendations, type RecommendationItem } from '../../hooks/useLazyStremioRecommendations';
-import { useTmdbAccessToken } from '../../hooks/useTmdbLists';
+import { useActiveTmdbToken } from '../../hooks/useTmdbLists';
 import { getMovieDetails, getTvShowDetails, getTmdbImageUrl, tmdbPersonIdByName } from '../../services/tmdb';
 import { useDownloadStore } from '../../stores/downloadStore';
 import { useNuvioPreselectVideoId, useSetNuvioPreselectVideoId } from '../../stores/uiStore';
@@ -95,7 +95,7 @@ export function NuvioDetailView({
   const onPlayRef = useRef(onPlay);
   useEffect(() => { onPlayRef.current = onPlay; }, [onPlay]);
 
-  const tmdbToken = useTmdbAccessToken();
+  const tmdbToken = useActiveTmdbToken();
   const { cast, loading: castLoading } = useLazyStremioCast(meta as unknown as StremioMeta, tmdbToken);
   const { trailerUrl: tmdbTrailerUrl } = useLazyStremioTrailer(meta as unknown as StremioMeta, tmdbToken);
   const { items: recommendations, loading: recsLoading } = useLazyStremioRecommendations(meta as unknown as StremioMeta, tmdbToken);

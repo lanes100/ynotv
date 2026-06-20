@@ -304,6 +304,7 @@ export const useNuvioAuthStore = create<NuvioAuthStore>()(
           const tmdbKey = profileSettings?.features?.tmdb_settings?.apiKey;
           if (tmdbKey && (window as any).storage) {
             await (window as any).storage.updateSettings({ tmdbApiKey: tmdbKey });
+            window.dispatchEvent(new CustomEvent('ynotv:tmdb-key-changed'));
           }
         } catch (e) {
           console.error('[NuvioAuthStore] Failed to fetch profile settings:', e);
@@ -333,6 +334,7 @@ export const useNuvioAuthStore = create<NuvioAuthStore>()(
           const tmdbKey = updatedFeatures.tmdb_settings?.apiKey;
           if (tmdbKey && (window as any).storage) {
             await (window as any).storage.updateSettings({ tmdbApiKey: tmdbKey });
+            window.dispatchEvent(new CustomEvent('ynotv:tmdb-key-changed'));
           }
         } catch (e: any) {
           console.error('[NuvioAuthStore] Failed to update profile settings:', e);
@@ -387,6 +389,7 @@ export const useNuvioAuthStore = create<NuvioAuthStore>()(
           const tmdbKey = profileSettings?.features?.tmdb_settings?.apiKey;
           if (tmdbKey && (window as any).storage) {
             await (window as any).storage.updateSettings({ tmdbApiKey: tmdbKey });
+            window.dispatchEvent(new CustomEvent('ynotv:tmdb-key-changed'));
           }
 
           // Pull home catalog settings

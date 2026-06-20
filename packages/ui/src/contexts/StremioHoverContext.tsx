@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useRef, useEffect } from 'r
 import type { StremioMetaPreview, StremioMeta, InstalledAddon } from '../types/stremio';
 import { fetchMeta } from '../services/stremio-addon';
 import { useStremioAddonStore } from '../stores/stremioAddonStore';
-import { useTmdbAccessToken } from '../hooks/useTmdbLists';
+import { useActiveTmdbToken } from '../hooks/useTmdbLists';
 import { searchTvShows, searchMovies, getTvShowCredits, getMovieCredits, getTmdbImageUrl } from '../services/tmdb';
 
 export interface StremioCastMember {
@@ -40,7 +40,7 @@ export function StremioHoverProvider({ children, addons, disabled }: { children:
 
   const stremioAddons = useStremioAddonStore((s) => s.enabledAddons);
   const enabledAddons = addons ?? stremioAddons;
-  const tmdbToken = useTmdbAccessToken();
+  const tmdbToken = useActiveTmdbToken();
 
   const showTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
