@@ -13,13 +13,15 @@
 - **Custom recording end padding** - The end padding applied to recordings can now be set to a custom duration, replacing the previous fixed maximum of 15 minutes. Useful for events that tend to run over their scheduled end time.
 - **Expanded settings menu** - A button in the top-right corner of the Settings page allows the settings menu to be expanded to full screen.
 - **Poster Scaling for Strem/Nuvio** - Scale poster sizes using the slider scale in top left of navigation bar.
+- **Cache Stremio fetch results** - Cache fetch results from addons with set timer. Enable in `Strem → Settings`
 - **Hide EPG buttons** - Individual EPG toolbar buttons (`Manage Channels`, `Refresh Source`, `EPG Shift`, `Playlist Editor`, `Failover Group`) can be hidden under `Settings → Navigation → EPG`.
-- **Discord button** - Added a Discord button in `Settings → About` to join the ynoTV discord.
 - **Default Language & Subtitles Off** - Added new options for Default Subtitle: Off, and Language:Default. Default language will select the default audio track.
+- **Discord button** - Added a Discord button in `Settings → About` to join the ynoTV discord.
 
 ### Fixed
 
 - **Late-starting sport matches not auto-refreshing** - Resolved an issue where matches that kicked off after their scheduled start time would fail to refresh automatically every 30 seconds.
+- **Default subtitle not being selected** - Fixed an issue where default subtitle language wasn't being correctly selected when subtitle addons were enabled in Strem.
 
 ## v2.1.1
 
