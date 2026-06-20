@@ -353,6 +353,14 @@ function NuvioPageContent({
     el.scrollTo({ left: el.scrollLeft + (dir === 'left' ? -amount : amount), behavior: 'smooth' });
   };
 
+  const nuvioCwScrollRef = useRef<HTMLDivElement>(null);
+  const scrollContinueWatching = (dir: 'left' | 'right') => {
+    const el = nuvioCwScrollRef.current;
+    if (!el) return;
+    const amount = el.clientWidth * 0.75;
+    el.scrollTo({ left: el.scrollLeft + (dir === 'left' ? -amount : amount), behavior: 'smooth' });
+  };
+
   const refreshToken = useTraktCatalogRefreshToken();
   interface TraktNuvioCatalogRow {
     key: string;
@@ -1922,8 +1930,24 @@ function NuvioPageContent({
                     <div className="nuvio-row">
                       <div className="nuvio-row-header">
                         <h3 className="nuvio-row-title">Continue Watching</h3>
+                        <div className="nuvio-chevron-controls">
+                          <button
+                            className="nuvio-chevron-btn"
+                            onClick={() => scrollContinueWatching('left')}
+                            aria-label="Scroll left"
+                          >
+                            &lsaquo;
+                          </button>
+                          <button
+                            className="nuvio-chevron-btn"
+                            onClick={() => scrollContinueWatching('right')}
+                            aria-label="Scroll right"
+                          >
+                            &rsaquo;
+                          </button>
+                        </div>
                       </div>
-                      <div className="nuvio-scroll-rail">
+                      <div className="nuvio-scroll-rail" ref={nuvioCwScrollRef}>
                         {(() => {
                           const cwStyle = localStorage.getItem('nuvio_cw_style') || 'card';
                           if (cwStyle === 'wide') {

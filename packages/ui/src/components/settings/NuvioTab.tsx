@@ -4,6 +4,7 @@ import { useNuvioPluginStore } from '../../stores/nuvioPluginStore';
 import { useNuvioAddonStore } from '../../stores/nuvioAddonStore';
 import { useNuvioCollectionStore } from '../../stores/nuvioCollectionStore';
 import { NuvioPinModal } from '../nuvio/NuvioPinModal';
+import { TraktCatalogsModal } from './TraktCatalogsModal';
 import { getEffectiveNuvioUrl, getEffectiveNuvioKey } from '../../services/nuvio-api';
 import type { InstalledAddon, BadgeSource, StreamAutoPlayMode, StreamAutoPlaySourceScope } from '../../types/stremio';
 import { parseBadgePayload, isLightColor, convertArgbToRgba } from '../../utils/streamBadges';
@@ -150,6 +151,7 @@ export function NuvioTab({
   const profile = authStore.activeProfile;
 
   const [traktConnected, setTraktConnected] = useState(false);
+  const [showTraktModal, setShowTraktModal] = useState(false);
   useEffect(() => {
     const checkTraktStatus = async () => {
       if (!window.storage) return;
@@ -1948,9 +1950,18 @@ export function NuvioTab({
               Connect Trakt Account
             </button>
           ) : (
-            <span style={{ fontSize: '0.75rem', color: '#2ed573', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', padding: '4px 8px', borderRadius: '4px', background: 'rgba(46,213,115,0.1)' }}>
-              Connected
-            </span>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <span style={{ fontSize: '0.75rem', color: '#2ed573', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', padding: '4px 8px', borderRadius: '4px', background: 'rgba(46,213,115,0.1)' }}>
+                Connected
+              </span>
+              <button
+                onClick={() => setShowTraktModal(true)}
+                className="sync-btn"
+                style={{ padding: '6px 12px', fontSize: '0.8rem' }}
+              >
+                Add Trakt Catalogs
+              </button>
+            </div>
           )}
         </div>
       </div>
@@ -2640,6 +2651,13 @@ export function NuvioTab({
             </div>
           </div>
         </div>
+      )}
+
+      {showTraktModal && (
+        <TraktCatalogsModal
+          type="nuvio"
+          onClose={() => setShowTraktModal(false)}
+        />
       )}
     </div>
   );
