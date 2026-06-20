@@ -1795,7 +1795,7 @@ export function NuvioTab({
       </div>
 
       {/* Hover Details toggle for Nuvio */}
-      <div className="retry-setting-row">
+      <div className="retry-setting-row" style={{ borderBottom: 'none', paddingLeft: '20px', paddingRight: '20px', marginTop: '24px' }}>
         <div className="timeshift-toggle-info">
           <span className="timeshift-toggle-label">Hover Details</span>
           <span className="timeshift-toggle-sub">Show hover cards with details when hovering over items in Nuvio catalogs.</span>

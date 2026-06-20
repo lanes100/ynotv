@@ -54,6 +54,7 @@ const LANGUAGE_OPTIONS = [
   { code: 'fi', label: 'Finnish' },
   { code: 'cs', label: 'Czech' },
   { code: 'el', label: 'Greek' },
+  { code: 'hu', label: 'Hungarian' },
   { code: 'he', label: 'Hebrew' },
   { code: 'id', label: 'Indonesian' },
   { code: 'ms', label: 'Malay' },
