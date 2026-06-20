@@ -1066,16 +1066,12 @@
 .stremio-detail-addon-filters {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
   margin-bottom: 16px;
-  overflow-x: auto;
   padding-bottom: 4px;
-  scrollbar-width: none;
 }
 
-.stremio-detail-addon-filters::-webkit-scrollbar {
-  display: none;
-}
 
 .stremio-addon-filter-btn {
   background: var(--surface-color, rgba(255, 255, 255, 0.05));

@@ -43,6 +43,8 @@ interface NuvioDetailViewProps {
   nuvioAutoPlayAllowedAddons?: string[];
   nuvioAutoPlayAllowedPlugins?: string[];
   nuvioAutoPlayRegex?: string;
+  nuvioCacheFetchResults?: boolean;
+  nuvioCacheFetchTimeout?: number;
 }
 
 function formatReleaseDate(dStr?: string) {
@@ -55,6 +57,12 @@ function formatReleaseDate(dStr?: string) {
     return dStr;
   }
 }
+
+interface CacheEntry {
+  streams: StremioStream[];
+  timestamp: number;
+}
+const streamCache = new Map<string, CacheEntry>();
 
 export function NuvioDetailView({
   meta,
@@ -73,6 +81,8 @@ export function NuvioDetailView({
   nuvioAutoPlayAllowedAddons = [],
   nuvioAutoPlayAllowedPlugins = [],
   nuvioAutoPlayRegex = '',
+  nuvioCacheFetchResults = false,
+  nuvioCacheFetchTimeout = 5,
 }: NuvioDetailViewProps) {
   const addons = useNuvioAddonStore((s) => s.enabledAddons);
   const pluginStore = useNuvioPluginStore();
@@ -120,6 +130,7 @@ export function NuvioDetailView({
   const [selectedAddonFilter, setSelectedAddonFilter] = useState('All');
   const [videoSearch, setVideoSearch] = useState('');
   const [downloadingUrl, setDownloadingUrl] = useState<string | null>(null);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   const autoPlayTriggeredRef = useRef<string | null>(null);
 
@@ -285,6 +296,20 @@ export function NuvioDetailView({
     id: string,
     onStreams?: (streams: StremioStream[]) => void
   ): Promise<StremioStream[]> => {
+    const cacheKey = `${type}:${id}`;
+    if (nuvioCacheFetchResults) {
+      const cached = streamCache.get(cacheKey);
+      if (cached) {
+        const ageMs = Date.now() - cached.timestamp;
+        if (ageMs < nuvioCacheFetchTimeout * 60 * 1000) {
+          onStreams?.(cached.streams);
+          return cached.streams;
+        } else {
+          streamCache.delete(cacheKey);
+        }
+      }
+    }
+
     const collected: StremioStream[] = [];
 
     // 1. Nuvio addons
@@ -336,8 +361,16 @@ export function NuvioDetailView({
     }
 
     await Promise.all([addonPromise, scraperPromise]);
+
+    if (nuvioCacheFetchResults && activeRef.current) {
+      streamCache.set(cacheKey, {
+        streams: collected,
+        timestamp: Date.now(),
+      });
+    }
+
     return collected;
-  }, [addons, pluginStore, selectedSeason]);
+  }, [addons, pluginStore, selectedSeason, nuvioCacheFetchResults, nuvioCacheFetchTimeout]);
 
   // Stable ref to avoid re-running effects when fetchStreamsWithPlugins identity changes
   const fetchStreamsRef = useRef(fetchStreamsWithPlugins);
@@ -348,7 +381,20 @@ export function NuvioDetailView({
     if (meta.type === 'series') return;
     let active = true;
     const loadStreams = async () => {
-      setStreams([]);
+      const cacheKey = `${effectiveMeta.type}:${effectiveMeta.id}`;
+      let isCached = false;
+      if (nuvioCacheFetchResults) {
+        const cached = streamCache.get(cacheKey);
+        if (cached) {
+          const ageMs = Date.now() - cached.timestamp;
+          if (ageMs < nuvioCacheFetchTimeout * 60 * 1000) {
+            isCached = true;
+          }
+        }
+      }
+      if (!isCached) {
+        setStreams([]);
+      }
       setLoadingStreams(true);
       const currentAddons = useNuvioAddonStore.getState().enabledAddons;
       await fetchStreamsRef.current(currentAddons, effectiveMeta.type, effectiveMeta.id, (newStreams) => {
@@ -361,14 +407,27 @@ export function NuvioDetailView({
     loadStreams();
     return () => { active = false; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [effectiveMeta.id, effectiveMeta.type, addons.map((a) => `${a.id}:${a.enabled !== false}`).join(',')]);
+  }, [effectiveMeta.id, effectiveMeta.type, addons.map((a) => `${a.id}:${a.enabled !== false}`).join(','), refreshTrigger, nuvioCacheFetchResults, nuvioCacheFetchTimeout]);
 
   // Series streams when episode selected
   useEffect(() => {
     if (meta.type !== 'series' || !selectedVideo) return;
     let active = true;
     const loadStreams = async () => {
-      setStreams([]);
+      const cacheKey = `series:${selectedVideo.id}`;
+      let isCached = false;
+      if (nuvioCacheFetchResults) {
+        const cached = streamCache.get(cacheKey);
+        if (cached) {
+          const ageMs = Date.now() - cached.timestamp;
+          if (ageMs < nuvioCacheFetchTimeout * 60 * 1000) {
+            isCached = true;
+          }
+        }
+      }
+      if (!isCached) {
+        setStreams([]);
+      }
       setLoadingStreams(true);
       const currentAddons = useNuvioAddonStore.getState().enabledAddons;
       await fetchStreamsRef.current(currentAddons, 'series', selectedVideo.id, (newStreams) => {
@@ -381,7 +440,7 @@ export function NuvioDetailView({
     loadStreams();
     return () => { active = false; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedVideo, addons.map((a) => `${a.id}:${a.enabled !== false}`).join(',')]);
+  }, [selectedVideo, addons.map((a) => `${a.id}:${a.enabled !== false}`).join(','), refreshTrigger, nuvioCacheFetchResults, nuvioCacheFetchTimeout]);
 
   // ─── Computed values ───────────────────────────────────────
   const isSeries = meta.type === 'series';
@@ -464,6 +523,14 @@ export function NuvioDetailView({
   const handleEpisodeClick = useCallback((ep: StremioVideo) => {
     setSelectedVideo(ep);
   }, []);
+
+  const handleRefresh = useCallback(() => {
+    const key = meta.type === 'series' && selectedVideo
+      ? `series:${selectedVideo.id}`
+      : `${effectiveMeta.type}:${effectiveMeta.id}`;
+    streamCache.delete(key);
+    setRefreshTrigger((prev) => prev + 1);
+  }, [meta.type, selectedVideo, effectiveMeta.type, effectiveMeta.id]);
 
   const handleLibraryToggle = async () => {
     if (inLibrary) return; // No remove API yet
@@ -1047,11 +1114,40 @@ export function NuvioDetailView({
                     ← Back to Episodes
                   </button>
                 )}
-                <h3 className="stremio-detail-streams-title">
-                  {isSeries
-                    ? `Episode ${selectedVideo?.episode} Streams`
-                    : 'Available Streams'}
-                </h3>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+                  <h3 className="stremio-detail-streams-title" style={{ margin: 0 }}>
+                    {isSeries
+                      ? `Episode ${selectedVideo?.episode} Streams`
+                      : 'Available Streams'}
+                  </h3>
+                  <button 
+                    className="stremio-detail-back-btn" 
+                    onClick={handleRefresh} 
+                    style={{ 
+                      marginBottom: 0, 
+                      padding: '4px 10px', 
+                      fontSize: '0.75rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      background: 'rgba(255,255,255,0.05)',
+                      border: '1px solid rgba(255,255,255,0.08)',
+                    }}
+                  >
+                    <svg 
+                      viewBox="0 0 24 24" 
+                      fill="none" 
+                      stroke="currentColor" 
+                      strokeWidth="2.5" 
+                      width="12" 
+                      height="12"
+                      style={loadingStreams ? { animation: 'spin 1s linear infinite' } : undefined}
+                    >
+                      <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67" />
+                    </svg>
+                    Refresh
+                  </button>
+                </div>
               </div>
 
               {streams.length > 0 && addonNames.length > 0 && (

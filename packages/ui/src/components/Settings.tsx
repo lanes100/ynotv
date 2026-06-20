@@ -83,6 +83,10 @@ interface SettingsProps {
   onNuvioStreamBadgePlacementChange?: (placement: 'top' | 'bottom') => void;
   showNuvioHoverDetails?: boolean;
   onShowNuvioHoverDetailsChange?: (show: boolean) => void;
+  nuvioCacheFetchResults?: boolean;
+  onNuvioCacheFetchResultsChange?: (enabled: boolean) => void;
+  nuvioCacheFetchTimeout?: number;
+  onNuvioCacheFetchTimeoutChange?: (timeout: number) => void;
 }
 
 export function Settings({
@@ -140,6 +144,10 @@ export function Settings({
   onNuvioStreamBadgePlacementChange,
   showNuvioHoverDetails: showNuvioHoverDetailsProp,
   onShowNuvioHoverDetailsChange,
+  nuvioCacheFetchResults: nuvioCacheFetchResultsProp,
+  onNuvioCacheFetchResultsChange,
+  nuvioCacheFetchTimeout: nuvioCacheFetchTimeoutProp,
+  onNuvioCacheFetchTimeoutChange,
 }: SettingsProps) {
   const [activeTab, setActiveTab] = useState<SettingsTabId>(initialTab);
   const { showConfirm, ModalComponent } = useModal();
@@ -319,6 +327,8 @@ export function Settings({
   const [nuvioShowFileSizeBadges, setNuvioShowFileSizeBadges] = useState(true);
   const [nuvioStreamBadgePlacement, setNuvioStreamBadgePlacement] = useState<'top' | 'bottom'>('bottom');
   const [showNuvioHoverDetails, setShowNuvioHoverDetails] = useState(true);
+  const [nuvioCacheFetchResults, setNuvioCacheFetchResults] = useState(false);
+  const [nuvioCacheFetchTimeout, setNuvioCacheFetchTimeout] = useState(5);
   const [nuvioAutoPlayMode, setNuvioAutoPlayMode] = useState<StreamAutoPlayMode>('manual');
   const [nuvioAutoPlayTimeout, setNuvioAutoPlayTimeout] = useState(0);
   const [nuvioAutoPlaySourceScope, setNuvioAutoPlaySourceScope] = useState<StreamAutoPlaySourceScope>('all');
@@ -403,6 +413,18 @@ export function Settings({
       setShowNuvioHoverDetails(showNuvioHoverDetailsProp);
     }
   }, [showNuvioHoverDetailsProp]);
+
+  useEffect(() => {
+    if (nuvioCacheFetchResultsProp !== undefined) {
+      setNuvioCacheFetchResults(nuvioCacheFetchResultsProp);
+    }
+  }, [nuvioCacheFetchResultsProp]);
+
+  useEffect(() => {
+    if (nuvioCacheFetchTimeoutProp !== undefined) {
+      setNuvioCacheFetchTimeout(nuvioCacheFetchTimeoutProp);
+    }
+  }, [nuvioCacheFetchTimeoutProp]);
 
   // Category settings state
   const [showAllChannels, setShowAllChannels] = useState(true);
@@ -677,6 +699,8 @@ export function Settings({
         nuvioAutoPlayAllowedAddons?: string[];
         nuvioAutoPlayAllowedPlugins?: string[];
         nuvioAutoPlayRegex?: string;
+        nuvioCacheFetchResults?: boolean;
+        nuvioCacheFetchTimeout?: number;
       };
 
       setShowAllChannels(settings.showAllChannels ?? true);
@@ -840,6 +864,12 @@ export function Settings({
       }
       if (settings.nuvioAutoPlayRegex !== undefined) {
         setNuvioAutoPlayRegex(settings.nuvioAutoPlayRegex as string);
+      }
+      if (settings.nuvioCacheFetchResults !== undefined) {
+        setNuvioCacheFetchResults(settings.nuvioCacheFetchResults as boolean);
+      }
+      if (settings.nuvioCacheFetchTimeout !== undefined) {
+        setNuvioCacheFetchTimeout(settings.nuvioCacheFetchTimeout as number);
       }
 
       // Load LiveTV settings
@@ -1289,6 +1319,26 @@ export function Settings({
     setNuvioAutoPlayRegex(regex);
     if (window.storage) {
       await window.storage.updateSettings({ nuvioAutoPlayRegex: regex });
+    }
+  };
+
+  const handleNuvioCacheFetchResultsChange = async (enabled: boolean) => {
+    setNuvioCacheFetchResults(enabled);
+    if (onNuvioCacheFetchResultsChange) {
+      onNuvioCacheFetchResultsChange(enabled);
+    }
+    if (window.storage) {
+      await window.storage.updateSettings({ nuvioCacheFetchResults: enabled });
+    }
+  };
+
+  const handleNuvioCacheFetchTimeoutChange = async (timeout: number) => {
+    setNuvioCacheFetchTimeout(timeout);
+    if (onNuvioCacheFetchTimeoutChange) {
+      onNuvioCacheFetchTimeoutChange(timeout);
+    }
+    if (window.storage) {
+      await window.storage.updateSettings({ nuvioCacheFetchTimeout: timeout });
     }
   };
 
@@ -1877,6 +1927,10 @@ export function Settings({
             onNuvioAutoPlayAllowedPluginsChange={handleNuvioAutoPlayAllowedPluginsChange}
             nuvioAutoPlayRegex={nuvioAutoPlayRegex}
             onNuvioAutoPlayRegexChange={handleNuvioAutoPlayRegexChange}
+            nuvioCacheFetchResults={nuvioCacheFetchResults}
+            onNuvioCacheFetchResultsChange={handleNuvioCacheFetchResultsChange}
+            nuvioCacheFetchTimeout={nuvioCacheFetchTimeout}
+            onNuvioCacheFetchTimeoutChange={handleNuvioCacheFetchTimeoutChange}
           />
         );
       case 'security':

@@ -378,6 +378,22 @@ function App() {
     }
   }, []);
 
+  const [nuvioCacheFetchResults, setNuvioCacheFetchResults] = useState<boolean>(false);
+  const handleNuvioCacheFetchResultsChange = useCallback(async (enabled: boolean) => {
+    setNuvioCacheFetchResults(enabled);
+    if (window.storage) {
+      await window.storage.updateSettings({ nuvioCacheFetchResults: enabled });
+    }
+  }, []);
+
+  const [nuvioCacheFetchTimeout, setNuvioCacheFetchTimeout] = useState<number>(5);
+  const handleNuvioCacheFetchTimeoutChange = useCallback(async (timeout: number) => {
+    setNuvioCacheFetchTimeout(timeout);
+    if (window.storage) {
+      await window.storage.updateSettings({ nuvioCacheFetchTimeout: timeout });
+    }
+  }, []);
+
   // Load stremioStreamPickerMode from storage
   useEffect(() => {
     if (!layoutSettingsLoaded) return;
@@ -447,6 +463,12 @@ function App() {
         }
         if (res.data?.nuvioAutoPlayRegex !== undefined) {
           setNuvioAutoPlayRegex(res.data.nuvioAutoPlayRegex as string);
+        }
+        if (res.data?.nuvioCacheFetchResults !== undefined) {
+          setNuvioCacheFetchResults(res.data.nuvioCacheFetchResults as boolean);
+        }
+        if (res.data?.nuvioCacheFetchTimeout !== undefined) {
+          setNuvioCacheFetchTimeout(res.data.nuvioCacheFetchTimeout as number);
         }
         if (res.data?.popoutMode) {
           setPopoutMode(res.data.popoutMode as 'off' | 'popout' | 'external');
@@ -3648,6 +3670,10 @@ function App() {
           onNuvioShowFileSizeBadgesChange={handleNuvioShowFileSizeBadgesChange}
           nuvioStreamBadgePlacement={nuvioStreamBadgePlacement}
           onNuvioStreamBadgePlacementChange={handleNuvioStreamBadgePlacementChange}
+          nuvioCacheFetchResults={nuvioCacheFetchResults}
+          onNuvioCacheFetchResultsChange={handleNuvioCacheFetchResultsChange}
+          nuvioCacheFetchTimeout={nuvioCacheFetchTimeout}
+          onNuvioCacheFetchTimeoutChange={handleNuvioCacheFetchTimeoutChange}
           initialTab={settingsTab}
           pendingSubTabFromParent={pendingSettingsSubTab}
           onConsumePendingSubTab={() => setPendingSettingsSubTab(null)}
@@ -3789,6 +3815,10 @@ function App() {
           onNuvioAutoPlayAllowedPluginsChange={handleNuvioAutoPlayAllowedPluginsChange}
           nuvioAutoPlayRegex={nuvioAutoPlayRegex}
           onNuvioAutoPlayRegexChange={handleNuvioAutoPlayRegexChange}
+          nuvioCacheFetchResults={nuvioCacheFetchResults}
+          onNuvioCacheFetchResultsChange={handleNuvioCacheFetchResultsChange}
+          nuvioCacheFetchTimeout={nuvioCacheFetchTimeout}
+          onNuvioCacheFetchTimeoutChange={handleNuvioCacheFetchTimeoutChange}
           onNavigateToSettingsTab={(tab) => {
             setSettingsTab(tab as any);
             setShowSettingsPopup(true);

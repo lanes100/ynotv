@@ -112,6 +112,10 @@ interface NuvioTabProps {
   onNuvioAutoPlayRegexChange: (regex: string) => void;
   onNavigateToSettingsTab?: (tab: string) => void;
   onUnsavedChangesChange?: (dirty: boolean) => void;
+  nuvioCacheFetchResults: boolean;
+  onNuvioCacheFetchResultsChange: (enabled: boolean) => Promise<void> | void;
+  nuvioCacheFetchTimeout: number;
+  onNuvioCacheFetchTimeoutChange: (timeout: number) => void;
 }
 
 export const NuvioTab = forwardRef<{ save: () => Promise<void> }, NuvioTabProps>(
@@ -142,6 +146,10 @@ export const NuvioTab = forwardRef<{ save: () => Promise<void> }, NuvioTabProps>
     onNuvioAutoPlayRegexChange,
     onNavigateToSettingsTab,
     onUnsavedChangesChange,
+    nuvioCacheFetchResults,
+    onNuvioCacheFetchResultsChange,
+    nuvioCacheFetchTimeout,
+    onNuvioCacheFetchTimeoutChange,
   }, ref) {
   const authStore = useNuvioAuthStore();
   const [pinPromptProfile, setPinPromptProfile] = useState<any | null>(null);
@@ -2193,6 +2201,52 @@ export const NuvioTab = forwardRef<{ save: () => Promise<void> }, NuvioTabProps>
               </button>
             </div>
           </>
+        )}
+      </div>
+
+      {/* Cache Fetch Results section for Nuvio */}
+      <div className="settings-section" style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '24px', marginTop: '24px' }}>
+        <h3 style={{ margin: '0 0 8px 0', fontSize: '0.95rem', fontWeight: 500, color: 'rgba(255,255,255,0.9)' }}>
+          Cache Fetch Results (Nuvio)
+        </h3>
+        <p style={{ margin: '0 0 12px 0', fontSize: '0.82rem', color: 'rgba(255,255,255,0.5)' }}>
+          Cache addon and plugin fetch results. When returning to the same detail page within the set time, previously fetched streams will load instantly.
+        </p>
+
+        <div className="retry-setting-row" style={{ borderBottom: 'none' }}>
+          <div className="timeshift-toggle-info">
+            <span className="timeshift-toggle-label">Cache Fetch Results</span>
+            <span className="timeshift-toggle-sub">Enable caching of stream query results.</span>
+          </div>
+          <label className="toggle-switch">
+            <input
+              type="checkbox"
+              checked={nuvioCacheFetchResults}
+              onChange={(e) => onNuvioCacheFetchResultsChange(e.target.checked)}
+            />
+            <span className="toggle-slider" />
+          </label>
+        </div>
+
+        {nuvioCacheFetchResults && (
+          <div className="retry-setting-row" style={{ borderBottom: 'none', marginTop: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div className="timeshift-toggle-info">
+              <span className="timeshift-toggle-label">Cache Expiration ({nuvioCacheFetchTimeout}m)</span>
+              <span className="timeshift-toggle-sub">How long (in minutes) cache results remain valid (max 30 minutes).</span>
+            </div>
+            <input
+              type="range"
+              min="1"
+              max="30"
+              step="1"
+              value={nuvioCacheFetchTimeout}
+              onChange={(e) => onNuvioCacheFetchTimeoutChange(Number(e.target.value))}
+              style={{
+                width: '120px',
+                accentColor: '#00d4ff',
+              }}
+            />
+          </div>
         )}
       </div>
 

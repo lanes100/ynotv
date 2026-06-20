@@ -80,6 +80,10 @@ interface NuvioPageProps {
   nuvioAutoPlayRegex?: string;
   onNuvioAutoPlayRegexChange?: (regex: string) => void;
   onNavigateToSettingsTab?: (tab: string) => void;
+  nuvioCacheFetchResults?: boolean;
+  onNuvioCacheFetchResultsChange?: (show: boolean) => Promise<void> | void;
+  nuvioCacheFetchTimeout?: number;
+  onNuvioCacheFetchTimeoutChange?: (timeout: number) => void;
 }
 
 const getFolderShapeClass = (folderShape: string | undefined): string => {
@@ -290,6 +294,10 @@ function NuvioPageContent({
   nuvioAutoPlayRegex = '',
   onNuvioAutoPlayRegexChange,
   onNavigateToSettingsTab,
+  nuvioCacheFetchResults = false,
+  onNuvioCacheFetchResultsChange,
+  nuvioCacheFetchTimeout = 5,
+  onNuvioCacheFetchTimeoutChange,
 }: NuvioPageProps) {
   const compiledBadgeRules = useMemo(() => compileBadgeSources(nuvioBadgeSources), [nuvioBadgeSources]);
   const addonsStore = useNuvioAddonStore();
@@ -2809,6 +2817,10 @@ function NuvioPageContent({
                 onNuvioAutoPlayAllowedPluginsChange={onNuvioAutoPlayAllowedPluginsChange || (() => {})}
                 nuvioAutoPlayRegex={nuvioAutoPlayRegex}
                 onNuvioAutoPlayRegexChange={onNuvioAutoPlayRegexChange || (() => {})}
+                nuvioCacheFetchResults={nuvioCacheFetchResults}
+                onNuvioCacheFetchResultsChange={onNuvioCacheFetchResultsChange || (() => {})}
+                nuvioCacheFetchTimeout={nuvioCacheFetchTimeout}
+                onNuvioCacheFetchTimeoutChange={onNuvioCacheFetchTimeoutChange || (() => {})}
                 onNavigateToSettingsTab={onNavigateToSettingsTab}
               />
             )}
@@ -2856,6 +2868,8 @@ function NuvioPageContent({
           nuvioAutoPlayAllowedAddons={nuvioAutoPlayAllowedAddons}
           nuvioAutoPlayAllowedPlugins={nuvioAutoPlayAllowedPlugins}
           nuvioAutoPlayRegex={nuvioAutoPlayRegex}
+          nuvioCacheFetchResults={nuvioCacheFetchResults}
+          nuvioCacheFetchTimeout={nuvioCacheFetchTimeout}
         />
       )}
 
