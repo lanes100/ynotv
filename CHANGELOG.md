@@ -15,11 +15,11 @@
 - **Poster Scaling for Strem/Nuvio** - Scale poster sizes using the slider scale in top left of navigation bar.
 - **Hide EPG buttons** - Individual EPG toolbar buttons (`Manage Channels`, `Refresh Source`, `EPG Shift`, `Playlist Editor`, `Failover Group`) can be hidden under `Settings → Navigation → EPG`.
 - **Discord button** - Added a Discord button in `Settings → About` to join the ynoTV discord.
+- **Default Language & Subtitles Off** - Added new options for Default Subtitle: Off, and Language:Default. Default language will select the default audio track.
 
 ### Fixed
 
 - **Late-starting sport matches not auto-refreshing** - Resolved an issue where matches that kicked off after their scheduled start time would fail to refresh automatically every 30 seconds.
-
 
 ## v2.1.1
 

@@ -587,6 +587,8 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
   const healthLoadGraceUntilRef = useRef(0);
   const hasAutoSelectedSubRef = useRef(false);
   const hasAutoSelectedAudioRef = useRef(false);
+  const lastSubTracksCountRef = useRef(0);
+  const lastAudioTracksCountRef = useRef(0);
   const autoSelectTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const autoSelectAttemptsRef = useRef(0);
   const streamFailureHandlingRef = useRef(false);
@@ -1538,6 +1540,8 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
     }
     hasAutoSelectedSubRef.current = false;
     hasAutoSelectedAudioRef.current = false;
+    lastSubTracksCountRef.current = 0;
+    lastAudioTracksCountRef.current = 0;
 
     clearRetryTimers();
     clearWatchdog();
@@ -1621,14 +1625,13 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
     handleLoadStream(channel);
   }, [handleLoadStream, resetHealthTracking, vodInfo, position, duration]);
 
-  const autoSelectSubtitle = useCallback(async () => {
+  const autoSelectSubtitle = useCallback(async (providedSubTracks?: any[]) => {
     if (!window.storage) return;
     const result = await window.storage.getSettings();
     const ss = result.data?.subtitleSettings;
     const rawDefaultLanguage = ss?.defaultLanguage || 'en';
 
-    const trackList = await Bridge.getTrackList();
-    const subTracks = trackList.filter((t: any) => t.type === 'sub');
+    const subTracks = providedSubTracks || (await Bridge.getTrackList()).filter((t: any) => t.type === 'sub');
 
     if (rawDefaultLanguage === 'off') {
       logInfo(`[Playback] Subtitle language set to off. Disabling subtitles. (found ${subTracks.length} tracks, attempt ${autoSelectAttemptsRef.current})`);
@@ -1677,7 +1680,7 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
     }
   }, []);
 
-  const autoSelectAudio = useCallback(async () => {
+  const autoSelectAudio = useCallback(async (providedAudioTracks?: any[]) => {
     if (!window.storage) return;
     const result = await window.storage.getSettings();
     const ss = result.data?.subtitleSettings;
@@ -1692,8 +1695,7 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
     const defaultAudioLanguage = normalizeLangCode(rawDefaultAudioLanguage);
     if (!defaultAudioLanguage) return;
 
-    const trackList = await Bridge.getTrackList();
-    const audioTracks = trackList.filter((t: any) => t.type === 'audio');
+    const audioTracks = providedAudioTracks || (await Bridge.getTrackList()).filter((t: any) => t.type === 'audio');
 
     // Filter tracks matching target language
     const matchingTracks = audioTracks.filter((t: any) => normalizeLangCode(t.lang) === defaultAudioLanguage);
@@ -1726,18 +1728,39 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
       autoSelectAttemptsRef.current += 1;
       
       try {
+        const trackList = await Bridge.getTrackList();
+        const subTracks = trackList.filter((t: any) => t.type === 'sub');
+        const audioTracks = trackList.filter((t: any) => t.type === 'audio');
+
+        if (subTracks.length !== lastSubTracksCountRef.current) {
+          logInfo(`[Playback] Subtitle track count changed from ${lastSubTracksCountRef.current} to ${subTracks.length}. Resetting auto-select state.`);
+          hasAutoSelectedSubRef.current = false;
+          lastSubTracksCountRef.current = subTracks.length;
+        }
+
+        if (audioTracks.length !== lastAudioTracksCountRef.current) {
+          logInfo(`[Playback] Audio track count changed from ${lastAudioTracksCountRef.current} to ${audioTracks.length}. Resetting auto-select state.`);
+          hasAutoSelectedAudioRef.current = false;
+          lastAudioTracksCountRef.current = audioTracks.length;
+        }
+
         if (!hasAutoSelectedSubRef.current) {
-          await autoSelectSubtitle();
+          await autoSelectSubtitle(subTracks);
         }
         if (!hasAutoSelectedAudioRef.current) {
-          await autoSelectAudio();
+          await autoSelectAudio(audioTracks);
         }
       } catch (err) {
         logWarn('[Playback] Error during auto-selection polling:', err);
       }
 
       const allDone = hasAutoSelectedSubRef.current && hasAutoSelectedAudioRef.current;
-      if (allDone || autoSelectAttemptsRef.current >= 40) {
+      if (allDone && autoSelectAttemptsRef.current >= 15) {
+        if (autoSelectTimerRef.current) {
+          clearInterval(autoSelectTimerRef.current);
+          autoSelectTimerRef.current = null;
+        }
+      } else if (autoSelectAttemptsRef.current >= 40) {
         if (autoSelectTimerRef.current) {
           clearInterval(autoSelectTimerRef.current);
           autoSelectTimerRef.current = null;
@@ -2038,6 +2061,8 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
       
       hasAutoSelectedSubRef.current = false;
       hasAutoSelectedAudioRef.current = false;
+      lastSubTracksCountRef.current = 0;
+      lastAudioTracksCountRef.current = 0;
       startAutoSelectPolling();
       
       // Resume from saved position if available
@@ -2188,6 +2213,8 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
     }
     hasAutoSelectedSubRef.current = false;
     hasAutoSelectedAudioRef.current = false;
+    lastSubTracksCountRef.current = 0;
+    lastAudioTracksCountRef.current = 0;
 
     // Reset failover state on stop
     failoverActiveRef.current = false;

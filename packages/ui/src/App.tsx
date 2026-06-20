@@ -97,6 +97,7 @@ import { useStremioAuthStore } from './stores/stremioAuthStore';
 import { useNuvioAuthStore } from './stores/nuvioAuthStore';
 import { useUIStore } from './stores/uiStore';
 import { fetchSubtitles } from './services/stremio-addon';
+import { toSubSourceLang, fromSubSourceLang } from './services/subsource';
 import { scrobbler } from './services/scrobbler';
 import { pushNuvioWatchProgress } from './services/nuvio-api';
 import { SkipIntroButton } from './components/SkipIntroButton';
@@ -1806,15 +1807,30 @@ function App() {
             if (stream.behaviorHints?.videoSize) subtitleExtra.videoSize = String(stream.behaviorHints.videoSize);
             if (stream.behaviorHints?.filename) subtitleExtra.filename = stream.behaviorHints.filename;
             const subs = await fetchSubtitles(addons, meta.type, subtitleId, Object.keys(subtitleExtra).length > 0 ? subtitleExtra : undefined);
-            if (subs.length > 0 && window.mpv?.addSubtitleFile) {
+            
+            const normalizeLangCode = (code?: string): string => {
+              if (!code) return '';
+              try {
+                return fromSubSourceLang(toSubSourceLang(code));
+              } catch {
+                return code.toLowerCase().slice(0, 2);
+              }
+            };
+            const targetLang = normalizeLangCode(defaultLanguage);
+            const filteredSubs = subs.filter(sub => {
+              if (!sub.lang) return false;
+              return normalizeLangCode(sub.lang) === targetLang;
+            });
+
+            if (filteredSubs.length > 0 && window.mpv?.addSubtitleFile) {
               const { writeTextFile, mkdir, BaseDirectory } = await import('@tauri-apps/plugin-fs');
               const { appLocalDataDir, join } = await import('@tauri-apps/api/path');
               const appDir = await appLocalDataDir();
 
               await mkdir('subtitles', { baseDir: BaseDirectory.AppLocalData, recursive: true }).catch(() => {});
 
-              for (let i = 0; i < subs.length; i++) {
-                const sub = subs[i];
+              for (let i = 0; i < filteredSubs.length; i++) {
+                const sub = filteredSubs[i];
                 try {
                   const safeUrl = sub.url ? (sub.url.includes('%') ? encodeURI(decodeURI(sub.url)) : encodeURI(sub.url)) : '';
                   const res = await window.fetchProxy.fetch(safeUrl);
