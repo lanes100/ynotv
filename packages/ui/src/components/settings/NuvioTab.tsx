@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useNuvioAuthStore } from '../../stores/nuvioAuthStore';
 import { useNuvioPluginStore } from '../../stores/nuvioPluginStore';
 import { useNuvioAddonStore } from '../../stores/nuvioAddonStore';
@@ -277,6 +277,11 @@ export function NuvioTab({
 
   // Homepage catalog settings states
   const [localCatalogItems, setLocalCatalogItems] = useState<any[]>([]);
+  // Pointer-event drag state for catalog items reordering
+  const dragFromIdx = useRef<number | null>(null);
+  const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
+  const [draggingIndex, setDraggingIndex] = useState<number | null>(null);
+  const catalogListRef = useRef<HTMLDivElement>(null);
   const [hideUnreleased, setHideUnreleased] = useState(false);
   const [hideUnderline, setHideUnderline] = useState(false);
 
@@ -366,16 +371,24 @@ export function NuvioTab({
     
     const sortedSettings = [...settingsItems].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
     sortedSettings.forEach(sItem => {
-      const key = sItem.isCollection 
-        ? `collection_${sItem.collectionId}` 
-        : `${sItem.addonId}:${sItem.type}:${sItem.catalogId}`;
+      const isCollection = sItem.is_collection || sItem.isCollection;
+      const collectionId = sItem.collection_id || sItem.collectionId;
+      const addonId = sItem.addon_id || sItem.addonId;
+      const catalogId = sItem.catalog_id || sItem.catalogId;
+      const customTitle = sItem.custom_title !== undefined ? sItem.custom_title : sItem.customTitle;
+      const enabled = sItem.enabled !== false;
+      const order = sItem.order ?? 999;
+
+      const key = isCollection 
+        ? `collection_${collectionId}` 
+        : `${addonId}:${sItem.type}:${catalogId}`;
         
       let availableItem: any = null;
-      if (sItem.isCollection) {
+      if (isCollection) {
         availableItem = collectionsList.find(c => c.key === key);
       } else {
         availableItem = catalogsList.find(c => {
-          const settingsKey = `${sItem.addonId}:${sItem.type}:${sItem.catalogId}`;
+          const settingsKey = `${addonId}:${sItem.type}:${catalogId}`;
           return matchCatalogKey(settingsKey, c.key, activeAddons);
         });
       }
@@ -383,9 +396,9 @@ export function NuvioTab({
       if (availableItem) {
         result.push({
           ...availableItem,
-          enabled: sItem.enabled !== false,
-          customTitle: sItem.customTitle || '',
-          order: sItem.order ?? 999
+          enabled: enabled,
+          customTitle: customTitle || '',
+          order: order
         });
         usedKeys.add(availableItem.key);
       }
@@ -435,6 +448,54 @@ export function NuvioTab({
     const reordered = updated.map((item, idx) => ({ ...item, order: idx }));
     setLocalCatalogItems(reordered);
   };
+
+  // Compute which list-item index a clientY falls into
+  const getCatalogIndexFromClientY = (clientY: number): number => {
+    if (!catalogListRef.current) return 0;
+    const children = Array.from(catalogListRef.current.children) as HTMLElement[];
+    for (let i = 0; i < children.length; i++) {
+      const rect = children[i].getBoundingClientRect();
+      if (clientY < rect.top + rect.height / 2) return i;
+    }
+    return Math.max(0, children.length - 1);
+  };
+
+  const handleCatalogPointerDown = useCallback((e: React.PointerEvent, index: number) => {
+    if (e.button !== 0) return;
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    dragFromIdx.current = index;
+    setDragOverIdx(index);
+    setDraggingIndex(index);
+  }, []);
+
+  const handleCatalogPointerMove = useCallback((e: React.PointerEvent) => {
+    if (dragFromIdx.current === null) return;
+    e.preventDefault();
+    const idx = getCatalogIndexFromClientY(e.clientY);
+    setDragOverIdx(idx);
+  }, []);
+
+  const handleCatalogPointerUp = useCallback((e: React.PointerEvent) => {
+    if (dragFromIdx.current === null) return;
+    const from = dragFromIdx.current;
+    const to = getCatalogIndexFromClientY(e.clientY);
+    dragFromIdx.current = null;
+    setDragOverIdx(null);
+    setDraggingIndex(null);
+    if (from === to) return;
+    setLocalCatalogItems(items => {
+      const newItems = [...items];
+      const [removed] = newItems.splice(from, 1);
+      newItems.splice(to, 0, removed);
+      return newItems.map((item, idx) => ({ ...item, order: idx }));
+    });
+  }, []);
+
+  const handleCatalogPointerCancel = useCallback(() => {
+    dragFromIdx.current = null;
+    setDragOverIdx(null);
+    setDraggingIndex(null);
+  }, []);
 
   const handleSaveCatalogSettings = async () => {
     try {
@@ -1336,78 +1397,130 @@ export function NuvioTab({
                   <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'rgba(255,255,255,0.4)', marginBottom: '4px', letterSpacing: '0.05em' }}>
                     CATALOG DISPLAY ORDER & VISIBILITY
                   </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '400px', overflowY: 'auto', paddingRight: '4px' }}>
-                    {localCatalogItems.map((item, index) => (
-                      <div
-                        key={item.key}
-                        style={{
-                          background: item.enabled ? 'rgba(255,255,255,0.01)' : 'rgba(255,255,255,0.005)',
-                          border: '1px solid rgba(255,255,255,0.04)',
-                          borderRadius: '6px',
-                          padding: '10px 12px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          opacity: item.enabled ? 1 : 0.6
-                        }}
-                      >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: 0 }}>
-                          {/* Reordering arrows */}
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                            <button
-                              type="button"
-                              onClick={() => handleMoveItem(index, 'up')}
-                              disabled={index === 0}
-                              style={{ background: 'none', border: 'none', color: index === 0 ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.6)', cursor: index === 0 ? 'default' : 'pointer', fontSize: '0.8rem', padding: '0 4px', lineHeight: 1 }}
-                            >
-                              ▲
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleMoveItem(index, 'down')}
-                              disabled={index === localCatalogItems.length - 1}
-                              style={{ background: 'none', border: 'none', color: index === localCatalogItems.length - 1 ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.6)', cursor: index === localCatalogItems.length - 1 ? 'default' : 'pointer', fontSize: '0.8rem', padding: '0 4px', lineHeight: 1 }}
-                            >
-                              ▼
-                            </button>
-                          </div>
-                          
-                          {/* Item Details */}
-                          <div style={{ minWidth: 0, flex: 1 }}>
-                            <input
-                              type="text"
-                              value={item.customTitle !== undefined ? (item.customTitle || item.title) : item.title}
-                              placeholder={item.title}
-                              onChange={(e) => handleCustomTitleChange(item.key, e.target.value)}
+                  <div
+                    ref={catalogListRef}
+                    onPointerMove={handleCatalogPointerMove}
+                    onPointerUp={handleCatalogPointerUp}
+                    onPointerCancel={handleCatalogPointerCancel}
+                    style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '400px', overflowY: 'auto', paddingRight: '4px' }}
+                  >
+                    {localCatalogItems.map((item, index) => {
+                      const isDragging = draggingIndex === index;
+                      const isDragOver = dragOverIdx === index && draggingIndex !== null && draggingIndex !== index;
+                      return (
+                        <div
+                          key={item.key}
+                          style={{
+                            background: isDragging
+                              ? 'var(--accent-glow, rgba(0, 212, 255, 0.15))'
+                              : isDragOver
+                                ? 'rgba(255, 255, 255, 0.03)'
+                                : item.enabled ? 'rgba(255,255,255,0.01)' : 'rgba(255,255,255,0.005)',
+                            border: isDragging
+                              ? '1px solid var(--accent-primary, #00d4ff)'
+                              : isDragOver
+                                ? '1px dashed var(--accent-primary, #00d4ff)'
+                                : '1px solid rgba(255,255,255,0.04)',
+                            borderRadius: '6px',
+                            padding: '10px 12px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            opacity: isDragging ? 0.7 : (item.enabled ? 1 : 0.6),
+                            cursor: isDragging ? 'grabbing' : 'default',
+                            transition: 'background 0.2s ease, border-color 0.2s ease, transform 0.1s ease',
+                            transform: isDragging ? 'scale(1.02)' : 'none',
+                            boxShadow: isDragging ? '0 4px 16px rgba(0, 0, 0, 0.4)' : 'none',
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: 0 }}>
+                            {/* Drag Grip */}
+                            <div
+                              className="drag-grip"
                               style={{
-                                background: 'transparent',
-                                border: 'none',
-                                borderBottom: '1px dashed rgba(255,255,255,0.15)',
-                                color: '#fff',
-                                fontSize: '0.82rem',
-                                fontWeight: 600,
-                                padding: '2px 0',
-                                width: '90%',
-                                outline: 'none'
+                                cursor: isDragging ? 'grabbing' : 'grab',
+                                padding: '4px 6px',
+                                color: isDragging ? 'var(--accent-primary, #00d4ff)' : 'rgba(255,255,255,0.3)',
+                                fontSize: '1.2rem',
+                                userSelect: 'none',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                touchAction: 'none',
+                                transition: 'color 0.15s ease',
                               }}
-                            />
-                            <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)', marginTop: '2px', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
-                              {item.addonName} · {item.subtitle}
+                              onPointerDown={(e) => handleCatalogPointerDown(e, index)}
+                              onMouseEnter={(e) => {
+                                if (draggingIndex === null) {
+                                  (e.currentTarget as HTMLElement).style.color = 'var(--accent-primary, #00d4ff)';
+                                }
+                              }}
+                              onMouseLeave={(e) => {
+                                if (draggingIndex === null) {
+                                  (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.3)';
+                                }
+                              }}
+                            >
+                              ⋮⋮
+                            </div>
+  
+                            {/* Reordering arrows */}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                              <button
+                                type="button"
+                                onClick={() => handleMoveItem(index, 'up')}
+                                disabled={index === 0}
+                                style={{ background: 'none', border: 'none', color: index === 0 ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.6)', cursor: index === 0 ? 'default' : 'pointer', fontSize: '0.8rem', padding: '0 4px', lineHeight: 1 }}
+                              >
+                                ▲
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleMoveItem(index, 'down')}
+                                disabled={index === localCatalogItems.length - 1}
+                                style={{ background: 'none', border: 'none', color: index === localCatalogItems.length - 1 ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.6)', cursor: index === localCatalogItems.length - 1 ? 'default' : 'pointer', fontSize: '0.8rem', padding: '0 4px', lineHeight: 1 }}
+                              >
+                                ▼
+                              </button>
+                            </div>
+                            
+                            {/* Item Details */}
+                            <div style={{ minWidth: 0, flex: 1 }}>
+                              <input
+                                type="text"
+                                value={item.customTitle !== undefined ? (item.customTitle || item.title) : item.title}
+                                placeholder={item.title}
+                                onChange={(e) => handleCustomTitleChange(item.key, e.target.value)}
+                                style={{
+                                  background: 'transparent',
+                                  border: 'none',
+                                  borderBottom: '1px dashed rgba(255,255,255,0.15)',
+                                  color: '#fff',
+                                  fontSize: '0.82rem',
+                                  fontWeight: 600,
+                                  padding: '2px 0',
+                                  width: '90%',
+                                  outline: 'none'
+                                }}
+                              />
+                              <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)', marginTop: '2px', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                                {item.addonName} · {item.subtitle}
+                              </div>
                             </div>
                           </div>
+  
+                          {/* Enabled Switch */}
+                          <label className="toggle-switch" style={{ transform: 'scale(0.8)' }}>
+                            <input
+                              type="checkbox"
+                              checked={item.enabled}
+                              onChange={() => handleToggleItem(item.key)}
+                            />
+                            <span className="toggle-slider" />
+                          </label>
                         </div>
-
-                        {/* Enabled Switch */}
-                        <label className="toggle-switch" style={{ transform: 'scale(0.8)' }}>
-                          <input
-                            type="checkbox"
-                            checked={item.enabled}
-                            onChange={() => handleToggleItem(item.key)}
-                          />
-                          <span className="toggle-slider" />
-                        </label>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               ) : (
