@@ -483,10 +483,25 @@ export function NuvioDetailView({
 
   useEffect(() => { setSelectedAddonFilter('All'); }, [streams]);
 
+  // Filter streams by addon and sort by addon list order
   const filteredStreams = useMemo(() => {
-    if (selectedAddonFilter === 'All') return streams;
-    return streams.filter((s) => s.addonName === selectedAddonFilter);
-  }, [streams, selectedAddonFilter]);
+    const sorted = [...streams].sort((a, b) => {
+      const isScraperA = a.addonName?.startsWith('⚙');
+      const isScraperB = b.addonName?.startsWith('⚙');
+      if (isScraperA && !isScraperB) return 1;
+      if (!isScraperA && isScraperB) return -1;
+      if (isScraperA && isScraperB) return 0;
+
+      const idxA = addons.findIndex((addon) => addon.manifest.name === a.addonName);
+      const idxB = addons.findIndex((addon) => addon.manifest.name === b.addonName);
+      const valA = idxA === -1 ? 999 : idxA;
+      const valB = idxB === -1 ? 999 : idxB;
+      return valA - valB;
+    });
+    if (selectedAddonFilter === 'All') return sorted;
+    return sorted.filter((s) => s.addonName === selectedAddonFilter);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [streams, selectedAddonFilter, addons.map((a) => `${a.id}:${a.enabled !== false}`).join(',')]);
 
   // Set default season
   useEffect(() => {

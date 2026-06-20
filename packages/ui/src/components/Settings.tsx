@@ -71,6 +71,10 @@ interface SettingsProps {
   onShowFileSizeBadgesChange?: (enabled: boolean) => void;
   streamBadgePlacement?: 'top' | 'bottom';
   onStreamBadgePlacementChange?: (placement: 'top' | 'bottom') => void;
+  stremioCacheFetchResults?: boolean;
+  onStremioCacheFetchResultsChange?: (enabled: boolean) => void;
+  stremioCacheFetchTimeout?: number;
+  onStremioCacheFetchTimeoutChange?: (timeout: number) => void;
   showNuvioStreamBadges?: boolean;
   onShowNuvioStreamBadgesChange?: (enabled: boolean) => void;
   nuvioBadgeSources?: BadgeSource[];
@@ -132,6 +136,10 @@ export function Settings({
   onShowFileSizeBadgesChange,
   streamBadgePlacement: streamBadgePlacementProp,
   onStreamBadgePlacementChange,
+  stremioCacheFetchResults: stremioCacheFetchResultsProp,
+  onStremioCacheFetchResultsChange,
+  stremioCacheFetchTimeout: stremioCacheFetchTimeoutProp,
+  onStremioCacheFetchTimeoutChange,
   showNuvioStreamBadges: showNuvioStreamBadgesProp,
   onShowNuvioStreamBadgesChange,
   nuvioBadgeSources: nuvioBadgeSourcesProp,
@@ -321,6 +329,8 @@ export function Settings({
   const [showHoverDetails, setShowHoverDetails] = useState(true);
   const [showFileSizeBadges, setShowFileSizeBadges] = useState(true);
   const [streamBadgePlacement, setStreamBadgePlacement] = useState<'top' | 'bottom'>('bottom');
+  const [stremioCacheFetchResults, setStremioCacheFetchResults] = useState(false);
+  const [stremioCacheFetchTimeout, setStremioCacheFetchTimeout] = useState(5);
   const [showNuvioStreamBadges, setShowNuvioStreamBadges] = useState(true);
   const [nuvioBadgeSources, setNuvioBadgeSources] = useState<BadgeSource[]>(DEFAULT_BADGE_SOURCES);
   const [nuvioBadgeSize, setNuvioBadgeSize] = useState(100);
@@ -377,6 +387,18 @@ export function Settings({
       setStreamBadgePlacement(streamBadgePlacementProp);
     }
   }, [streamBadgePlacementProp]);
+
+  useEffect(() => {
+    if (stremioCacheFetchResultsProp !== undefined) {
+      setStremioCacheFetchResults(stremioCacheFetchResultsProp);
+    }
+  }, [stremioCacheFetchResultsProp]);
+
+  useEffect(() => {
+    if (stremioCacheFetchTimeoutProp !== undefined) {
+      setStremioCacheFetchTimeout(stremioCacheFetchTimeoutProp);
+    }
+  }, [stremioCacheFetchTimeoutProp]);
 
   useEffect(() => {
     if (showNuvioStreamBadgesProp !== undefined) {
@@ -666,6 +688,8 @@ export function Settings({
         sportsBgOpacity?: number;
         stremioStreamPickerMode?: 'modal' | 'autoplay';
         showStremioStreamBadges?: boolean;
+        stremioCacheFetchResults?: boolean;
+        stremioCacheFetchTimeout?: number;
         badgeSources?: BadgeSource[];
         stremioBadgeSize?: number;
         showFileSizeBadges?: boolean;
@@ -829,6 +853,12 @@ export function Settings({
       document.documentElement.style.setProperty('--stremio-badge-scale', String(loadedBadgeSize / 100));
       if (settings.showFileSizeBadges !== undefined) {
         setShowFileSizeBadges(settings.showFileSizeBadges);
+      }
+      if (settings.stremioCacheFetchResults !== undefined) {
+        setStremioCacheFetchResults(settings.stremioCacheFetchResults as boolean);
+      }
+      if (settings.stremioCacheFetchTimeout !== undefined) {
+        setStremioCacheFetchTimeout(settings.stremioCacheFetchTimeout as number);
       }
       if (settings.streamBadgePlacement !== undefined) {
         setStreamBadgePlacement(settings.streamBadgePlacement as 'top' | 'bottom');
@@ -1216,6 +1246,26 @@ export function Settings({
     }
     if (window.storage) {
       await window.storage.updateSettings({ streamBadgePlacement: placement });
+    }
+  };
+
+  const handleStremioCacheFetchResultsChange = async (enabled: boolean) => {
+    setStremioCacheFetchResults(enabled);
+    if (onStremioCacheFetchResultsChange) {
+      onStremioCacheFetchResultsChange(enabled);
+    }
+    if (window.storage) {
+      await window.storage.updateSettings({ stremioCacheFetchResults: enabled });
+    }
+  };
+
+  const handleStremioCacheFetchTimeoutChange = async (timeout: number) => {
+    setStremioCacheFetchTimeout(timeout);
+    if (onStremioCacheFetchTimeoutChange) {
+      onStremioCacheFetchTimeoutChange(timeout);
+    }
+    if (window.storage) {
+      await window.storage.updateSettings({ stremioCacheFetchTimeout: timeout });
     }
   };
 
@@ -1898,6 +1948,10 @@ export function Settings({
             onShowFileSizeBadgesChange={handleShowFileSizeBadgesChange}
             streamBadgePlacement={streamBadgePlacement}
             onStreamBadgePlacementChange={handleStreamBadgePlacementChange}
+            stremioCacheFetchResults={stremioCacheFetchResults}
+            onStremioCacheFetchResultsChange={handleStremioCacheFetchResultsChange}
+            stremioCacheFetchTimeout={stremioCacheFetchTimeout}
+            onStremioCacheFetchTimeoutChange={handleStremioCacheFetchTimeoutChange}
           />
         );
       case 'nuvio':

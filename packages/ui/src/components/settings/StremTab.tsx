@@ -17,6 +17,10 @@ interface StremTabProps {
   onShowFileSizeBadgesChange: (show: boolean) => Promise<void> | void;
   streamBadgePlacement: 'top' | 'bottom';
   onStreamBadgePlacementChange: (placement: 'top' | 'bottom') => Promise<void> | void;
+  stremioCacheFetchResults: boolean;
+  onStremioCacheFetchResultsChange: (enabled: boolean) => Promise<void> | void;
+  stremioCacheFetchTimeout: number;
+  onStremioCacheFetchTimeoutChange: (timeout: number) => Promise<void> | void;
 }
 
 export function StremTab({
@@ -34,6 +38,10 @@ export function StremTab({
   onShowFileSizeBadgesChange,
   streamBadgePlacement,
   onStreamBadgePlacementChange,
+  stremioCacheFetchResults,
+  onStremioCacheFetchResultsChange,
+  stremioCacheFetchTimeout,
+  onStremioCacheFetchTimeoutChange,
 }: StremTabProps) {
   const [badgeUrl, setBadgeUrl] = useState('');
   const [badgePaste, setBadgePaste] = useState('');
@@ -158,6 +166,52 @@ export function StremTab({
           />
           <span className="toggle-slider" />
         </label>
+      </div>
+
+      {/* Cache Fetch Results section for Stremio */}
+      <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '20px', marginTop: '20px' }}>
+        <h3 style={{ margin: '0 0 8px 0', fontSize: '0.95rem', fontWeight: 500, color: 'rgba(255,255,255,0.9)' }}>
+          Cache Fetch Results (Stremio)
+        </h3>
+        <p style={{ margin: '0 0 12px 0', fontSize: '0.82rem', color: 'rgba(255,255,255,0.5)' }}>
+          Cache addon fetch results. When returning to the same detail page within the set time, previously fetched streams will load instantly.
+        </p>
+
+        <div className="retry-setting-row" style={{ borderBottom: 'none' }}>
+          <div className="timeshift-toggle-info">
+            <span className="timeshift-toggle-label">Cache Fetch Results</span>
+            <span className="timeshift-toggle-sub">Enable caching of stream query results.</span>
+          </div>
+          <label className="toggle-switch">
+            <input
+              type="checkbox"
+              checked={stremioCacheFetchResults}
+              onChange={(e) => onStremioCacheFetchResultsChange(e.target.checked)}
+            />
+            <span className="toggle-slider" />
+          </label>
+        </div>
+
+        {stremioCacheFetchResults && (
+          <div className="retry-setting-row" style={{ borderBottom: 'none', marginTop: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div className="timeshift-toggle-info">
+              <span className="timeshift-toggle-label">Cache Expiration ({stremioCacheFetchTimeout}m)</span>
+              <span className="timeshift-toggle-sub">How long (in minutes) cache results remain valid (max 30 minutes).</span>
+            </div>
+            <input
+              type="range"
+              min="1"
+              max="30"
+              step="1"
+              value={stremioCacheFetchTimeout}
+              onChange={(e) => onStremioCacheFetchTimeoutChange(Number(e.target.value))}
+              style={{
+                width: '120px',
+                accentColor: '#00d4ff',
+              }}
+            />
+          </div>
+        )}
       </div>
 
       <h3 style={{ margin: '24px 0 8px 0', fontSize: '0.95rem', fontWeight: 500, color: 'rgba(255,255,255,0.9)' }}>

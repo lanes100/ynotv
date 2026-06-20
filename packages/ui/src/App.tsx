@@ -394,6 +394,22 @@ function App() {
     }
   }, []);
 
+  const [stremioCacheFetchResults, setStremioCacheFetchResults] = useState<boolean>(false);
+  const handleStremioCacheFetchResultsChange = useCallback(async (enabled: boolean) => {
+    setStremioCacheFetchResults(enabled);
+    if (window.storage) {
+      await window.storage.updateSettings({ stremioCacheFetchResults: enabled });
+    }
+  }, []);
+
+  const [stremioCacheFetchTimeout, setStremioCacheFetchTimeout] = useState<number>(5);
+  const handleStremioCacheFetchTimeoutChange = useCallback(async (timeout: number) => {
+    setStremioCacheFetchTimeout(timeout);
+    if (window.storage) {
+      await window.storage.updateSettings({ stremioCacheFetchTimeout: timeout });
+    }
+  }, []);
+
   // Load stremioStreamPickerMode from storage
   useEffect(() => {
     if (!layoutSettingsLoaded) return;
@@ -469,6 +485,12 @@ function App() {
         }
         if (res.data?.nuvioCacheFetchTimeout !== undefined) {
           setNuvioCacheFetchTimeout(res.data.nuvioCacheFetchTimeout as number);
+        }
+        if (res.data?.stremioCacheFetchResults !== undefined) {
+          setStremioCacheFetchResults(res.data.stremioCacheFetchResults as boolean);
+        }
+        if (res.data?.stremioCacheFetchTimeout !== undefined) {
+          setStremioCacheFetchTimeout(res.data.stremioCacheFetchTimeout as number);
         }
         if (res.data?.popoutMode) {
           setPopoutMode(res.data.popoutMode as 'off' | 'popout' | 'external');
@@ -3660,6 +3682,10 @@ function App() {
           onShowFileSizeBadgesChange={handleShowFileSizeBadgesChange}
           streamBadgePlacement={streamBadgePlacement}
           onStreamBadgePlacementChange={handleStreamBadgePlacementChange}
+          stremioCacheFetchResults={stremioCacheFetchResults}
+          onStremioCacheFetchResultsChange={handleStremioCacheFetchResultsChange}
+          stremioCacheFetchTimeout={stremioCacheFetchTimeout}
+          onStremioCacheFetchTimeoutChange={handleStremioCacheFetchTimeoutChange}
           showNuvioStreamBadges={showNuvioStreamBadges}
           onShowNuvioStreamBadgesChange={handleShowNuvioStreamBadgesChange}
           nuvioBadgeSources={nuvioBadgeSources}
@@ -3784,6 +3810,10 @@ function App() {
           onShowFileSizeBadgesChange={handleShowFileSizeBadgesChange}
           streamBadgePlacement={streamBadgePlacement}
           onStreamBadgePlacementChange={handleStreamBadgePlacementChange}
+          stremioCacheFetchResults={stremioCacheFetchResults}
+          onStremioCacheFetchResultsChange={handleStremioCacheFetchResultsChange}
+          stremioCacheFetchTimeout={stremioCacheFetchTimeout}
+          onStremioCacheFetchTimeoutChange={handleStremioCacheFetchTimeoutChange}
         />
       </TransitionView>
 

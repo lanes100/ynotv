@@ -45,6 +45,10 @@ interface StremioPageProps {
   onShowFileSizeBadgesChange?: (show: boolean) => Promise<void> | void;
   streamBadgePlacement: 'top' | 'bottom';
   onStreamBadgePlacementChange?: (placement: 'top' | 'bottom') => Promise<void> | void;
+  stremioCacheFetchResults: boolean;
+  onStremioCacheFetchResultsChange?: (enabled: boolean) => Promise<void> | void;
+  stremioCacheFetchTimeout: number;
+  onStremioCacheFetchTimeoutChange?: (timeout: number) => Promise<void> | void;
 }
 
 export function StremioPage({
@@ -63,6 +67,10 @@ export function StremioPage({
   onShowFileSizeBadgesChange,
   streamBadgePlacement,
   onStreamBadgePlacementChange,
+  stremioCacheFetchResults,
+  onStremioCacheFetchResultsChange,
+  stremioCacheFetchTimeout,
+  onStremioCacheFetchTimeoutChange,
 }: StremioPageProps) {
   const addons = useStremioAddonStore((s) => s.enabledAddons);
   const stremioView = useStremioView();
@@ -185,6 +193,8 @@ export function StremioPage({
               compiledBadgeRules={compiledBadgeRules}
               showFileSizeBadges={showFileSizeBadges}
               streamBadgePlacement={streamBadgePlacement}
+              stremioCacheFetchResults={stremioCacheFetchResults}
+              stremioCacheFetchTimeout={stremioCacheFetchTimeout}
             />
           )}
 
@@ -213,6 +223,10 @@ export function StremioPage({
                 onShowFileSizeBadgesChange={onShowFileSizeBadgesChange || (() => {})}
                 streamBadgePlacement={streamBadgePlacement}
                 onStreamBadgePlacementChange={onStreamBadgePlacementChange || (() => {})}
+                stremioCacheFetchResults={stremioCacheFetchResults}
+                onStremioCacheFetchResultsChange={onStremioCacheFetchResultsChange || (() => {})}
+                stremioCacheFetchTimeout={stremioCacheFetchTimeout}
+                onStremioCacheFetchTimeoutChange={onStremioCacheFetchTimeoutChange || (() => {})}
               />
             </div>
           )}

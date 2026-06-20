@@ -32,7 +32,16 @@ interface StremioDetailProps {
   compiledBadgeRules?: { pattern: RegExp; badge: StremioStreamBadge }[];
   showFileSizeBadges?: boolean;
   streamBadgePlacement?: 'top' | 'bottom';
+  stremioCacheFetchResults?: boolean;
+  stremioCacheFetchTimeout?: number;
 }
+
+interface CacheEntry {
+  streams: StremioStream[];
+  timestamp: number;
+}
+
+const streamCache = new Map<string, CacheEntry>();
 
 function formatReleaseDate(dStr?: string) {
   if (!dStr) return '';
@@ -54,6 +63,8 @@ export function StremioDetail({
   compiledBadgeRules,
   showFileSizeBadges = true,
   streamBadgePlacement = 'bottom',
+  stremioCacheFetchResults = false,
+  stremioCacheFetchTimeout = 5,
 }: StremioDetailProps) {
   const addons = useStremioAddonStore((s) => s.enabledAddons);
   const addonsKey = addons.map((a) => `${a.id}:${a.enabled !== false}`).join(',');
@@ -233,6 +244,51 @@ export function StremioDetail({
   const [videoSearch, setVideoSearch] = useState('');
   const [selectedAddonFilter, setSelectedAddonFilter] = useState<string>('All');
 
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  const fetchStremioStreamsWithCache = useCallback(async (
+    type: string,
+    id: string,
+    onStreams?: (streams: StremioStream[]) => void
+  ): Promise<StremioStream[]> => {
+    const cacheKey = `${type}:${id}`;
+    if (stremioCacheFetchResults) {
+      const cached = streamCache.get(cacheKey);
+      if (cached) {
+        const ageMs = Date.now() - cached.timestamp;
+        if (ageMs < stremioCacheFetchTimeout * 60 * 1000) {
+          onStreams?.(cached.streams);
+          return cached.streams;
+        } else {
+          streamCache.delete(cacheKey);
+        }
+      }
+    }
+
+    const collected: StremioStream[] = [];
+    const result = await fetchStreams(addons, type, id, (incoming) => {
+      collected.push(...incoming);
+      onStreams?.([...collected]);
+    });
+
+    if (stremioCacheFetchResults) {
+      streamCache.set(cacheKey, {
+        streams: result,
+        timestamp: Date.now(),
+      });
+    }
+
+    return result;
+  }, [addons, stremioCacheFetchResults, stremioCacheFetchTimeout]);
+
+  const handleRefresh = useCallback(() => {
+    const key = meta.type === 'series' && selectedVideo
+      ? `series:${selectedVideo.id}`
+      : `${meta.type}:${meta.id}`;
+    streamCache.delete(key);
+    setRefreshTrigger((prev) => prev + 1);
+  }, [meta.type, selectedVideo, meta.id]);
+
   const [downloadingUrl, setDownloadingUrl] = useState<string | null>(null);
   const startDownload = useDownloadStore((s) => s.startDownload);
 
@@ -282,11 +338,19 @@ export function StremioDetail({
     setSelectedAddonFilter('All');
   }, [streams]);
 
-  // Filter streams by addon
+  // Filter streams by addon and sort by addon list order
   const filteredStreams = useMemo(() => {
-    if (selectedAddonFilter === 'All') return streams;
-    return streams.filter((s) => s.addonName === selectedAddonFilter);
-  }, [streams, selectedAddonFilter]);
+    const sorted = [...streams].sort((a, b) => {
+      const idxA = addons.findIndex((addon) => addon.manifest.name === a.addonName);
+      const idxB = addons.findIndex((addon) => addon.manifest.name === b.addonName);
+      const valA = idxA === -1 ? 999 : idxA;
+      const valB = idxB === -1 ? 999 : idxB;
+      return valA - valB;
+    });
+    if (selectedAddonFilter === 'All') return sorted;
+    return sorted.filter((s) => s.addonName === selectedAddonFilter);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [streams, selectedAddonFilter, addonsKey]);
 
   const renderedStreams = useMemo(() => {
     return filteredStreams.map((stream, idx) => {
@@ -435,28 +499,29 @@ export function StremioDetail({
     if (!video) return;
     setPreselectVideoId(null);
     setSelectedVideo(video);
-    setStreams([]);
-    setLoadingStreams(true);
-    fetchStreams(addons, 'series', video.id, (newStreams) => {
-      setStreams((prev) => [...prev, ...newStreams]);
-    }).then((result) => {
-      setLoadingStreams(false);
-      if (streamPickerMode === 'autoplay' && result.length > 0) {
-        const direct = result.find((s) => s.url && !s.behaviorHints?.notWebReady) || result[0];
-        if (direct) onPlayRef.current(direct, metaRef.current, video);
-      }
-    });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isSeries, preselectVideoId, meta.id, meta.videos?.length, addonsKey, streamPickerMode, setPreselectVideoId]);
+  }, [isSeries, preselectVideoId, setSelectedVideo, setPreselectVideoId]);
 
   // Load streams on mount for Movies
   useEffect(() => {
     if (!isSeries) {
       const loadMovieStreams = async () => {
-        setStreams([]);
+        const cacheKey = `${meta.type}:${meta.id}`;
+        let isCached = false;
+        if (stremioCacheFetchResults) {
+          const cached = streamCache.get(cacheKey);
+          if (cached) {
+            const ageMs = Date.now() - cached.timestamp;
+            if (ageMs < stremioCacheFetchTimeout * 60 * 1000) {
+              isCached = true;
+            }
+          }
+        }
+        if (!isCached) {
+          setStreams([]);
+        }
         setLoadingStreams(true);
-        const result = await fetchStreams(addons, meta.type, meta.id, (newStreams) => {
-          setStreams((prev) => [...prev, ...newStreams]);
+        const result = await fetchStremioStreamsWithCache(meta.type, meta.id, (newStreams) => {
+          setStreams(newStreams);
         });
         setLoadingStreams(false);
 
@@ -468,7 +533,49 @@ export function StremioDetail({
       loadMovieStreams();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isSeries, meta.id, meta.type, addonsKey, streamPickerMode]);
+  }, [isSeries, meta.id, meta.type, addonsKey, streamPickerMode, refreshTrigger, stremioCacheFetchResults, stremioCacheFetchTimeout, fetchStremioStreamsWithCache]);
+
+  // Load streams when selectedVideo changes (for series/episodes)
+  useEffect(() => {
+    if (!isSeries || !selectedVideo) return;
+    let active = true;
+    const loadEpisodeStreams = async () => {
+      const cacheKey = `series:${selectedVideo.id}`;
+      let isCached = false;
+      if (stremioCacheFetchResults) {
+        const cached = streamCache.get(cacheKey);
+        if (cached) {
+          const ageMs = Date.now() - cached.timestamp;
+          if (ageMs < stremioCacheFetchTimeout * 60 * 1000) {
+            isCached = true;
+          }
+        }
+      }
+      if (!isCached) {
+        setStreams([]);
+      }
+      setLoadingStreams(true);
+      const result = await fetchStremioStreamsWithCache('series', selectedVideo.id, (newStreams) => {
+        if (!active) return;
+        setStreams(newStreams);
+      });
+      if (!active) return;
+      setLoadingStreams(false);
+
+      if (streamPickerMode === 'autoplay' && result.length > 0) {
+        const direct = result.find((s) => s.url && !s.behaviorHints?.notWebReady) || result[0];
+        if (direct && active) {
+          onPlayRef.current(direct, metaRef.current, selectedVideo);
+          setSelectedVideo(null); // Reset back to list on play
+        }
+      }
+    };
+    loadEpisodeStreams();
+    return () => {
+      active = false;
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isSeries, selectedVideo, addonsKey, streamPickerMode, refreshTrigger, stremioCacheFetchResults, stremioCacheFetchTimeout, fetchStremioStreamsWithCache]);
 
   /** Find the next episode in the series after the given one */
   const getNextEpisode = useCallback((ep: StremioVideo): StremioVideo | undefined => {
@@ -481,23 +588,9 @@ export function StremioDetail({
     return idx >= 0 && idx < sorted.length - 1 ? sorted[idx + 1] : undefined;
   }, [meta.videos]);
 
-  const handleEpisodeClick = useCallback(async (ep: StremioVideo) => {
+  const handleEpisodeClick = useCallback((ep: StremioVideo) => {
     setSelectedVideo(ep);
-    setStreams([]);
-    setLoadingStreams(true);
-    const result = await fetchStreams(addons, 'series', ep.id, (newStreams) => {
-      setStreams((prev) => [...prev, ...newStreams]);
-    });
-    setLoadingStreams(false);
-
-    if (streamPickerMode === 'autoplay' && result.length > 0) {
-      const direct = result.find((s) => s.url && !s.behaviorHints?.notWebReady) || result[0];
-      if (direct) {
-        onPlay(direct, meta, ep);
-        setSelectedVideo(null); // Reset back to list on play
-      }
-    }
-  }, [addons, streamPickerMode, onPlay, meta]);
+  }, []);
 
   const handleLibraryToggle = () => {
     if (isAdded) {
@@ -851,11 +944,40 @@ export function StremioDetail({
                     ← Back to Episodes
                   </button>
                 )}
-                <h3 className="stremio-detail-streams-title">
-                  {isSeries
-                    ? `Episode ${selectedVideo?.episode} Streams`
-                    : 'Available Streams'}
-                </h3>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', gap: '12px' }}>
+                  <h3 className="stremio-detail-streams-title" style={{ margin: 0 }}>
+                    {isSeries
+                      ? `Episode ${selectedVideo?.episode} Streams`
+                      : 'Available Streams'}
+                  </h3>
+                  <button
+                    className="stremio-detail-back-btn"
+                    onClick={handleRefresh}
+                    style={{
+                      marginBottom: 0,
+                      padding: '4px 10px',
+                      fontSize: '0.75rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      background: 'rgba(255,255,255,0.05)',
+                      border: '1px solid rgba(255,255,255,0.08)',
+                    }}
+                  >
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      width="12"
+                      height="12"
+                      style={loadingStreams ? { animation: 'stremio-spin 1s linear infinite' } : undefined}
+                    >
+                      <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67" />
+                    </svg>
+                    Refresh
+                  </button>
+                </div>
               </div>
 
               {streams.length > 0 && addonNames.length > 0 && (
