@@ -452,15 +452,7 @@ function NuvioPageContent({
     return () => el.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Refs and controls for Collection rail horizontal scrolling
-  const collectionScrollRefs = useRef<Record<string, HTMLDivElement>>({});
-  const scrollCollection = (key: string, direction: 'left' | 'right') => {
-    const el = collectionScrollRefs.current[key];
-    if (el) {
-      const scrollAmount = direction === 'left' ? -el.clientWidth * 0.75 : el.clientWidth * 0.75;
-      el.scrollBy({ left: scrollAmount, behavior: 'smooth' });
-    }
-  };
+
 
   // Derive home catalog layout by sorting and filtering collections & addon rows from Nuvio homeCatalogSettings
   const homeRows = useMemo(() => {
@@ -609,6 +601,80 @@ function NuvioPageContent({
     const lower = catalogFilter.toLowerCase().trim();
     return traktNuvioCatalogRows.filter(row => row.title.toLowerCase().includes(lower));
   }, [traktNuvioCatalogRows, catalogFilter]);
+
+  // Scroll boundaries states for rails
+  const [cwCanScrollLeft, setCwCanScrollLeft] = useState(false);
+  const [cwCanScrollRight, setCwCanScrollRight] = useState(false);
+
+  const [spCanScrollLeft, setSpCanScrollLeft] = useState(false);
+  const [spCanScrollRight, setSpCanScrollRight] = useState(false);
+
+  const collectionScrollRefs = useRef<Record<string, HTMLDivElement>>({});
+  const [collectionScrollState, setCollectionScrollState] = useState<Record<string, { left: boolean; right: boolean }>>({});
+
+  const updateCwScroll = useCallback(() => {
+    const el = nuvioCwScrollRef.current;
+    if (!el) return;
+    setCwCanScrollLeft(el.scrollLeft > 0);
+    setCwCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 1);
+  }, []);
+
+  const updateSpScroll = useCallback(() => {
+    const el = nuvioServiceScrollRef.current;
+    if (!el) return;
+    setSpCanScrollLeft(el.scrollLeft > 0);
+    setSpCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 1);
+  }, []);
+
+  const updateCollectionScroll = useCallback((key: string) => {
+    const el = collectionScrollRefs.current[key];
+    if (!el) return;
+    const left = el.scrollLeft > 0;
+    const right = el.scrollLeft + el.clientWidth < el.scrollWidth - 1;
+    setCollectionScrollState(prev => {
+      if (prev[key]?.left === left && prev[key]?.right === right) return prev;
+      return { ...prev, [key]: { left, right } };
+    });
+  }, []);
+
+  const scrollCollection = (key: string, direction: 'left' | 'right') => {
+    const el = collectionScrollRefs.current[key];
+    if (el) {
+      const scrollAmount = direction === 'left' ? -el.clientWidth * 0.75 : el.clientWidth * 0.75;
+      el.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+    }
+  };
+
+  useEffect(() => {
+    const handleResize = () => {
+      updateCwScroll();
+      updateSpScroll();
+      Object.keys(collectionScrollRefs.current).forEach(key => updateCollectionScroll(key));
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [updateCwScroll, updateSpScroll, updateCollectionScroll]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      updateCwScroll();
+    }, 150);
+    return () => clearTimeout(timer);
+  }, [resolvedWatchProgress, updateCwScroll]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      updateSpScroll();
+    }, 150);
+    return () => clearTimeout(timer);
+  }, [enabledStreamingServices, updateSpScroll]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      Object.keys(collectionScrollRefs.current).forEach(key => updateCollectionScroll(key));
+    }, 150);
+    return () => clearTimeout(timer);
+  }, [filteredRows, updateCollectionScroll]);
 
   // Profile selection dropdown state
   const [showProfileMenu, setShowProfileMenu] = useState(false);
@@ -2033,24 +2099,37 @@ function NuvioPageContent({
                     <div className="nuvio-row">
                       <div className="nuvio-row-header">
                         <h3 className="nuvio-row-title">Continue Watching</h3>
-                        <div className="nuvio-chevron-controls">
+                        <div className="stremio-row-nav">
                           <button
-                            className="nuvio-chevron-btn"
+                            className="stremio-row-nav-btn"
                             onClick={() => scrollContinueWatching('left')}
                             aria-label="Scroll left"
+                            disabled={!cwCanScrollLeft}
                           >
-                            &lsaquo;
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 18l-6-6 6-6" /></svg>
                           </button>
                           <button
-                            className="nuvio-chevron-btn"
+                            className="stremio-row-nav-btn"
                             onClick={() => scrollContinueWatching('right')}
                             aria-label="Scroll right"
+                            disabled={!cwCanScrollRight}
                           >
-                            &rsaquo;
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 18l6-6-6-6" /></svg>
                           </button>
                         </div>
                       </div>
-                      <div className="nuvio-scroll-rail" ref={nuvioCwScrollRef}>
+                      <div
+                        className="nuvio-scroll-rail"
+                        ref={(el) => {
+                          (nuvioCwScrollRef as any).current = el;
+                          if (el) {
+                            setTimeout(() => {
+                              updateCwScroll();
+                            }, 150);
+                          }
+                        }}
+                        onScroll={updateCwScroll}
+                      >
                         {(() => {
                           const cwStyle = localStorage.getItem('nuvio_cw_style') || 'card';
                           if (cwStyle === 'wide') {
@@ -2183,26 +2262,36 @@ function NuvioPageContent({
                     <div className="nuvio-row" style={{ marginBottom: '24px', position: 'relative' }}>
                       <div className="nuvio-row-header">
                         <h3 className="nuvio-row-title">Streaming Platforms</h3>
-                        <div className="nuvio-chevron-controls">
+                        <div className="stremio-row-nav">
                           <button
-                            className="nuvio-chevron-btn"
+                            className="stremio-row-nav-btn"
                             onClick={() => scrollNuvioServices('left')}
                             aria-label="Scroll left"
+                            disabled={!spCanScrollLeft}
                           >
-                            &lsaquo;
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 18l-6-6 6-6" /></svg>
                           </button>
                           <button
-                            className="nuvio-chevron-btn"
+                            className="stremio-row-nav-btn"
                             onClick={() => scrollNuvioServices('right')}
                             aria-label="Scroll right"
+                            disabled={!spCanScrollRight}
                           >
-                            &rsaquo;
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 18l6-6-6-6" /></svg>
                           </button>
                         </div>
                       </div>
                       <div
                         className="nuvio-service-rail-scroll"
-                        ref={nuvioServiceScrollRef}
+                        ref={(el) => {
+                          (nuvioServiceScrollRef as any).current = el;
+                          if (el) {
+                            setTimeout(() => {
+                              updateSpScroll();
+                            }, 150);
+                          }
+                        }}
+                        onScroll={updateSpScroll}
                       >
                         <div className="nuvio-service-rail-track">
                           {Object.keys(SERVICES)
@@ -2258,20 +2347,22 @@ function NuvioPageContent({
                             <div key={row.key} className="nuvio-row">
                               <div className="nuvio-row-header">
                                 <h3 className="nuvio-row-title">{row.title}</h3>
-                                <div className="nuvio-chevron-controls">
+                                <div className="stremio-row-nav">
                                   <button
-                                    className="nuvio-chevron-btn"
+                                    className="stremio-row-nav-btn"
                                     onClick={() => scrollCollection(row.key, 'left')}
                                     aria-label="Scroll left"
+                                    disabled={!collectionScrollState[row.key]?.left}
                                   >
-                                    &lsaquo;
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 18l-6-6 6-6" /></svg>
                                   </button>
                                   <button
-                                    className="nuvio-chevron-btn"
+                                    className="stremio-row-nav-btn"
                                     onClick={() => scrollCollection(row.key, 'right')}
                                     aria-label="Scroll right"
+                                    disabled={!collectionScrollState[row.key]?.right}
                                   >
-                                    &rsaquo;
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 18l6-6-6-6" /></svg>
                                   </button>
                                 </div>
                               </div>
@@ -2280,10 +2371,14 @@ function NuvioPageContent({
                                 ref={(el) => {
                                   if (el) {
                                     collectionScrollRefs.current[row.key] = el;
+                                    setTimeout(() => {
+                                      updateCollectionScroll(row.key);
+                                    }, 150);
                                   } else {
                                     delete collectionScrollRefs.current[row.key];
                                   }
                                 }}
+                                onScroll={() => updateCollectionScroll(row.key)}
                               >
                                 {coll.folders.map((folder: any) => {
                                   const tileShape = getFolderShapeClass(folder.tileShape);

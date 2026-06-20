@@ -171,42 +171,6 @@
   margin: 0;
 }
 
-.nuvio-chevron-controls {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-
-.nuvio-chevron-btn {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 50%;
-  color: rgba(255, 255, 255, 0.7);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  font-size: 1.25rem;
-  line-height: 1;
-  padding: 0;
-  padding-bottom: 2px;
-  transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
-  user-select: none;
-}
-
-.nuvio-chevron-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: var(--accent-primary, #00d4ff);
-  color: var(--accent-primary, #00d4ff);
-  box-shadow: 0 0 8px color-mix(in srgb, var(--accent-primary, #00d4ff) 25%, transparent);
-  transform: scale(1.05);
-}
-
-.nuvio-chevron-btn:active {
-  transform: scale(0.95);
-}
 
 .nuvio-scroll-rail {
   display: flex;

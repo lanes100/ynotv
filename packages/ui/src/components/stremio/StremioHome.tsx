@@ -682,38 +682,40 @@ export function StremioHome({ addons, onItemClick }: StremioHomeProps) {
                 </button>
               </div>
             </div>
-            <div
-              className="stremio-service-rail-scroll"
-              ref={serviceScrollRef}
-              onScroll={handleServiceRailScroll}
-            >
-              <div className="stremio-service-rail-track">
-                {Object.keys(SERVICES)
-                  .filter((svcKey) => enabledStreamingServices.includes(svcKey))
-                  .map((svcKey) => {
-                    const svc = SERVICES[svcKey as StreamingService];
-                    return (
-                      <button
-                        key={svcKey}
-                        className="stremio-service-tile-btn"
-                        onClick={() => setSelectedService(svcKey)}
-                      >
-                        <img
-                          src={svc.logo}
-                          alt={svc.name}
-                          style={{
-                            height: svc.logoHeightHome ? `${svc.logoHeightHome}px` : '24px',
-                            width: 'auto',
-                            filter: svc.logoFilter || 'none',
-                          }}
-                        />
-                      </button>
-                    );
-                  })}
+            <div className="stremio-service-rail-scroll-wrapper" style={{ position: 'relative' }}>
+              <div
+                className="stremio-service-rail-scroll"
+                ref={serviceScrollRef}
+                onScroll={handleServiceRailScroll}
+              >
+                <div className="stremio-service-rail-track">
+                  {Object.keys(SERVICES)
+                    .filter((svcKey) => enabledStreamingServices.includes(svcKey))
+                    .map((svcKey) => {
+                      const svc = SERVICES[svcKey as StreamingService];
+                      return (
+                        <button
+                          key={svcKey}
+                          className="stremio-service-tile-btn"
+                          onClick={() => setSelectedService(svcKey)}
+                        >
+                          <img
+                            src={svc.logo}
+                            alt={svc.name}
+                            style={{
+                              height: svc.logoHeightHome ? `${svc.logoHeightHome}px` : '24px',
+                              width: 'auto',
+                              filter: svc.logoFilter || 'none',
+                            }}
+                          />
+                        </button>
+                      );
+                    })}
+                </div>
               </div>
+              {canScrollServiceLeft && <div className="stremio-row-fade stremio-row-fade-left" style={{ zIndex: 3 }} />}
+              {canScrollServiceRight && <div className="stremio-row-fade stremio-row-fade-right" style={{ zIndex: 3 }} />}
             </div>
-            {canScrollServiceLeft && <div className="stremio-row-fade stremio-row-fade-left" style={{ zIndex: 3 }} />}
-            {canScrollServiceRight && <div className="stremio-row-fade stremio-row-fade-right" style={{ zIndex: 3 }} />}
           </div>
         )}
 
