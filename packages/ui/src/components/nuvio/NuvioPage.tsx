@@ -38,6 +38,7 @@ import { StremioCatalogRow } from '../stremio/StremioCatalogRow';
 import { StremioHoverProvider, useStremioHover } from '../../contexts/StremioHoverContext';
 import { StremioHoverCard } from '../stremio/StremioHoverCard';
 import { NuvioDetailView, type NuvioMeta } from './NuvioDetailView';
+import { PosterSizeSlider } from '../PosterSizeSlider';
 import { NuvioPersonDetail } from './NuvioPersonDetail';
 import { NuvioPinModal } from './NuvioPinModal';
 import { useModal } from '../Modal';
@@ -299,6 +300,9 @@ function NuvioPageContent({
   const { showConfirm, ModalComponent } = useModal();
   const nuvioHasUnsavedHomeLayout = useNuvioHasUnsavedHomeLayout();
   const nuvioTabSaveFn = useNuvioTabSaveFn();
+
+  const nuvioPosterSize = useUIStore((s) => s.nuvioPosterSize);
+  const setNuvioPosterSize = useUIStore((s) => s.setNuvioPosterSize);
 
   const [library, setLibrary] = useState<NuvioLibrarySyncItem[]>([]);
   const libraryIds = useMemo(() => new Set(library.map(l => l.content_id)), [library]);
@@ -1430,7 +1434,7 @@ function NuvioPageContent({
   };
 
   return (
-    <div className="nuvio-page">
+    <div className="nuvio-page" style={{ '--nuvio-poster-width': `${nuvioPosterSize}px` } as React.CSSProperties}>
       {/* Nuvio Dedicated Topbar */}
       <div className="nuvio-topbar">
         <div className="nuvio-topbar-left">
@@ -1443,6 +1447,7 @@ function NuvioPageContent({
               Nuvio
             </span>
           </div>
+          <PosterSizeSlider value={nuvioPosterSize} onChange={setNuvioPosterSize} />
         </div>
 
         {/* Centered Navigation Tabs */}

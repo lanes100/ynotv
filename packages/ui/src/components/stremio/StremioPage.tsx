@@ -78,6 +78,8 @@ export function StremioPage({
   const [showAddonManager, setShowAddonManager] = useState(false);
   const [showAccountModal, setShowAccountModal] = useState(false);
 
+  const stremioPosterSize = useUIStore((s) => s.stremioPosterSize);
+
   const mainRef = useRef<HTMLDivElement | null>(null);
   const [homeScrollTop, setHomeScrollTop] = useState(0);
 
@@ -138,7 +140,7 @@ export function StremioPage({
 
   return (
     <StremioHoverProvider>
-      <div className="stremio-page">
+      <div className="stremio-page" style={{ '--strem-poster-width': `${stremioPosterSize}px` } as React.CSSProperties}>
         {showAddonManager && (
           <AddonManagerPanel onClose={() => setShowAddonManager(false)} />
         )}

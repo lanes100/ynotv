@@ -268,8 +268,8 @@
 /* ─── Netflix-style Top 10 Rank Cards ─────────────────────── */
 .stremio-rank-card-container {
   position: relative;
-  width: 165px;
-  height: 235px;
+  width: calc(var(--strem-poster-width, var(--nuvio-poster-width, 150px)) * 1.1);
+  height: calc(var(--strem-poster-width, var(--nuvio-poster-width, 150px)) * 1.567);
   flex-shrink: 0;
   cursor: pointer;
 }
@@ -322,6 +322,10 @@
 }
 
 /* Category Grid list view */
+.stremio-row-card {
+  width: var(--strem-poster-width, var(--nuvio-poster-width, 150px));
+}
+
 .stremio-service-grid-wrap {
   display: flex;
   flex-direction: column;
@@ -330,7 +334,7 @@
 
 .stremio-service-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(135px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(calc(var(--strem-poster-width, var(--nuvio-poster-width, 150px)) * 0.9), 1fr));
   gap: 20px;
 }
 

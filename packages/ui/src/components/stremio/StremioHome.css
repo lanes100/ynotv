@@ -76,7 +76,7 @@
 
 .stremio-meta-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(calc(var(--strem-poster-width, var(--nuvio-poster-width, 150px)) * 1.067), 1fr));
   gap: 16px;
 }
 
@@ -245,7 +245,7 @@
 
 .stremio-row-card {
   flex-shrink: 0;
-  width: 150px;
+  width: var(--strem-poster-width, var(--nuvio-poster-width, 150px));
   background: var(--surface-color, rgba(255, 255, 255, 0.04));
   border-radius: 10px;
   overflow: hidden;
@@ -439,7 +439,7 @@
 .stremio-rw-card {
   position: relative;
   flex-shrink: 0;
-  width: 150px;
+  width: var(--strem-poster-width, var(--nuvio-poster-width, 150px));
   background: var(--surface-color, rgba(255, 255, 255, 0.04));
   border-radius: 10px;
   overflow: hidden;
@@ -743,7 +743,7 @@
 
 /* Landscape Posters Mode */
 .stremio-row-card.landscape {
-  width: 245px !important;
+  width: calc(var(--strem-poster-width, var(--nuvio-poster-width, 150px)) * 1.63) !important;
   background: transparent !important;
   border: none !important;
   box-shadow: none !important;

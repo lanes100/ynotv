@@ -14,8 +14,10 @@ import {
   useSetStremioSelectedCloudCatalogKey,
   useStremioView,
   useSetStremioView,
+  useUIStore,
 } from '../../stores/uiStore';
 import { useSearchHistory } from '../../hooks/useSearchHistory';
+import { PosterSizeSlider } from '../PosterSizeSlider';
 import './StremioTopbar.css';
 
 interface StremioTopbarProps {
@@ -42,6 +44,9 @@ export function StremioTopbar({ addons, onOpenAddonManager, onOpenAccount }: Str
   const stremioSearchHistory = useSearchHistory('stremio');
   const [showStremioHistory, setShowStremioHistory] = useState(false);
   const stremioHistoryRef = useRef<HTMLDivElement | null>(null);
+
+  const stremioPosterSize = useUIStore((s) => s.stremioPosterSize);
+  const setStremioPosterSize = useUIStore((s) => s.setStremioPosterSize);
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
@@ -132,6 +137,7 @@ export function StremioTopbar({ addons, onOpenAddonManager, onOpenAccount }: Str
           </svg>
           <span className="stremio-brand-name">Strem</span>
         </div>
+        <PosterSizeSlider value={stremioPosterSize} onChange={setStremioPosterSize} />
       </div>
 
       {/* Centered navigation items */}

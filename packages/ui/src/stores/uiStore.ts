@@ -141,6 +141,12 @@ interface UIState {
   setNuvioHasUnsavedHomeLayout: (value: boolean) => void;
   nuvioTabSaveFn: (() => Promise<void>) | null;
   setNuvioTabSaveFn: (fn: (() => Promise<void>) | null) => void;
+
+  // Poster sizes
+  stremioPosterSize: number;
+  setStremioPosterSize: (size: number) => void;
+  nuvioPosterSize: number;
+  setNuvioPosterSize: (size: number) => void;
 }
 
 export const useUIStore = create<UIState>((set) => ({
@@ -349,6 +355,17 @@ export const useUIStore = create<UIState>((set) => ({
   setNuvioHasUnsavedHomeLayout: (value) => set({ nuvioHasUnsavedHomeLayout: value }),
   nuvioTabSaveFn: null,
   setNuvioTabSaveFn: (fn) => set({ nuvioTabSaveFn: fn }),
+
+  stremioPosterSize: typeof window !== 'undefined' ? parseInt(localStorage.getItem('stremioPosterSize') || '150', 10) : 150,
+  setStremioPosterSize: (size) => {
+    if (typeof window !== 'undefined') localStorage.setItem('stremioPosterSize', String(size));
+    set({ stremioPosterSize: size });
+  },
+  nuvioPosterSize: typeof window !== 'undefined' ? parseInt(localStorage.getItem('nuvioPosterSize') || '150', 10) : 150,
+  setNuvioPosterSize: (size) => {
+    if (typeof window !== 'undefined') localStorage.setItem('nuvioPosterSize', String(size));
+    set({ nuvioPosterSize: size });
+  },
 }));
 
 // Selectors for cleaner component code
