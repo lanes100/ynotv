@@ -218,7 +218,7 @@ export function NuvioPersonDetail({ personId, onBack, onItemClick }: NuvioPerson
   if (loading) {
     return (
       <div className="nuvio-person-detail loading">
-        <div className="spinner" style={{ width: '28px', height: '28px', borderRadius: '50%', border: '3px solid rgba(0,212,255,0.1)', borderTopColor: '#00d4ff', animation: 'spin 1s linear infinite' }} />
+        <div className="spinner" style={{ width: '28px', height: '28px', borderRadius: '50%', border: '3px solid color-mix(in srgb, var(--accent-primary, #00d4ff) 10%, transparent)', borderTopColor: 'var(--accent-primary, #00d4ff)', animation: 'spin 1s linear infinite' }} />
         <span>Loading profile...</span>
       </div>
     );

@@ -1501,7 +1501,7 @@ function NuvioPageContent({
                   width: '18px',
                   height: '18px',
                   borderRadius: '50%',
-                  backgroundColor: profile.avatar_color_hex || '#00d4ff',
+                  backgroundColor: profile.avatar_color_hex || 'var(--accent-primary, #00d4ff)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -1538,7 +1538,7 @@ function NuvioPageContent({
                           width: '18px',
                           height: '18px',
                           borderRadius: '50%',
-                          backgroundColor: p.avatar_color_hex || '#00d4ff',
+                          backgroundColor: p.avatar_color_hex || 'var(--accent-primary, #00d4ff)',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
@@ -1568,7 +1568,7 @@ function NuvioPageContent({
         {!token ? (
           <div style={{ maxWidth: '420px', margin: '60px auto', display: 'flex', flexDirection: 'column', gap: '16px', padding: '0 20px' }}>
             <div style={{ textAlign: 'center' }}>
-              <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#00d4ff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: '12px' }}>
+              <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary, #00d4ff)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: '12px' }}>
                 <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
                 <circle cx="9" cy="7" r="4" />
                 <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
@@ -1632,7 +1632,7 @@ function NuvioPageContent({
                     type="submit"
                     disabled={authStore.isSyncing}
                     style={{
-                      background: 'linear-gradient(135deg, #00d4ff, #0088ff)',
+                      background: 'linear-gradient(135deg, var(--accent-primary, #00d4ff), color-mix(in srgb, var(--accent-primary, #00d4ff) 70%, black))',
                       border: 'none',
                       color: '#000',
                       borderRadius: '6px',
@@ -1726,7 +1726,7 @@ function NuvioPageContent({
                     width: '64px',
                     height: '64px',
                     borderRadius: '50%',
-                    backgroundColor: p.avatar_color_hex || '#00d4ff',
+                    backgroundColor: p.avatar_color_hex || 'var(--accent-primary, #00d4ff)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -1754,12 +1754,12 @@ function NuvioPageContent({
               ))}
             </div>
             <div style={{ marginTop: '36px', fontSize: '0.75rem', color: 'rgba(255,255,255,0.3)' }}>
-              Manage profiles in <span onClick={() => navigateToView('settings')} style={{ color: '#00d4ff', cursor: 'pointer', textDecoration: 'underline' }}>Settings</span>
+              Manage profiles in <span onClick={() => navigateToView('settings')} style={{ color: 'var(--accent-primary, #00d4ff)', cursor: 'pointer', textDecoration: 'underline' }}>Settings</span>
             </div>
           </div>
         ) : loading && resolvedWatchProgress.length === 0 && library.length === 0 ? (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '200px', color: 'rgba(255,255,255,0.4)', gap: '10px' }}>
-            <div className="spinner" style={{ width: '28px', height: '28px', borderRadius: '50%', border: '3px solid rgba(0,212,255,0.1)', borderTopColor: '#00d4ff', animation: 'spin 1s linear infinite' }} />
+            <div className="spinner" style={{ width: '28px', height: '28px', borderRadius: '50%', border: '3px solid color-mix(in srgb, var(--accent-primary, #00d4ff) 10%, transparent)', borderTopColor: 'var(--accent-primary, #00d4ff)', animation: 'spin 1s linear infinite' }} />
             <span style={{ fontSize: '0.82rem' }}>Loading synced data...</span>
           </div>
         ) : (
@@ -1820,7 +1820,7 @@ function NuvioPageContent({
                   <div className="nuvio-folder-detail-grid-wrapper">
                     {loadingFolderItems ? (
                       <div className="nuvio-folder-detail-loading">
-                        <div className="spinner" style={{ width: '28px', height: '28px', borderRadius: '50%', border: '3px solid rgba(0,212,255,0.1)', borderTopColor: '#00d4ff', animation: 'spin 1s linear infinite' }} />
+                        <div className="spinner" style={{ width: '28px', height: '28px', borderRadius: '50%', border: '3px solid color-mix(in srgb, var(--accent-primary, #00d4ff) 10%, transparent)', borderTopColor: 'var(--accent-primary, #00d4ff)', animation: 'spin 1s linear infinite' }} />
                         <span>Loading catalog items...</span>
                       </div>
                     ) : folderError ? (
@@ -1863,7 +1863,7 @@ function NuvioPageContent({
                         )}
                         {loadingMoreFolderItems && (
                           <div className="nuvio-folder-detail-loading" style={{ padding: '20px 0' }}>
-                            <div className="spinner" style={{ width: '20px', height: '20px', borderRadius: '50%', border: '2px solid rgba(0,212,255,0.1)', borderTopColor: '#00d4ff', animation: 'spin 1s linear infinite' }} />
+                            <div className="spinner" style={{ width: '20px', height: '20px', borderRadius: '50%', border: '2px solid color-mix(in srgb, var(--accent-primary, #00d4ff) 10%, transparent)', borderTopColor: 'var(--accent-primary, #00d4ff)', animation: 'spin 1s linear infinite' }} />
                             <span style={{ fontSize: '0.78rem' }}>Loading more...</span>
                           </div>
                         )}

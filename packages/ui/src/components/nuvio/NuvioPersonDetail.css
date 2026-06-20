@@ -183,7 +183,7 @@
 .meta-birth-link:hover,
 .meta-place-link:hover {
   color: #ffffff;
-  text-decoration-color: #00d4ff;
+  text-decoration-color: var(--accent-primary, #00d4ff);
 }
 
 .person-bio-container {
@@ -233,7 +233,7 @@
 }
 
 .bio-film-link:hover {
-  color: #00d4ff;
+  color: var(--accent-primary, #00d4ff);
 }
 
 .nuvio-person-filmography {
@@ -398,7 +398,7 @@
   border-radius: 4px;
   font-size: 0.6875rem;
   font-weight: 700;
-  color: #00d4ff;
+  color: var(--accent-primary, #00d4ff);
   z-index: 2;
 }
 
