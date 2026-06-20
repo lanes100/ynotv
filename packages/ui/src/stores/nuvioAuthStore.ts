@@ -30,6 +30,7 @@ import {
   fetchNuvioHomeCatalogSettings,
   pushNuvioHomeCatalogSettings,
   fetchNuvioAvatarCatalog,
+  clearNuvioApiCache,
   type NuvioProfile,
   type NuvioProfilePushPayload,
   type NuvioCollection,
@@ -146,6 +147,7 @@ export const useNuvioAuthStore = create<NuvioAuthStore>()(
           error: null,
           lastSyncTime: null,
         });
+        clearNuvioApiCache();
       },
 
       fetchProfiles: async () => {
@@ -371,6 +373,7 @@ export const useNuvioAuthStore = create<NuvioAuthStore>()(
       },
 
       syncNow: async () => {
+        clearNuvioApiCache();
         const token = get().token;
         const profile = get().activeProfile;
         if (!token || !profile) return;

@@ -305,6 +305,7 @@ function NuvioPageContent({
   const setNuvioPosterSize = useUIStore((s) => s.setNuvioPosterSize);
 
   const [library, setLibrary] = useState<NuvioLibrarySyncItem[]>([]);
+  const [libraryLoaded, setLibraryLoaded] = useState(false);
   const libraryIds = useMemo(() => new Set(library.map(l => l.content_id)), [library]);
   const isLandscapePosters = !!authStore.homeCatalogSettings?.landscape_posters;
   const [resolvedWatchProgress, setResolvedWatchProgress] = useState<(NuvioWatchProgressSyncEntry & { poster?: string; name?: string; background?: string; episodeTitle?: string; episodeThumbnail?: string })[]>([]);
@@ -660,10 +661,26 @@ function NuvioPageContent({
 
   // Fetch profiles on mount/token change
   useEffect(() => {
-    if (token) {
+    if (token && authStore.profiles.length === 0) {
       authStore.fetchProfiles();
     }
-  }, [token]);
+    if (!token) {
+      setLibrary([]);
+      setLibraryLoaded(false);
+    }
+  }, [token, authStore.profiles.length]);
+
+  // Load library when switching to library view or opening details view
+  useEffect(() => {
+    if ((nuvioView === 'library' || !!nuvioActiveMeta) && token && profile && !libraryLoaded) {
+      fetchNuvioLibrary(token, profile.profile_index, 500)
+        .then((lib) => {
+          setLibrary(lib || []);
+          setLibraryLoaded(true);
+        })
+        .catch((e) => console.error('[NuvioPage] Failed to fetch library:', e));
+    }
+  }, [nuvioView, nuvioActiveMeta, token, profile?.profile_index, libraryLoaded]);
 
 
 
@@ -732,13 +749,17 @@ function NuvioPageContent({
           ? 1
           : profile.profile_index;
 
-      // Fetch Library and Progress concurrently (addons already synced by syncNow)
-      const [lib, progress] = await Promise.all([
-        fetchNuvioLibrary(token, profile.profile_index, 100),
-        fetchNuvioWatchProgress(token, profile.profile_index, null, 100),
-      ]);
+      // Fetch Watch Progress (addons already synced by syncNow)
+      const progress = await fetchNuvioWatchProgress(token, profile.profile_index, null, 100);
 
-      setLibrary(lib || []);
+      if (nuvioView === 'library') {
+        const lib = await fetchNuvioLibrary(token, profile.profile_index, 500);
+        setLibrary(lib || []);
+        setLibraryLoaded(true);
+      } else {
+        setLibrary([]);
+        setLibraryLoaded(false);
+      }
 
       if (progress && progress.length > 0) {
         setRawWatchProgress(progress);
@@ -749,7 +770,7 @@ function NuvioPageContent({
         setResolvedWatchProgress([]);
       }
     } catch (e) {
-      console.error('[NuvioPage] Failed to fetch synced library/progress/addons:', e);
+      console.error('[NuvioPage] Failed to fetch synced progress/addons:', e);
     } finally {
       if (!background) setLoading(false);
     }

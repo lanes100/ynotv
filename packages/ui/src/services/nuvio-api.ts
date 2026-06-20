@@ -179,8 +179,8 @@ export async function refreshNuvioSession(refreshToken: string): Promise<NuvioSe
   });
 }
 
-// Low-level fetch that never auto-refreshes (avoids infinite loops)
-async function callNuvioApiRaw<T>(
+// Core request implementation
+async function executeNuvioRequest<T>(
   method: 'GET' | 'POST' | 'PUT' | 'DELETE',
   path: string,
   body?: any,
@@ -236,6 +236,52 @@ async function callNuvioApiRaw<T>(
     return {} as T;
   }
   return JSON.parse(text) as T;
+}
+
+interface CacheEntry {
+  timestamp: number;
+  promise: Promise<any>;
+}
+
+const apiCache = new Map<string, CacheEntry>();
+const CACHE_TTL = 120000; // 2 minutes cache TTL
+
+export function clearNuvioApiCache() {
+  apiCache.clear();
+}
+
+// Low-level fetch that never auto-refreshes (avoids infinite loops)
+async function callNuvioApiRaw<T>(
+  method: 'GET' | 'POST' | 'PUT' | 'DELETE',
+  path: string,
+  body?: any,
+  token?: string | null
+): Promise<T> {
+  const isGetOrPull = method === 'GET' || path.includes('rpc/sync_pull_');
+
+  if (!isGetOrPull) {
+    clearNuvioApiCache();
+    return executeNuvioRequest<T>(method, path, body, token);
+  }
+
+  const cacheKey = `${getEffectiveNuvioUrl()}/${path}::${body ? JSON.stringify(body) : ''}::${token || ''}`;
+  const cached = apiCache.get(cacheKey);
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    return cached.promise as Promise<T>;
+  }
+
+  const promise = executeNuvioRequest<T>(method, path, body, token);
+
+  apiCache.set(cacheKey, {
+    timestamp: Date.now(),
+    promise,
+  });
+
+  promise.catch(() => {
+    apiCache.delete(cacheKey);
+  });
+
+  return promise;
 }
 
 // Request Helper – calls raw, auto-refreshes token on 401 and retries once
