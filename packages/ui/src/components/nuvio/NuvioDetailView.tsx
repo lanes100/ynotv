@@ -297,43 +297,42 @@ export function NuvioDetailView({
     // 2. Nuvio plugin scrapers
     let scraperPromise: Promise<void> = Promise.resolve();
     if (pluginStore.pluginsEnabled && pluginStore.scrapers.length > 0) {
-      scraperPromise = (async () => {
-        const enabled = pluginStore.scrapers.filter((s) => s.enabled);
-        for (const scraper of enabled) {
-          if (!activeRef.current) break;
-          try {
-            const season = type === 'series' ? (selectedSeason ?? null) : null;
-            const episode = type === 'series' ? null : null;
-            const parts = id.split(':');
-            const parentId = parts[0];
-            const epSeason = parts.length >= 3 ? parseInt(parts[1], 10) : null;
-            const epEpisode = parts.length >= 3 ? parseInt(parts[2], 10) : null;
-            const results = await executePlugin(
-              scraper.code,
-              parentId,
-              type,
-              epSeason ?? season,
-              epEpisode ?? episode,
-              scraper.id,
-              (scraper as any).settings ?? {}
-            );
-            if (!activeRef.current) break;
-            const scraperStreams: StremioStream[] = results.map((r: any) => ({
-              name: r.title || scraper.name,
-              title: r.quality || '',
-              url: r.url || undefined,
-              infoHash: r.infoHash || undefined,
-              fileIdx: r.fileIdx !== null && r.fileIdx !== undefined ? r.fileIdx : undefined,
-              behaviorHints: r.headers ? { proxyHeaders: r.headers } : undefined,
-              addonName: `⚙ ${scraper.name}`,
-            }));
-            collected.push(...scraperStreams);
-            onStreams?.([...collected]);
-          } catch (e) {
-            console.warn('[NuvioDetailView] Scraper error:', scraper.id, e);
-          }
+      const enabled = pluginStore.scrapers.filter((s) => s.enabled);
+      const promises = enabled.map(async (scraper) => {
+        if (!activeRef.current) return;
+        try {
+          const season = type === 'series' ? (selectedSeason ?? null) : null;
+          const episode = type === 'series' ? null : null;
+          const parts = id.split(':');
+          const parentId = parts[0];
+          const epSeason = parts.length >= 3 ? parseInt(parts[1], 10) : null;
+          const epEpisode = parts.length >= 3 ? parseInt(parts[2], 10) : null;
+          const results = await executePlugin(
+            scraper.code,
+            parentId,
+            type,
+            epSeason ?? season,
+            epEpisode ?? episode,
+            scraper.id,
+            (scraper as any).settings ?? {}
+          );
+          if (!activeRef.current) return;
+          const scraperStreams: StremioStream[] = results.map((r: any) => ({
+            name: r.title || scraper.name,
+            title: r.quality || '',
+            url: r.url || undefined,
+            infoHash: r.infoHash || undefined,
+            fileIdx: r.fileIdx !== null && r.fileIdx !== undefined ? r.fileIdx : undefined,
+            behaviorHints: r.headers ? { proxyHeaders: r.headers } : undefined,
+            addonName: `⚙ ${scraper.name}`,
+          }));
+          collected.push(...scraperStreams);
+          onStreams?.([...collected]);
+        } catch (e) {
+          console.warn('[NuvioDetailView] Scraper error:', scraper.id, e);
         }
-      })();
+      });
+      scraperPromise = Promise.all(promises).then(() => {});
     }
 
     await Promise.all([addonPromise, scraperPromise]);
