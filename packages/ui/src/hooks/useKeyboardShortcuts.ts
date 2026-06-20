@@ -197,6 +197,14 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions): void
                 e.preventDefault();
                 setCategoriesOpen(false);
                 setActiveView((v) => (v === 'calendar' ? 'none' : 'calendar'));
+            } else if (matches('toggleNuvio', e.key)) {
+                e.preventDefault();
+                setCategoriesOpen(false);
+                setActiveView((v) => (v === 'nuvio' ? 'none' : 'nuvio'));
+            } else if (matches('toggleStrem', e.key)) {
+                e.preventDefault();
+                setCategoriesOpen(false);
+                setActiveView((v) => (v === 'stremio' ? 'none' : 'stremio'));
             } else if (matches('toggleEpgView', e.key)) {
                 e.preventDefault();
                 handleToggleEpgView();

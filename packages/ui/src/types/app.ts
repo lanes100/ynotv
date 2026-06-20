@@ -32,7 +32,9 @@ export type ShortcutAction =
     | 'channelDown'
     | 'toggleEpgView'
     | 'replayLastStream'
-    | 'toggleTransparentGuide';
+    | 'toggleTransparentGuide'
+    | 'toggleNuvio'
+    | 'toggleStrem';
 
 export interface SavedChannelState {
     channelName: string | null;
