@@ -192,6 +192,7 @@ async function callNuvioApiRaw<T>(
     'apikey': getEffectiveNuvioKey(),
     'Content-Type': 'application/json',
     'Accept': 'application/json',
+    'User-Agent': 'NuvioDesktop/0.1.5-alpha',
   };
 
   if (token) {
