@@ -248,15 +248,17 @@ export function CatalogDetailView({ addon, catalog, onItemClick }: CatalogDetail
 
   // Observe sentinel intersection relative to the .stremio-main scrolling container
   useEffect(() => {
-    if (!sentinelRef.current || loadingInitial || loadingMore || !hasMore) return;
-    const mainEl = document.querySelector('.stremio-main');
+    const sentinel = sentinelRef.current;
+    if (!sentinel || loadingInitial || loadingMore || !hasMore) return;
+    const mainEl = sentinel.closest('.stremio-main');
+    if (!mainEl) return;
     const observer = new IntersectionObserver((entries) => {
       const first = entries[0];
       if (first?.isIntersecting) {
         void loadPage(items.length, false);
       }
     }, { root: mainEl, rootMargin: '400px' });
-    observer.observe(sentinelRef.current);
+    observer.observe(sentinel);
     return () => observer.disconnect();
   }, [items.length, hasMore, loadingInitial, loadingMore, loadPage]);
 

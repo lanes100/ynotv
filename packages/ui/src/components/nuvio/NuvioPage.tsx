@@ -706,8 +706,9 @@ function NuvioPageContent({
   // IntersectionObserver for folder detail infinite scroll
   useEffect(() => {
     const sentinel = folderSentinelRef.current;
-    const container = document.querySelector('.nuvio-main');
-    if (!sentinel || !container || loadingFolderItems) return;
+    if (!sentinel || loadingFolderItems) return;
+    const container = sentinel.closest('.nuvio-main');
+    if (!container) return;
 
     const observer = new IntersectionObserver((entries) => {
       if (entries[0]?.isIntersecting) {

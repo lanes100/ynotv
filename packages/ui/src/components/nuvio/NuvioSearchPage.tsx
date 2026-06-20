@@ -199,6 +199,12 @@ export function NuvioSearchPage({
     if (!append) {
       discoverSkipRef.current = 0;
       hasMoreDiscoverRef.current = true;
+
+      // Scroll parent container to top on new query/catalog change
+      const el = document.querySelector('.nuvio-main');
+      if (el) {
+        el.scrollTop = 0;
+      }
     }
     setDiscoverLoading(true);
     try {
@@ -303,14 +309,16 @@ export function NuvioSearchPage({
   useEffect(() => {
     const sentinel = discoverSentinelRef.current;
     if (!sentinel || !selectedCatalogKey) return;
+    const container = sentinel.closest('.nuvio-main');
+    if (!container) return;
     const observer = new IntersectionObserver((entries) => {
       if (entries[0]?.isIntersecting && hasMoreDiscoverRef.current && !discoverLoadingRef.current) {
         loadDiscover(true);
       }
-    }, { rootMargin: '600px' });
+    }, { root: container, rootMargin: '600px' });
     observer.observe(sentinel);
     return () => observer.disconnect();
-  }, [selectedCatalogKey, loadDiscover]);
+  }, [selectedCatalogKey, loadDiscover, discoverItems.length]);
 
   return (
     <div className="nuvio-search-page">
