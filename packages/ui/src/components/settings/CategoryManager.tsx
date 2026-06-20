@@ -23,6 +23,8 @@ export function CategoryManager({ sourceId, sourceName, onClose, onChange }: Cat
     const [searchQuery, setSearchQuery] = useState('');
     const [managingCategory, setManagingCategory] = useState<{ id: string; name: string } | null>(null);
     const isSavingRef = useRef(false);
+    const [selectToMoveMode, setSelectToMoveMode] = useState<'inactive' | 'selecting' | 'ready'>('inactive');
+    const [selectedForMove, setSelectedForMove] = useState<Set<string>>(new Set());
     const categorySortOrder = useCategorySortOrder();
 
     // Pointer-event drag state
@@ -134,6 +136,61 @@ export function CategoryManager({ sourceId, sourceName, onClose, onChange }: Cat
             cat.id === id ? { ...cat, enabled: !cat.enabled } : cat
         ));
         setIsDirty(true);
+    }, []);
+
+    // Move category to top
+    const moveToTop = useCallback((index: number) => {
+        if (index === 0) return;
+        setCategories(cats => {
+            const newCats = [...cats];
+            const [moved] = newCats.splice(index, 1);
+            newCats.unshift(moved);
+            return newCats.map((cat, idx) => ({ ...cat, displayOrder: idx }));
+        });
+        setIsDirty(true);
+    }, []);
+
+    const handleSelectToMoveToggle = useCallback(() => {
+        if (selectToMoveMode === 'inactive') {
+            setSelectToMoveMode('selecting');
+            setSelectedForMove(new Set());
+        } else if (selectToMoveMode === 'selecting') {
+            if (selectedForMove.size > 0) {
+                setSelectToMoveMode('ready');
+            } else {
+                setSelectToMoveMode('inactive');
+            }
+        } else if (selectToMoveMode === 'ready') {
+            if (selectedForMove.size > 0) {
+                setCategories(cats => {
+                    const newCats = [...cats];
+                    const selected = newCats.filter(cat => selectedForMove.has(cat.id));
+                    const unselected = newCats.filter(cat => !selectedForMove.has(cat.id));
+                    const reordered = [...selected, ...unselected];
+                    return reordered.map((cat, idx) => ({ ...cat, displayOrder: idx }));
+                });
+                setIsDirty(true);
+            }
+            setSelectedForMove(new Set());
+            setSelectToMoveMode('inactive');
+        }
+    }, [selectToMoveMode, selectedForMove]);
+
+    const handleSelectToMoveCancel = useCallback(() => {
+        setSelectToMoveMode('inactive');
+        setSelectedForMove(new Set());
+    }, []);
+
+    const toggleSelectForMove = useCallback((id: string) => {
+        setSelectedForMove(prev => {
+            const next = new Set(prev);
+            if (next.has(id)) {
+                next.delete(id);
+            } else {
+                next.add(id);
+            }
+            return next;
+        });
     }, []);
 
     // Move category up
@@ -313,6 +370,22 @@ export function CategoryManager({ sourceId, sourceName, onClose, onChange }: Cat
                     >
                         {hideUnselected ? '👁 Show All' : '👁‍🗨 Hide Unselected'}
                     </button>
+                    <button
+                        onClick={handleSelectToMoveToggle}
+                        className={selectToMoveMode !== 'inactive' ? 'active-toggle' : ''}
+                    >
+                        {selectToMoveMode === 'inactive' && '⇈ Select to Move to Top'}
+                        {selectToMoveMode === 'selecting' && `✓ Done Selecting (${selectedForMove.size})`}
+                        {selectToMoveMode === 'ready' && '⇈ Move Selected to Top'}
+                    </button>
+                    {selectToMoveMode !== 'inactive' && (
+                        <button
+                            onClick={handleSelectToMoveCancel}
+                            className="cancel-select-btn"
+                        >
+                            Cancel
+                        </button>
+                    )}
                 </div>
 
                 <div className="category-search">
@@ -341,24 +414,29 @@ export function CategoryManager({ sourceId, sourceName, onClose, onChange }: Cat
                         return (
                             <div
                                 key={cat.id}
-                                className={`category-item ${!isAlphabetical && isDragging ? 'dragging' : ''} ${!isAlphabetical && isDragOver ? 'drag-over' : ''}`}
+                                className={`category-item ${!isAlphabetical && isDragging ? 'dragging' : ''} ${!isAlphabetical && isDragOver ? 'drag-over' : ''} ${selectToMoveMode !== 'inactive' && selectedForMove.has(cat.id) ? 'selected-for-move' : ''} ${selectToMoveMode !== 'inactive' ? 'selection-mode-item' : ''}`}
+                                onClick={selectToMoveMode !== 'inactive' ? () => toggleSelectForMove(cat.id) : undefined}
                             >
                                 {!isAlphabetical && (
                                     <span
                                         className="drag-handle"
-                                        style={{ touchAction: 'none' }}
-                                        onPointerDown={(e) => handleHandlePointerDown(e, index)}
+                                        style={{ touchAction: 'none', opacity: selectToMoveMode !== 'inactive' ? 0.3 : 1 }}
+                                        onPointerDown={selectToMoveMode !== 'inactive' ? undefined : (e) => handleHandlePointerDown(e, index)}
                                     >
                                         ⋮⋮
                                     </span>
                                 )}
 
                                 {cat.type === 'native' ? (
-                                    <label className="category-checkbox">
+                                    <label 
+                                        className="category-checkbox" 
+                                        onClick={selectToMoveMode !== 'inactive' ? (e) => e.preventDefault() : undefined}
+                                    >
                                         <input
                                             type="checkbox"
                                             checked={cat.enabled}
-                                            onChange={() => toggleCategory(cat.id)}
+                                            onChange={selectToMoveMode !== 'inactive' ? () => {} : () => toggleCategory(cat.id)}
+                                            disabled={selectToMoveMode !== 'inactive'}
                                         />
                                         <span className="category-name">{cat.name}</span>
                                     </label>
@@ -373,7 +451,8 @@ export function CategoryManager({ sourceId, sourceName, onClose, onChange }: Cat
                                 <div className="category-actions-row" style={{ display: 'flex', alignItems: 'center' }}>
                                     <button
                                         className="manage-channels-btn"
-                                        onClick={() => setManagingCategory({ id: cat.id, name: cat.name })}
+                                        onClick={selectToMoveMode !== 'inactive' ? (e) => e.stopPropagation() : () => setManagingCategory({ id: cat.id, name: cat.name })}
+                                        disabled={selectToMoveMode !== 'inactive'}
                                         title="Manage channels in this category"
                                     >
                                         📺 Channels
@@ -381,16 +460,18 @@ export function CategoryManager({ sourceId, sourceName, onClose, onChange }: Cat
                                     {cat.type === 'link' && (
                                         <button
                                             className="category-delete-btn"
-                                            onClick={() => handleDeleteLink(cat.linkId)}
+                                            onClick={selectToMoveMode !== 'inactive' ? (e) => e.stopPropagation() : () => handleDeleteLink(cat.linkId)}
+                                            disabled={selectToMoveMode !== 'inactive'}
                                             title="Remove category link"
                                             style={{
                                                 background: 'transparent',
                                                 border: 'none',
                                                 color: '#ff4b4b',
-                                                cursor: 'pointer',
+                                                cursor: selectToMoveMode !== 'inactive' ? 'default' : 'pointer',
                                                 fontSize: '1rem',
                                                 marginLeft: '8px',
-                                                padding: '4px'
+                                                padding: '4px',
+                                                opacity: selectToMoveMode !== 'inactive' ? 0.3 : 1
                                             }}
                                         >
                                             ✕
@@ -402,16 +483,24 @@ export function CategoryManager({ sourceId, sourceName, onClose, onChange }: Cat
                                     <div className="category-reorder">
                                         <button
                                             className="order-btn"
-                                            onClick={() => moveUp(index)}
-                                            disabled={index === 0}
+                                            onClick={selectToMoveMode !== 'inactive' ? (e) => e.stopPropagation() : () => moveToTop(index)}
+                                            disabled={index === 0 || selectToMoveMode !== 'inactive'}
+                                            title="Move to top"
+                                        >
+                                            ↑↑
+                                        </button>
+                                        <button
+                                            className="order-btn"
+                                            onClick={selectToMoveMode !== 'inactive' ? (e) => e.stopPropagation() : () => moveUp(index)}
+                                            disabled={index === 0 || selectToMoveMode !== 'inactive'}
                                             title="Move up"
                                         >
                                             ↑
                                         </button>
                                         <button
                                             className="order-btn"
-                                            onClick={() => moveDown(index)}
-                                            disabled={index === categories.length - 1}
+                                            onClick={selectToMoveMode !== 'inactive' ? (e) => e.stopPropagation() : () => moveDown(index)}
+                                            disabled={index === categories.length - 1 || selectToMoveMode !== 'inactive'}
                                             title="Move down"
                                         >
                                             ↓

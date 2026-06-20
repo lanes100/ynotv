@@ -18,6 +18,14 @@ export function ManageVodCategories({ sourceId, sourceName, onClose, onChange }:
     const [hideUnselected, setHideUnselected] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const isSavingRef = useRef(false);
+    const [selectToMoveMode, setSelectToMoveMode] = useState<'inactive' | 'selecting' | 'ready'>('inactive');
+    const [selectedForMove, setSelectedForMove] = useState<Set<string>>(new Set());
+
+    // Reset selection states on tab switch
+    useEffect(() => {
+        setSelectToMoveMode('inactive');
+        setSelectedForMove(new Set());
+    }, [activeTab]);
 
     // Pointer-event drag state
     const dragFromIdx = useRef<number | null>(null);
@@ -111,6 +119,65 @@ export function ManageVodCategories({ sourceId, sourceName, onClose, onChange }:
         currentTabCats = currentTabCats.map((cat, idx) => ({ ...cat, display_order: idx }));
         return [...others, ...currentTabCats];
     };
+
+    const moveToTop = useCallback((categoryId: string) => {
+        setCategories(cats => {
+            const currentTabCats = cats.filter(c => c.type === activeTab);
+            const idxInTab = currentTabCats.findIndex(c => c.category_id === categoryId);
+            if (idxInTab <= 0) return cats;
+
+            const newTabCats = [...currentTabCats];
+            const [moved] = newTabCats.splice(idxInTab, 1);
+            newTabCats.unshift(moved);
+            
+            // Re-merge and reindex
+            return reindexTab([...cats.filter(c => c.type !== activeTab), ...newTabCats]);
+        });
+        setIsDirty(true);
+    }, [activeTab]);
+
+    const handleSelectToMoveToggle = useCallback(() => {
+        if (selectToMoveMode === 'inactive') {
+            setSelectToMoveMode('selecting');
+            setSelectedForMove(new Set());
+        } else if (selectToMoveMode === 'selecting') {
+            if (selectedForMove.size > 0) {
+                setSelectToMoveMode('ready');
+            } else {
+                setSelectToMoveMode('inactive');
+            }
+        } else if (selectToMoveMode === 'ready') {
+            if (selectedForMove.size > 0) {
+                setCategories(cats => {
+                    const currentTabCats = cats.filter(c => c.type === activeTab);
+                    const selected = currentTabCats.filter(cat => selectedForMove.has(cat.category_id));
+                    const unselected = currentTabCats.filter(cat => !selectedForMove.has(cat.category_id));
+                    const reorderedTabCats = [...selected, ...unselected];
+                    return reindexTab([...cats.filter(c => c.type !== activeTab), ...reorderedTabCats]);
+                });
+                setIsDirty(true);
+            }
+            setSelectedForMove(new Set());
+            setSelectToMoveMode('inactive');
+        }
+    }, [selectToMoveMode, selectedForMove, activeTab]);
+
+    const handleSelectToMoveCancel = useCallback(() => {
+        setSelectToMoveMode('inactive');
+        setSelectedForMove(new Set());
+    }, []);
+
+    const toggleSelectForMove = useCallback((id: string) => {
+        setSelectedForMove(prev => {
+            const next = new Set(prev);
+            if (next.has(id)) {
+                next.delete(id);
+            } else {
+                next.add(id);
+            }
+            return next;
+        });
+    }, []);
 
     const moveUp = useCallback((categoryId: string) => {
         setCategories(cats => {
@@ -298,6 +365,22 @@ export function ManageVodCategories({ sourceId, sourceName, onClose, onChange }:
                     >
                         {hideUnselected ? '👁 Show All' : '👁‍🗨 Hide Unselected'}
                     </button>
+                    <button
+                        onClick={handleSelectToMoveToggle}
+                        className={selectToMoveMode !== 'inactive' ? 'active-toggle' : ''}
+                    >
+                        {selectToMoveMode === 'inactive' && '⇈ Select to Move to Top'}
+                        {selectToMoveMode === 'selecting' && `✓ Done Selecting (${selectedForMove.size})`}
+                        {selectToMoveMode === 'ready' && '⇈ Move Selected to Top'}
+                    </button>
+                    {selectToMoveMode !== 'inactive' && (
+                        <button
+                            onClick={handleSelectToMoveCancel}
+                            className="cancel-select-btn"
+                        >
+                            Cancel
+                        </button>
+                    )}
                 </div>
 
                 <div className="category-search" style={{ flexShrink: 0 }}>
@@ -315,7 +398,7 @@ export function ManageVodCategories({ sourceId, sourceName, onClose, onChange }:
                     onPointerMove={handleContainerPointerMove}
                     onPointerUp={handleContainerPointerUp}
                     onPointerCancel={handleContainerPointerCancel}
-                    style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}
+                    style={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden' }}
                 >
                     {visibleCategories.map((cat, visibleIdx) => {
                         const isDragging = dragFromIdx.current === visibleIdx;
@@ -326,21 +409,26 @@ export function ManageVodCategories({ sourceId, sourceName, onClose, onChange }:
                         return (
                             <div
                                 key={cat.category_id}
-                                className={`category-item ${isDragging ? 'dragging' : ''} ${isDragOver ? 'drag-over' : ''}`}
+                                className={`category-item ${isDragging ? 'dragging' : ''} ${isDragOver ? 'drag-over' : ''} ${selectToMoveMode !== 'inactive' && selectedForMove.has(cat.category_id) ? 'selected-for-move' : ''} ${selectToMoveMode !== 'inactive' ? 'selection-mode-item' : ''}`}
+                                onClick={selectToMoveMode !== 'inactive' ? () => toggleSelectForMove(cat.category_id) : undefined}
                             >
                                 <span
                                     className="drag-handle"
-                                    style={{ touchAction: 'none' }}
-                                    onPointerDown={(e) => handleHandlePointerDown(e, cat.category_id)}
+                                    style={{ touchAction: 'none', opacity: selectToMoveMode !== 'inactive' ? 0.3 : 1 }}
+                                    onPointerDown={selectToMoveMode !== 'inactive' ? undefined : (e) => handleHandlePointerDown(e, cat.category_id)}
                                 >
                                     ⋮⋮
                                 </span>
 
-                                <label className="category-checkbox">
+                                <label 
+                                    className="category-checkbox"
+                                    onClick={selectToMoveMode !== 'inactive' ? (e) => e.preventDefault() : undefined}
+                                >
                                     <input
                                         type="checkbox"
                                         checked={cat.enabled}
-                                        onChange={() => toggleCategory(cat.category_id)}
+                                        onChange={selectToMoveMode !== 'inactive' ? () => {} : () => toggleCategory(cat.category_id)}
+                                        disabled={selectToMoveMode !== 'inactive'}
                                     />
                                     <span className="category-name">{cat.name}</span>
                                 </label>
@@ -348,16 +436,24 @@ export function ManageVodCategories({ sourceId, sourceName, onClose, onChange }:
                                 <div className="category-reorder">
                                     <button
                                         className="order-btn"
-                                        onClick={() => moveUp(cat.category_id)}
-                                        disabled={tabIdx === 0}
+                                        onClick={selectToMoveMode !== 'inactive' ? (e) => e.stopPropagation() : () => moveToTop(cat.category_id)}
+                                        disabled={tabIdx === 0 || selectToMoveMode !== 'inactive'}
+                                        title="Move to top"
+                                    >
+                                        ↑↑
+                                    </button>
+                                    <button
+                                        className="order-btn"
+                                        onClick={selectToMoveMode !== 'inactive' ? (e) => e.stopPropagation() : () => moveUp(cat.category_id)}
+                                        disabled={tabIdx === 0 || selectToMoveMode !== 'inactive'}
                                         title="Move up"
                                     >
                                         ↑
                                     </button>
                                     <button
                                         className="order-btn"
-                                        onClick={() => moveDown(cat.category_id)}
-                                        disabled={tabIdx === tabCategories.length - 1}
+                                        onClick={selectToMoveMode !== 'inactive' ? (e) => e.stopPropagation() : () => moveDown(cat.category_id)}
+                                        disabled={tabIdx === tabCategories.length - 1 || selectToMoveMode !== 'inactive'}
                                         title="Move down"
                                     >
                                         ↓

@@ -28,7 +28,7 @@
 /* Two-section layout: fixed top + scrollable bottom */
 .category-strip-top {
   flex-shrink: 0;
-  padding: 8px 0 0 0;
+  padding: 0;
   /* No scrolling - stays fixed at top */
 }
 
