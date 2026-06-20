@@ -300,22 +300,6 @@ export function PlaybackTab({
                   </label>
                 </div>
 
-                <div className="timeshift-toggle-row" style={{ marginBottom: '12px', marginTop: '12px', borderBottom: 'none' }}>
-                  <div className="timeshift-toggle-info">
-                    <span className="timeshift-toggle-label">Show Channel Loading Screen</span>
-                    <span className="timeshift-toggle-sub">
-                      Show an overlay with a loading spinner and channel name when a stream starts or buffers.
-                    </span>
-                  </div>
-                  <label className="toggle-switch">
-                    <input
-                      type="checkbox"
-                      checked={showLoadingScreen}
-                      onChange={(e) => onShowLoadingScreenChange(e.target.checked)}
-                    />
-                    <span className="toggle-slider" />
-                  </label>
-                </div>
               </div>
 
               <div style={{ marginTop: '20px', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '16px' }}>
@@ -348,6 +332,24 @@ export function PlaybackTab({
         {activeSubTab === 'reconnect' && (
           <div className="settings-section">
             <div className="playback-section" style={{ marginTop: 0 }}>
+
+              {/* Show Channel Loading Screen */}
+              <div className="timeshift-toggle-row" style={{ marginBottom: '12px' }}>
+                <div className="timeshift-toggle-info">
+                  <span className="timeshift-toggle-label">Show Channel Loading Screen</span>
+                  <span className="timeshift-toggle-sub">
+                    Show an overlay with a loading spinner and channel name when a stream starts or buffers.
+                  </span>
+                </div>
+                <label className="toggle-switch">
+                  <input
+                    type="checkbox"
+                    checked={showLoadingScreen}
+                    onChange={(e) => onShowLoadingScreenChange(e.target.checked)}
+                  />
+                  <span className="toggle-slider" />
+                </label>
+              </div>
 
               {/* Event-based reconnect toggle */}
               <div className="timeshift-toggle-row" style={{ marginBottom: '12px' }}>

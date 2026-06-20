@@ -200,6 +200,28 @@ export function LiveTVTab({
           <>
             <div className="settings-section">
               <div className="timeshift-settings" style={{ marginTop: 0 }}>
+                {/* EPG Visible Hours */}
+                <div className="timeshift-toggle-row">
+                  <div className="timeshift-toggle-info">
+                    <span className="timeshift-toggle-label">EPG Visible Hours</span>
+                    <span className="timeshift-toggle-sub">Customize the number of hours visible in the grid (Automatic uses 2-5 hours dynamically based on width).</span>
+                  </div>
+                  <select
+                    value={epgVisibleHours}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      onEpgVisibleHoursChange(val === 'auto' ? 'auto' : parseInt(val, 10));
+                    }}
+                  >
+                    <option value="auto">Automatic (Default)</option>
+                    <option value="2">2 Hours</option>
+                    <option value="3">3 Hours</option>
+                    <option value="4">4 Hours</option>
+                    <option value="5">5 Hours</option>
+                    <option value="6">6 Hours</option>
+                  </select>
+                </div>
+
                 {/* Enable darker current program block */}
                 <div className="timeshift-toggle-row">
                   <div className="timeshift-toggle-info">
@@ -402,28 +424,6 @@ export function LiveTVTab({
                   >
                     <option value="traditional">Traditional EPG View</option>
                     <option value="alternate">Alternate EPG View</option>
-                  </select>
-                </div>
-
-                {/* EPG Visible Hours */}
-                <div className="timeshift-toggle-row" style={{ marginTop: '16px' }}>
-                  <div className="timeshift-toggle-info">
-                    <span className="timeshift-toggle-label">EPG Visible Hours</span>
-                    <span className="timeshift-toggle-sub">Customize the number of hours visible in the grid (Automatic uses 2-5 hours dynamically based on width).</span>
-                  </div>
-                  <select
-                    value={epgVisibleHours}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      onEpgVisibleHoursChange(val === 'auto' ? 'auto' : parseInt(val, 10));
-                    }}
-                  >
-                    <option value="auto">Automatic (Default)</option>
-                    <option value="2">2 Hours</option>
-                    <option value="3">3 Hours</option>
-                    <option value="4">4 Hours</option>
-                    <option value="5">5 Hours</option>
-                    <option value="6">6 Hours</option>
                   </select>
                 </div>
 
