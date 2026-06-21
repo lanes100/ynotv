@@ -899,6 +899,14 @@
   transition: background 0.2s ease;
 }
 
+.modern-ui .guide-channel-row.has-playlist-name {
+  min-height: 84px;
+}
+
+.modern-ui .guide-channel-row.has-playlist-name .guide-channel-info {
+  padding-bottom: 28px; /* Shift content up to clear metadata badge vertically */
+}
+
 .modern-ui .guide-channel-row.currently-playing {
   background: color-mix(in srgb, var(--accent-primary, #00d4ff) 5%, transparent);
 }

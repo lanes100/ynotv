@@ -204,6 +204,7 @@ function App() {
     setOverlayAutohideTimer,
     popoutStopMain,
     popoutAlwaysOnTop,
+    setPopoutAlwaysOnTop,
     navHiddenTabs: settingsNavHiddenTabs,
     epgHiddenButtons: settingsEpgHiddenButtons,
     startupView,
@@ -685,6 +686,16 @@ function App() {
     setPopoutMuted,
     seekPopout,
   } = popout;
+
+  const handleTogglePopoutAlwaysOnTop = useCallback(async () => {
+    const nextVal = !popoutAlwaysOnTop;
+    setPopoutAlwaysOnTop(nextVal);
+    try {
+      await Bridge.popoutSetAlwaysOnTop(nextVal);
+    } catch (e) {
+      console.error('[Popout] Failed to toggle always-on-top:', e);
+    }
+  }, [popoutAlwaysOnTop, setPopoutAlwaysOnTop]);
 
   // Popout mode state: 'off' | 'popout' | 'external'
   const [popoutMode, setPopoutMode] = useState<'off' | 'popout' | 'external'>('off');
@@ -3979,6 +3990,29 @@ function App() {
               }}
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+            </button>
+            <button
+              onClick={handleTogglePopoutAlwaysOnTop}
+              title={popoutAlwaysOnTop ? "Disable Always on top" : "Enable Always on top"}
+              style={{
+                background: popoutAlwaysOnTop ? 'rgba(0, 212, 255, 0.25)' : 'rgba(255,255,255,0.1)',
+                border: 'none',
+                borderRadius: '8px',
+                color: popoutAlwaysOnTop ? 'var(--accent, #00d4ff)' : '#fff',
+                width: '32px',
+                height: '32px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                fontSize: '14px',
+                transition: 'all 0.2s ease',
+              }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill={popoutAlwaysOnTop ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="12" y1="17" x2="12" y2="22"></line>
+                <path d="M5 17h14v-1.76a2 2 0 0 0-.44-1.24l-2.78-3.5A2 2 0 0 1 15 9.26V5a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v4.26a2 2 0 0 1-.78 1.24l-2.78 3.5a2 2 0 0 0-.44 1.24Z"></path>
+              </svg>
             </button>
             <div style={{ width: '1px', height: '20px', background: 'rgba(255,255,255,0.15)', margin: '0 4px' }} />
             <button

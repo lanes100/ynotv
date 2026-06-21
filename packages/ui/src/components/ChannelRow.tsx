@@ -30,6 +30,8 @@ interface ChannelRowProps {
   onPlayInPopout?: (channel: StoredChannel) => void;
   onPlayInExternal?: (channel: StoredChannel) => void;
   isCurrentlyPlaying?: boolean;
+  showPlaylistName?: boolean;
+  sourceNames?: Map<string, string>;
 }
 
 export const ChannelRow = memo(function ChannelRow({
@@ -51,6 +53,8 @@ export const ChannelRow = memo(function ChannelRow({
   onPlayInPopout,
   onPlayInExternal,
   isCurrentlyPlaying,
+  showPlaylistName,
+  sourceNames,
 }: ChannelRowProps) {
   // Context menu state
   const [contextMenu, setContextMenu] = useState<{ program: StoredProgram; x: number; y: number } | null>(null);
@@ -108,11 +112,13 @@ export const ChannelRow = memo(function ChannelRow({
     });
   }
 
+  const isPlaylistNameShown = showPlaylistName && categoryId === '__favorites__';
+
   return (
-    <div className={`guide-channel-row ${isCurrentlyPlaying ? 'currently-playing' : ''}`}>
+    <div className={`guide-channel-row ${isCurrentlyPlaying ? 'currently-playing' : ''} ${isPlaylistNameShown ? 'has-playlist-name' : ''}`}>
       {/* Channel info column */}
       <div
-        className={`guide-channel-info ${isRecording ? 'is-recording' : ''}`}
+        className={`guide-channel-info ${isRecording ? 'is-recording' : ''} ${isPlaylistNameShown ? 'has-playlist-name' : ''}`}
         style={{
           width: 'var(--epg-channel-column-width, 264px)',
           minWidth: 'var(--epg-channel-column-width, 264px)',
@@ -167,6 +173,11 @@ export const ChannelRow = memo(function ChannelRow({
               }}>18+</span>
             )}
           </span>
+          {showPlaylistName && categoryId === '__favorites__' && (
+            <span className="guide-channel-playlist-name" title={sourceNames?.get(channel.source_id) || channel.source_id}>
+              {sourceNames?.get(channel.source_id) || channel.source_id}
+            </span>
+          )}
         </div>
         <div className="channel-row-metadata">
           <MetadataBadge streamId={channel.stream_id} variant="detailed" />

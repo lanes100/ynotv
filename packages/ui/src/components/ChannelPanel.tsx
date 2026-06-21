@@ -55,6 +55,8 @@ interface ChannelRowData {
   onPlayInPopout?: (channel: StoredChannel) => void;
   onPlayInExternal?: (channel: StoredChannel) => void;
   currentChannel?: StoredChannel | null;
+  showPlaylistName: boolean;
+  sourceNames: Map<string, string>;
 }
 
 const ChannelRowVirtuoso = memo(function ChannelRowVirtuoso({
@@ -88,6 +90,8 @@ const ChannelRowVirtuoso = memo(function ChannelRowVirtuoso({
       onPlayInPopout={data.onPlayInPopout}
       onPlayInExternal={data.onPlayInExternal}
       isCurrentlyPlaying={isCurrentlyPlaying}
+      showPlaylistName={data.showPlaylistName}
+      sourceNames={data.sourceNames}
     />
   );
 });
@@ -385,6 +389,32 @@ export function ChannelPanel({
   // State for channel manager modal
   const [managingCategory, setManagingCategory] = useState<{ id: string; name: string; sourceId: string } | null>(null);
   const [managingFavorites, setManagingFavorites] = useState(false);
+
+  const [showFavPlaylistName, setShowFavPlaylistName] = useState(() => {
+    const saved = localStorage.getItem('showFavPlaylistName');
+    return saved === 'true';
+  });
+
+  const [sourceNames, setSourceNames] = useState<Map<string, string>>(new Map());
+
+  useEffect(() => {
+    async function loadSourceNames() {
+      if (!window.storage) return;
+      try {
+        const result = await window.storage.getSources();
+        if (result.data) {
+          const map = new Map<string, string>();
+          for (const source of result.data) {
+            map.set(source.id, source.name);
+          }
+          setSourceNames(map);
+        }
+      } catch (e) {
+        console.error('Failed to load source names', e);
+      }
+    }
+    loadSourceNames();
+  }, []);
 
   // Ref to track the current categoryId without triggering the on-demand EPG sync
   const categoryIdRef = useRef(categoryId);
@@ -1930,13 +1960,26 @@ export function ChannelPanel({
                 <span className="guide-current-time">{formatTime(currentTime)}</span>
                 <span className="guide-channel-count">{channels.length} channels</span>
                 {categoryId === '__favorites__' && (
-                  <button
-                    className="guide-manage-channels-btn"
-                    onClick={() => setManagingFavorites(true)}
-                    title="Manage favorites order"
-                  >
-                    ⭐ Manage Favorites
-                  </button>
+                  <>
+                    <button
+                      className="guide-manage-channels-btn"
+                      onClick={() => setManagingFavorites(true)}
+                      title="Manage favorites order"
+                    >
+                      ⭐ Manage Favorites
+                    </button>
+                    <button
+                      className={`guide-manage-channels-btn ${showFavPlaylistName ? 'active-toggle' : ''}`}
+                      onClick={() => {
+                        const newVal = !showFavPlaylistName;
+                        setShowFavPlaylistName(newVal);
+                        localStorage.setItem('showFavPlaylistName', String(newVal));
+                      }}
+                      title="Show playlist name for each channel"
+                    >
+                      {showFavPlaylistName ? '📋' : '📄'} Toggle Playlist Name
+                    </button>
+                  </>
                 )}
                 {canManageChannels && (
                   <>
@@ -2394,6 +2437,8 @@ export function ChannelPanel({
                 onPlayInPopout,
                 onPlayInExternal,
                 currentChannel,
+                showPlaylistName: showFavPlaylistName,
+                sourceNames,
               }}
               components={{
                 EmptyPlaceholder: () => (
