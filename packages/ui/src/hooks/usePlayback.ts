@@ -507,15 +507,7 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
     return () => window.removeEventListener('ynotv:retry-settings-changed', handler);
   }, []);
 
-  // Listen for intentional-stop signals (e.g. popout opened with "stop main")
-  useEffect(() => {
-    const handler = () => {
-      logInfo('[Playback] Received intentional-stop signal — suppressing next stream-death retry');
-      intentionallyStoppedRef.current = true;
-    };
-    window.addEventListener('ynotv:intentional-stop', handler);
-    return () => window.removeEventListener('ynotv:intentional-stop', handler);
-  }, []);
+
 
   // Effect to transition loadingState based on MPV player status
   useEffect(() => {
@@ -950,6 +942,31 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
     }
   }, []);
 
+  // Listen for intentional-stop signals (e.g. popout opened with "stop main")
+  useEffect(() => {
+    const handler = () => {
+      logInfo('[Playback] Received intentional-stop signal — suppressing next stream-death retry');
+      intentionallyStoppedRef.current = true;
+      clearRetryTimers();
+      clearWatchdog();
+      setPlaying(false);
+      setLoadingState('idle');
+    };
+    window.addEventListener('ynotv:intentional-stop', handler);
+    return () => window.removeEventListener('ynotv:intentional-stop', handler);
+  }, [clearRetryTimers, clearWatchdog]);
+
+  // When the popout closes, clear the intentional-stop flag so that the main
+  // player can recover from stream failures normally again.
+  useEffect(() => {
+    const handler = () => {
+      logInfo('[Playback] Popout closed — clearing intentional-stop flag, resuming stream-death handling');
+      intentionallyStoppedRef.current = false;
+    };
+    window.addEventListener('ynotv:popout-closed', handler);
+    return () => window.removeEventListener('ynotv:popout-closed', handler);
+  }, []);
+
   /**
    * Kick off a 5-second countdown and then reload the current channel.
    * Expects `currentChannelRef.current` to be set.
@@ -1116,7 +1133,6 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
     }
     if (intentionallyStoppedRef.current) {
       logInfo('[Retry] Ignoring stream failure — main player was intentionally stopped');
-      intentionallyStoppedRef.current = false;
       return;
     }
     if (userPausedRef.current) {
@@ -2252,6 +2268,7 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
       await Bridge.pause();
     } else {
       userPausedRef.current = false;
+      intentionallyStoppedRef.current = false;
       resetHealthTracking();
       await Bridge.resume();
     }

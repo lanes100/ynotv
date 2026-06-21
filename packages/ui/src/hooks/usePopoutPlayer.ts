@@ -53,6 +53,9 @@ export function usePopoutPlayer(): PopoutPlayerState {
         setIsOpen(false);
         setContent(null);
         setIsLoading(false);
+        // Notify usePlayback so it clears the intentional-stop flag and
+        // resumes normal stream-death retry handling.
+        window.dispatchEvent(new CustomEvent('ynotv:popout-closed'));
       }).then((fn) => {
         if (disposed) fn();
         else unlistenClosed = fn;

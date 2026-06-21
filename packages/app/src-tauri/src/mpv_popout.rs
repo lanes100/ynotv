@@ -164,50 +164,56 @@ pub async fn send_ipc(tx: &tokio::sync::mpsc::Sender<String>, command: &str, arg
 #[cfg(target_os = "windows")]
 fn set_always_on_top(hwnd_raw: isize, on_top: bool) -> Result<(), String> {
     use windows::Win32::Foundation::HWND;
-    use windows::Win32::UI::WindowsAndMessaging::{SetWindowPos, HWND_TOPMOST, HWND_NOTOPMOST, SWP_NOMOVE, SWP_NOSIZE, SWP_NOACTIVATE, SWP_SHOWWINDOW};
+    use windows::Win32::UI::WindowsAndMessaging::{SetWindowPos, HWND_TOPMOST, HWND_NOTOPMOST, SWP_NOMOVE, SWP_NOSIZE, SWP_NOACTIVATE};
 
     let hwnd = HWND(hwnd_raw as _);
-    let flags = SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_SHOWWINDOW;
+    let flags = SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE;
     unsafe {
         let insert_after = if on_top { HWND_TOPMOST } else { HWND_NOTOPMOST };
-        SetWindowPos(hwnd, insert_after, 0, 0, 0, 0, flags)
-            .map_err(|e| format!("SetWindowPos failed: {}", e))?;
+        log::info!("[MPV-POPOUT] Calling SetWindowPos with HWND={:?}, on_top={}", hwnd, on_top);
+        let res = SetWindowPos(hwnd, insert_after, 0, 0, 0, 0, flags);
+        match res {
+            Ok(_) => {
+                log::info!("[MPV-POPOUT] SetWindowPos succeeded for HWND={:?}", hwnd);
+                Ok(())
+            }
+            Err(e) => {
+                log::error!("[MPV-POPOUT] SetWindowPos failed for HWND={:?}: {}", hwnd, e);
+                Err(format!("SetWindowPos failed: {}", e))
+            }
+        }
     }
-    Ok(())
 }
 
-/// Find a top-level window by exact title using EnumWindows.
+/// Find a top-level window by process ID using EnumWindows and GetWindowThreadProcessId.
 /// The popout MPV is NOT a child window (no --wid), so EnumChildWindows won't find it.
 #[cfg(target_os = "windows")]
-fn find_top_level_hwnd(target_title: &str) -> Option<isize> {
+fn find_hwnd_by_pid(target_pid: u32) -> Option<isize> {
     use windows::Win32::Foundation::{BOOL, HWND, LPARAM};
-    use windows::Win32::UI::WindowsAndMessaging::{EnumWindows, GetWindowTextW, GetWindowTextLengthW, IsWindowVisible};
-    use std::os::windows::ffi::OsStrExt;
+    use windows::Win32::UI::WindowsAndMessaging::{EnumWindows, IsWindowVisible, GetWindowThreadProcessId, GetClassNameW};
 
-    let target_utf16: Vec<u16> = std::ffi::OsStr::new(target_title)
-        .encode_wide()
-        .chain(std::iter::once(0))
-        .collect();
-
-    struct SearchData { target: Vec<u16>, result: isize }
-    let mut data = SearchData { target: target_utf16, result: 0 };
+    struct SearchData { pid: u32, result: isize }
+    let mut data = SearchData { pid: target_pid, result: 0 };
 
     unsafe extern "system" fn enum_proc(hwnd: HWND, lparam: LPARAM) -> BOOL {
         let data = &mut *(lparam.0 as *mut SearchData);
-        // Only consider visible top-level windows
-        if IsWindowVisible(hwnd).as_bool() {
-            let len = GetWindowTextLengthW(hwnd);
-            if len > 0 {
-                let mut buf = vec![0u16; (len + 1) as usize];
-                let actual_len = GetWindowTextW(hwnd, &mut buf);
-                if actual_len > 0 {
-                    let text = &buf[..actual_len as usize];
-                    let target = &data.target[..data.target.len() - 1];
-                    if text == target {
-                        data.result = hwnd.0 as isize;
-                        return BOOL(0); // Stop enumeration
-                    }
-                }
+        let mut process_id: u32 = 0;
+        GetWindowThreadProcessId(hwnd, Some(&mut process_id));
+        if process_id == data.pid {
+            let mut class_name = [0u16; 256];
+            let len = GetClassNameW(hwnd, &mut class_name);
+            let class_str = if len > 0 {
+                String::from_utf16_lossy(&class_name[..len as usize])
+            } else {
+                String::new()
+            };
+            let visible = IsWindowVisible(hwnd).as_bool();
+            log::info!("[MPV-POPOUT-ENUM] Found window owned by PID {}: HWND={:?}, class={}, visible={}", 
+                data.pid, hwnd, class_str, visible);
+            // MPV main window has class name "mpv"
+            if class_str == "mpv" {
+                data.result = hwnd.0 as isize;
+                return BOOL(0); // Stop enumeration
             }
         }
         BOOL(1)
@@ -294,6 +300,10 @@ pub async fn spawn_and_load<R: Runtime>(
         "--no-border".into(),
     ];
 
+    if always_on_top {
+        args.push("--ontop".into());
+    }
+
     // If SOCKS5 proxy is configured, pass it to MPV
     if let Ok(proxy) = std::env::var("ALL_PROXY") {
         args.push(format!("--http-proxy={}", proxy));
@@ -323,7 +333,7 @@ pub async fn spawn_and_load<R: Runtime>(
         while let Some(event) = rx.recv().await {
             match event {
                 CommandEvent::Stderr(line) => {
-                    eprintln!("[MPV-POPOUT] {}", String::from_utf8_lossy(&line));
+                    log::debug!("[MPV-POPOUT] Stderr: {}", String::from_utf8_lossy(&line));
                 }
                 CommandEvent::Terminated(_) => {
                     // Check if the instance is still in state.
@@ -341,7 +351,7 @@ pub async fn spawn_and_load<R: Runtime>(
                     };
                     if was_alive {
                         let _ = app_handle_stderr.emit("popout-closed", ());
-                        eprintln!("[MPV-POPOUT] Process terminated naturally — emitted popout-closed");
+                        log::info!("[MPV-POPOUT] Process terminated naturally — emitted popout-closed");
                     }
                     break;
                 }
@@ -359,14 +369,25 @@ pub async fn spawn_and_load<R: Runtime>(
 
     #[cfg(target_os = "windows")]
     {
-        // Try to find the popout HWND — it's a top-level window, not a child
+        // Try to find the popout HWND — it's a top-level window, not a child.
+        // We retry up to 10 times with a 300ms delay to give MPV enough time to initialize its window.
         let mut hwnd: isize = 0;
-        if let Some(found) = find_top_level_hwnd("YNOTV_POPOUT") {
-            hwnd = found;
+        for attempt in 1..=10 {
+            if let Some(found) = find_hwnd_by_pid(pid) {
+                hwnd = found;
+                log::info!("[MPV-POPOUT] Successfully resolved HWND: {:?} on attempt {}", hwnd, attempt);
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(300)).await;
+        }
+
+        if hwnd != 0 {
             // Set always-on-top if requested
             if always_on_top {
                 let _ = set_always_on_top(hwnd, true);
             }
+        } else {
+            log::warn!("[MPV-POPOUT] Warning: Failed to find HWND for PID {} after retries", pid);
         }
 
         let state = app.state::<PopoutMpvState>();
@@ -448,16 +469,24 @@ pub fn is_running<R: Runtime>(app: &AppHandle<R>) -> bool {
 /// Toggle always-on-top on Windows.
 /// If the HWND wasn't captured during spawn (e.g. timing race), searches top-level windows.
 pub async fn set_always_on_top_cmd<R: Runtime>(app: &AppHandle<R>, on_top: bool) -> Result<(), String> {
+    // Send to MPV via IPC dynamically
+    let _ = set_property(app, "ontop", json!(on_top)).await;
+
     #[cfg(target_os = "windows")]
     {
-        let mut hwnd = {
+        let mut hwnd = 0;
+        let mut pid = 0;
+        {
             let state = app.state::<PopoutMpvState>();
             let inst = state.instance.lock().unwrap();
-            inst.as_ref().map(|i| i.hwnd).unwrap_or(0)
-        };
-        // Fall back to searching all top-level windows
-        if hwnd == 0 {
-            if let Some(found) = find_top_level_hwnd("YNOTV_POPOUT") {
+            if let Some(ref popout) = *inst {
+                hwnd = popout.hwnd;
+                pid = popout.pid;
+            }
+        }
+        // Fall back to searching all top-level windows by PID
+        if hwnd == 0 && pid != 0 {
+            if let Some(found) = find_hwnd_by_pid(pid) {
                 hwnd = found;
                 // Persist the discovered HWND
                 let state = app.state::<PopoutMpvState>();
