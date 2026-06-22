@@ -103,6 +103,11 @@ export function VerticalSidebar({
 }: VerticalSidebarProps) {
     const [sources, setSources] = useState<Record<string, string>>({});
     const [expandedSources, setExpandedSources] = useState<Record<string, boolean>>({});
+    const [isV3, setIsV3] = useState(false);
+
+    useEffect(() => {
+        setIsV3(document.documentElement.classList.contains('modern-ui-v3'));
+    }, []);
 
     // Fetch sources to resolve names and initialize expanded state
     useEffect(() => {
@@ -187,23 +192,25 @@ export function VerticalSidebar({
     return (
         <div className="vertical-sidebar">
             {/* Header: Back Button & Title */}
-            <div className="vertical-sidebar__header">
-                {onBack && (
-                    <button
-                        className="vertical-sidebar__back"
-                        onClick={onBack}
-                        aria-label="Go back"
-                    >
-                        <span className="vertical-sidebar__back-arrow">
-                            <BackArrow />
-                        </span>
-                        <span className="vertical-sidebar__back-text">Back</span>
-                        <span className="vertical-sidebar__back-icon">
-                            {type === 'series' ? <SeriesIcon /> : <MovieIcon />}
-                        </span>
-                    </button>
-                )}
-            </div>
+            {!isV3 && (
+                <div className="vertical-sidebar__header">
+                    {onBack && (
+                        <button
+                            className="vertical-sidebar__back"
+                            onClick={onBack}
+                            aria-label="Go back"
+                        >
+                            <span className="vertical-sidebar__back-arrow">
+                                <BackArrow />
+                            </span>
+                            <span className="vertical-sidebar__back-text">Back</span>
+                            <span className="vertical-sidebar__back-icon">
+                                {type === 'series' ? <SeriesIcon /> : <MovieIcon />}
+                            </span>
+                        </button>
+                    )}
+                </div>
+            )}
 
             {/* Search Bar */}
             {onSearchChange && (
@@ -232,37 +239,106 @@ export function VerticalSidebar({
 
             {/* Fixed Top Section: Home, All, Recent */}
             <div className="vertical-sidebar__top">
-                {/* Home Link */}
-                <button
-                    className={`vertical-sidebar__item ${selectedId === null ? 'active' : ''}`}
-                    onClick={() => onSelect(null)}
-                >
-                    Home
-                </button>
+                {isV3 ? (
+                    <>
+                        {/* Home Link */}
+                        <button
+                            className={`vertical-sidebar__item category-list-bar ${selectedId === null ? 'active' : ''}`}
+                            onClick={() => onSelect(null)}
+                        >
+                            <div className="category-item-left">
+                                <span className="category-icon watchlist-icon">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                                        <polyline points="9 22 9 12 15 12 15 22" />
+                                    </svg>
+                                </span>
+                                <span className="category-name">Home</span>
+                            </div>
+                        </button>
 
-                {/* All Link */}
-                <button
-                    className={`vertical-sidebar__item ${selectedId === 'all' ? 'active' : ''}`}
-                    onClick={() => onSelect('all')}
-                >
-                    All {type === 'series' ? 'Series' : 'Movies'}
-                </button>
+                        {/* All Link */}
+                        <button
+                            className={`vertical-sidebar__item category-list-bar ${selectedId === 'all' ? 'active' : ''}`}
+                            onClick={() => onSelect('all')}
+                        >
+                            <div className="category-item-left">
+                                <span className="category-icon all-channels-icon">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                        <rect x="2" y="7" width="20" height="15" rx="2" ry="2" />
+                                        <polyline points="17 2 12 7 7 2" />
+                                    </svg>
+                                </span>
+                                <span className="category-name">All {type === 'series' ? 'Series' : 'Movies'}</span>
+                            </div>
+                        </button>
 
-                {/* Favorites Link */}
-                <button
-                    className={`vertical-sidebar__item ${selectedId === 'favorites' ? 'active' : ''}`}
-                    onClick={() => onSelect('favorites')}
-                >
-                    Favorites
-                </button>
+                        {/* Favorites Link */}
+                        <button
+                            className={`vertical-sidebar__item category-list-bar ${selectedId === 'favorites' ? 'active' : ''}`}
+                            onClick={() => onSelect('favorites')}
+                        >
+                            <div className="category-item-left">
+                                <span className="category-icon favorites-icon">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                                    </svg>
+                                </span>
+                                <span className="category-name">Favorites</span>
+                            </div>
+                        </button>
 
-                {/* Recent Link */}
-                <button
-                    className={`vertical-sidebar__item ${selectedId === 'recent' ? 'active' : ''}`}
-                    onClick={() => onSelect('recent')}
-                >
-                    Recent
-                </button>
+                        {/* Recent Link */}
+                        <button
+                            className={`vertical-sidebar__item category-list-bar ${selectedId === 'recent' ? 'active' : ''}`}
+                            onClick={() => onSelect('recent')}
+                        >
+                            <div className="category-item-left">
+                                <span className="category-icon recent-icon">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                        <circle cx="12" cy="12" r="10" />
+                                        <polyline points="12 6 12 12 16 14" />
+                                    </svg>
+                                </span>
+                                <span className="category-name">Recent</span>
+                            </div>
+                        </button>
+                    </>
+                ) : (
+                    <>
+                        {/* Home Link */}
+                        <button
+                            className={`vertical-sidebar__item ${selectedId === null ? 'active' : ''}`}
+                            onClick={() => onSelect(null)}
+                        >
+                            Home
+                        </button>
+
+                        {/* All Link */}
+                        <button
+                            className={`vertical-sidebar__item ${selectedId === 'all' ? 'active' : ''}`}
+                            onClick={() => onSelect('all')}
+                        >
+                            All {type === 'series' ? 'Series' : 'Movies'}
+                        </button>
+
+                        {/* Favorites Link */}
+                        <button
+                            className={`vertical-sidebar__item ${selectedId === 'favorites' ? 'active' : ''}`}
+                            onClick={() => onSelect('favorites')}
+                        >
+                            Favorites
+                        </button>
+
+                        {/* Recent Link */}
+                        <button
+                            className={`vertical-sidebar__item ${selectedId === 'recent' ? 'active' : ''}`}
+                            onClick={() => onSelect('recent')}
+                        >
+                            Recent
+                        </button>
+                    </>
+                )}
             </div>
 
             {/* Scrollable Bottom Section: Source Groups */}

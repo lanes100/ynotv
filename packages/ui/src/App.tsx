@@ -2985,7 +2985,7 @@ function App() {
                     setCategoriesOpen(false);
                     setActiveView(activeView === 'sports' ? 'none' : 'sports');
                   }}
-                  title="Sports Hub"
+                  title="Sports"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M8 21h8"></path>

@@ -2189,77 +2189,130 @@
   display: none !important;
 }
 
+.modern-ui-v3 .vertical-sidebar__top {
+  padding: 8px 0 !important;
+}
+
 .modern-ui-v3 .vertical-sidebar__item {
-  border-radius: 12px !important;
-  margin: 4px 8px !important;
-  width: calc(100% - 16px) !important;
+  border-radius: 0 !important;
+  margin: 2px 0 !important;
+  width: 100% !important;
   box-sizing: border-box !important;
-  border: 1px solid rgba(255, 255, 255, 0.03) !important;
-  background: rgba(255, 255, 255, 0.01) !important;
+  border-left: none !important;
+  border-right: none !important;
+  border-top: 1px solid transparent !important;
+  border-bottom: 1px solid transparent !important;
+  background: transparent !important;
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
   color: var(--text-secondary, #888) !important;
+  padding: 10px 16px !important;
 }
 
 .modern-ui-v3 .vertical-sidebar__item:hover {
   background: rgba(255, 255, 255, 0.05) !important;
-  border-color: rgba(255, 255, 255, 0.1) !important;
   color: var(--text-primary, #fff) !important;
 }
 
 .modern-ui-v3 .vertical-sidebar__item.active {
   background: rgba(255, 255, 255, 0.1) !important;
-  border-color: rgba(255, 255, 255, 0.22) !important;
+  border-top-color: rgba(255, 255, 255, 0.08) !important;
+  border-bottom-color: rgba(255, 255, 255, 0.08) !important;
   color: var(--text-primary, #ffffff) !important;
   box-shadow: 
     0 4px 12px rgba(0, 0, 0, 0.15),
-    0 0 0 1px rgba(255, 255, 255, 0.08) inset !important;
+    0 0 0 1px rgba(255, 255, 255, 0.04) inset !important;
   position: relative !important;
-  padding-left: 18px !important;
+  padding-left: 20px !important;
 }
 
 .modern-ui-v3 .vertical-sidebar__item.active::before {
   content: '' !important;
   position: absolute !important;
-  left: 6px !important;
+  left: 0 !important;
   top: 50% !important;
   transform: translateY(-50%) !important;
-  width: 4px !important;
-  height: 16px !important;
+  width: 3px !important;
+  height: 50% !important;
   background: var(--accent-primary, #e50914) !important;
-  border-radius: 2px !important;
+  border-radius: 0 2px 2px 0 !important;
   box-shadow: 0 0 8px var(--accent-primary, #e50914) !important;
 }
 
+.modern-ui-v3 .vertical-sidebar__item.nested {
+  padding-left: 48px !important;
+}
+
+.modern-ui-v3 .vertical-sidebar__item.nested.active {
+  padding-left: 52px !important;
+}
+
+.modern-ui-v3 .vertical-sidebar__header {
+  display: none !important;
+}
+
+.modern-ui-v3 .vertical-sidebar__search-container {
+  padding: 8px 0 !important;
+}
+
 .modern-ui-v3 .vertical-sidebar__search {
-  border-radius: 12px !important;
+  border-radius: 0 !important;
   background: rgba(255, 255, 255, 0.04) !important;
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
-  margin: 8px 12px !important;
-  width: calc(100% - 24px) !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-left: none !important;
+  border-right: none !important;
+  margin: 4px 0 !important;
+  width: 100% !important;
   box-sizing: border-box !important;
 }
 
 .modern-ui-v3 .vertical-sidebar__search:focus-within {
   background: rgba(255, 255, 255, 0.08) !important;
-  border-color: rgba(255, 255, 255, 0.2) !important;
+  border-top-color: rgba(255, 255, 255, 0.2) !important;
+  border-bottom-color: rgba(255, 255, 255, 0.2) !important;
 }
 
-.modern-ui-v3 .vertical-sidebar__back {
-  border-radius: 20px !important;
-  border: 1px solid rgba(255, 255, 255, 0.1) !important;
-  background: rgba(255, 255, 255, 0.04) !important;
-  color: var(--text-primary, #fff) !important;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
-  margin: 12px 16px !important;
-  width: calc(100% - 32px) !important;
-  box-sizing: border-box !important;
+/* Ensure category-item-left is styled properly in VOD sidebar */
+.modern-ui-v3 .vertical-sidebar .category-item-left {
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  flex: 1 !important;
+  min-width: 0 !important;
 }
 
-.modern-ui-v3 .vertical-sidebar__back:hover {
-  background: rgba(255, 255, 255, 0.12) !important;
-  border-color: rgba(255, 255, 255, 0.2) !important;
-  transform: translateY(-1px) !important;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+.modern-ui-v3 .vertical-sidebar .category-name {
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+}
+
+/* Glow and accent colors for vertical sidebar icons when active */
+.modern-ui .vertical-sidebar__item.active .all-channels-icon {
+  background: rgba(0, 212, 255, 0.16) !important;
+  box-shadow: 0 0 10px rgba(0, 212, 255, 0.4) !important;
+  color: #33e0ff !important;
+  border-color: rgba(0, 212, 255, 0.3) !important;
+}
+.modern-ui .vertical-sidebar__item.active .favorites-icon {
+  background: rgba(255, 196, 0, 0.16) !important;
+  box-shadow: 0 0 10px rgba(255, 196, 0, 0.4) !important;
+  color: #ffd033 !important;
+  border-color: rgba(255, 196, 0, 0.3) !important;
+}
+.modern-ui .vertical-sidebar__item.active .watchlist-icon {
+  background: rgba(99, 102, 241, 0.16) !important;
+  box-shadow: 0 0 10px rgba(99, 102, 241, 0.4) !important;
+  color: #818cf8 !important;
+  border-color: rgba(99, 102, 241, 0.3) !important;
+}
+.modern-ui .vertical-sidebar__item.active .recent-icon {
+  background: rgba(244, 63, 94, 0.16) !important;
+  box-shadow: 0 0 10px rgba(244, 63, 94, 0.4) !important;
+  color: #fb7185 !important;
+  border-color: rgba(244, 63, 94, 0.3) !important;
 }
 
 .modern-ui-v3 .vertical-sidebar__separator {
@@ -2275,18 +2328,38 @@
 }
 
 .modern-ui-v3 .vertical-sidebar__source-header {
-  border-radius: 12px !important;
-  margin: 4px 8px !important;
-  width: calc(100% - 16px) !important;
+  border-radius: 0 !important;
+  margin: 0 !important;
+  width: 100% !important;
   box-sizing: border-box !important;
-  background: rgba(255, 255, 255, 0.01) !important;
-  border: 1px solid rgba(255, 255, 255, 0.03) !important;
+  background: transparent !important;
+  border-left: none !important;
+  border-right: none !important;
+  border-top: 1px solid transparent !important;
+  border-bottom: 1px solid transparent !important;
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  padding: 10px 16px !important;
 }
 
 .modern-ui-v3 .vertical-sidebar__source-header:hover {
   background: rgba(255, 255, 255, 0.05) !important;
-  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Opaque styling for sticky header when expanded in V3 */
+.modern-ui-v3 .vertical-sidebar__source-group.is-expanded .vertical-sidebar__source-header {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 100 !important;
+  background: rgba(12, 14, 24, 0.98) !important; /* opaque glass matching the sidebar theme */
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+  border-radius: 0 !important;
+  margin: 0 !important;
+  width: 100% !important;
+}
+
+.modern-ui-v3 .vertical-sidebar__source-group.is-expanded .vertical-sidebar__source-header:hover {
+  background: rgba(25, 27, 44, 0.98) !important; /* slightly lighter but still opaque on hover */
 }
 
 .modern-ui-v3 .vod-page__content {
@@ -2821,6 +2894,538 @@
   -webkit-backdrop-filter: blur(35px) saturate(200%) !important;
   border: 1px solid rgba(255, 255, 255, 0.12) !important;
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6) !important;
+}
+
+/* Settings Modal Glassmorphism Overrides */
+.modern-ui-v3 .settings-overlay {
+  background: rgba(8, 8, 12, 0.4) !important;
+  backdrop-filter: blur(10px) !important;
+  -webkit-backdrop-filter: blur(10px) !important;
+}
+
+.modern-ui-v3 .settings-panel {
+  background: rgba(12, 14, 24, 0.45) !important;
+  backdrop-filter: blur(35px) saturate(200%) !important;
+  -webkit-backdrop-filter: blur(35px) saturate(200%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6) !important;
+  border-radius: 24px !important;
+}
+
+.modern-ui-v3 .settings-header {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  background: transparent !important;
+}
+
+.modern-ui-v3 .settings-tabs {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  background: transparent !important;
+}
+
+.modern-ui-v3 .settings-tab {
+  color: rgba(255, 255, 255, 0.55) !important;
+  border-bottom: 2px solid transparent !important;
+  transition: all 0.2s ease !important;
+}
+
+.modern-ui-v3 .settings-tab:hover {
+  color: rgba(255, 255, 255, 0.85) !important;
+  background: rgba(255, 255, 255, 0.04) !important;
+}
+
+.modern-ui-v3 .settings-tab.active {
+  color: var(--accent-primary, #00d4ff) !important;
+  border-bottom-color: var(--accent-primary, #00d4ff) !important;
+  text-shadow: 0 0 8px color-mix(in srgb, var(--accent-primary, #00d4ff) 50%, transparent) !important;
+  background: transparent !important;
+}
+
+.modern-ui-v3 .settings-search-input-wrapper {
+  border-radius: 12px !important;
+  background: rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+.modern-ui-v3 .settings-search-input-wrapper:focus-within {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.05) !important;
+}
+
+/* V3 Form Controls */
+.modern-ui-v3 .form-group input,
+.modern-ui-v3 .settings-content select,
+.modern-ui-v3 .type-selector button {
+  border-radius: 10px !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  background: rgba(255, 255, 255, 0.04) !important;
+  color: #fff !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
+  transition: all 0.2s ease !important;
+}
+
+.modern-ui-v3 .form-group input:focus,
+.modern-ui-v3 .settings-content select:focus,
+.modern-ui-v3 .type-selector button:focus-within {
+  border-color: rgba(255, 255, 255, 0.2) !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.05) !important;
+  outline: none !important;
+}
+
+.modern-ui-v3 .type-selector button.active {
+  background: rgba(255, 255, 255, 0.12) !important;
+  border-color: rgba(255, 255, 255, 0.22) !important;
+  color: var(--accent-primary, #00d4ff) !important;
+  box-shadow: 
+    0 2px 8px rgba(0, 0, 0, 0.15),
+    0 0 0 1px rgba(255, 255, 255, 0.05) inset !important;
+}
+
+.modern-ui-v3 .settings-content select option {
+  background: #141624 !important;
+  color: white !important;
+}
+
+/* Buttons in Settings modal */
+.modern-ui-v3 .save-btn,
+.modern-ui-v3 .settings-fullscreen-btn {
+  background: var(--accent-primary, #00d4ff) !important;
+  color: #121424 !important;
+  font-weight: 600 !important;
+  border: 1px solid transparent !important;
+  border-radius: 10px !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  box-shadow: 0 4px 12px rgba(0, 212, 255, 0.25) !important;
+}
+
+.modern-ui-v3 .save-btn:hover:not(:disabled),
+.modern-ui-v3 .settings-fullscreen-btn:hover {
+  background: #33e0ff !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 6px 16px rgba(0, 212, 255, 0.4) !important;
+}
+
+.modern-ui-v3 .cancel-btn,
+.modern-ui-v3 .reset-shortcuts-btn,
+.modern-ui-v3 .close-btn,
+.modern-ui-v3 .sync-btn,
+.modern-ui-v3 .add-btn,
+.modern-ui-v3 .import-btn,
+.modern-ui-v3 .change-file-btn {
+  background: rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  color: rgba(255, 255, 255, 0.8) !important;
+  border-radius: 10px !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.modern-ui-v3 .cancel-btn:hover,
+.modern-ui-v3 .reset-shortcuts-btn:hover,
+.modern-ui-v3 .close-btn:hover,
+.modern-ui-v3 .sync-btn:hover:not(:disabled),
+.modern-ui-v3 .add-btn:hover,
+.modern-ui-v3 .import-btn:hover,
+.modern-ui-v3 .change-file-btn:hover {
+  background: rgba(255, 255, 255, 0.12) !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+  color: #fff !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+}
+
+.modern-ui-v3 .sync-btn.danger {
+  background: rgba(239, 68, 68, 0.15) !important;
+  border-color: rgba(239, 68, 68, 0.4) !important;
+  color: #ef4444 !important;
+}
+
+.modern-ui-v3 .sync-btn.danger:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.25) !important;
+  border-color: rgba(239, 68, 68, 0.5) !important;
+  color: #ef4444 !important;
+}
+
+/* ==========================================================================
+   V3 DYNAMIC THEME & LIQUID GLASS ADAPTATIONS
+   Overrides solid theme backgrounds when the modern-ui-v3 layout is active.
+   ========================================================================== */
+
+/* 1. Neutralize solid/opaque backgrounds and apply adaptive glassmorphism */
+html.modern-ui-v3[data-theme] .category-strip,
+html.modern-ui-v3[data-theme] .guide-grid-section,
+html.modern-ui-v3[data-theme] .guide-info-pane,
+html.modern-ui-v3[data-theme] .vertical-sidebar,
+html.modern-ui-v3[data-theme] .vod-page__content,
+html.modern-ui-v3[data-theme] .dvr-dashboard,
+html.modern-ui-v3[data-theme] .sports-hub,
+html.modern-ui-v3[data-theme] .stremio-page,
+html.modern-ui-v3[data-theme] .nuvio-page,
+html.modern-ui-v3[data-theme] .tvcp-page,
+html.modern-ui-v3[data-theme] .settings-panel {
+  background: color-mix(in srgb, var(--bg-secondary, rgba(12, 14, 24, 0.95)) 35%, transparent) !important;
+  background-attachment: scroll !important; /* reset from fixed */
+  backdrop-filter: blur(35px) saturate(200%) !important;
+  -webkit-backdrop-filter: blur(35px) saturate(200%) !important;
+  border: 1px solid color-mix(in srgb, var(--accent-primary, #00d4ff) 15%, rgba(255, 255, 255, 0.1)) !important;
+  box-shadow: 
+    0 12px 40px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.25),
+    inset 0 0 0 1px color-mix(in srgb, var(--accent-primary, #00d4ff) 8%, transparent) !important;
+}
+
+/* Title Bar V3 Glassmorphism Override - replaces the sharp colored bottom border with soft specular highlight/glass mix */
+html.modern-ui-v3[data-theme] .title-bar {
+  background: color-mix(in srgb, var(--bg-secondary, rgba(12, 14, 24, 0.95)) 35%, transparent) !important;
+  backdrop-filter: blur(35px) saturate(200%) !important;
+  -webkit-backdrop-filter: blur(35px) saturate(200%) !important;
+  border: none !important;
+  box-shadow: 
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.25) !important;
+}
+
+/* Specific inner components reset */
+html.modern-ui-v3[data-theme] .guide-header {
+  background: rgba(255, 255, 255, 0.015) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  backdrop-filter: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  border-top: none !important;
+  border-left: none !important;
+  border-right: none !important;
+}
+
+/* VOD Sticky Source Headers - opaque theme-matching background */
+html.modern-ui-v3[data-theme] .vertical-sidebar__source-group.is-expanded .vertical-sidebar__source-header {
+  background: color-mix(in srgb, var(--bg-secondary, rgba(12, 14, 24, 0.95)) 98%, transparent) !important;
+}
+
+/* TV Calendar V3 Glassmorphism Layout */
+html.modern-ui-v3[data-theme] .tvcp-page {
+  top: 16px !important;
+  bottom: 16px !important;
+  left: 16px !important;
+  right: 16px !important;
+  width: calc(100% - 32px) !important;
+  height: calc(100% - 32px) !important;
+}
+
+html.modern-ui-v3[data-theme] .tvcp-sidebar {
+  background: transparent !important;
+}
+
+html.modern-ui-v3[data-theme] .tvcp-sidebar::before {
+  display: none !important;
+}
+
+html.modern-ui-v3[data-theme] .tvcp-main {
+  background: transparent !important;
+}
+
+/* 2. Theme-Coordinated Glass Blob Animations */
+
+/* Red/Crimson/Pink Themes (Crimson, Cherry, Ruby, Rose, Berry, Volcano, Dragonfruit, Hot Pink, Magenta) */
+html.modern-ui-v3[data-theme*="crimson"] .livetv-liquid-glass-bg,
+html.modern-ui-v3[data-theme*="pink"] .livetv-liquid-glass-bg,
+html.modern-ui-v3[data-theme*="rose"] .livetv-liquid-glass-bg,
+html.modern-ui-v3[data-theme*="berry"] .livetv-liquid-glass-bg,
+html.modern-ui-v3[data-theme*="cherry"] .livetv-liquid-glass-bg,
+html.modern-ui-v3[data-theme*="ruby"] .livetv-liquid-glass-bg,
+html.modern-ui-v3[data-theme*="red"] .livetv-liquid-glass-bg,
+html.modern-ui-v3[data-theme*="dragonfruit"] .livetv-liquid-glass-bg,
+html.modern-ui-v3[data-theme*="magenta"] .livetv-liquid-glass-bg,
+html.modern-ui-v3[data-theme*="volcano"] .livetv-liquid-glass-bg {
+  background: color-mix(in srgb, var(--bg-primary, #050505) 85%, #000) !important;
+}
+html.modern-ui-v3[data-theme*="crimson"] .livetv-liquid-glass-bg .blob-1,
+html.modern-ui-v3[data-theme*="pink"] .livetv-liquid-glass-bg .blob-1,
+html.modern-ui-v3[data-theme*="rose"] .livetv-liquid-glass-bg .blob-1,
+html.modern-ui-v3[data-theme*="berry"] .livetv-liquid-glass-bg .blob-1,
+html.modern-ui-v3[data-theme*="cherry"] .livetv-liquid-glass-bg .blob-1,
+html.modern-ui-v3[data-theme*="ruby"] .livetv-liquid-glass-bg .blob-1,
+html.modern-ui-v3[data-theme*="red"] .livetv-liquid-glass-bg .blob-1,
+html.modern-ui-v3[data-theme*="dragonfruit"] .livetv-liquid-glass-bg .blob-1,
+html.modern-ui-v3[data-theme*="magenta"] .livetv-liquid-glass-bg .blob-1,
+html.modern-ui-v3[data-theme*="volcano"] .livetv-liquid-glass-bg .blob-1 {
+  background: radial-gradient(circle, rgba(255, 0, 80, 0.55) 0%, transparent 70%) !important;
+}
+html.modern-ui-v3[data-theme*="crimson"] .livetv-liquid-glass-bg .blob-2,
+html.modern-ui-v3[data-theme*="pink"] .livetv-liquid-glass-bg .blob-2,
+html.modern-ui-v3[data-theme*="rose"] .livetv-liquid-glass-bg .blob-2,
+html.modern-ui-v3[data-theme*="berry"] .livetv-liquid-glass-bg .blob-2,
+html.modern-ui-v3[data-theme*="cherry"] .livetv-liquid-glass-bg .blob-2,
+html.modern-ui-v3[data-theme*="ruby"] .livetv-liquid-glass-bg .blob-2,
+html.modern-ui-v3[data-theme*="red"] .livetv-liquid-glass-bg .blob-2,
+html.modern-ui-v3[data-theme*="dragonfruit"] .livetv-liquid-glass-bg .blob-2,
+html.modern-ui-v3[data-theme*="magenta"] .livetv-liquid-glass-bg .blob-2,
+html.modern-ui-v3[data-theme*="volcano"] .livetv-liquid-glass-bg .blob-2 {
+  background: radial-gradient(circle, rgba(186, 8, 80, 0.45) 0%, transparent 70%) !important;
+}
+html.modern-ui-v3[data-theme*="crimson"] .livetv-liquid-glass-bg .blob-3,
+html.modern-ui-v3[data-theme*="pink"] .livetv-liquid-glass-bg .blob-3,
+html.modern-ui-v3[data-theme*="rose"] .livetv-liquid-glass-bg .blob-3,
+html.modern-ui-v3[data-theme*="berry"] .livetv-liquid-glass-bg .blob-3,
+html.modern-ui-v3[data-theme*="cherry"] .livetv-liquid-glass-bg .blob-3,
+html.modern-ui-v3[data-theme*="ruby"] .livetv-liquid-glass-bg .blob-3,
+html.modern-ui-v3[data-theme*="red"] .livetv-liquid-glass-bg .blob-3,
+html.modern-ui-v3[data-theme*="dragonfruit"] .livetv-liquid-glass-bg .blob-3,
+html.modern-ui-v3[data-theme*="magenta"] .livetv-liquid-glass-bg .blob-3,
+html.modern-ui-v3[data-theme*="volcano"] .livetv-liquid-glass-bg .blob-3 {
+  background: radial-gradient(circle, rgba(239, 68, 68, 0.35) 0%, transparent 70%) !important;
+}
+html.modern-ui-v3[data-theme*="crimson"] .livetv-liquid-glass-bg .blob-4,
+html.modern-ui-v3[data-theme*="pink"] .livetv-liquid-glass-bg .blob-4,
+html.modern-ui-v3[data-theme*="rose"] .livetv-liquid-glass-bg .blob-4,
+html.modern-ui-v3[data-theme*="berry"] .livetv-liquid-glass-bg .blob-4,
+html.modern-ui-v3[data-theme*="cherry"] .livetv-liquid-glass-bg .blob-4,
+html.modern-ui-v3[data-theme*="ruby"] .livetv-liquid-glass-bg .blob-4,
+html.modern-ui-v3[data-theme*="red"] .livetv-liquid-glass-bg .blob-4,
+html.modern-ui-v3[data-theme*="dragonfruit"] .livetv-liquid-glass-bg .blob-4,
+html.modern-ui-v3[data-theme*="magenta"] .livetv-liquid-glass-bg .blob-4,
+html.modern-ui-v3[data-theme*="volcano"] .livetv-liquid-glass-bg .blob-4 {
+  background: radial-gradient(circle, rgba(147, 51, 234, 0.3) 0%, transparent 70%) !important;
+}
+
+/* Cyan/Blue/Indigo/Slate/Arctic Themes (Cyan, Blue, Indigo, Ocean, Sapphire, Deep Ocean, Arctic, Slate, Turquoise, Electric, Miami) */
+html.modern-ui-v3[data-theme*="cyan"] .livetv-liquid-glass-bg,
+html.modern-ui-v3[data-theme*="blue"] .livetv-liquid-glass-bg,
+html.modern-ui-v3[data-theme*="ocean"] .livetv-liquid-glass-bg,
+html.modern-ui-v3[data-theme*="sapphire"] .livetv-liquid-glass-bg,
+html.modern-ui-v3[data-theme*="arctic"] .livetv-liquid-glass-bg,
+html.modern-ui-v3[data-theme*="slate"] .livetv-liquid-glass-bg,
+html.modern-ui-v3[data-theme*="turquoise"] .livetv-liquid-glass-bg,
+html.modern-ui-v3[data-theme*="indigo"] .livetv-liquid-glass-bg,
+html.modern-ui-v3[data-theme*="electric"] .livetv-liquid-glass-bg,
+html.modern-ui-v3[data-theme*="miami"] .livetv-liquid-glass-bg {
+  background: color-mix(in srgb, var(--bg-primary, #05050a) 85%, #000) !important;
+}
+html.modern-ui-v3[data-theme*="cyan"] .livetv-liquid-glass-bg .blob-1,
+html.modern-ui-v3[data-theme*="blue"] .livetv-liquid-glass-bg .blob-1,
+html.modern-ui-v3[data-theme*="ocean"] .livetv-liquid-glass-bg .blob-1,
+html.modern-ui-v3[data-theme*="sapphire"] .livetv-liquid-glass-bg .blob-1,
+html.modern-ui-v3[data-theme*="arctic"] .livetv-liquid-glass-bg .blob-1,
+html.modern-ui-v3[data-theme*="slate"] .livetv-liquid-glass-bg .blob-1,
+html.modern-ui-v3[data-theme*="turquoise"] .livetv-liquid-glass-bg .blob-1,
+html.modern-ui-v3[data-theme*="indigo"] .livetv-liquid-glass-bg .blob-1,
+html.modern-ui-v3[data-theme*="electric"] .livetv-liquid-glass-bg .blob-1,
+html.modern-ui-v3[data-theme*="miami"] .livetv-liquid-glass-bg .blob-1 {
+  background: radial-gradient(circle, rgba(0, 191, 255, 0.55) 0%, transparent 70%) !important;
+}
+html.modern-ui-v3[data-theme*="cyan"] .livetv-liquid-glass-bg .blob-2,
+html.modern-ui-v3[data-theme*="blue"] .livetv-liquid-glass-bg .blob-2,
+html.modern-ui-v3[data-theme*="ocean"] .livetv-liquid-glass-bg .blob-2,
+html.modern-ui-v3[data-theme*="sapphire"] .livetv-liquid-glass-bg .blob-2,
+html.modern-ui-v3[data-theme*="arctic"] .livetv-liquid-glass-bg .blob-2,
+html.modern-ui-v3[data-theme*="slate"] .livetv-liquid-glass-bg .blob-2,
+html.modern-ui-v3[data-theme*="turquoise"] .livetv-liquid-glass-bg .blob-2,
+html.modern-ui-v3[data-theme*="indigo"] .livetv-liquid-glass-bg .blob-2,
+html.modern-ui-v3[data-theme*="electric"] .livetv-liquid-glass-bg .blob-2,
+html.modern-ui-v3[data-theme*="miami"] .livetv-liquid-glass-bg .blob-2 {
+  background: radial-gradient(circle, rgba(0, 100, 255, 0.45) 0%, transparent 70%) !important;
+}
+html.modern-ui-v3[data-theme*="cyan"] .livetv-liquid-glass-bg .blob-3,
+html.modern-ui-v3[data-theme*="blue"] .livetv-liquid-glass-bg .blob-3,
+html.modern-ui-v3[data-theme*="ocean"] .livetv-liquid-glass-bg .blob-3,
+html.modern-ui-v3[data-theme*="sapphire"] .livetv-liquid-glass-bg .blob-3,
+html.modern-ui-v3[data-theme*="arctic"] .livetv-liquid-glass-bg .blob-3,
+html.modern-ui-v3[data-theme*="slate"] .livetv-liquid-glass-bg .blob-3,
+html.modern-ui-v3[data-theme*="turquoise"] .livetv-liquid-glass-bg .blob-3,
+html.modern-ui-v3[data-theme*="indigo"] .livetv-liquid-glass-bg .blob-3,
+html.modern-ui-v3[data-theme*="electric"] .livetv-liquid-glass-bg .blob-3,
+html.modern-ui-v3[data-theme*="miami"] .livetv-liquid-glass-bg .blob-3 {
+  background: radial-gradient(circle, rgba(147, 51, 234, 0.35) 0%, transparent 70%) !important;
+}
+html.modern-ui-v3[data-theme*="cyan"] .livetv-liquid-glass-bg .blob-4,
+html.modern-ui-v3[data-theme*="blue"] .livetv-liquid-glass-bg .blob-4,
+html.modern-ui-v3[data-theme*="ocean"] .livetv-liquid-glass-bg .blob-4,
+html.modern-ui-v3[data-theme*="sapphire"] .livetv-liquid-glass-bg .blob-4,
+html.modern-ui-v3[data-theme*="arctic"] .livetv-liquid-glass-bg .blob-4,
+html.modern-ui-v3[data-theme*="slate"] .livetv-liquid-glass-bg .blob-4,
+html.modern-ui-v3[data-theme*="turquoise"] .livetv-liquid-glass-bg .blob-4,
+html.modern-ui-v3[data-theme*="indigo"] .livetv-liquid-glass-bg .blob-4,
+html.modern-ui-v3[data-theme*="electric"] .livetv-liquid-glass-bg .blob-4,
+html.modern-ui-v3[data-theme*="miami"] .livetv-liquid-glass-bg .blob-4 {
+  background: radial-gradient(circle, rgba(0, 255, 204, 0.3) 0%, transparent 70%) !important;
+}
+
+/* Green/Forest/Mint/Lime/Zen Themes (Emerald, Lime, Forest, Mint, Zen Garden, Chartreuse) */
+html.modern-ui-v3[data-theme*="emerald"] .livetv-liquid-glass-bg,
+html.modern-ui-v3[data-theme*="forest"] .livetv-liquid-glass-bg,
+html.modern-ui-v3[data-theme*="mint"] .livetv-liquid-glass-bg,
+html.modern-ui-v3[data-theme*="lime"] .livetv-liquid-glass-bg,
+html.modern-ui-v3[data-theme*="zengarden"] .livetv-liquid-glass-bg,
+html.modern-ui-v3[data-theme*="chartreuse"] .livetv-liquid-glass-bg {
+  background: color-mix(in srgb, var(--bg-primary, #050a05) 85%, #000) !important;
+}
+html.modern-ui-v3[data-theme*="emerald"] .livetv-liquid-glass-bg .blob-1,
+html.modern-ui-v3[data-theme*="forest"] .livetv-liquid-glass-bg .blob-1,
+html.modern-ui-v3[data-theme*="mint"] .livetv-liquid-glass-bg .blob-1,
+html.modern-ui-v3[data-theme*="lime"] .livetv-liquid-glass-bg .blob-1,
+html.modern-ui-v3[data-theme*="zengarden"] .livetv-liquid-glass-bg .blob-1,
+html.modern-ui-v3[data-theme*="chartreuse"] .livetv-liquid-glass-bg .blob-1 {
+  background: radial-gradient(circle, rgba(0, 230, 118, 0.55) 0%, transparent 70%) !important;
+}
+html.modern-ui-v3[data-theme*="emerald"] .livetv-liquid-glass-bg .blob-2,
+html.modern-ui-v3[data-theme*="forest"] .livetv-liquid-glass-bg .blob-2,
+html.modern-ui-v3[data-theme*="mint"] .livetv-liquid-glass-bg .blob-2,
+html.modern-ui-v3[data-theme*="lime"] .livetv-liquid-glass-bg .blob-2,
+html.modern-ui-v3[data-theme*="zengarden"] .livetv-liquid-glass-bg .blob-2,
+html.modern-ui-v3[data-theme*="chartreuse"] .livetv-liquid-glass-bg .blob-2 {
+  background: radial-gradient(circle, rgba(34, 139, 34, 0.45) 0%, transparent 70%) !important;
+}
+html.modern-ui-v3[data-theme*="emerald"] .livetv-liquid-glass-bg .blob-3,
+html.modern-ui-v3[data-theme*="forest"] .livetv-liquid-glass-bg .blob-3,
+html.modern-ui-v3[data-theme*="mint"] .livetv-liquid-glass-bg .blob-3,
+html.modern-ui-v3[data-theme*="lime"] .livetv-liquid-glass-bg .blob-3,
+html.modern-ui-v3[data-theme*="zengarden"] .livetv-liquid-glass-bg .blob-3,
+html.modern-ui-v3[data-theme*="chartreuse"] .livetv-liquid-glass-bg .blob-3 {
+  background: radial-gradient(circle, rgba(0, 191, 255, 0.35) 0%, transparent 70%) !important;
+}
+html.modern-ui-v3[data-theme*="emerald"] .livetv-liquid-glass-bg .blob-4,
+html.modern-ui-v3[data-theme*="forest"] .livetv-liquid-glass-bg .blob-4,
+html.modern-ui-v3[data-theme*="mint"] .livetv-liquid-glass-bg .blob-4,
+html.modern-ui-v3[data-theme*="lime"] .livetv-liquid-glass-bg .blob-4,
+html.modern-ui-v3[data-theme*="zengarden"] .livetv-liquid-glass-bg .blob-4,
+html.modern-ui-v3[data-theme*="chartreuse"] .livetv-liquid-glass-bg .blob-4 {
+  background: radial-gradient(circle, rgba(198, 255, 0, 0.3) 0%, transparent 70%) !important;
+}
+
+/* Purple/Lavender/Cosmic/Galaxy/Amethyst/Nebula Themes (Purple, Midnight, Amethyst, Cosmic, Lavender, Galaxy, Nebula, Neon, Violet) */
+html.modern-ui-v3[data-theme*="purple"] .livetv-liquid-glass-bg,
+html.modern-ui-v3[data-theme*="midnight"] .livetv-liquid-glass-bg,
+html.modern-ui-v3[data-theme*="amethyst"] .livetv-liquid-glass-bg,
+html.modern-ui-v3[data-theme*="cosmic"] .livetv-liquid-glass-bg,
+html.modern-ui-v3[data-theme*="lavender"] .livetv-liquid-glass-bg,
+html.modern-ui-v3[data-theme*="galaxy"] .livetv-liquid-glass-bg,
+html.modern-ui-v3[data-theme*="nebula"] .livetv-liquid-glass-bg,
+html.modern-ui-v3[data-theme*="neon"] .livetv-liquid-glass-bg,
+html.modern-ui-v3[data-theme*="violet"] .livetv-liquid-glass-bg {
+  background: color-mix(in srgb, var(--bg-primary, #050510) 85%, #000) !important;
+}
+html.modern-ui-v3[data-theme*="purple"] .livetv-liquid-glass-bg .blob-1,
+html.modern-ui-v3[data-theme*="midnight"] .livetv-liquid-glass-bg .blob-1,
+html.modern-ui-v3[data-theme*="amethyst"] .livetv-liquid-glass-bg .blob-1,
+html.modern-ui-v3[data-theme*="cosmic"] .livetv-liquid-glass-bg .blob-1,
+html.modern-ui-v3[data-theme*="lavender"] .livetv-liquid-glass-bg .blob-1,
+html.modern-ui-v3[data-theme*="galaxy"] .livetv-liquid-glass-bg .blob-1,
+html.modern-ui-v3[data-theme*="nebula"] .livetv-liquid-glass-bg .blob-1,
+html.modern-ui-v3[data-theme*="neon"] .livetv-liquid-glass-bg .blob-1,
+html.modern-ui-v3[data-theme*="violet"] .livetv-liquid-glass-bg .blob-1 {
+  background: radial-gradient(circle, rgba(147, 51, 234, 0.55) 0%, transparent 70%) !important;
+}
+html.modern-ui-v3[data-theme*="purple"] .livetv-liquid-glass-bg .blob-2,
+html.modern-ui-v3[data-theme*="midnight"] .livetv-liquid-glass-bg .blob-2,
+html.modern-ui-v3[data-theme*="amethyst"] .livetv-liquid-glass-bg .blob-2,
+html.modern-ui-v3[data-theme*="cosmic"] .livetv-liquid-glass-bg .blob-2,
+html.modern-ui-v3[data-theme*="lavender"] .livetv-liquid-glass-bg .blob-2,
+html.modern-ui-v3[data-theme*="galaxy"] .livetv-liquid-glass-bg .blob-2,
+html.modern-ui-v3[data-theme*="nebula"] .livetv-liquid-glass-bg .blob-2,
+html.modern-ui-v3[data-theme*="neon"] .livetv-liquid-glass-bg .blob-2,
+html.modern-ui-v3[data-theme*="violet"] .livetv-liquid-glass-bg .blob-2 {
+  background: radial-gradient(circle, rgba(76, 29, 149, 0.45) 0%, transparent 70%) !important;
+}
+html.modern-ui-v3[data-theme*="purple"] .livetv-liquid-glass-bg .blob-3,
+html.modern-ui-v3[data-theme*="midnight"] .livetv-liquid-glass-bg .blob-3,
+html.modern-ui-v3[data-theme*="amethyst"] .livetv-liquid-glass-bg .blob-3,
+html.modern-ui-v3[data-theme*="cosmic"] .livetv-liquid-glass-bg .blob-3,
+html.modern-ui-v3[data-theme*="lavender"] .livetv-liquid-glass-bg .blob-3,
+html.modern-ui-v3[data-theme*="galaxy"] .livetv-liquid-glass-bg .blob-3,
+html.modern-ui-v3[data-theme*="nebula"] .livetv-liquid-glass-bg .blob-3,
+html.modern-ui-v3[data-theme*="neon"] .livetv-liquid-glass-bg .blob-3,
+html.modern-ui-v3[data-theme*="violet"] .livetv-liquid-glass-bg .blob-3 {
+  background: radial-gradient(circle, rgba(236, 72, 153, 0.35) 0%, transparent 70%) !important;
+}
+html.modern-ui-v3[data-theme*="purple"] .livetv-liquid-glass-bg .blob-4,
+html.modern-ui-v3[data-theme*="midnight"] .livetv-liquid-glass-bg .blob-4,
+html.modern-ui-v3[data-theme*="amethyst"] .livetv-liquid-glass-bg .blob-4,
+html.modern-ui-v3[data-theme*="cosmic"] .livetv-liquid-glass-bg .blob-4,
+html.modern-ui-v3[data-theme*="lavender"] .livetv-liquid-glass-bg .blob-4,
+html.modern-ui-v3[data-theme*="galaxy"] .livetv-liquid-glass-bg .blob-4,
+html.modern-ui-v3[data-theme*="nebula"] .livetv-liquid-glass-bg .blob-4,
+html.modern-ui-v3[data-theme*="neon"] .livetv-liquid-glass-bg .blob-4,
+html.modern-ui-v3[data-theme*="violet"] .livetv-liquid-glass-bg .blob-4 {
+  background: radial-gradient(circle, rgba(30, 144, 255, 0.3) 0%, transparent 70%) !important;
+}
+
+/* Orange/Amber/Gold/Sunset/Horizon/Copper/Yellow/Autumn Themes (Orange, Amber, Gold, Sunset, Tropicana, Horizon, Copper, Yellow, Autumn) */
+html.modern-ui-v3[data-theme*="orange"] .livetv-liquid-glass-bg,
+html.modern-ui-v3[data-theme*="amber"] .livetv-liquid-glass-bg,
+html.modern-ui-v3[data-theme*="gold"] .livetv-liquid-glass-bg,
+html.modern-ui-v3[data-theme*="sunset"] .livetv-liquid-glass-bg,
+html.modern-ui-v3[data-theme*="tropicana"] .livetv-liquid-glass-bg,
+html.modern-ui-v3[data-theme*="horizon"] .livetv-liquid-glass-bg,
+html.modern-ui-v3[data-theme*="copper"] .livetv-liquid-glass-bg,
+html.modern-ui-v3[data-theme*="yellow"] .livetv-liquid-glass-bg,
+html.modern-ui-v3[data-theme*="autumn"] .livetv-liquid-glass-bg {
+  background: color-mix(in srgb, var(--bg-primary, #0a0505) 85%, #000) !important;
+}
+html.modern-ui-v3[data-theme*="orange"] .livetv-liquid-glass-bg .blob-1,
+html.modern-ui-v3[data-theme*="amber"] .livetv-liquid-glass-bg .blob-1,
+html.modern-ui-v3[data-theme*="gold"] .livetv-liquid-glass-bg .blob-1,
+html.modern-ui-v3[data-theme*="sunset"] .livetv-liquid-glass-bg .blob-1,
+html.modern-ui-v3[data-theme*="tropicana"] .livetv-liquid-glass-bg .blob-1,
+html.modern-ui-v3[data-theme*="horizon"] .livetv-liquid-glass-bg .blob-1,
+html.modern-ui-v3[data-theme*="copper"] .livetv-liquid-glass-bg .blob-1,
+html.modern-ui-v3[data-theme*="yellow"] .livetv-liquid-glass-bg .blob-1,
+html.modern-ui-v3[data-theme*="autumn"] .livetv-liquid-glass-bg .blob-1 {
+  background: radial-gradient(circle, rgba(249, 115, 22, 0.55) 0%, transparent 70%) !important;
+}
+html.modern-ui-v3[data-theme*="orange"] .livetv-liquid-glass-bg .blob-2,
+html.modern-ui-v3[data-theme*="amber"] .livetv-liquid-glass-bg .blob-2,
+html.modern-ui-v3[data-theme*="gold"] .livetv-liquid-glass-bg .blob-2,
+html.modern-ui-v3[data-theme*="sunset"] .livetv-liquid-glass-bg .blob-2,
+html.modern-ui-v3[data-theme*="tropicana"] .livetv-liquid-glass-bg .blob-2,
+html.modern-ui-v3[data-theme*="horizon"] .livetv-liquid-glass-bg .blob-2,
+html.modern-ui-v3[data-theme*="copper"] .livetv-liquid-glass-bg .blob-2,
+html.modern-ui-v3[data-theme*="yellow"] .livetv-liquid-glass-bg .blob-2,
+html.modern-ui-v3[data-theme*="autumn"] .livetv-liquid-glass-bg .blob-2 {
+  background: radial-gradient(circle, rgba(217, 119, 6, 0.45) 0%, transparent 70%) !important;
+}
+html.modern-ui-v3[data-theme*="orange"] .livetv-liquid-glass-bg .blob-3,
+html.modern-ui-v3[data-theme*="amber"] .livetv-liquid-glass-bg .blob-3,
+html.modern-ui-v3[data-theme*="gold"] .livetv-liquid-glass-bg .blob-3,
+html.modern-ui-v3[data-theme*="sunset"] .livetv-liquid-glass-bg .blob-3,
+html.modern-ui-v3[data-theme*="tropicana"] .livetv-liquid-glass-bg .blob-3,
+html.modern-ui-v3[data-theme*="horizon"] .livetv-liquid-glass-bg .blob-3,
+html.modern-ui-v3[data-theme*="copper"] .livetv-liquid-glass-bg .blob-3,
+html.modern-ui-v3[data-theme*="yellow"] .livetv-liquid-glass-bg .blob-3,
+html.modern-ui-v3[data-theme*="autumn"] .livetv-liquid-glass-bg .blob-3 {
+  background: radial-gradient(circle, rgba(239, 68, 68, 0.35) 0%, transparent 70%) !important;
+}
+html.modern-ui-v3[data-theme*="orange"] .livetv-liquid-glass-bg .blob-4,
+html.modern-ui-v3[data-theme*="amber"] .livetv-liquid-glass-bg .blob-4,
+html.modern-ui-v3[data-theme*="gold"] .livetv-liquid-glass-bg .blob-4,
+html.modern-ui-v3[data-theme*="sunset"] .livetv-liquid-glass-bg .blob-4,
+html.modern-ui-v3[data-theme*="tropicana"] .livetv-liquid-glass-bg .blob-4,
+html.modern-ui-v3[data-theme*="horizon"] .livetv-liquid-glass-bg .blob-4,
+html.modern-ui-v3[data-theme*="copper"] .livetv-liquid-glass-bg .blob-4,
+html.modern-ui-v3[data-theme*="yellow"] .livetv-liquid-glass-bg .blob-4,
+html.modern-ui-v3[data-theme*="autumn"] .livetv-liquid-glass-bg .blob-4 {
+  background: radial-gradient(circle, rgba(236, 72, 153, 0.3) 0%, transparent 70%) !important;
+}
+
+/* 3. Light Theme Liquid Glass Adjustments */
+html.modern-ui-v3[data-theme="light"] .livetv-liquid-glass-bg {
+  background: var(--bg-primary, #f5f5f5) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .livetv-liquid-glass-bg .glass-blob {
+  mix-blend-mode: multiply !important;
+  opacity: 0.18 !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .livetv-liquid-glass-bg .blob-1 {
+  background: radial-gradient(circle, rgba(0, 150, 255, 0.6) 0%, transparent 70%) !important;
+}
+html.modern-ui-v3[data-theme="light"] .livetv-liquid-glass-bg .blob-2 {
+  background: radial-gradient(circle, rgba(255, 100, 180, 0.5) 0%, transparent 70%) !important;
+}
+html.modern-ui-v3[data-theme="light"] .livetv-liquid-glass-bg .blob-3 {
+  background: radial-gradient(circle, rgba(255, 200, 0, 0.4) 0%, transparent 70%) !important;
+}
+html.modern-ui-v3[data-theme="light"] .livetv-liquid-glass-bg .blob-4 {
+  background: radial-gradient(circle, rgba(0, 200, 100, 0.4) 0%, transparent 70%) !important;
 }
 
 

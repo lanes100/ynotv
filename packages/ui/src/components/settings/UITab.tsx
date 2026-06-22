@@ -155,11 +155,11 @@ export function UITab({ settings, onSettingsChange }: UITabProps) {
           <div className="timeshift-toggle-row" style={{ position: 'relative' }}>
             <div className="timeshift-toggle-info">
               <span className="timeshift-toggle-label" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                LiveTV Design
+                UI Design
                 <div className="epg-tooltip">
                   <span className="epg-tooltip-icon">?</span>
                   <div className="epg-tooltip-content">
-                    Choose the design layout for LiveTV: V1 (Classic), V2 (Modern), or V3 (Liquid Glass with dynamic blurred backgrounds).
+                    Choose the design layout: V1 (Classic), V2 (Modern), or V3 (with dynamic blurred backgrounds).
                   </div>
                 </div>
               </span>
@@ -187,7 +187,7 @@ export function UITab({ settings, onSettingsChange }: UITabProps) {
             >
               <option value="v1" style={{ backgroundColor: '#1f1f2e' }}>v1 (Classic)</option>
               <option value="v2" style={{ backgroundColor: '#1f1f2e' }}>v2 (Modern)</option>
-              <option value="v3" style={{ backgroundColor: '#1f1f2e' }}>v3 (Liquid Glass)</option>
+              <option value="v3" style={{ backgroundColor: '#1f1f2e' }}>v3</option>
             </select>
           </div>
 
