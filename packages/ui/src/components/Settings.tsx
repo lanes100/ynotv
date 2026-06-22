@@ -91,6 +91,8 @@ interface SettingsProps {
   onNuvioCacheFetchResultsChange?: (enabled: boolean) => void;
   nuvioCacheFetchTimeout?: number;
   onNuvioCacheFetchTimeoutChange?: (timeout: number) => void;
+  liveTvDesign?: 'v1' | 'v2' | 'v3';
+  onLiveTvDesignChange?: (design: 'v1' | 'v2' | 'v3') => void;
 }
 
 export function Settings({
@@ -156,6 +158,8 @@ export function Settings({
   onNuvioCacheFetchResultsChange,
   nuvioCacheFetchTimeout: nuvioCacheFetchTimeoutProp,
   onNuvioCacheFetchTimeoutChange,
+  liveTvDesign,
+  onLiveTvDesignChange,
 }: SettingsProps) {
   const [activeTab, setActiveTab] = useState<SettingsTabId>(initialTab);
   const { showConfirm, ModalComponent } = useModal();
@@ -284,12 +288,12 @@ export function Settings({
     startupWidth?: number;
     startupHeight?: number;
     dontSaveWindowSizeOnClose?: boolean;
-    modernUiEnabled?: boolean;
+    modernUiEnabled?: boolean | string;
     collapseSourceCategoriesOnStartup?: boolean;
     overlayAutohideTimer?: number;
     uiScale?: number;
   }>({
-    modernUiEnabled: true,
+    modernUiEnabled: 'v2',
     collapseSourceCategoriesOnStartup: false,
     overlayAutohideTimer: 3,
     uiScale: 100,
@@ -661,7 +665,7 @@ export function Settings({
         epgBoldSourceCategories?: boolean;
         epgView?: 'traditional' | 'alternate';
         collapseSourceCategoriesOnStartup?: boolean;
-        modernUiEnabled?: boolean;
+        modernUiEnabled?: boolean | string;
         overlayAutohideTimer?: number;
         uiScale?: number;
         epgVisibleHours?: 'auto' | number;
@@ -816,14 +820,19 @@ export function Settings({
       document.documentElement.style.setProperty('--category-font-size', `${loadedCategoryFontSize}px`);
 
       // Apply modern UI class on load
-      if (loadedModernUi) {
+      const design = loadedModernUi === 'v3' ? 'v3' : (loadedModernUi === false || loadedModernUi === 'v1' ? 'v1' : 'v2');
+      document.documentElement.classList.remove('modern-ui', 'modern-ui-v3');
+      if (design === 'v3') {
+        document.documentElement.classList.add('modern-ui', 'modern-ui-v3');
+      } else if (design === 'v2') {
         document.documentElement.classList.add('modern-ui');
-      } else {
-        document.documentElement.classList.remove('modern-ui');
+      }
+      if (onLiveTvDesignChange) {
+        onLiveTvDesignChange(design);
       }
       // Persist default if not already saved
       if (settings.modernUiEnabled === undefined) {
-        await window.storage.updateSettings({ modernUiEnabled: true });
+        await window.storage.updateSettings({ modernUiEnabled: 'v2' });
       }
 
       // Load startup settings
@@ -1751,7 +1760,7 @@ export function Settings({
     startupWidth?: number;
     startupHeight?: number;
     dontSaveWindowSizeOnClose?: boolean;
-    modernUiEnabled?: boolean;
+    modernUiEnabled?: boolean | string;
     collapseSourceCategoriesOnStartup?: boolean;
     overlayAutohideTimer?: number;
     uiScale?: number;
@@ -1761,10 +1770,15 @@ export function Settings({
 
     // Apply/remove the modern-ui class when modernUiEnabled changes
     if (newSettings.modernUiEnabled !== undefined) {
-      if (newSettings.modernUiEnabled) {
+      const design = newSettings.modernUiEnabled === 'v3' ? 'v3' : (newSettings.modernUiEnabled === false || newSettings.modernUiEnabled === 'v1' ? 'v1' : 'v2');
+      document.documentElement.classList.remove('modern-ui', 'modern-ui-v3');
+      if (design === 'v3') {
+        document.documentElement.classList.add('modern-ui', 'modern-ui-v3');
+      } else if (design === 'v2') {
         document.documentElement.classList.add('modern-ui');
-      } else {
-        document.documentElement.classList.remove('modern-ui');
+      }
+      if (onLiveTvDesignChange) {
+        onLiveTvDesignChange(design);
       }
     }
 

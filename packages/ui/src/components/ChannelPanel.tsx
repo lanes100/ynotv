@@ -126,6 +126,8 @@ interface ChannelPanelProps {
   onChannelUp?: () => void;
   onChannelDown?: () => void;
 
+  onPreviewVideoRectChange?: (rect: { left: number; top: number; width: number; height: number } | null) => void;
+
   // Playback state & controls for Alternate View NowPlayingBar overlay
   mpvReady?: boolean;
   duration?: number;
@@ -240,6 +242,7 @@ export function ChannelPanel({
   onPlayInExternal,
   popoutIsOpen = false,
   guideTransparent = false,
+  onPreviewVideoRectChange,
 }: ChannelPanelProps) {
   const epgView = useEpgView();
   const epgVisibleHours = useEpgVisibleHours();
@@ -1515,6 +1518,9 @@ export function ChannelPanel({
       const effectiveChannelId = selectedChannel?.stream_id || lastChannelIdRef.current;
 
       if (!previewRef.current || !effectiveChannelId || !visible) {
+        if (onPreviewVideoRectChange) {
+          onPreviewVideoRectChange(null);
+        }
         return;
       }
 
@@ -1529,7 +1535,21 @@ export function ChannelPanel({
       };
 
       // Safety check for zero dimensions (e.g. hidden)
-      if (rect.width === 0 || rect.height === 0) return;
+      if (rect.width === 0 || rect.height === 0) {
+        if (onPreviewVideoRectChange) {
+          onPreviewVideoRectChange(null);
+        }
+        return;
+      }
+
+      if (onPreviewVideoRectChange) {
+        onPreviewVideoRectChange({
+          left: rect.left,
+          top: rect.top,
+          width: rect.width,
+          height: rect.height,
+        });
+      }
 
       // When the LiveTV guide is open in multiview, the primary MPV is temporarily
       // resized to fullscreen so the EPG preview scaling works exactly like normal
@@ -1639,6 +1659,9 @@ export function ChannelPanel({
       observer.disconnect();
       window.removeEventListener('resize', updateVideoPosition);
       cancelAnimationFrame(animationFrameId);
+      if (onPreviewVideoRectChange) {
+        onPreviewVideoRectChange(null);
+      }
     };
     // Re-run when layout changes (sidebar/category visibility) or when visibility/selection changes
     // Include selectedChannelId to trigger resize when returning to view with a selection

@@ -19,6 +19,7 @@ import { SportsScoresOverlay } from './SportsScoresOverlay';
 import './SportsHub.css';
 
 interface SportsHubProps {
+  visible?: boolean;
   onClose: () => void;
   onSearchChannels?: (query: string) => void;
   previewEnabled?: boolean;
@@ -32,9 +33,11 @@ interface SportsHubProps {
   onChannelDown?: () => void;
   aspectRatio?: AspectRatioMode;
   onSetAspectRatio?: (mode: AspectRatioMode) => void;
+  onPreviewVideoRectChange?: (rect: { left: number; top: number; width: number; height: number } | null) => void;
 }
 
 export function SportsHub({
+  visible,
   onClose,
   onSearchChannels,
   previewEnabled,
@@ -47,7 +50,25 @@ export function SportsHub({
   onChannelDown,
   aspectRatio = 'fit',
   onSetAspectRatio,
+  onPreviewVideoRectChange,
 }: SportsHubProps) {
+  const [transitionCompleted, setTransitionCompleted] = useState(visible === undefined);
+
+  useEffect(() => {
+    if (visible === undefined) {
+      setTransitionCompleted(true);
+      return;
+    }
+    if (visible) {
+      const timer = setTimeout(() => {
+        setTransitionCompleted(true);
+      }, 250);
+      return () => clearTimeout(timer);
+    } else {
+      setTransitionCompleted(false);
+    }
+  }, [visible]);
+
   const previewRef = useRef<HTMLDivElement>(null);
   const fillerLeftRef = useRef<HTMLDivElement>(null);
   const fillerRightRef = useRef<HTMLDivElement>(null);
@@ -141,18 +162,11 @@ export function SportsHub({
   // Handle Video Resizing for Preview Mode via ResizeObserver explicitly when component mounts
   useEffect(() => {
     let isSyncing = false;
+    const isReady = visible === undefined ? true : (visible && transitionCompleted);
 
     const updateVideoPosition = async () => {
-      if (!previewRef.current || !previewEnabled) {
-        if (!previewEnabled) {
-          Bridge.setProperties({
-            'video-zoom': 0,
-            'video-align-x': 0,
-            'video-align-y': 0,
-            'video-aspect-override': -1,
-            'keepaspect': true,
-          }).catch(() => { });
-        }
+      if (!previewRef.current || !previewEnabled || !isReady) {
+        onPreviewVideoRectChange?.(null);
         return;
       }
 
@@ -170,9 +184,17 @@ export function SportsHub({
       };
 
       if (rect.width === 0 || rect.height === 0) {
+        onPreviewVideoRectChange?.(null);
         isSyncing = false;
         return;
       }
+
+      onPreviewVideoRectChange?.({
+        left: rect.left,
+        top: rect.top,
+        width: rect.width,
+        height: rect.height,
+      });
 
       const windowW = window.innerWidth;
       const windowH = window.innerHeight;
@@ -280,7 +302,7 @@ export function SportsHub({
       }
     };
 
-    if (previewEnabled) {
+    if (previewEnabled && isReady) {
       animate();
     }
 
@@ -288,17 +310,9 @@ export function SportsHub({
       observer.disconnect();
       window.removeEventListener('resize', updateVideoPosition);
       cancelAnimationFrame(animationFrameId);
-
-      // Cleanup zoom when the entire SportsHub unmounts or preview toggles explicitly
-      Bridge.setProperties({
-        'video-zoom': 0,
-        'video-align-x': 0,
-        'video-align-y': 0,
-        'video-aspect-override': -1,
-        'keepaspect': true,
-      }).catch(() => { });
+      onPreviewVideoRectChange?.(null);
     };
-  }, [previewEnabled, aspectRatio]);
+  }, [previewEnabled, aspectRatio, visible, transitionCompleted]);
 
   const handleSearchChannels = useCallback((channelName: string) => {
     if (onSearchChannels) {

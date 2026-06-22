@@ -7,7 +7,7 @@ interface UITabProps {
     startupWidth?: number;
     startupHeight?: number;
     dontSaveWindowSizeOnClose?: boolean;
-    modernUiEnabled?: boolean;
+    modernUiEnabled?: boolean | string;
     collapseSourceCategoriesOnStartup?: boolean;
     overlayAutohideTimer?: number;
     uiScale?: number;
@@ -16,7 +16,7 @@ interface UITabProps {
     startupWidth?: number;
     startupHeight?: number;
     dontSaveWindowSizeOnClose?: boolean;
-    modernUiEnabled?: boolean;
+    modernUiEnabled?: boolean | string;
     collapseSourceCategoriesOnStartup?: boolean;
     overlayAutohideTimer?: number;
     uiScale?: number;
@@ -155,23 +155,40 @@ export function UITab({ settings, onSettingsChange }: UITabProps) {
           <div className="timeshift-toggle-row" style={{ position: 'relative' }}>
             <div className="timeshift-toggle-info">
               <span className="timeshift-toggle-label" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                Enable Modern UI Design
+                LiveTV Design
                 <div className="epg-tooltip">
                   <span className="epg-tooltip-icon">?</span>
                   <div className="epg-tooltip-content">
-                    When enabled, applies a modern glass-morphism aesthetic with enhanced animations, gradients, and visual effects to the Categories and EPG views. Works best with glass themes.
+                    Choose the design layout for LiveTV: V1 (Classic), V2 (Modern), or V3 (Liquid Glass with dynamic blurred backgrounds).
                   </div>
                 </div>
               </span>
             </div>
-            <label className="toggle-switch">
-              <input
-                type="checkbox"
-                checked={settings.modernUiEnabled ?? true}
-                onChange={(e) => onSettingsChange({ ...settings, modernUiEnabled: e.target.checked })}
-              />
-              <span className="toggle-slider" />
-            </label>
+            <select
+              value={
+                settings.modernUiEnabled === false || settings.modernUiEnabled === 'v1'
+                  ? 'v1'
+                  : settings.modernUiEnabled === 'v3'
+                  ? 'v3'
+                  : 'v2'
+              }
+              onChange={(e) => onSettingsChange({ ...settings, modernUiEnabled: e.target.value })}
+              style={{
+                padding: '0.4rem 0.8rem',
+                backgroundColor: 'var(--bg-tertiary, #1f1f2e)',
+                border: '1px solid var(--border-color, rgba(255, 255, 255, 0.15))',
+                borderRadius: '6px',
+                color: 'var(--text-primary, #ffffff)',
+                fontSize: '0.85rem',
+                cursor: 'pointer',
+                minWidth: '130px',
+                outline: 'none'
+              }}
+            >
+              <option value="v1" style={{ backgroundColor: '#1f1f2e' }}>v1 (Classic)</option>
+              <option value="v2" style={{ backgroundColor: '#1f1f2e' }}>v2 (Modern)</option>
+              <option value="v3" style={{ backgroundColor: '#1f1f2e' }}>v3 (Liquid Glass)</option>
+            </select>
           </div>
 
           {/* Collapse Source Categories on Startup */}

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import type { SportsEvent } from '@ynotv/core';
 import {
   getGameSummary,
@@ -894,15 +895,15 @@ export function GameDetail({ event, onClose, onChannelClick, onPlayChannel, vari
   };
 
   if (isUFC) {
-    return renderUFCDetail();
+    return createPortal(renderUFCDetail(), document.body);
   }
 
   if (isRacing) {
-    return renderRacingDetail();
+    return createPortal(renderRacingDetail(), document.body);
   }
 
   if (isGolf) {
-    return renderGolfDetail();
+    return createPortal(renderGolfDetail(), document.body);
   }
 
   const renderTennisDetail = () => {
@@ -1025,14 +1026,14 @@ export function GameDetail({ event, onClose, onChannelClick, onPlayChannel, vari
   };
 
   if (isTennis) {
-    return renderTennisDetail();
+    return createPortal(renderTennisDetail(), document.body);
   }
 
   if (isRugby) {
-    return renderRugbyDetail();
+    return createPortal(renderRugbyDetail(), document.body);
   }
 
-  return (
+  return createPortal(
     <div className={`game-detail-overlay${variant === 'glass' ? ' glass' : ''}`} onClick={handleOverlayClick} onKeyDown={handleKeyDown}>
       <div className={`game-detail-modal${variant === 'glass' ? ' glass' : ''}`}>
         <div className="game-detail-header">
@@ -1152,6 +1153,7 @@ export function GameDetail({ event, onClose, onChannelClick, onPlayChannel, vari
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

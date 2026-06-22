@@ -1225,6 +1225,32 @@ function App() {
   const transparentGuideFlashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [guideTransparent, setGuideTransparent] = useState(false);
   const [isTransparentGuideZapActive, setIsTransparentGuideZapActive] = useState(false);
+  const [liveTvDesign, setLiveTvDesign] = useState<'v1' | 'v2' | 'v3'>('v2');
+  const [randomScheme, setRandomScheme] = useState<string>('scheme-apple');
+  const [previewVideoRect, setPreviewVideoRect] = useState<{ left: number; top: number; width: number; height: number } | null>(null);
+
+  useEffect(() => {
+    if (activeView === 'guide' || activeView === 'movies' || activeView === 'series' || activeView === 'dvr' || activeView === 'sports' || activeView === 'stremio' || activeView === 'nuvio') {
+      const schemes = ['scheme-apple', 'scheme-sunset', 'scheme-aurora', 'scheme-forest'];
+      const chosen = schemes[Math.floor(Math.random() * schemes.length)];
+      setRandomScheme(chosen);
+    } else {
+      setPreviewVideoRect(null);
+    }
+  }, [activeView]);
+
+  // Reset video scale and alignment to fullscreen globally when no preview pane is active
+  useEffect(() => {
+    if (!previewVideoRect) {
+      Bridge.setProperties({
+        'video-zoom': 0,
+        'video-align-x': 0,
+        'video-align-y': 0,
+        'video-aspect-override': -1,
+        'keepaspect': true,
+      }).catch(() => { });
+    }
+  }, [previewVideoRect]);
 
   const triggerChannelChangeFlash = useCallback(() => {
     if (!channelInfoOverlayEnabled) return;
@@ -2603,15 +2629,19 @@ function App() {
             setEpgVisibleHours(rawHours === 'auto' ? 'auto' : Number(rawHours));
           }
           // Apply modern UI setting (default to true if never set)
-          const shouldEnableModernUi = settingsResult.data.modernUiEnabled ?? true;
-          if (shouldEnableModernUi) {
+          const modernUiVal = settingsResult.data.modernUiEnabled;
+          const design = modernUiVal === 'v3' ? 'v3' : (modernUiVal === false || modernUiVal === 'v1' ? 'v1' : 'v2');
+          setLiveTvDesign(design);
+
+          document.documentElement.classList.remove('modern-ui', 'modern-ui-v3');
+          if (design === 'v3') {
+            document.documentElement.classList.add('modern-ui', 'modern-ui-v3');
+          } else if (design === 'v2') {
             document.documentElement.classList.add('modern-ui');
-          } else {
-            document.documentElement.classList.remove('modern-ui');
           }
           // Persist the default value on first run so future reads are explicit
           if (settingsResult.data.modernUiEnabled === undefined) {
-            await window.storage.updateSettings({ modernUiEnabled: true });
+            await window.storage.updateSettings({ modernUiEnabled: 'v2' });
           }
         }
 
@@ -3567,6 +3597,36 @@ function App() {
         onClose={() => setShowAdvancedSearch(false)}
       />
 
+      {/* V3 Liquid Glass Background */}
+      {liveTvDesign === 'v3' && (activeView === 'guide' || activeView === 'movies' || activeView === 'series' || activeView === 'dvr' || activeView === 'sports' || activeView === 'stremio' || activeView === 'nuvio') && !guideTransparent && (
+        <div 
+          className={`livetv-liquid-glass-bg ${randomScheme}`}
+          style={
+            previewVideoRect && currentChannel && playing
+              ? {
+                  clipPath: `polygon(
+                    0% 0%, 
+                    100% 0%, 
+                    100% 100%, 
+                    0% 100%, 
+                    0% 0%, 
+                    ${previewVideoRect.left}px ${previewVideoRect.top}px, 
+                    ${previewVideoRect.left}px ${previewVideoRect.top + previewVideoRect.height}px, 
+                    ${previewVideoRect.left + previewVideoRect.width}px ${previewVideoRect.top + previewVideoRect.height}px, 
+                    ${previewVideoRect.left + previewVideoRect.width}px ${previewVideoRect.top}px, 
+                    ${previewVideoRect.left}px ${previewVideoRect.top}px
+                  )`
+                }
+              : undefined
+          }
+        >
+          <div className="glass-blob blob-1" />
+          <div className="glass-blob blob-2" />
+          <div className="glass-blob blob-3" />
+          <div className="glass-blob blob-4" />
+        </div>
+      )}
+
       {/* Category Strip */}
       <CategoryStrip
         selectedCategoryId={categoryId}
@@ -3617,6 +3677,7 @@ function App() {
         onPlayInExternal={handlePlayInExternal}
         popoutIsOpen={popoutIsOpen}
         onPlayCatchup={handlePlayCatchup}
+        onPreviewVideoRectChange={setPreviewVideoRect}
         onClose={() => {
           setActiveView('none');
           setCategoriesOpen(false);
@@ -3742,6 +3803,8 @@ function App() {
           onTransparentGuideOnZapChange={setTransparentGuideOnZap}
           overlayAutohideTimer={overlayAutohideTimer}
           onOverlayAutohideTimerChange={setOverlayAutohideTimer}
+          liveTvDesign={liveTvDesign}
+          onLiveTvDesignChange={setLiveTvDesign}
         />
       )}
 
@@ -3781,6 +3844,7 @@ function App() {
       {/* Sports Hub */}
       <TransitionView visible={activeView === 'sports'}>
         <SportsHub
+          visible={activeView === 'sports'}
           onClose={() => setActiveView('none')}
           onSearchChannels={(query) => {
             setSearchQuery(query);
@@ -3800,6 +3864,7 @@ function App() {
           onStop={handleStop}
           onChannelUp={handleChannelUp}
           onChannelDown={handleChannelDown}
+          onPreviewVideoRectChange={setPreviewVideoRect}
         />
       </TransitionView>
 

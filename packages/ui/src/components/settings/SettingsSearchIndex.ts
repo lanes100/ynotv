@@ -152,7 +152,7 @@ const SETTINGS_SEARCH_INDEX: SettingsSearchResult[] = [
 
   // --- UI ---
   { id: 'ui-tab', label: 'UI', tabId: 'ui', tabLabel: 'UI', section: 'UI' },
-  { id: 'modern-ui-design', label: 'Enable Modern UI Design', description: 'Apply modern glass-morphism aesthetic with enhanced animations.', tabId: 'ui', tabLabel: 'UI', section: 'UI' },
+  { id: 'modern-ui-design', label: 'LiveTV Design', description: 'Select the visual theme for LiveTV: V1 (Classic), V2 (Modern), or V3 (Liquid Glass).', tabId: 'ui', tabLabel: 'UI', section: 'UI' },
   { id: 'collapse-source-categories', label: 'Collapse Source Categories on Startup', description: 'Source categories will be collapsed by default when LiveTV loads.', tabId: 'ui', tabLabel: 'UI', section: 'UI' },
   { id: 'autohide-overlay-timer', label: 'Autohide Overlay Timer', description: 'How long to wait before hiding UI controls when inactive.', tabId: 'ui', tabLabel: 'UI', section: 'UI' },
   { id: 'window-width', label: 'Window Width', tabId: 'ui', tabLabel: 'UI', section: 'Window Settings' },
