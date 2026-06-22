@@ -544,6 +544,8 @@ export function PlaybackTab({
             onExternalPlayerPathChange={onExternalPlayerPathChange}
             externalPlayerReuse={externalPlayerReuse}
             onExternalPlayerReuseChange={onExternalPlayerReuseChange}
+            mpvDisableWhitelist={mpvDisableWhitelist}
+            onMpvDisableWhitelistChange={onMpvDisableWhitelistChange}
           />
         )}
 

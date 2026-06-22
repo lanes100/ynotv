@@ -20,6 +20,8 @@ import { RecentChannelsContextMenu } from './RecentChannelsContextMenu';
 import { PlaylistContextMenu } from './PlaylistContextMenu';
 import { EpgEditorModal } from './EpgEditorModal';
 import { clearRecentChannels } from '../utils/recentChannels';
+import { useCategorySortOrder } from '../stores/uiStore';
+import { isCategorySortCustomized } from '../utils/categorySortOverrides';
 import './CategoryStrip.css';
 
 function parseCategoryIds(raw: string | string[] | number[] | undefined): string[] {
@@ -291,6 +293,19 @@ function PlaylistCategoryLinkItem({
 
 export function CategoryStrip({ selectedCategoryId, onSelectCategory, visible, onEditSource, onClose, onShow, isLiveTV }: CategoryStripProps) {
   const groupedCategories = useCategoriesBySource();
+  const categorySortOrder = useCategorySortOrder();
+  const [sortOverridesVersion, setSortOverridesVersion] = useState(0);
+
+  useEffect(() => {
+    const handleOverridesChange = () => {
+      setSortOverridesVersion(prev => prev + 1);
+    };
+    window.addEventListener('ynotv:category-sort-overrides-changed', handleOverridesChange);
+    return () => {
+      window.removeEventListener('ynotv:category-sort-overrides-changed', handleOverridesChange);
+    };
+  }, []);
+
   const [searchQuery, setSearchQuery] = useState('');
   const [searchFocused, setSearchFocused] = useState(false);
 
@@ -1117,11 +1132,16 @@ export function CategoryStrip({ selectedCategoryId, onSelectCategory, visible, o
                         });
                       }
                       
-                      // Sort by displayOrder, then alphabetically by name
-                      list.sort((a, b) => {
-                        if (a.displayOrder !== b.displayOrder) return a.displayOrder - b.displayOrder;
-                        return a.name.localeCompare(b.name);
-                      });
+                      // Sort
+                      const isAlphabetical = categorySortOrder === 'alphabetical' && !isCategorySortCustomized(group.sourceId);
+                      if (isAlphabetical) {
+                        list.sort((a, b) => a.name.localeCompare(b.name));
+                      } else {
+                        list.sort((a, b) => {
+                          if (a.displayOrder !== b.displayOrder) return a.displayOrder - b.displayOrder;
+                          return a.name.localeCompare(b.name);
+                        });
+                      }
                       
                       const individualCount = flatPlaylistIndividualCounts?.get(group.sourceId) || 0;
                       
@@ -1177,9 +1197,25 @@ export function CategoryStrip({ selectedCategoryId, onSelectCategory, visible, o
           } else if (item.type === 'playlist' && item.playlistGroup) {
             const playlist = item.playlistGroup;
             const isExpanded = !!expandedPlaylists[playlist.playlist_id];
+            const getLinkName = (link: PlaylistCategoryLink) => {
+              return link.custom_name || (categoryNamesMap.get(link.category_id) || link.category_id);
+            };
+
             const playlistLinks = (allPlaylistCategoryLinks || [])
-              .filter(l => l.playlist_id === playlist.playlist_id)
-              .sort((a, b) => a.display_order - b.display_order);
+              .filter(l => l.playlist_id === playlist.playlist_id);
+
+            const isAlphabetical = categorySortOrder === 'alphabetical' && !isCategorySortCustomized(playlist.playlist_id);
+
+            if (isAlphabetical) {
+              playlistLinks.sort((a, b) => {
+                const nameA = getLinkName(a);
+                const nameB = getLinkName(b);
+                return nameA.localeCompare(nameB);
+              });
+            } else {
+              playlistLinks.sort((a, b) => a.display_order - b.display_order);
+            }
+
             const individualCount = flatPlaylistIndividualCounts?.get(playlist.playlist_id) || 0;
 
             return (

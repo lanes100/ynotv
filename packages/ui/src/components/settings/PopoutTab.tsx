@@ -16,6 +16,8 @@ interface PopoutTabProps {
   onExternalPlayerPathChange: (path: string) => void;
   externalPlayerReuse: boolean;
   onExternalPlayerReuseChange: (reuse: boolean) => void;
+  mpvDisableWhitelist: boolean;
+  onMpvDisableWhitelistChange: (disabled: boolean) => Promise<void>;
 }
 
 export function PopoutTab({
@@ -31,6 +33,8 @@ export function PopoutTab({
   onExternalPlayerPathChange,
   externalPlayerReuse,
   onExternalPlayerReuseChange,
+  mpvDisableWhitelist,
+  onMpvDisableWhitelistChange,
 }: PopoutTabProps) {
   const [localParams, setLocalParams] = useState(popoutMpvParams);
   const [hasChanges, setHasChanges] = useState(false);
@@ -176,6 +180,23 @@ export function PopoutTab({
                 type="checkbox"
                 checked={popoutAlwaysOnTop}
                 onChange={(e) => onPopoutAlwaysOnTopChange(e.target.checked)}
+              />
+              <span className="toggle-slider"></span>
+            </label>
+          </div>
+
+          <div className="timeshift-toggle-row">
+            <div className="timeshift-toggle-info">
+              <span className="timeshift-toggle-label">Disable Parameter Whitelist</span>
+              <span className="timeshift-toggle-sub">
+                Allows any MPV parameter to be passed, including potentially unsafe ones. Use with caution.
+              </span>
+            </div>
+            <label className="toggle-switch">
+              <input
+                type="checkbox"
+                checked={mpvDisableWhitelist}
+                onChange={(e) => onMpvDisableWhitelistChange(e.target.checked)}
               />
               <span className="toggle-slider"></span>
             </label>

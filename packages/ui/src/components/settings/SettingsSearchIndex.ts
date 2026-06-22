@@ -120,6 +120,7 @@ const SETTINGS_SEARCH_INDEX: SettingsSearchResult[] = [
   { id: 'external-player', label: 'External Player', tabId: 'playback', tabLabel: 'Playback', subTabId: 'popout', section: 'External Player' },
   { id: 'popout-stop-main', label: 'Stop main player when popout opens', description: 'Stop the embedded player when a popout is opened.', tabId: 'playback', tabLabel: 'Playback', subTabId: 'popout', section: 'Popout Player' },
   { id: 'popout-always-on-top', label: 'Always on top', description: 'Keep the popout window above all other windows.', tabId: 'playback', tabLabel: 'Playback', subTabId: 'popout', section: 'Popout Player' },
+  { id: 'disable-parameter-whitelist-popout', label: 'Disable Parameter Whitelist', description: 'Allows any MPV parameter to be passed, including potentially unsafe ones.', tabId: 'playback', tabLabel: 'Playback', subTabId: 'popout', section: 'Popout Player' },
   { id: 'popout-mpv-params', label: 'Enable additional MPV parameters for popout', description: 'Pass custom command-line arguments to the popout MPV instance.', tabId: 'playback', tabLabel: 'Playback', subTabId: 'popout', section: 'Popout Player' },
   { id: 'popout-player', label: 'Popout Player', tabId: 'playback', tabLabel: 'Playback', subTabId: 'popout', section: 'Popout Player' },
   { id: 'skip-intro-auto', label: 'Automatic Intro Skip', description: 'Skip the intro automatically without showing a button.', tabId: 'playback', tabLabel: 'Playback', subTabId: 'skipintro', section: 'Skip Intro' },

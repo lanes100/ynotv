@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { useLiveQuery } from '../../hooks/useSqliteLiveQuery';
 import { db, type StoredCategory, updateCategoriesBatch } from '../../db';
 import { useCategorySortOrder } from '../../stores/uiStore';
+import { isCategorySortCustomized, setCategorySortCustomized } from '../../utils/categorySortOverrides';
 import { ChannelManager } from './ChannelManager';
 import './CategoryManager.css';
 
@@ -26,6 +27,22 @@ export function CategoryManager({ sourceId, sourceName, onClose, onChange }: Cat
     const [selectToMoveMode, setSelectToMoveMode] = useState<'inactive' | 'selecting' | 'ready'>('inactive');
     const [selectedForMove, setSelectedForMove] = useState<Set<string>>(new Set());
     const categorySortOrder = useCategorySortOrder();
+    const targetPlaylistId = sourceId.startsWith('playlist:') ? sourceId.replace('playlist:', '') : sourceId;
+    const [isCustomized, setIsCustomized] = useState(() => isCategorySortCustomized(targetPlaylistId));
+    const isUnlockingRef = useRef(false);
+
+    const handleUnlockOrder = useCallback(() => {
+        isUnlockingRef.current = true;
+        setCategorySortCustomized(targetPlaylistId, true);
+        setIsCustomized(true);
+        setIsDirty(true);
+    }, [targetPlaylistId]);
+
+    const handleResetToAlphabetical = useCallback(() => {
+        isUnlockingRef.current = false;
+        setCategorySortCustomized(targetPlaylistId, false);
+        setIsCustomized(false);
+    }, [targetPlaylistId]);
 
     // Pointer-event drag state
     const dragFromIdx = useRef<number | null>(null);
@@ -43,7 +60,6 @@ export function CategoryManager({ sourceId, sourceName, onClose, onChange }: Cat
         return Math.max(0, children.length - 1);
     };
 
-    const targetPlaylistId = sourceId.startsWith('playlist:') ? sourceId.replace('playlist:', '') : sourceId;
 
     // Load categories for this source
     const dbCategories = useLiveQuery(
@@ -75,6 +91,11 @@ export function CategoryManager({ sourceId, sourceName, onClose, onChange }: Cat
 
     // Initialize categories from database (but not while saving)
     useEffect(() => {
+        if (isUnlockingRef.current) {
+            isUnlockingRef.current = false;
+            return;
+        }
+
         if (dbCategories && !isSavingRef.current) {
             const list: Array<
                 | { type: 'native'; id: string; name: string; enabled: boolean; displayOrder: number; category: StoredCategory }
@@ -110,7 +131,8 @@ export function CategoryManager({ sourceId, sourceName, onClose, onChange }: Cat
             }
 
             // Sort
-            if (categorySortOrder === 'alphabetical') {
+            const isAlphabetical = categorySortOrder === 'alphabetical' && !isCustomized;
+            if (isAlphabetical) {
                 list.sort((a, b) => a.name.localeCompare(b.name));
             } else {
                 list.sort((a, b) => {
@@ -128,7 +150,7 @@ export function CategoryManager({ sourceId, sourceName, onClose, onChange }: Cat
             setCategories(normalized);
             setIsDirty(false);
         }
-    }, [dbCategories, categoryLinks, dbCategoriesMap, categorySortOrder]);
+    }, [dbCategories, categoryLinks, dbCategoriesMap, categorySortOrder, isCustomized]);
 
     // Toggle enable/disable
     const toggleCategory = useCallback((id: string) => {
@@ -353,11 +375,82 @@ export function CategoryManager({ sourceId, sourceName, onClose, onChange }: Cat
                     <button className="close-btn" onClick={onClose}>✕</button>
                 </div>
 
-                <div className="category-manager-stats">
-                    {enabledCount} of {totalCount} categories enabled
-                    <span style={{ marginLeft: '12px', opacity: 0.7, fontSize: '0.85em' }}>
-                        ({categorySortOrder === 'alphabetical' ? 'Alphabetical' : 'Default'} order)
+                <div className="category-manager-stats" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span>{enabledCount} of {totalCount} categories enabled</span>
+                    <span style={{ opacity: 0.7, fontSize: '0.85em' }}>
+                        ({categorySortOrder === 'alphabetical' && !isCustomized ? 'Alphabetical' : 'Default'} order)
                     </span>
+                    {categorySortOrder === 'alphabetical' && (
+                        !isCustomized ? (
+                            <button
+                                onClick={handleUnlockOrder}
+                                style={{
+                                    padding: '2px 8px',
+                                    fontSize: '0.85em',
+                                    background: 'var(--bg-primary, #1e1e1e)',
+                                    border: '1px solid var(--surface-border, #333)',
+                                    borderRadius: '4px',
+                                    color: 'var(--text-primary, #fff)',
+                                    cursor: 'pointer',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '4px',
+                                    marginLeft: '8px'
+                                }}
+                                title="Unlock manual reordering for this specific playlist/source"
+                            >
+                                <svg 
+                                    xmlns="http://www.w3.org/2000/svg" 
+                                    width="12" 
+                                    height="12" 
+                                    viewBox="0 0 24 24" 
+                                    fill="none" 
+                                    stroke="currentColor" 
+                                    strokeWidth="2" 
+                                    strokeLinecap="round" 
+                                    strokeLinejoin="round"
+                                >
+                                    <path d="M12 20h9"/>
+                                    <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>
+                                </svg>
+                                <span>Customize Order</span>
+                            </button>
+                        ) : (
+                            <button
+                                onClick={handleResetToAlphabetical}
+                                style={{
+                                    padding: '2px 8px',
+                                    fontSize: '0.85em',
+                                    background: 'var(--bg-primary, #1e1e1e)',
+                                    border: '1px solid var(--surface-border, #333)',
+                                    borderRadius: '4px',
+                                    color: 'var(--text-primary, #fff)',
+                                    cursor: 'pointer',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '4px',
+                                    marginLeft: '8px'
+                                }}
+                                title="Reset sorting for this specific playlist/source back to alphabetical"
+                            >
+                                <svg 
+                                    xmlns="http://www.w3.org/2000/svg" 
+                                    width="12" 
+                                    height="12" 
+                                    viewBox="0 0 24 24" 
+                                    fill="none" 
+                                    stroke="currentColor" 
+                                    strokeWidth="2" 
+                                    strokeLinecap="round" 
+                                    strokeLinejoin="round"
+                                >
+                                    <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+                                    <path d="M3 3v5h5"/>
+                                </svg>
+                                <span>Reset to Alphabetical</span>
+                            </button>
+                        )
+                    )}
                 </div>
 
                 <div className="category-manager-actions">
@@ -409,7 +502,7 @@ export function CategoryManager({ sourceId, sourceName, onClose, onChange }: Cat
                         const isDragging = dragFromIdx.current === index;
                         const isDragOver = dragOverIdx === index && dragFromIdx.current !== null && dragFromIdx.current !== index;
 
-                        const isAlphabetical = categorySortOrder === 'alphabetical';
+                        const isAlphabetical = categorySortOrder === 'alphabetical' && !isCustomized;
 
                         return (
                             <div
