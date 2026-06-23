@@ -3657,14 +3657,29 @@ function App() {
                     // Technique: draw the full-screen rect (outer) then the rounded-rect
                     // video cutout (inner) as a sub-path. The browser's evenodd fill rule
                     // makes the inner shape a transparent hole in the background.
-                    const r = 20; // border-radius in px - must match CSS border-radius on .guide-preview-video
-                    const { left: x, top: y, width: w, height: h } = previewVideoRect;
-                    const W = window.innerWidth;
-                    const H = window.innerHeight;
-                    // Outer rectangle (full screen, clockwise)
+                    //
+                    // Zoom correction: .livetv-liquid-glass-bg lives inside .app which has
+                    // `zoom: var(--app-zoom)` applied. That makes the element's local coordinate
+                    // space equal to (viewport / zoom). getBoundingClientRect() always returns
+                    // viewport CSS pixels, so we divide every coordinate by zoom to map into the
+                    // element's local space. r stays as 20 because:
+                    //   CSS border-radius 20px × zoom → 20*zoom visual px
+                    //   → 20*zoom / zoom = 20 local px  ✓
+                    const zoom = parseFloat(
+                      getComputedStyle(document.documentElement).getPropertyValue('--app-zoom').trim()
+                    ) || 1;
+                    const r = 20; // border-radius in local px (zoom-invariant, see above)
+                    const { left: vx, top: vy, width: vw, height: vh } = previewVideoRect;
+                    // Convert viewport coords → element local coords
+                    const x = vx / zoom;
+                    const y = vy / zoom;
+                    const w = vw / zoom;
+                    const h = vh / zoom;
+                    const W = window.innerWidth  / zoom;
+                    const H = window.innerHeight / zoom;
+                    // Outer rectangle (full screen in local space, clockwise)
                     const outer = `M 0 0 L ${W} 0 L ${W} ${H} L 0 ${H} Z`;
-                    // Inner rounded rectangle (the video cutout, counter-clockwise so evenodd cuts it out)
-                    // Start at top-left corner after the radius, go clockwise
+                    // Inner rounded rectangle (video cutout, clockwise — evenodd makes it a hole)
                     const inner = [
                       `M ${x + r} ${y}`,
                       `L ${x + w - r} ${y}`,                            // top edge
