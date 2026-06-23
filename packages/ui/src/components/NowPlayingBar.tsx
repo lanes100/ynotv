@@ -9,6 +9,8 @@ import { scheduleRecording, getDvrSettings, updatePlayingStream, detectScheduleC
 import { StalkerClient } from '@ynotv/local-adapter';
 import { useModal } from './Modal';
 import { type AspectRatioMode, getAspectRatioLabel } from '../services/tauri-bridge';
+import { SourcePickerModal } from './SourcePickerModal';
+import type { StremioStream } from '../types/stremio';
 import './NowPlayingBar.css';
 
 interface NowPlayingBarProps {
@@ -64,6 +66,7 @@ interface NowPlayingBarProps {
   overlay?: React.ReactNode;
   onNavigateDvr?: () => void;
   onReplayStream?: () => void;
+  onSwitchStream?: (stream: StremioStream) => void;
 }
 
 // Format seconds to "H:MM:SS" or "M:SS"
@@ -119,6 +122,7 @@ export function NowPlayingBar({
   overlay,
   onNavigateDvr,
   onReplayStream,
+  onSwitchStream,
 }: NowPlayingBarProps) {
   // scrubMode: 'timeshift' | 'epgcatchup' — local toggle when channel supports both
   const [scrubMode, setScrubMode] = useState<'timeshift' | 'epgcatchup'>('timeshift');
@@ -129,6 +133,14 @@ export function NowPlayingBar({
   const canControl = mpvReady && channel !== null;
   const currentProgram = useCurrentProgram(channel?.stream_id ?? null);
   const { showSuccess, showError, showConfirmThree, showPrompt, ModalComponent } = useModal();
+
+  // Source picker modal state
+  const [showSourcePicker, setShowSourcePicker] = useState(false);
+
+  // Show source picker button only for Stremio/Nuvio VOD content
+  const isStremioNuvio = isVod && vodInfo && (vodInfo.source_id === 'stremio' || vodInfo.source_id === 'nuvio');
+  const stremioSourceId = isStremioNuvio && vodInfo?.stremioId ? vodInfo.stremioId : null;
+  const stremioSourceType = isStremioNuvio && vodInfo?.stremioType ? vodInfo.stremioType : null;
 
   // Aspect ratio menu state
   const [showAspectMenu, setShowAspectMenu] = useState(false);
@@ -836,6 +848,16 @@ export function NowPlayingBar({
               >
                 <StatsIcon />
               </button>
+              {isStremioNuvio && onSwitchStream && stremioSourceId && stremioSourceType && (
+                <button
+                  className="npb-btn npb-source-picker-btn"
+                  onClick={() => setShowSourcePicker(true)}
+                  disabled={!canControl}
+                  title="Switch Source"
+                >
+                  <SourcePickerIcon />
+                </button>
+              )}
               {!isVod && (
                 <button
                   className="npb-btn npb-record-btn"
@@ -953,6 +975,21 @@ export function NowPlayingBar({
               </div>
             </div>,
             document.body
+          )}
+
+          {/* Source Picker Modal */}
+          {isStremioNuvio && showSourcePicker && stremioSourceId && stremioSourceType && onSwitchStream && (
+            <SourcePickerModal
+              source={vodInfo?.source_id === 'nuvio' ? 'nuvio' : 'stremio'}
+              type={stremioSourceType}
+              id={stremioSourceId}
+              currentAddonName={vodInfo?.addonName}
+              onSelect={(stream) => {
+                setShowSourcePicker(false);
+                onSwitchStream(stream);
+              }}
+              onClose={() => setShowSourcePicker(false)}
+            />
           )}
 
         </>
@@ -1141,6 +1178,16 @@ function ReloadIcon() {
       <path d="M3 12a9 9 0 0 1 15-6.7L21 8" />
       <path d="M3 22v-6h6" />
       <path d="M21 12a9 9 0 0 1-15 6.7L3 16" />
+    </svg>
+  );
+}
+
+function SourcePickerIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="m12 3-10 5 10 5 10-5-10-5Z" />
+      <path d="m2 17 10 5 10-5" />
+      <path d="m2 12 10 5 10-5" />
     </svg>
   );
 }

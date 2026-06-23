@@ -57,4 +57,7 @@ export interface VodPlayInfo {
   recordingStatus?: string; // e.g. 'recording' or 'completed'
   backdropUrl?: string;   // Backdrop/banner image URL from details page
   logoUrl?: string;       // Movie/series name picture/logo URL from details page
+  addonName?: string;     // Current stream addon name (Stremio/Nuvio source)
+  stremioType?: string;   // 'movie' or 'series' for Stremio/Nuvio stream lookup
+  stremioId?: string;     // Meta ID (movie) or episode ID (series) for stream lookup
 }

@@ -3624,6 +3624,68 @@ html.modern-ui-v3[data-theme="light"] .ufc-detail-fighter-img {
   ) !important;
 }
 
+/* Episode cards (Series detail view) */
+.modern-ui-v3 .stremio-detail-video-card {
+  background: rgba(255, 255, 255, 0.03) !important;
+  border: 1px solid rgba(255, 255, 255, 0.06) !important;
+  border-radius: 12px !important;
+  padding: 12px !important;
+  transition: all 0.28s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.modern-ui-v3 .stremio-detail-video-card:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-color: rgba(255, 255, 255, 0.15) !important;
+  box-shadow: 
+    0 8px 24px rgba(0, 0, 0, 0.25),
+    0 0 0 1px rgba(255, 255, 255, 0.03) inset !important;
+  transform: translateY(-1px) !important;
+}
+
+.modern-ui-v3 .stremio-detail-video-card.stremio-ep-watched {
+  border-color: rgba(34, 197, 94, 0.22) !important;
+  background: rgba(34, 197, 94, 0.06) !important;
+}
+
+.modern-ui-v3 .stremio-ep-thumb-wrap {
+  width: 140px !important;
+  height: 79px !important;
+  border-radius: 8px !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  background: rgba(0, 0, 0, 0.2) !important;
+  position: relative !important;
+}
+
+.modern-ui-v3 .stremio-ep-progress-track {
+  height: 4px !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-radius: 0 0 8px 8px !important;
+  overflow: hidden !important;
+}
+
+.modern-ui-v3 .stremio-ep-progress-fill {
+  background: var(--accent-primary, #00d4ff) !important;
+  box-shadow: 0 0 6px var(--accent-primary, #00d4ff) !important;
+}
+
+.modern-ui-v3 .stremio-ep-watched-badge {
+  background: #22c55e !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  box-shadow: 0 4px 10px rgba(34, 197, 94, 0.4) !important;
+}
+
+.modern-ui-v3 .stremio-ep-unwatched-badge {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  backdrop-filter: blur(4px) !important;
+  -webkit-backdrop-filter: blur(4px) !important;
+}
+
+.modern-ui-v3 .stremio-ep-unwatched-badge:hover {
+  background: rgba(255, 255, 255, 0.18) !important;
+  border-color: rgba(255, 255, 255, 0.3) !important;
+}
+
 /* Light Theme overrides for Stremio/Nuvio detail views */
 html.modern-ui-v3[data-theme="light"] .stremio-detail-back-btn,
 html.modern-ui-v3[data-theme="light"] .nuvio-folder-detail-back-btn,
@@ -3710,11 +3772,43 @@ html.modern-ui-v3[data-theme="light"] .stremio-detail-streams-loading-mini {
   border: 1px solid rgba(0, 0, 0, 0.06) !important;
 }
 
+html.modern-ui-v3[data-theme="light"] .stremio-detail-video-card {
+  background: rgba(0, 0, 0, 0.02) !important;
+  border: 1px solid rgba(0, 0, 0, 0.05) !important;
+  color: rgba(0, 0, 0, 0.8) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .stremio-detail-video-card:hover {
+  background: rgba(0, 0, 0, 0.04) !important;
+  border-color: rgba(0, 0, 0, 0.12) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .stremio-detail-video-card.stremio-ep-watched {
+  border-color: rgba(34, 197, 94, 0.25) !important;
+  background: rgba(34, 197, 94, 0.06) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .stremio-ep-unwatched-badge {
+  background: rgba(0, 0, 0, 0.05) !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .stremio-ep-unwatched-badge:hover {
+  background: rgba(0, 0, 0, 0.1) !important;
+  border-color: rgba(0, 0, 0, 0.15) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .stremio-ep-unwatched-badge svg {
+  stroke: rgba(0, 0, 0, 0.6) !important;
+}
+
 /* Modals */
 .modern-ui-v3 .stremio-addon-overlay,
 .modern-ui-v3 .stremio-modal-backdrop,
 .modern-ui-v3 .stremio-picker-overlay,
-.modern-ui-v3 .nuvio-pin-modal-overlay {
+.modern-ui-v3 .nuvio-pin-modal-overlay,
+.modern-ui-v3 .spm-overlay {
   background: rgba(8, 8, 12, 0.4) !important;
   backdrop-filter: blur(10px) !important;
   -webkit-backdrop-filter: blur(10px) !important;
@@ -3723,7 +3817,8 @@ html.modern-ui-v3[data-theme="light"] .stremio-detail-streams-loading-mini {
 .modern-ui-v3 .stremio-addon-modal,
 .modern-ui-v3 .stremio-account-modal,
 .modern-ui-v3 .stremio-picker-modal,
-.modern-ui-v3 .nuvio-pin-modal-card {
+.modern-ui-v3 .nuvio-pin-modal-card,
+.modern-ui-v3 .spm-modal {
   background: rgba(255, 255, 255, 0.06) !important;
   backdrop-filter: blur(24px) saturate(180%) !important;
   -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
@@ -3733,6 +3828,176 @@ html.modern-ui-v3[data-theme="light"] .stremio-detail-streams-loading-mini {
     inset 0 -1px 0 rgba(255, 255, 255, 0.05),
     0 20px 50px rgba(0, 0, 0, 0.6),
     0 2px 8px color-mix(in srgb, var(--accent-primary, #8b5cf6) 10%, transparent) !important;
+}
+
+/* Source Picker Modal V3 Glassmorphism overrides */
+.modern-ui-v3 .spm-modal {
+  width: 720px !important;
+  max-width: 90vw !important;
+  border-radius: 20px !important;
+}
+
+.modern-ui-v3 .spm-header {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
+  background: transparent !important;
+}
+
+.modern-ui-v3 .spm-close {
+  border-radius: 50% !important;
+  width: 32px !important;
+  height: 32px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background: rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.7)) !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.modern-ui-v3 .spm-close:hover {
+  background: rgba(255, 255, 255, 0.12) !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+  color: #fff !important;
+}
+
+.modern-ui-v3 .spm-current-source {
+  background: color-mix(in srgb, var(--accent-primary, #00d4ff) 12%, rgba(255, 255, 255, 0.04)) !important;
+  border: 1px solid color-mix(in srgb, var(--accent-primary, #00d4ff) 25%, rgba(255, 255, 255, 0.08)) !important;
+  color: var(--accent-primary, #00d4ff) !important;
+  border-radius: 12px !important;
+  padding: 3px 10px !important;
+}
+
+.modern-ui-v3 .spm-filters {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
+}
+
+.modern-ui-v3 .spm-filter-btn {
+  background: rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.7)) !important;
+  padding: 6px 14px !important;
+  border-radius: 20px !important;
+  font-size: 0.8rem !important;
+  font-weight: 600 !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.modern-ui-v3 .spm-filter-btn:hover {
+  background: rgba(255, 255, 255, 0.12) !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+  color: #fff !important;
+}
+
+.modern-ui-v3 .spm-filter-btn.active {
+  background: color-mix(in srgb, var(--accent-primary, #00d4ff) 15%, rgba(255, 255, 255, 0.05)) !important;
+  border-color: color-mix(in srgb, var(--accent-primary, #00d4ff) 35%, rgba(255, 255, 255, 0.15)) !important;
+  color: var(--accent-primary, #00d4ff) !important;
+  box-shadow: 
+    0 4px 12px rgba(0, 0, 0, 0.15),
+    0 0 10px color-mix(in srgb, var(--accent-primary, #00d4ff) 10%, transparent) !important;
+}
+
+.modern-ui-v3 .spm-item {
+  background: rgba(255, 255, 255, 0.03) !important;
+  border: 1px solid rgba(255, 255, 255, 0.06) !important;
+  border-radius: 14px !important;
+  transition: all 0.28s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.modern-ui-v3 .spm-item:hover {
+  border-color: rgba(255, 255, 255, 0.15) !important;
+  box-shadow: 
+    0 8px 24px rgba(0, 0, 0, 0.25),
+    0 0 0 1px rgba(255, 255, 255, 0.03) inset !important;
+  transform: translateY(-1px) !important;
+}
+
+.modern-ui-v3 .spm-item-active {
+  background: rgba(255, 255, 255, 0.06) !important;
+  border-color: color-mix(in srgb, var(--accent-primary, #00d4ff) 35%, rgba(255, 255, 255, 0.12)) !important;
+}
+
+.modern-ui-v3 .spm-badge {
+  border-radius: 4px !important;
+}
+
+.modern-ui-v3 .spm-item-active-tag {
+  background: color-mix(in srgb, var(--accent-primary, #00d4ff) 15%, rgba(255, 255, 255, 0.04)) !important;
+  border: 1px solid color-mix(in srgb, var(--accent-primary, #00d4ff) 35%, rgba(255, 255, 255, 0.12)) !important;
+  color: var(--accent-primary, #00d4ff) !important;
+  border-radius: 8px !important;
+}
+
+/* Light theme overrides for Source Picker Modal */
+html.modern-ui-v3[data-theme="light"] .spm-modal {
+  background: rgba(255, 255, 255, 0.45) !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  box-shadow: 
+    inset 0 1px 0 rgba(255, 255, 255, 0.6),
+    0 8px 32px rgba(0, 0, 0, 0.08),
+    0 2px 8px rgba(0, 0, 0, 0.02) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .spm-close {
+  background: rgba(0, 0, 0, 0.04) !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  color: rgba(0, 0, 0, 0.7) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .spm-close:hover {
+  background: rgba(0, 0, 0, 0.08) !important;
+  border-color: rgba(0, 0, 0, 0.15) !important;
+  color: #000 !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .spm-current-source {
+  background: color-mix(in srgb, var(--accent-primary, #00d4ff) 15%, rgba(0, 0, 0, 0.04)) !important;
+  border: 1px solid color-mix(in srgb, var(--accent-primary, #00d4ff) 35%, rgba(0, 0, 0, 0.08)) !important;
+  color: var(--accent-primary, #00d4ff) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .spm-filter-btn {
+  background: rgba(0, 0, 0, 0.04) !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  color: rgba(0, 0, 0, 0.7) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .spm-filter-btn:hover {
+  background: rgba(0, 0, 0, 0.08) !important;
+  border-color: rgba(0, 0, 0, 0.15) !important;
+  color: #000 !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .spm-filter-btn.active {
+  background: color-mix(in srgb, var(--accent-primary, #00d4ff) 15%, rgba(0, 0, 0, 0.04)) !important;
+  border-color: color-mix(in srgb, var(--accent-primary, #00d4ff) 35%, rgba(0, 0, 0, 0.08)) !important;
+  color: var(--accent-primary, #00d4ff) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .spm-item {
+  background: rgba(0, 0, 0, 0.02) !important;
+  border: 1px solid rgba(0, 0, 0, 0.05) !important;
+  color: rgba(0, 0, 0, 0.8) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .spm-item:hover {
+  background: rgba(0, 0, 0, 0.04) !important;
+  border-color: var(--accent-primary, rgba(0, 212, 255, 0.3)) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .spm-item-active {
+  background: rgba(0, 212, 255, 0.05) !important;
+  border-color: color-mix(in srgb, var(--accent-primary, #00d4ff) 35%, rgba(0, 0, 0, 0.1)) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .spm-item-active-tag {
+  background: color-mix(in srgb, var(--accent-primary, #00d4ff) 15%, rgba(0, 0, 0, 0.04)) !important;
+  border: 1px solid color-mix(in srgb, var(--accent-primary, #00d4ff) 35%, rgba(0, 0, 0, 0.08)) !important;
+  color: var(--accent-primary, #00d4ff) !important;
 }
 
 /* Settings Modal Glassmorphism Overrides */
@@ -4954,8 +5219,126 @@ html.modern-ui-v3:not([data-theme="light"]) .guide-channel-playlist-name {
   letter-spacing: -0.02em !important;
 }
 
+/* ==========================================================================
+   Nuvio V3 Liquid Glass Theme Alignment
+   ========================================================================== */
 
+/* 1. Hero Buttons */
+.modern-ui-v3 .stremio-hero-btn-watch {
+  background: rgba(255, 255, 255, 0.15) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.25) !important;
+  border-radius: 8px !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+  color: #ffffff !important;
+  font-weight: 600 !important;
+  padding: 10px 24px !important;
+  transition: all 0.2s ease !important;
+}
 
+.modern-ui-v3 .stremio-hero-btn-watch:hover {
+  background: rgba(255, 255, 255, 0.22) !important;
+  border-color: rgba(255, 255, 255, 0.35) !important;
+  color: #ffffff !important;
+  transform: translateY(-2px) !important;
+}
 
+.modern-ui-v3 .stremio-hero-btn-watch:active {
+  transform: translateY(0) !important;
+}
 
+.modern-ui-v3 .stremio-hero-btn-watchlist {
+  background: rgba(255, 255, 255, 0.06) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  border-radius: 8px !important;
+  color: rgba(255, 255, 255, 0.85) !important;
+  padding: 10px 24px !important;
+  transition: all 0.2s ease !important;
+}
 
+.modern-ui-v3 .stremio-hero-btn-watchlist:hover {
+  background: rgba(255, 255, 255, 0.12) !important;
+  border-color: rgba(255, 255, 255, 0.22) !important;
+  color: #ffffff !important;
+  transform: translateY(-2px) !important;
+}
+
+.modern-ui-v3 .stremio-hero-btn-watchlist.in-watchlist {
+  background: rgba(0, 212, 255, 0.12) !important;
+  border-color: rgba(0, 212, 255, 0.3) !important;
+  color: #00d4ff !important;
+}
+
+.modern-ui-v3 .stremio-hero-btn-watchlist.in-watchlist:hover {
+  background: rgba(0, 212, 255, 0.18) !important;
+  border-color: rgba(0, 212, 255, 0.4) !important;
+}
+
+.modern-ui-v3 .stremio-hero-btn-watchlist:active {
+  transform: translateY(0) !important;
+}
+
+/* 2. Genre Tags */
+.modern-ui-v3 .stremio-hero-genre-tag {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  border-radius: 20px !important;
+  padding: 3px 12px !important;
+  font-size: 0.75rem !important;
+  font-weight: 500 !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+}
+
+/* 3. Filter Catalogs Bar */
+.modern-ui-v3 .nuvio-catalog-filter {
+  background: rgba(255, 255, 255, 0.04) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06) !important;
+}
+
+/* 4. Thumbnail Cards */
+.modern-ui-v3 .nuvio-card,
+.modern-ui-v3 .nuvio-cw-card,
+.modern-ui-v3 .nuvio-cw-wide-card,
+.modern-ui-v3 .nuvio-cw-poster-card,
+.modern-ui-v3 .nuvio-folder-card {
+  border-radius: 10px !important;
+  overflow: hidden !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  transition: all 0.2s ease !important;
+}
+
+.modern-ui-v3 .nuvio-card:hover,
+.modern-ui-v3 .nuvio-cw-card:hover,
+.modern-ui-v3 .nuvio-cw-wide-card:hover,
+.modern-ui-v3 .nuvio-cw-poster-card:hover,
+.modern-ui-v3 .nuvio-folder-card:hover {
+  border-color: rgba(255, 255, 255, 0.2) !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4),
+              0 0 0 1px rgba(139, 92, 246, 0.2) !important;
+  transform: translateY(-2px) !important;
+}
+
+/* 5. Section Headers */
+.modern-ui-v3 .nuvio-row-title {
+  font-family: 'Inter', sans-serif !important;
+  font-weight: 700 !important;
+  font-size: 1rem !important;
+  letter-spacing: -0.01em !important;
+  color: rgba(255, 255, 255, 0.95) !important;
+}
+
+/* 6. Hero Banner Container */
+.modern-ui-v3 .stremio-hero-banner {
+  border-radius: 12px !important;
+  overflow: hidden !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.04),
+              0 20px 60px rgba(0, 0, 0, 0.5) !important;
+}

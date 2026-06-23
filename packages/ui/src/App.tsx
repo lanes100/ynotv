@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 const AUTO_SYNC_CHECK_INTERVAL_MS = 10 * 60 * 1000;
 let hasStartupAutoSyncTriggered = false;
 import { invoke } from '@tauri-apps/api/core';
-import type { StremioStreamPickerMode, StremioMeta, BadgeSource, StreamAutoPlayMode, StreamAutoPlaySourceScope } from './types/stremio';
+import type { StremioStream, StremioStreamPickerMode, StremioMeta, BadgeSource, StreamAutoPlayMode, StreamAutoPlaySourceScope } from './types/stremio';
 import { checkForUpdates, checkForUpdatesSilent } from './services/updater';
 import { Settings } from './components/Settings';
 import type { SettingsTabId } from './components/settings/SettingsSidebar';
@@ -1760,7 +1760,10 @@ function App() {
     nextEpisode?: number;
   } | null>(null);
   const stremioMovieRef = useRef<{ metaId: string; name: string; poster?: string } | null>(null);
-  const stremioMetaRef = useRef<StremioMeta | null>(null);  useEffect(() => {
+  const stremioMetaRef = useRef<StremioMeta | null>(null);
+  const stremioEpisodeVideoRef = useRef<any>(null);
+  const stremioIsNuvioRef = useRef(false);
+  useEffect(() => {
     const handler = async (e: Event) => {
       try {
         const detail = (e as CustomEvent).detail;
@@ -1778,6 +1781,8 @@ function App() {
 
         const isNuvio = !!detail.isNuvio;
         stremioMetaRef.current = meta;
+        stremioEpisodeVideoRef.current = episodeVideo || null;
+        stremioIsNuvioRef.current = isNuvio;
         const watchStore = useStremioWatchStore.getState();
 
         if (meta.type === 'series' && episodeVideo) {
@@ -1862,6 +1867,9 @@ function App() {
           episodeId: episodeVideo?.id,
           backdropUrl: meta.background,
           logoUrl: meta.logo,
+          addonName: stream.addonName,
+          stremioType: isSeries ? 'series' : 'movie',
+          stremioId: isSeries ? episodeVideo.id : meta.id,
         });
 
 
@@ -1948,6 +1956,17 @@ function App() {
     };
     window.addEventListener('ynotv:stremio-play', handler);
     return () => window.removeEventListener('ynotv:stremio-play', handler);
+  }, []);
+
+  // Stream switch handler for SourcePickerModal
+  const handleSwitchStream = useCallback((stream: StremioStream) => {
+    const meta = stremioMetaRef.current;
+    const episodeVideo = stremioEpisodeVideoRef.current;
+    const isNuvio = stremioIsNuvioRef.current;
+    if (!meta) return;
+    window.dispatchEvent(new CustomEvent('ynotv:stremio-play', {
+      detail: { stream, meta, episodeVideo, isNuvio },
+    }));
   }, []);
 
   // ==========================================================================
@@ -3480,6 +3499,7 @@ function App() {
         onSetAspectRatio={handleSetAspectRatio}
         onNavigateDvr={() => setActiveView('dvr')}
         onReplayStream={currentChannel ? () => handlePlayChannelWrapper(currentChannel) : undefined}
+        onSwitchStream={handleSwitchStream}
         overlay={
           <FailoverGroupOverlay
             currentChannel={currentChannel}
