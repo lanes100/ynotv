@@ -6935,3 +6935,317 @@ html.modern-ui-v3[data-theme="light"] .advanced-search-btn.secondary:hover {
 }
 
 
+/* ============================================
+   V3 LIQUID GLASS — NOW PLAYING BAR
+   ============================================ */
+
+/* Floating glass panel — lifts off the bottom edge */
+html.modern-ui-v3 .now-playing-bar {
+  bottom: 12px !important;
+  left: 16px !important;
+  right: 16px !important;
+  border-radius: 20px !important;
+  background: rgba(8, 7, 16, 0.78) !important;
+  backdrop-filter: blur(40px) saturate(160%) brightness(0.9) !important;
+  -webkit-backdrop-filter: blur(40px) saturate(160%) brightness(0.9) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.04),
+    0 12px 48px rgba(0, 0, 0, 0.65),
+    0 4px 16px rgba(0, 0, 0, 0.45),
+    0 0 0 1px rgba(255, 255, 255, 0.04) !important;
+  padding: 12px 20px !important;
+}
+
+/* Smooth slide-in from below for v3 */
+html.modern-ui-v3 .now-playing-bar.hidden {
+  transform: translateY(calc(100% + 12px)) !important;
+}
+
+html.modern-ui-v3 .now-playing-bar.visible {
+  transform: translateY(0) !important;
+}
+
+/* Overlay slot adjusts for floating bar */
+html.modern-ui-v3 .now-playing-bar .npb-overlay-slot {
+  margin-bottom: 8px !important;
+  padding-right: 0 !important;
+}
+
+/* ── Info row divider — subtle gradient ── */
+html.modern-ui-v3 .now-playing-bar .npb-divider {
+  background: linear-gradient(to bottom,
+    transparent 0%,
+    rgba(255, 255, 255, 0.14) 25%,
+    rgba(255, 255, 255, 0.14) 75%,
+    transparent 100%
+  ) !important;
+}
+
+/* ── Channel logo — glass pill ── */
+html.modern-ui-v3 .now-playing-bar .npb-channel-logo {
+  border-radius: 8px !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* ── Text hierarchy ── */
+html.modern-ui-v3 .now-playing-bar .npb-channel-name {
+  color: rgba(255, 255, 255, 0.98) !important;
+  letter-spacing: 0.01em !important;
+}
+
+html.modern-ui-v3 .now-playing-bar .npb-program-title {
+  color: rgba(255, 255, 255, 0.6) !important;
+}
+
+html.modern-ui-v3 .now-playing-bar .npb-program-desc {
+  color: rgba(255, 255, 255, 0.42) !important;
+}
+
+html.modern-ui-v3 .now-playing-bar .npb-time-elapsed,
+html.modern-ui-v3 .now-playing-bar .npb-time-remaining {
+  color: rgba(255, 255, 255, 0.55) !important;
+}
+
+/* ── Progress bars — accent glow ── */
+html.modern-ui-v3 .now-playing-bar .npb-progress-bar {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-radius: 6px !important;
+  height: 4px !important;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.3) !important;
+}
+
+html.modern-ui-v3 .now-playing-bar .npb-progress-fill {
+  background: linear-gradient(90deg,
+    var(--accent-primary, #00d4ff) 0%,
+    color-mix(in srgb, var(--accent-primary, #00d4ff) 75%, white) 100%
+  ) !important;
+  box-shadow: 0 0 8px color-mix(in srgb, var(--accent-primary, #00d4ff) 60%, transparent) !important;
+  border-radius: 6px !important;
+}
+
+/* Interactive progress bar hover expand */
+html.modern-ui-v3 .now-playing-bar .npb-progress-interactive {
+  height: 4px !important;
+  border-radius: 6px !important;
+}
+
+html.modern-ui-v3 .now-playing-bar .npb-progress-interactive.active {
+  height: 7px !important;
+}
+
+/* Scrubber handle — glass white bubble */
+html.modern-ui-v3 .now-playing-bar .npb-scrubber-handle {
+  background: #ffffff !important;
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--accent-primary, #00d4ff) 40%, transparent),
+    0 2px 8px rgba(0, 0, 0, 0.4) !important;
+}
+
+/* Time tooltip — glass pill */
+html.modern-ui-v3 .now-playing-bar .npb-time-tooltip {
+  background: rgba(15, 12, 25, 0.88) !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  border-radius: 8px !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 4px 16px rgba(0, 0, 0, 0.5) !important;
+  color: rgba(255, 255, 255, 0.95) !important;
+}
+
+html.modern-ui-v3 .now-playing-bar .npb-time-tooltip::after {
+  border-top-color: rgba(15, 12, 25, 0.88) !important;
+}
+
+/* ── TimeShift scrubber ── */
+html.modern-ui-v3 .now-playing-bar .npb-ts-scrubber {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-radius: 6px !important;
+  height: 5px !important;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.3) !important;
+}
+
+html.modern-ui-v3 .now-playing-bar .npb-ts-scrubber:hover {
+  height: 8px !important;
+}
+
+html.modern-ui-v3 .now-playing-bar .npb-ts-fill {
+  background: linear-gradient(90deg,
+    var(--accent-primary, #00d4ff) 0%,
+    color-mix(in srgb, var(--accent-primary, #00d4ff) 75%, white) 100%
+  ) !important;
+  box-shadow: 0 0 8px color-mix(in srgb, var(--accent-primary, #00d4ff) 50%, transparent) !important;
+  border-radius: 6px !important;
+}
+
+html.modern-ui-v3 .now-playing-bar .npb-ts-handle {
+  background: #ffffff !important;
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--accent-primary, #00d4ff) 40%, transparent),
+    0 2px 8px rgba(0, 0, 0, 0.4) !important;
+}
+
+html.modern-ui-v3 .now-playing-bar .npb-live-edge-marker {
+  background: #ff4560 !important;
+  box-shadow: 0 0 6px rgba(255, 69, 96, 0.7) !important;
+}
+
+html.modern-ui-v3 .now-playing-bar .npb-live-badge {
+  color: #ff4560 !important;
+  text-shadow: 0 0 8px rgba(255, 69, 96, 0.6) !important;
+}
+
+html.modern-ui-v3 .now-playing-bar .npb-behind-live {
+  color: rgba(255, 196, 0, 0.9) !important;
+}
+
+html.modern-ui-v3 .now-playing-bar .npb-timeshift-window {
+  color: rgba(255, 255, 255, 0.38) !important;
+}
+
+/* ── Control buttons — glass pill style ── */
+html.modern-ui-v3 .now-playing-bar .npb-btn {
+  background: rgba(255, 255, 255, 0.06) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 12px !important;
+  color: rgba(255, 255, 255, 0.88) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 2px 6px rgba(0, 0, 0, 0.2) !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+html.modern-ui-v3 .now-playing-bar .npb-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.13) !important;
+  border-color: rgba(255, 255, 255, 0.22) !important;
+  color: #ffffff !important;
+  transform: translateY(-1px) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    0 4px 14px rgba(0, 0, 0, 0.3) !important;
+}
+
+html.modern-ui-v3 .now-playing-bar .npb-btn:active:not(:disabled) {
+  transform: scale(0.94) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 1px 4px rgba(0, 0, 0, 0.2) !important;
+}
+
+html.modern-ui-v3 .now-playing-bar .npb-btn:disabled {
+  opacity: 0.25 !important;
+}
+
+/* ── Volume slider ── */
+html.modern-ui-v3 .now-playing-bar .npb-volume-slider {
+  background: rgba(255, 255, 255, 0.1) !important;
+  border-radius: 4px !important;
+}
+
+html.modern-ui-v3 .now-playing-bar .npb-volume-slider::-webkit-slider-thumb {
+  background: #ffffff !important;
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--accent-primary, #00d4ff) 35%, transparent),
+    0 1px 4px rgba(0, 0, 0, 0.35) !important;
+}
+
+html.modern-ui-v3 .now-playing-bar .npb-volume-value {
+  color: rgba(255, 255, 255, 0.45) !important;
+}
+
+/* ── Divider between extra controls ── */
+html.modern-ui-v3 .now-playing-bar .npb-extra-controls,
+html.modern-ui-v3 .now-playing-bar .npb-aspect-controls {
+  border-left-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* ── Aspect ratio popup — glass card ── */
+html.modern-ui-v3 .now-playing-bar .npb-aspect-menu {
+  background: rgba(12, 10, 22, 0.82) !important;
+  backdrop-filter: blur(20px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  border-radius: 14px !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    0 12px 40px rgba(0, 0, 0, 0.55) !important;
+}
+
+html.modern-ui-v3 .now-playing-bar .npb-aspect-item {
+  border-radius: 8px !important;
+  color: rgba(255, 255, 255, 0.75) !important;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+html.modern-ui-v3 .now-playing-bar .npb-aspect-item:hover {
+  background: rgba(255, 255, 255, 0.1) !important;
+  color: #fff !important;
+}
+
+html.modern-ui-v3 .now-playing-bar .npb-aspect-item.active {
+  background: color-mix(in srgb, var(--accent-primary, #00d4ff) 18%, transparent) !important;
+  color: var(--accent-primary, #00d4ff) !important;
+  font-weight: 600 !important;
+}
+
+/* ── Mode toggle buttons ── */
+html.modern-ui-v3 .now-playing-bar .npb-scrub-mode-btn {
+  border-radius: 20px !important;
+  background: color-mix(in srgb, var(--accent-primary, #00d4ff) 8%, transparent) !important;
+  border-color: color-mix(in srgb, var(--accent-primary, #00d4ff) 28%, transparent) !important;
+  color: color-mix(in srgb, var(--accent-primary, #00d4ff) 90%, white) !important;
+}
+
+html.modern-ui-v3 .now-playing-bar .npb-scrub-mode-btn:hover {
+  background: color-mix(in srgb, var(--accent-primary, #00d4ff) 18%, transparent) !important;
+  border-color: color-mix(in srgb, var(--accent-primary, #00d4ff) 55%, transparent) !important;
+  color: var(--accent-primary, #00d4ff) !important;
+  transform: translateY(-1px) !important;
+}
+
+html.modern-ui-v3 .now-playing-bar .npb-scrub-mode-btn--back {
+  background: rgba(160, 120, 255, 0.08) !important;
+  border-color: rgba(160, 120, 255, 0.28) !important;
+  color: rgba(160, 120, 255, 0.88) !important;
+}
+
+html.modern-ui-v3 .now-playing-bar .npb-scrub-mode-btn--back:hover {
+  background: rgba(160, 120, 255, 0.18) !important;
+  border-color: rgba(160, 120, 255, 0.55) !important;
+  color: #b08fff !important;
+  transform: translateY(-1px) !important;
+}
+
+/* ── Go Live / Catch Up button ── */
+html.modern-ui-v3 .now-playing-bar .npb-live-btn {
+  border-radius: 20px !important;
+  background: rgba(255, 64, 96, 0.1) !important;
+  border-color: rgba(255, 64, 96, 0.32) !important;
+  color: #ff6080 !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 2px 8px rgba(255, 64, 96, 0.15) !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+html.modern-ui-v3 .now-playing-bar .npb-live-btn:hover {
+  background: rgba(255, 64, 96, 0.22) !important;
+  border-color: rgba(255, 64, 96, 0.65) !important;
+  color: #ff8099 !important;
+  transform: translateY(-1px) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 4px 14px rgba(255, 64, 96, 0.3) !important;
+}
+
+/* ── Empty state ── */
+html.modern-ui-v3 .now-playing-bar .npb-empty-state span,
+html.modern-ui-v3 .now-playing-bar .npb-empty-state-text span {
+  color: rgba(255, 255, 255, 0.3) !important;
+}
+
