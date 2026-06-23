@@ -3598,34 +3598,46 @@ function App() {
       />
 
       {/* V3 Liquid Glass Background */}
-      {liveTvDesign === 'v3' && (activeView === 'guide' || activeView === 'movies' || activeView === 'series' || activeView === 'dvr' || activeView === 'sports' || activeView === 'stremio' || activeView === 'nuvio') && !guideTransparent && (
-        <div 
-          className={`livetv-liquid-glass-bg ${randomScheme}`}
-          style={
-            previewVideoRect && currentChannel && playing
-              ? {
-                  clipPath: `polygon(
-                    0% 0%, 
-                    100% 0%, 
-                    100% 100%, 
-                    0% 100%, 
-                    0% 0%, 
-                    ${previewVideoRect.left}px ${previewVideoRect.top}px, 
-                    ${previewVideoRect.left}px ${previewVideoRect.top + previewVideoRect.height}px, 
-                    ${previewVideoRect.left + previewVideoRect.width}px ${previewVideoRect.top + previewVideoRect.height}px, 
-                    ${previewVideoRect.left + previewVideoRect.width}px ${previewVideoRect.top}px, 
-                    ${previewVideoRect.left}px ${previewVideoRect.top}px
-                  )`
-                }
-              : undefined
-          }
-        >
-          <div className="glass-blob blob-1" />
-          <div className="glass-blob blob-2" />
-          <div className="glass-blob blob-3" />
-          <div className="glass-blob blob-4" />
-        </div>
-      )}
+      {(() => {
+        const isPreviewView = activeView === 'guide' || activeView === 'sports';
+        const hasPreviewRect = !!previewVideoRect;
+        const shouldRenderGlassBg = liveTvDesign === 'v3' && (
+          (isPreviewView && !guideTransparent && (!currentChannel || hasPreviewRect)) ||
+          ((activeView === 'movies' || activeView === 'series' || activeView === 'dvr' || activeView === 'stremio' || activeView === 'nuvio') && !guideTransparent) ||
+          (activeView === 'none' && !currentChannel)
+        );
+
+        if (!shouldRenderGlassBg) return null;
+
+        return (
+          <div 
+            className={`livetv-liquid-glass-bg ${randomScheme}`}
+            style={
+              previewVideoRect && currentChannel
+                ? {
+                    clipPath: `polygon(
+                      0% 0%, 
+                      100% 0%, 
+                      100% 100%, 
+                      0% 100%, 
+                      0% 0%, 
+                      ${previewVideoRect.left}px ${previewVideoRect.top}px, 
+                      ${previewVideoRect.left}px ${previewVideoRect.top + previewVideoRect.height}px, 
+                      ${previewVideoRect.left + previewVideoRect.width}px ${previewVideoRect.top + previewVideoRect.height}px, 
+                      ${previewVideoRect.left + previewVideoRect.width}px ${previewVideoRect.top}px, 
+                      ${previewVideoRect.left}px ${previewVideoRect.top}px
+                    )`
+                  }
+                : undefined
+            }
+          >
+            <div className="glass-blob blob-1" />
+            <div className="glass-blob blob-2" />
+            <div className="glass-blob blob-3" />
+            <div className="glass-blob blob-4" />
+          </div>
+        );
+      })()}
 
       {/* Category Strip */}
       <CategoryStrip

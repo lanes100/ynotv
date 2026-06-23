@@ -1757,27 +1757,22 @@ function NuvioPageContent({
       {/* Main Content */}
       <div className={`nuvio-main ${nuvioView === 'home' ? 'nuvio-main-home' : ''} ${nuvioView === 'search' ? 'nuvio-main-search' : ''} ${nuvioActiveMeta ? 'nuvio-page-hide-content' : ''}`}>
         {!token ? (
-          <div style={{ maxWidth: '420px', margin: '60px auto', display: 'flex', flexDirection: 'column', gap: '16px', padding: '0 20px' }}>
-            <div style={{ textAlign: 'center' }}>
+          <div className="nuvio-login-container">
+            <div className="nuvio-login-header">
               <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary, #00d4ff)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: '12px' }}>
                 <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
                 <circle cx="9" cy="7" r="4" />
                 <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
                 <path d="M16 3.13a4 4 0 0 1 0 7.75" />
               </svg>
-              <h3 style={{ color: '#fff', margin: '0 0 6px 0', fontSize: '1.05rem', fontWeight: 600 }}>Nuvio Sync Offline</h3>
-              <p style={{ margin: '0 0 16px 0', fontSize: '0.82rem', color: 'rgba(255,255,255,0.5)', lineHeight: 1.5 }}>
+              <h3 className="nuvio-login-title">Nuvio Sync Offline</h3>
+              <p className="nuvio-login-desc">
                 Sign in to synchronize your custom collections, starred library items, and continue watching progress across devices.
               </p>
             </div>
 
-            <div style={{
-              background: 'rgba(255,255,255,0.02)',
-              border: '1px solid rgba(255,255,255,0.05)',
-              borderRadius: '8px',
-              padding: '20px'
-            }}>
-              <h4 style={{ margin: '0 0 14px 0', fontSize: '0.9rem', fontWeight: 600 }}>
+            <div className="nuvio-login-card">
+              <h4 className="nuvio-login-card-title">
                 {isLoginMode ? 'Sign In to Nuvio' : 'Create a Nuvio Account'}
               </h4>
               <form onSubmit={handleAuthSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -1786,34 +1781,14 @@ function NuvioPageContent({
                   placeholder="Email Address"
                   value={loginEmail}
                   onChange={(e) => setLoginEmail(e.target.value)}
-                  style={{
-                    width: '100%',
-                    background: 'rgba(0,0,0,0.2)',
-                    border: '1px solid rgba(255,255,255,0.08)',
-                    borderRadius: '6px',
-                    padding: '10px',
-                    fontSize: '0.85rem',
-                    color: '#fff',
-                    outline: 'none',
-                    boxSizing: 'border-box'
-                  }}
+                  className="nuvio-login-input"
                 />
                 <input
                   type="password"
                   placeholder="Password"
                   value={loginPassword}
                   onChange={(e) => setLoginPassword(e.target.value)}
-                  style={{
-                    width: '100%',
-                    background: 'rgba(0,0,0,0.2)',
-                    border: '1px solid rgba(255,255,255,0.08)',
-                    borderRadius: '6px',
-                    padding: '10px',
-                    fontSize: '0.85rem',
-                    color: '#fff',
-                    outline: 'none',
-                    boxSizing: 'border-box'
-                  }}
+                  className="nuvio-login-input"
                 />
                 {loginError && (
                   <div style={{ color: '#ff4f4f', fontSize: '0.75rem' }}>{loginError}</div>
@@ -1839,14 +1814,7 @@ function NuvioPageContent({
                   <button
                     type="button"
                     onClick={() => setIsLoginMode(!isLoginMode)}
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      color: 'rgba(255,255,255,0.6)',
-                      fontSize: '0.75rem',
-                      cursor: 'pointer',
-                      textDecoration: 'underline'
-                    }}
+                    className="nuvio-login-toggle-btn"
                   >
                     {isLoginMode ? 'Need an account? Register' : 'Have an account? Login'}
                   </button>
@@ -1854,13 +1822,7 @@ function NuvioPageContent({
               </form>
             </div>
 
-            <p style={{
-              margin: '0',
-              fontSize: '0.7rem',
-              color: 'rgba(255,255,255,0.35)',
-              lineHeight: 1.5,
-              textAlign: 'center'
-            }}>
+            <p className="nuvio-login-disclaimer">
               Disclaimer: ynoTV is an independent open source desktop client and is not affiliated with or endorsed by Nuvio. Your login credentials are only used to connect to Nuvio's servers directly to sync &mdash; ynoTV never stores or transmits them.
             </p>
 

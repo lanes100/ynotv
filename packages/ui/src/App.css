@@ -437,6 +437,8 @@
   pointer-events: auto;
   color: white;
   min-height: 280px;
+  position: relative;
+  z-index: 80;
 }
 
 .placeholder__logo {

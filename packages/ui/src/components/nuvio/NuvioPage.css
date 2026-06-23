@@ -1847,4 +1847,88 @@ select.nuvio-input option {
   background: rgba(255, 255, 255, 0.15);
 }
 
+/* Nuvio Login Page Styles */
+.nuvio-login-container {
+  max-width: 420px;
+  margin: 60px auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 0 20px;
+}
+
+.nuvio-login-header {
+  text-align: center;
+}
+
+.nuvio-login-title {
+  color: var(--text-primary, #fff);
+  margin: 0 0 6px 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.nuvio-login-desc {
+  margin: 0 0 16px 0;
+  font-size: 0.82rem;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.5));
+  line-height: 1.5;
+}
+
+.nuvio-login-card {
+  background: var(--surface-color, rgba(255, 255, 255, 0.02));
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.05));
+  border-radius: 8px;
+  padding: 20px;
+}
+
+.nuvio-login-card-title {
+  margin: 0 0 14px 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-primary, #fff);
+}
+
+.nuvio-login-input {
+  width: 100%;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.08));
+  border-radius: 6px;
+  padding: 10px;
+  font-size: 0.85rem;
+  color: var(--text-primary, #fff);
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color 0.2s;
+}
+
+.nuvio-login-input:focus {
+  border-color: var(--accent-primary, #00d4ff);
+}
+
+.nuvio-login-input::placeholder {
+  color: var(--text-secondary, rgba(255, 255, 255, 0.35));
+}
+
+.nuvio-login-toggle-btn {
+  background: none;
+  border: none;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.6));
+  font-size: 0.75rem;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.nuvio-login-toggle-btn:hover {
+  color: var(--text-primary, #fff);
+}
+
+.nuvio-login-disclaimer {
+  margin: 0;
+  font-size: 0.7rem;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.35));
+  line-height: 1.5;
+  text-align: center;
+}
+
 

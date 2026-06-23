@@ -1729,16 +1729,62 @@
   bottom: 0;
   z-index: 75;
   overflow: hidden;
-  background: #07080d; /* Deep glass dark blue-black base */
+  background: linear-gradient(135deg, 
+    #02000a 0%, 
+    #070114 25%, 
+    #02050b 50%, 
+    #09031c 75%, 
+    #01030a 100%
+  ) !important;
   pointer-events: none;
   transition: opacity 0.5s ease;
+}
+
+.livetv-liquid-glass-bg::before {
+  content: '';
+  position: absolute;
+  width: 600px;
+  height: 600px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(139, 92, 246, 0.15) 0%, transparent 70%);
+  top: -200px;
+  left: -100px;
+  pointer-events: none;
+  z-index: 1;
+  animation: ambient-float-1 20s infinite ease-in-out alternate;
+}
+
+.livetv-liquid-glass-bg::after {
+  content: '';
+  position: absolute;
+  width: 500px;
+  height: 500px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(59, 130, 246, 0.12) 0%, transparent 70%);
+  bottom: -150px;
+  right: -100px;
+  pointer-events: none;
+  z-index: 1;
+  animation: ambient-float-2 25s infinite ease-in-out alternate;
+}
+
+@keyframes ambient-float-1 {
+  0% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(60px, 40px) scale(1.08); }
+  100% { transform: translate(0, 0) scale(1); }
+}
+
+@keyframes ambient-float-2 {
+  0% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(-45px, 60px) scale(1.12); }
+  100% { transform: translate(0, 0) scale(1); }
 }
 
 .livetv-liquid-glass-bg .glass-blob {
   position: absolute;
   border-radius: 50%;
-  filter: blur(110px);
-  opacity: 0.45;
+  filter: blur(120px);
+  opacity: 0.18 !important;
   mix-blend-mode: screen;
   will-change: transform;
 }
@@ -1897,6 +1943,15 @@
   100% { transform: translate(6vw, -6vh) scale(0.95) rotate(-90deg); }
 }
 
+/* Placeholder styling for v3 UI - transparent, borderless, just the SVG logo on the background */
+.modern-ui-v3 .placeholder {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
 /* 2. Floating Glassmorphism Panels Layout */
 .modern-ui-v3 .category-strip {
   top: 48px !important;
@@ -1905,12 +1960,14 @@
   height: calc(100% - 64px) !important;
   border-radius: 20px !important;
   border: 1px solid rgba(255, 255, 255, 0.12) !important;
-  background: rgba(12, 14, 24, 0.35) !important;
-  backdrop-filter: blur(35px) saturate(200%) !important;
-  -webkit-backdrop-filter: blur(35px) saturate(200%) !important;
+  background: rgba(255, 255, 255, 0.06) !important;
+  backdrop-filter: blur(24px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
   box-shadow: 
-    0 12px 40px rgba(0, 0, 0, 0.35),
-    0 0 0 1px rgba(255, 255, 255, 0.05) inset !important;
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.05),
+    0 8px 32px rgba(0, 0, 0, 0.3),
+    0 2px 8px color-mix(in srgb, var(--accent-primary, #8b5cf6) 10%, transparent) !important;
   transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease !important;
 }
 
@@ -1934,13 +1991,24 @@
 .modern-ui-v3 .guide-grid-section {
   border-radius: 24px !important;
   border: 1px solid rgba(255, 255, 255, 0.12) !important;
-  background: rgba(12, 14, 24, 0.35) !important;
-  backdrop-filter: blur(35px) saturate(200%) !important;
-  -webkit-backdrop-filter: blur(35px) saturate(200%) !important;
+  background: rgba(255, 255, 255, 0.06) !important;
+  backdrop-filter: blur(24px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
   box-shadow: 
-    0 12px 40px rgba(0, 0, 0, 0.35),
-    0 0 0 1px rgba(255, 255, 255, 0.05) inset !important;
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.05),
+    0 8px 32px rgba(0, 0, 0, 0.3),
+    0 2px 8px color-mix(in srgb, var(--accent-primary, #8b5cf6) 10%, transparent) !important;
   overflow: hidden;
+}
+
+/* EPG Transparent overlay grid alignment to not overlap sidebar in v3 */
+.modern-ui-v3 .guide-panel.guide-transparent-mode.with-categories .guide-grid-section {
+  left: calc(var(--category-strip-content-width, 260px) + 32px) !important;
+}
+
+.modern-ui-v3 .guide-panel.guide-transparent-mode:not(.with-categories) .guide-grid-section {
+  left: 16px !important;
 }
 
 /* 3. Rounded Floating Info & Preview Panes */
@@ -1951,13 +2019,15 @@
 
 .modern-ui-v3 .guide-info-pane {
   border-radius: 20px !important;
-  border: 1px solid rgba(255, 255, 255, 0.1) !important;
-  background: rgba(12, 14, 24, 0.35) !important;
-  backdrop-filter: blur(35px) saturate(200%) !important;
-  -webkit-backdrop-filter: blur(35px) saturate(200%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  background: rgba(255, 255, 255, 0.06) !important;
+  backdrop-filter: blur(24px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
   box-shadow: 
-    0 8px 32px rgba(0, 0, 0, 0.25),
-    0 0 0 1px rgba(255, 255, 255, 0.03) inset !important;
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.05),
+    0 8px 32px rgba(0, 0, 0, 0.3),
+    0 2px 8px color-mix(in srgb, var(--accent-primary, #8b5cf6) 10%, transparent) !important;
   margin-left: 16px !important;
   margin-bottom: 16px !important;
   padding: 20px !important;
@@ -1965,21 +2035,44 @@
 
 .modern-ui-v3 .guide-preview-placeholder {
   border-radius: 20px !important;
-  border: 1px solid rgba(255, 255, 255, 0.1) !important;
-  background: rgba(12, 14, 24, 0.3) !important;
-  backdrop-filter: blur(35px) saturate(200%) !important;
-  -webkit-backdrop-filter: blur(35px) saturate(200%) !important;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  background: rgba(255, 255, 255, 0.06) !important;
+  backdrop-filter: blur(24px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
+  box-shadow: 
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.05),
+    0 8px 32px rgba(0, 0, 0, 0.25) !important;
 }
 
 .modern-ui-v3 .guide-preview-minibar {
   border-radius: 16px !important;
-  border: 1px solid rgba(255, 255, 255, 0.12) !important;
-  background: rgba(10, 12, 22, 0.6) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  background: rgba(15, 12, 25, 0.75) !important;
   backdrop-filter: blur(20px) saturate(180%) !important;
   -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3) !important;
+  box-shadow: 
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.05),
+    0 12px 32px rgba(0, 0, 0, 0.5) !important;
   margin: 12px !important;
+  padding: 4px 8px !important;
+}
+
+.modern-ui-v3 .guide-minibar-btn {
+  background: transparent !important;
+  color: rgba(255, 255, 255, 0.8) !important;
+  backdrop-filter: none !important;
+}
+
+.modern-ui-v3 .guide-minibar-btn:hover {
+  background: rgba(255, 255, 255, 0.12) !important;
+  color: #fff !important;
+  transform: scale(1.05) !important;
+}
+
+.modern-ui-v3 .guide-minibar-btn:active {
+  transform: scale(0.95) !important;
 }
 
 /* 4. Soft Gradient Dividers */
@@ -2028,6 +2121,11 @@
   ) !important;
 }
 
+/* Allow program block hover effects to overflow the grid into the channel column */
+.modern-ui-v3 .guide-program-grid {
+  overflow: visible !important;
+}
+
 /* 5. Rounded Program Blocks & Hover Animations */
 .modern-ui-v3 .program-block {
   top: 4px;
@@ -2040,35 +2138,28 @@
 }
 
 .modern-ui-v3 .program-block:hover {
-  background: rgba(255, 255, 255, 0.09) !important;
-  border-color: rgba(255, 255, 255, 0.15) !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
   box-shadow: 
-    0 8px 24px rgba(0, 0, 0, 0.3),
-    0 0 0 1px rgba(255, 255, 255, 0.05) inset !important;
-  transform: translateY(-1px) scale(1.01);
-  z-index: 20;
+    inset 0 1px 0 rgba(255, 255, 255, 0.15),
+    0 8px 24px rgba(0, 0, 0, 0.3) !important;
+  transform: translateY(-1px) scale(1.01) !important;
+  transition: all 0.2s ease !important;
+  z-index: 20 !important;
 }
 
 .modern-ui-v3 .program-block.current {
-  background: linear-gradient(135deg,
-    color-mix(in srgb, var(--accent-primary, #00d4ff) 12%, rgba(255, 255, 255, 0.04)) 0%,
-    color-mix(in srgb, var(--accent-primary, #00d4ff) 6%, rgba(255, 255, 255, 0.02)) 100%
-  ) !important;
-  border-color: color-mix(in srgb, var(--accent-primary, #00d4ff) 40%, transparent) !important;
-  box-shadow:
-    0 0 0 1px color-mix(in srgb, var(--accent-primary, #00d4ff) 20%, transparent) inset,
-    0 4px 12px rgba(0, 0, 0, 0.15) !important;
+  background: color-mix(in srgb, var(--accent-primary, #8b5cf6) 18%, transparent) !important;
+  border: 1px solid color-mix(in srgb, var(--accent-primary, #8b5cf6) 40%, transparent) !important;
+  box-shadow: 0 0 20px color-mix(in srgb, var(--accent-primary, #8b5cf6) 20%, transparent) !important;
 }
 
 .modern-ui-v3 .program-block.current:hover {
-  background: linear-gradient(135deg,
-    color-mix(in srgb, var(--accent-primary, #00d4ff) 16%, rgba(255, 255, 255, 0.06)) 0%,
-    color-mix(in srgb, var(--accent-primary, #00d4ff) 8%, rgba(255, 255, 255, 0.03)) 100%
-  ) !important;
-  border-color: var(--accent-primary, #00d4ff) !important;
-  box-shadow:
-    0 0 15px color-mix(in srgb, var(--accent-primary, #00d4ff) 30%, transparent),
-    0 4px 16px rgba(0, 0, 0, 0.25) !important;
+  background: color-mix(in srgb, var(--accent-primary, #8b5cf6) 25%, transparent) !important;
+  border-color: color-mix(in srgb, var(--accent-primary, #8b5cf6) 60%, transparent) !important;
+  box-shadow: 0 0 25px color-mix(in srgb, var(--accent-primary, #8b5cf6) 30%, transparent) !important;
+  transform: translateY(-1px) scale(1.01) !important;
+  z-index: 20 !important;
 }
 
 .modern-ui-v3 .program-block.past {
@@ -2134,6 +2225,169 @@
   border-radius: 12px !important;
 }
 
+/* 8a. LiveTV Top Categories match VOD sidebar styling in V3 */
+.modern-ui-v3 .category-strip-top .category-list-bar:not(.custom-group-item) {
+  border-radius: 0 !important;
+  margin: 2px 8px !important;
+  width: calc(100% - 16px) !important;
+  box-sizing: border-box !important;
+  border-left: none !important;
+  border-right: none !important;
+  border-top: 1px solid transparent !important;
+  border-bottom: 1px solid transparent !important;
+  background: transparent !important;
+  color: var(--text-secondary, #888) !important;
+  padding: 10px 12px !important;
+}
+
+.modern-ui-v3 .category-strip-top .category-list-bar:not(.custom-group-item):hover {
+  background: rgba(255, 255, 255, 0.05) !important;
+  color: var(--text-primary, #fff) !important;
+  transform: none !important;
+  border-color: transparent !important;
+}
+
+.modern-ui-v3 .category-strip-top .category-list-bar:not(.custom-group-item).selected {
+  background: rgba(255, 255, 255, 0.1) !important;
+  border-top-color: rgba(255, 255, 255, 0.08) !important;
+  border-bottom-color: rgba(255, 255, 255, 0.08) !important;
+  color: var(--text-primary, #ffffff) !important;
+  box-shadow: 
+    0 4px 12px rgba(0, 0, 0, 0.15),
+    0 0 0 1px rgba(255, 255, 255, 0.04) inset !important;
+  position: relative !important;
+  padding-left: 16px !important;
+}
+
+.modern-ui-v3 .category-strip-top .category-list-bar:not(.custom-group-item).selected::before {
+  content: '' !important;
+  position: absolute !important;
+  left: 0 !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  width: 3px !important;
+  height: 50% !important;
+  background: var(--accent-primary, #e50914) !important;
+  border-radius: 0 2px 2px 0 !important;
+  box-shadow: 0 0 8px var(--accent-primary, #e50914) !important;
+}
+
+.modern-ui-v3 .category-strip-top .category-list-bar:not(.custom-group-item).selected .category-count {
+  background: rgba(255, 255, 255, 0.12) !important;
+  color: var(--text-primary, #fff) !important;
+}
+
+/* 8b. LiveTV source category items match VOD sidebar styling in V3 */
+.modern-ui-v3 .category-source-content .category-item.nested {
+  border-radius: 0 !important;
+  margin: 2px 0 !important;
+  width: 100% !important;
+  border-left: none !important;
+  border-right: none !important;
+  border-top: 1px solid transparent !important;
+  border-bottom: 1px solid transparent !important;
+  background: transparent !important;
+  color: var(--text-secondary, #888) !important;
+  padding: 10px 16px !important;
+  font-size: 13px !important;
+}
+
+.modern-ui-v3 .category-source-content .category-item.nested:hover {
+  background: rgba(255, 255, 255, 0.05) !important;
+  color: var(--text-primary, #fff) !important;
+  transform: none !important;
+  border-color: transparent !important;
+}
+
+.modern-ui-v3 .category-source-content .category-item.nested.selected {
+  background: rgba(255, 255, 255, 0.1) !important;
+  border-top-color: rgba(255, 255, 255, 0.08) !important;
+  border-bottom-color: rgba(255, 255, 255, 0.08) !important;
+  color: var(--text-primary, #ffffff) !important;
+  box-shadow: 
+    0 4px 12px rgba(0, 0, 0, 0.15),
+    0 0 0 1px rgba(255, 255, 255, 0.04) inset !important;
+  position: relative !important;
+  padding-left: 20px !important;
+}
+
+.modern-ui-v3 .category-source-content .category-item.nested.selected::before {
+  content: '' !important;
+  position: absolute !important;
+  left: 0 !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  width: 3px !important;
+  height: 50% !important;
+  background: var(--accent-primary, #e50914) !important;
+  border-radius: 0 2px 2px 0 !important;
+  box-shadow: 0 0 8px var(--accent-primary, #e50914) !important;
+}
+
+.modern-ui-v3 .category-source-content .category-item.nested.selected .category-count {
+  background: rgba(255, 255, 255, 0.12) !important;
+  color: var(--text-primary, #fff) !important;
+}
+
+/* 8c. LiveTV source headers match VOD sidebar source header styling in V3 */
+.modern-ui-v3 .category-strip .category-source-group {
+  margin: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  border: none !important;
+}
+
+.modern-ui-v3 .category-strip .category-source-content {
+  padding: 0 !important;
+  background: transparent !important;
+}
+
+.modern-ui-v3 .category-strip button.category-source-header {
+  border-radius: 0 !important;
+  margin: 0 !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  background: transparent !important;
+  border-left: none !important;
+  border-right: none !important;
+  border-top: 1px solid transparent !important;
+  border-bottom: 1px solid transparent !important;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  padding: 10px 16px !important;
+  color: var(--text-secondary, #888) !important;
+}
+
+.modern-ui-v3 .category-strip button.category-source-header:hover {
+  background: rgba(255, 255, 255, 0.05) !important;
+  color: var(--text-primary, #fff) !important;
+  border-top-color: transparent !important;
+}
+
+.modern-ui-v3 .category-strip .category-source-group.is-expanded button.category-source-header {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 100 !important;
+  background: rgba(12, 14, 24, 0.98) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+  border-radius: 0 !important;
+  margin: 0 !important;
+  width: 100% !important;
+}
+
+.modern-ui-v3 .category-strip .category-source-group.is-expanded button.category-source-header:hover {
+  background: rgba(25, 27, 44, 0.98) !important;
+}
+
+.modern-ui-v3 .category-strip button.category-source-header .source-count {
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  padding: 2px 8px !important;
+  border-radius: 12px !important;
+  background: rgba(255, 255, 255, 0.06) !important;
+  color: var(--text-secondary, #888) !important;
+}
+
 /* Sidebar Search wrapper */
 .modern-ui-v3 .category-search-input-wrapper {
   border-radius: 12px !important;
@@ -2175,14 +2429,18 @@
 
 .modern-ui-v3 .vertical-sidebar {
   margin: 16px 0 16px 16px !important;
+  height: calc(100% - 32px) !important;
+  align-self: flex-start !important;
   border-radius: 20px !important;
   border: 1px solid rgba(255, 255, 255, 0.12) !important;
-  background: rgba(12, 14, 24, 0.35) !important;
-  backdrop-filter: blur(35px) saturate(200%) !important;
-  -webkit-backdrop-filter: blur(35px) saturate(200%) !important;
+  background: rgba(255, 255, 255, 0.06) !important;
+  backdrop-filter: blur(24px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
   box-shadow: 
-    0 12px 40px rgba(0, 0, 0, 0.35),
-    0 0 0 1px rgba(255, 255, 255, 0.05) inset !important;
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.05),
+    0 8px 32px rgba(0, 0, 0, 0.3),
+    0 2px 8px color-mix(in srgb, var(--accent-primary, #8b5cf6) 10%, transparent) !important;
 }
 
 .modern-ui-v3 .vertical-sidebar::before {
@@ -2239,11 +2497,11 @@
 }
 
 .modern-ui-v3 .vertical-sidebar__item.nested {
-  padding-left: 48px !important;
+  padding-left: 16px !important;
 }
 
 .modern-ui-v3 .vertical-sidebar__item.nested.active {
-  padding-left: 52px !important;
+  padding-left: 20px !important;
 }
 
 .modern-ui-v3 .vertical-sidebar__header {
@@ -2251,25 +2509,23 @@
 }
 
 .modern-ui-v3 .vertical-sidebar__search-container {
-  padding: 8px 0 !important;
+  padding: 4px 0 !important;
 }
 
 .modern-ui-v3 .vertical-sidebar__search {
-  border-radius: 0 !important;
+  border-radius: 12px !important;
   background: rgba(255, 255, 255, 0.04) !important;
-  border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
-  border-left: none !important;
-  border-right: none !important;
-  margin: 4px 0 !important;
-  width: 100% !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  margin: 4px 12px !important;
+  width: calc(100% - 24px) !important;
   box-sizing: border-box !important;
+  padding: 6px 12px !important;
 }
 
 .modern-ui-v3 .vertical-sidebar__search:focus-within {
   background: rgba(255, 255, 255, 0.08) !important;
-  border-top-color: rgba(255, 255, 255, 0.2) !important;
-  border-bottom-color: rgba(255, 255, 255, 0.2) !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.05) !important;
 }
 
 /* Ensure category-item-left is styled properly in VOD sidebar */
@@ -2366,12 +2622,14 @@
   margin: 16px 16px 16px 16px !important;
   border-radius: 24px !important;
   border: 1px solid rgba(255, 255, 255, 0.12) !important;
-  background: rgba(12, 14, 24, 0.35) !important;
-  backdrop-filter: blur(35px) saturate(200%) !important;
-  -webkit-backdrop-filter: blur(35px) saturate(200%) !important;
+  background: rgba(255, 255, 255, 0.06) !important;
+  backdrop-filter: blur(24px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
   box-shadow: 
-    0 12px 40px rgba(0, 0, 0, 0.35),
-    0 0 0 1px rgba(255, 255, 255, 0.05) inset !important;
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.05),
+    0 8px 32px rgba(0, 0, 0, 0.3),
+    0 2px 8px color-mix(in srgb, var(--accent-primary, #8b5cf6) 10%, transparent) !important;
   box-sizing: border-box !important;
   overflow: hidden !important;
 }
@@ -2384,21 +2642,22 @@
 
 .modern-ui-v3 .hero {
   border-radius: 20px !important;
-  border: 1px solid rgba(255, 255, 255, 0.1) !important;
-  background: rgba(12, 14, 24, 0.25) !important;
-  backdrop-filter: blur(25px) saturate(180%) !important;
-  -webkit-backdrop-filter: blur(25px) saturate(180%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  background: rgba(255, 255, 255, 0.06) !important;
+  backdrop-filter: blur(24px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
   box-shadow: 
-    0 8px 32px rgba(0, 0, 0, 0.25),
-    0 0 0 1px rgba(255, 255, 255, 0.03) inset !important;
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.05),
+    0 8px 32px rgba(0, 0, 0, 0.25) !important;
 }
 
 .modern-ui-v3 .hero__overlay-left {
   background: linear-gradient(
     to right,
-    rgba(12, 14, 24, 0.85) 0%,
-    rgba(12, 14, 24, 0.7) 30%,
-    rgba(12, 14, 24, 0.4) 60%,
+    rgba(10, 5, 20, 0.6) 0%,
+    rgba(10, 5, 20, 0.4) 30%,
+    rgba(10, 5, 20, 0.1) 60%,
     transparent 100%
   ) !important;
 }
@@ -2406,8 +2665,8 @@
 .modern-ui-v3 .hero__overlay-bottom {
   background: linear-gradient(
     to top,
-    rgba(12, 14, 24, 0.85) 0%,
-    rgba(12, 14, 24, 0.5) 50%,
+    rgba(10, 5, 20, 0.6) 0%,
+    rgba(10, 5, 20, 0.3) 50%,
     transparent 100%
   ) !important;
 }
@@ -2518,12 +2777,14 @@
   height: calc(100% - 32px) !important;
   border-radius: 24px !important;
   border: 1px solid rgba(255, 255, 255, 0.12) !important;
-  background: rgba(12, 14, 24, 0.35) !important;
-  backdrop-filter: blur(35px) saturate(200%) !important;
-  -webkit-backdrop-filter: blur(35px) saturate(200%) !important;
+  background: rgba(255, 255, 255, 0.06) !important;
+  backdrop-filter: blur(24px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
   box-shadow: 
-    0 12px 40px rgba(0, 0, 0, 0.35),
-    0 0 0 1px rgba(255, 255, 255, 0.05) inset !important;
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.05),
+    0 8px 32px rgba(0, 0, 0, 0.3),
+    0 2px 8px color-mix(in srgb, var(--accent-primary, #8b5cf6) 10%, transparent) !important;
   box-sizing: border-box !important;
 }
 
@@ -2594,13 +2855,18 @@
   height: calc(100% - 32px) !important;
   border-radius: 24px !important;
   border: 1px solid rgba(255, 255, 255, 0.12) !important;
-  background: rgba(12, 14, 24, 0.35) !important;
-  backdrop-filter: blur(35px) saturate(200%) !important;
-  -webkit-backdrop-filter: blur(35px) saturate(200%) !important;
   box-shadow: 
-    0 12px 40px rgba(0, 0, 0, 0.35),
-    0 0 0 1px rgba(255, 255, 255, 0.05) inset !important;
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.05),
+    0 8px 32px rgba(0, 0, 0, 0.3),
+    0 2px 8px color-mix(in srgb, var(--accent-primary, #8b5cf6) 10%, transparent) !important;
   box-sizing: border-box !important;
+}
+
+.modern-ui-v3 .sports-hub:not(.with-preview) {
+  background: rgba(255, 255, 255, 0.06) !important;
+  backdrop-filter: blur(24px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
 }
 
 .modern-ui-v3 .sports-topbar {
@@ -2643,26 +2909,44 @@
 
 .modern-ui-v3 .sports-preview-pane {
   border-radius: 20px !important;
-  border: 1px solid rgba(255, 255, 255, 0.1) !important;
-  background: rgba(12, 14, 24, 0.3) !important;
-  backdrop-filter: blur(35px) saturate(200%) !important;
-  -webkit-backdrop-filter: blur(35px) saturate(200%) !important;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  background: rgba(255, 255, 255, 0.06) !important;
+  backdrop-filter: blur(24px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
+  box-shadow: 
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.05),
+    0 8px 32px rgba(0, 0, 0, 0.25) !important;
   overflow: hidden !important;
 }
 
-.modern-ui-v3 .sports-hub.with-preview {
+.modern-ui-v3 .sports-hub.with-preview,
+html.modern-ui-v3[data-theme] .sports-hub.with-preview {
   background: transparent !important;
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
 }
 
-.modern-ui-v3 .sports-hub.with-preview .sports-topbar {
-  background: rgba(12, 14, 24, 0.45) !important;
+html.modern-ui-v3[data-theme="light"] .sports-hub.with-preview .sports-topbar {
+  background: rgba(255, 255, 255, 0.5) !important;
   backdrop-filter: blur(35px) saturate(200%) !important;
   -webkit-backdrop-filter: blur(35px) saturate(200%) !important;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .sports-hub.with-preview .sports-content {
+  background: rgba(255, 255, 255, 0.45) !important;
+  backdrop-filter: blur(30px) saturate(190%) !important;
+  -webkit-backdrop-filter: blur(30px) saturate(190%) !important;
+}
+
+.modern-ui-v3 .sports-hub.with-preview .sports-topbar {
+  background: rgba(255, 255, 255, 0.07) !important;
+  backdrop-filter: blur(30px) saturate(200%) !important;
+  -webkit-backdrop-filter: blur(30px) saturate(200%) !important;
   border-top-left-radius: 24px !important;
   border-top-right-radius: 24px !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
 }
 
 .modern-ui-v3 .sports-hub.with-preview .sports-preview-pane {
@@ -2670,12 +2954,17 @@
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
   box-shadow: none !important;
+  border: none !important;
+}
+
+.modern-ui-v3 .sports-preview-filler {
+  background: transparent !important;
 }
 
 .modern-ui-v3 .sports-hub.with-preview .sports-content {
-  background: rgba(12, 14, 24, 0.35) !important;
-  backdrop-filter: blur(35px) saturate(200%) !important;
-  -webkit-backdrop-filter: blur(35px) saturate(200%) !important;
+  background: rgba(255, 255, 255, 0.06) !important;
+  backdrop-filter: blur(24px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
   border-bottom-left-radius: 24px !important;
   border-bottom-right-radius: 24px !important;
 }
@@ -2683,10 +2972,13 @@
 .modern-ui-v3 .sports-preview-minibar {
   border-radius: 16px !important;
   border: 1px solid rgba(255, 255, 255, 0.12) !important;
-  background: rgba(10, 12, 22, 0.6) !important;
-  backdrop-filter: blur(20px) saturate(180%) !important;
-  -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3) !important;
+  background: rgba(255, 255, 255, 0.06) !important;
+  backdrop-filter: blur(24px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
+  box-shadow: 
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.05),
+    0 8px 32px rgba(0, 0, 0, 0.3) !important;
   margin: 12px !important;
 }
 
@@ -2729,12 +3021,14 @@
   height: calc(100% - 32px) !important;
   border-radius: 24px !important;
   border: 1px solid rgba(255, 255, 255, 0.12) !important;
-  background: rgba(12, 14, 24, 0.35) !important;
-  backdrop-filter: blur(35px) saturate(200%) !important;
-  -webkit-backdrop-filter: blur(35px) saturate(200%) !important;
+  background: rgba(255, 255, 255, 0.06) !important;
+  backdrop-filter: blur(24px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
   box-shadow: 
-    0 12px 40px rgba(0, 0, 0, 0.35),
-    0 0 0 1px rgba(255, 255, 255, 0.05) inset !important;
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.05),
+    0 8px 32px rgba(0, 0, 0, 0.3),
+    0 2px 8px color-mix(in srgb, var(--accent-primary, #8b5cf6) 10%, transparent) !important;
   box-sizing: border-box !important;
   overflow: hidden !important;
 }
@@ -2861,18 +3155,25 @@
 }
 
 .modern-ui-v3 .nuvio-detail-panel {
-  background: rgba(12, 14, 24, 0.45) !important;
-  backdrop-filter: blur(35px) saturate(200%) !important;
-  -webkit-backdrop-filter: blur(35px) saturate(200%) !important;
+  background: rgba(255, 255, 255, 0.06) !important;
+  backdrop-filter: blur(24px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
   border-left: 1px solid rgba(255, 255, 255, 0.12) !important;
-  box-shadow: -10px 0 30px rgba(0, 0, 0, 0.5) !important;
+  box-shadow: 
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.05),
+    -10px 0 30px rgba(0, 0, 0, 0.5),
+    0 2px 8px color-mix(in srgb, var(--accent-primary, #8b5cf6) 10%, transparent) !important;
 }
 
 .modern-ui-v3 .stremio-detail-right {
-  background: rgba(12, 14, 24, 0.45) !important;
-  backdrop-filter: blur(35px) saturate(200%) !important;
-  -webkit-backdrop-filter: blur(35px) saturate(200%) !important;
+  background: rgba(255, 255, 255, 0.06) !important;
+  backdrop-filter: blur(24px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
   border-left: 1px solid rgba(255, 255, 255, 0.12) !important;
+  box-shadow: 
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.05) !important;
 }
 
 /* Modals */
@@ -2889,11 +3190,15 @@
 .modern-ui-v3 .stremio-account-modal,
 .modern-ui-v3 .stremio-picker-modal,
 .modern-ui-v3 .nuvio-pin-modal-card {
-  background: rgba(12, 14, 24, 0.45) !important;
-  backdrop-filter: blur(35px) saturate(200%) !important;
-  -webkit-backdrop-filter: blur(35px) saturate(200%) !important;
+  background: rgba(255, 255, 255, 0.06) !important;
+  backdrop-filter: blur(24px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
   border: 1px solid rgba(255, 255, 255, 0.12) !important;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6) !important;
+  box-shadow: 
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.05),
+    0 20px 50px rgba(0, 0, 0, 0.6),
+    0 2px 8px color-mix(in srgb, var(--accent-primary, #8b5cf6) 10%, transparent) !important;
 }
 
 /* Settings Modal Glassmorphism Overrides */
@@ -2904,12 +3209,46 @@
 }
 
 .modern-ui-v3 .settings-panel {
-  background: rgba(12, 14, 24, 0.45) !important;
-  backdrop-filter: blur(35px) saturate(200%) !important;
-  -webkit-backdrop-filter: blur(35px) saturate(200%) !important;
+  background: rgba(16, 12, 26, 0.82) !important;
+  backdrop-filter: blur(35px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(35px) saturate(180%) !important;
   border: 1px solid rgba(255, 255, 255, 0.12) !important;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6) !important;
+  box-shadow: 
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.05),
+    0 20px 50px rgba(0, 0, 0, 0.6),
+    0 2px 8px color-mix(in srgb, var(--accent-primary, #8b5cf6) 10%, transparent) !important;
   border-radius: 24px !important;
+}
+
+.modern-ui-v3 .settings-sidebar {
+  background: transparent !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+.modern-ui-v3 .settings-sidebar::before {
+  display: none !important;
+}
+
+.modern-ui-v3 .settings-nav-item {
+  color: rgba(255, 255, 255, 0.6) !important;
+  border: 1px solid transparent !important;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.modern-ui-v3 .settings-nav-item:hover {
+  background: rgba(255, 255, 255, 0.05) !important;
+  color: #fff !important;
+}
+
+.modern-ui-v3 .settings-nav-item.active {
+  background: color-mix(in srgb, var(--accent-primary, #8b5cf6) 18%, rgba(255, 255, 255, 0.08)) !important;
+  color: #fff !important;
+  border: 1px solid color-mix(in srgb, var(--accent-primary, #8b5cf6) 35%, rgba(255, 255, 255, 0.15)) !important;
+  box-shadow: 
+    0 4px 12px rgba(0, 0, 0, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+  font-weight: 600 !important;
 }
 
 .modern-ui-v3 .settings-header {
@@ -3052,36 +3391,143 @@
    ========================================================================== */
 
 /* 1. Neutralize solid/opaque backgrounds and apply adaptive glassmorphism */
-html.modern-ui-v3[data-theme] .category-strip,
+html.modern-ui-v3[data-theme] .category-strip {
+  background: rgba(255, 255, 255, 0.06) !important;
+  background-attachment: scroll !important; /* reset from fixed */
+  backdrop-filter: blur(24px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  box-shadow: 
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.05),
+    0 8px 32px rgba(0, 0, 0, 0.3),
+    0 2px 8px color-mix(in srgb, var(--accent-primary, #8b5cf6) 10%, transparent) !important;
+}
+
+/* Respect Category Sidebar Opacity setting in V3 Transparent EPG Mode */
+html.modern-ui-v3[data-theme]:has(.guide-transparent-mode) .category-strip {
+  background: rgba(0, 0, 0, var(--transparent-guide-sidebar-opacity, 0)) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border: none !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
+  box-shadow: none !important;
+}
+
 html.modern-ui-v3[data-theme] .guide-grid-section,
 html.modern-ui-v3[data-theme] .guide-info-pane,
 html.modern-ui-v3[data-theme] .vertical-sidebar,
 html.modern-ui-v3[data-theme] .vod-page__content,
 html.modern-ui-v3[data-theme] .dvr-dashboard,
-html.modern-ui-v3[data-theme] .sports-hub,
+html.modern-ui-v3[data-theme] .sports-hub:not(.with-preview),
 html.modern-ui-v3[data-theme] .stremio-page,
 html.modern-ui-v3[data-theme] .nuvio-page,
-html.modern-ui-v3[data-theme] .tvcp-page,
-html.modern-ui-v3[data-theme] .settings-panel {
-  background: color-mix(in srgb, var(--bg-secondary, rgba(12, 14, 24, 0.95)) 35%, transparent) !important;
+html.modern-ui-v3[data-theme] .tvcp-page {
+  background: rgba(255, 255, 255, 0.06) !important;
   background-attachment: scroll !important; /* reset from fixed */
-  backdrop-filter: blur(35px) saturate(200%) !important;
-  -webkit-backdrop-filter: blur(35px) saturate(200%) !important;
-  border: 1px solid color-mix(in srgb, var(--accent-primary, #00d4ff) 15%, rgba(255, 255, 255, 0.1)) !important;
+  backdrop-filter: blur(24px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
   box-shadow: 
-    0 12px 40px rgba(0, 0, 0, 0.35),
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.25),
-    inset 0 0 0 1px color-mix(in srgb, var(--accent-primary, #00d4ff) 8%, transparent) !important;
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.05),
+    0 8px 32px rgba(0, 0, 0, 0.3),
+    0 2px 8px color-mix(in srgb, var(--accent-primary, #8b5cf6) 10%, transparent) !important;
 }
 
-/* Title Bar V3 Glassmorphism Override - replaces the sharp colored bottom border with soft specular highlight/glass mix */
-html.modern-ui-v3[data-theme] .title-bar {
-  background: color-mix(in srgb, var(--bg-secondary, rgba(12, 14, 24, 0.95)) 35%, transparent) !important;
-  backdrop-filter: blur(35px) saturate(200%) !important;
-  -webkit-backdrop-filter: blur(35px) saturate(200%) !important;
-  border: none !important;
+html.modern-ui-v3[data-theme] .settings-panel {
+  background: rgba(16, 12, 26, 0.82) !important;
+  background-attachment: scroll !important;
+  backdrop-filter: blur(35px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(35px) saturate(180%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
   box-shadow: 
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.25) !important;
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.05),
+    0 20px 50px rgba(0, 0, 0, 0.6),
+    0 2px 8px color-mix(in srgb, var(--accent-primary, #8b5cf6) 10%, transparent) !important;
+}
+
+/* Neutralize child backgrounds in Category Strip */
+html.modern-ui-v3[data-theme] .category-strip .category-source-group.is-expanded button.category-source-header {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 100 !important;
+  background: rgba(15, 12, 25, 0.96) !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
+}
+
+html.modern-ui-v3[data-theme] .category-strip .category-source-group.is-expanded button.category-source-header:hover {
+  background: rgba(28, 22, 45, 0.96) !important;
+}
+
+html.modern-ui-v3[data-theme] .category-strip .category-source-content {
+  background: transparent !important;
+}
+
+/* EPG Rows & Channels glass adjustments */
+/* Force ALL rows to identical background — no zebra striping in glass UI */
+html.modern-ui-v3[data-theme] .guide-channel-row,
+html.modern-ui-v3[data-theme] .guide-channel-row:nth-child(odd),
+html.modern-ui-v3[data-theme] .guide-channel-row:nth-child(even),
+html.modern-ui-v3[data-theme] .guide-channel-row:nth-child(2n),
+html.modern-ui-v3[data-theme] .guide-channel-row:nth-child(2n+1) {
+  background: rgba(255, 255, 255, 0.04) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
+}
+
+html.modern-ui-v3[data-theme] .guide-channel-row:hover,
+html.modern-ui-v3[data-theme] .guide-channel-row.hovered {
+  background: rgba(255, 255, 255, 0.09) !important;
+}
+
+html.modern-ui-v3[data-theme] .guide-channel-row.currently-playing {
+  background: color-mix(in srgb, var(--accent-primary, #8b5cf6) 6%, rgba(255, 255, 255, 0.06)) !important;
+}
+
+html.modern-ui-v3[data-theme] .guide-channel-info {
+  background: rgba(0, 0, 0, 0.25) !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+html.modern-ui-v3[data-theme] .guide-channel-info:hover {
+  background: rgba(255, 255, 255, 0.06) !important;
+}
+
+html.modern-ui-v3[data-theme] .guide-channel-row.currently-playing .guide-channel-info {
+  background: rgba(0, 0, 0, 0.25) !important;
+}
+
+html.modern-ui-v3[data-theme] .guide-channel-logo {
+  background: rgba(255, 255, 255, 0.04) !important;
+}
+
+html.modern-ui-v3[data-theme] .guide-time-header-spacer {
+  background: rgba(0, 0, 0, 0.15) !important;
+  border-right: none !important;
+}
+
+/* EPG Text readability on glass */
+html.modern-ui-v3[data-theme] .program-block-title,
+html.modern-ui-v3[data-theme] .program-block-desc,
+html.modern-ui-v3[data-theme] .guide-channel-name,
+html.modern-ui-v3[data-theme] .guide-channel-number,
+html.modern-ui-v3[data-theme] .guide-channel-playlist-name {
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.4) !important;
+}
+
+/* Title Bar V3 Glassmorphism Override - frosted glass with a bottom border separator */
+html.modern-ui-v3[data-theme] .title-bar {
+  background: rgba(255, 255, 255, 0.07) !important;
+  backdrop-filter: blur(30px) saturate(200%) !important;
+  -webkit-backdrop-filter: blur(30px) saturate(200%) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+  box-shadow: 
+    inset 0 1px 0 rgba(255, 255, 255, 0.15),
+    0 4px 16px rgba(0, 0, 0, 0.2) !important;
 }
 
 /* Specific inner components reset */
@@ -3096,9 +3542,20 @@ html.modern-ui-v3[data-theme] .guide-header {
   border-right: none !important;
 }
 
-/* VOD Sticky Source Headers - opaque theme-matching background */
+/* VOD Sticky Source Headers - glass theme-matching background */
 html.modern-ui-v3[data-theme] .vertical-sidebar__source-group.is-expanded .vertical-sidebar__source-header {
-  background: color-mix(in srgb, var(--bg-secondary, rgba(12, 14, 24, 0.95)) 98%, transparent) !important;
+  background: rgba(15, 12, 25, 0.96) !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 0 !important;
+  margin: 0 !important;
+  width: 100% !important;
+}
+
+html.modern-ui-v3[data-theme] .vertical-sidebar__source-group.is-expanded .vertical-sidebar__source-header:hover {
+  background: rgba(28, 22, 45, 0.96) !important;
 }
 
 /* TV Calendar V3 Glassmorphism Layout */
@@ -3136,7 +3593,13 @@ html.modern-ui-v3[data-theme*="red"] .livetv-liquid-glass-bg,
 html.modern-ui-v3[data-theme*="dragonfruit"] .livetv-liquid-glass-bg,
 html.modern-ui-v3[data-theme*="magenta"] .livetv-liquid-glass-bg,
 html.modern-ui-v3[data-theme*="volcano"] .livetv-liquid-glass-bg {
-  background: color-mix(in srgb, var(--bg-primary, #050505) 85%, #000) !important;
+  background: linear-gradient(135deg,
+    #1f0210 0%,
+    #2a0518 25%,
+    #0a0208 50%,
+    #310521 75%,
+    #0d020d 100%
+  ) !important;
 }
 html.modern-ui-v3[data-theme*="crimson"] .livetv-liquid-glass-bg .blob-1,
 html.modern-ui-v3[data-theme*="pink"] .livetv-liquid-glass-bg .blob-1,
@@ -3198,7 +3661,13 @@ html.modern-ui-v3[data-theme*="turquoise"] .livetv-liquid-glass-bg,
 html.modern-ui-v3[data-theme*="indigo"] .livetv-liquid-glass-bg,
 html.modern-ui-v3[data-theme*="electric"] .livetv-liquid-glass-bg,
 html.modern-ui-v3[data-theme*="miami"] .livetv-liquid-glass-bg {
-  background: color-mix(in srgb, var(--bg-primary, #05050a) 85%, #000) !important;
+  background: linear-gradient(135deg,
+    #020f21 0%,
+    #051833 25%,
+    #020b14 50%,
+    #08253d 75%,
+    #020a1a 100%
+  ) !important;
 }
 html.modern-ui-v3[data-theme*="cyan"] .livetv-liquid-glass-bg .blob-1,
 html.modern-ui-v3[data-theme*="blue"] .livetv-liquid-glass-bg .blob-1,
@@ -3256,7 +3725,13 @@ html.modern-ui-v3[data-theme*="mint"] .livetv-liquid-glass-bg,
 html.modern-ui-v3[data-theme*="lime"] .livetv-liquid-glass-bg,
 html.modern-ui-v3[data-theme*="zengarden"] .livetv-liquid-glass-bg,
 html.modern-ui-v3[data-theme*="chartreuse"] .livetv-liquid-glass-bg {
-  background: color-mix(in srgb, var(--bg-primary, #050a05) 85%, #000) !important;
+  background: linear-gradient(135deg,
+    #021a0d 0%,
+    #052414 25%,
+    #020f08 50%,
+    #08331d 75%,
+    #02140a 100%
+  ) !important;
 }
 html.modern-ui-v3[data-theme*="emerald"] .livetv-liquid-glass-bg .blob-1,
 html.modern-ui-v3[data-theme*="forest"] .livetv-liquid-glass-bg .blob-1,
@@ -3301,7 +3776,13 @@ html.modern-ui-v3[data-theme*="galaxy"] .livetv-liquid-glass-bg,
 html.modern-ui-v3[data-theme*="nebula"] .livetv-liquid-glass-bg,
 html.modern-ui-v3[data-theme*="neon"] .livetv-liquid-glass-bg,
 html.modern-ui-v3[data-theme*="violet"] .livetv-liquid-glass-bg {
-  background: color-mix(in srgb, var(--bg-primary, #050510) 85%, #000) !important;
+  background: linear-gradient(135deg, 
+    #02000a 0%, 
+    #070114 25%, 
+    #02050b 50%, 
+    #09031c 75%, 
+    #01030a 100%
+  ) !important;
 }
 html.modern-ui-v3[data-theme*="purple"] .livetv-liquid-glass-bg .blob-1,
 html.modern-ui-v3[data-theme*="midnight"] .livetv-liquid-glass-bg .blob-1,
@@ -3358,7 +3839,13 @@ html.modern-ui-v3[data-theme*="horizon"] .livetv-liquid-glass-bg,
 html.modern-ui-v3[data-theme*="copper"] .livetv-liquid-glass-bg,
 html.modern-ui-v3[data-theme*="yellow"] .livetv-liquid-glass-bg,
 html.modern-ui-v3[data-theme*="autumn"] .livetv-liquid-glass-bg {
-  background: color-mix(in srgb, var(--bg-primary, #0a0505) 85%, #000) !important;
+  background: linear-gradient(135deg,
+    #1a0c02 0%,
+    #241205 25%,
+    #0f0802 50%,
+    #331808 75%,
+    #140a02 100%
+  ) !important;
 }
 html.modern-ui-v3[data-theme*="orange"] .livetv-liquid-glass-bg .blob-1,
 html.modern-ui-v3[data-theme*="amber"] .livetv-liquid-glass-bg .blob-1,
@@ -3427,6 +3914,405 @@ html.modern-ui-v3[data-theme="light"] .livetv-liquid-glass-bg .blob-3 {
 html.modern-ui-v3[data-theme="light"] .livetv-liquid-glass-bg .blob-4 {
   background: radial-gradient(circle, rgba(0, 200, 100, 0.4) 0%, transparent 70%) !important;
 }
+
+/* Light Theme Panel and Titlebar Overrides for readability */
+html.modern-ui-v3[data-theme="light"] .category-strip,
+html.modern-ui-v3[data-theme="light"] .guide-grid-section,
+html.modern-ui-v3[data-theme="light"] .guide-info-pane,
+html.modern-ui-v3[data-theme="light"] .vertical-sidebar,
+html.modern-ui-v3[data-theme="light"] .vod-page__content,
+html.modern-ui-v3[data-theme="light"] .dvr-dashboard,
+html.modern-ui-v3[data-theme="light"] .sports-hub:not(.with-preview),
+html.modern-ui-v3[data-theme="light"] .stremio-page,
+html.modern-ui-v3[data-theme="light"] .nuvio-page,
+html.modern-ui-v3[data-theme="light"] .tvcp-page,
+html.modern-ui-v3[data-theme="light"] .settings-panel,
+html.modern-ui-v3[data-theme="light"] .stremio-addon-modal,
+html.modern-ui-v3[data-theme="light"] .stremio-account-modal,
+html.modern-ui-v3[data-theme="light"] .stremio-picker-modal,
+html.modern-ui-v3[data-theme="light"] .nuvio-pin-modal-card,
+html.modern-ui-v3[data-theme="light"] .nuvio-detail-panel,
+html.modern-ui-v3[data-theme="light"] .stremio-detail-right {
+  background: rgba(255, 255, 255, 0.45) !important;
+  backdrop-filter: blur(30px) saturate(190%) !important;
+  -webkit-backdrop-filter: blur(30px) saturate(190%) !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  box-shadow: 
+    inset 0 1px 0 rgba(255, 255, 255, 0.6),
+    0 8px 32px rgba(0, 0, 0, 0.08),
+    0 2px 8px rgba(0, 0, 0, 0.02) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .title-bar {
+  background: rgba(255, 255, 255, 0.45) !important;
+  backdrop-filter: blur(30px) saturate(190%) !important;
+  -webkit-backdrop-filter: blur(30px) saturate(190%) !important;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08) !important;
+  box-shadow: 
+    inset 0 1px 0 rgba(255, 255, 255, 0.6),
+    0 4px 16px rgba(0, 0, 0, 0.08) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .program-block {
+  background: rgba(255, 255, 255, 0.3) !important;
+  border-color: rgba(0, 0, 0, 0.06) !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .program-block:hover {
+  background: rgba(255, 255, 255, 0.6) !important;
+  border-color: rgba(0, 0, 0, 0.12) !important;
+  box-shadow: 
+    inset 0 1px 0 rgba(255, 255, 255, 0.8),
+    0 4px 12px rgba(0, 0, 0, 0.06) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .program-block.current {
+  background: color-mix(in srgb, var(--accent-primary, #8b5cf6) 12%, rgba(255, 255, 255, 0.5)) !important;
+  border-color: color-mix(in srgb, var(--accent-primary, #8b5cf6) 30%, rgba(0, 0, 0, 0.1)) !important;
+  box-shadow: 
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    0 2px 10px color-mix(in srgb, var(--accent-primary, #8b5cf6) 8%, rgba(0, 0, 0, 0.04)) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .category-strip .category-source-group.is-expanded button.category-source-header,
+html.modern-ui-v3[data-theme="light"] .vertical-sidebar__source-group.is-expanded .vertical-sidebar__source-header {
+  background: rgba(240, 240, 245, 0.96) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .category-strip .category-source-group.is-expanded button.category-source-header:hover,
+html.modern-ui-v3[data-theme="light"] .vertical-sidebar__source-group.is-expanded .vertical-sidebar__source-header:hover {
+  background: rgba(230, 230, 235, 0.96) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .settings-sidebar {
+  border-right: 1px solid rgba(0, 0, 0, 0.08) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .settings-nav-item {
+  color: rgba(0, 0, 0, 0.65) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .settings-nav-item:hover {
+  background: rgba(0, 0, 0, 0.04) !important;
+  color: #000 !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .settings-nav-item.active {
+  background: color-mix(in srgb, var(--accent-primary, #8b5cf6) 15%, rgba(0, 0, 0, 0.05)) !important;
+  color: var(--accent-primary, #8b5cf6) !important;
+  border-color: color-mix(in srgb, var(--accent-primary, #8b5cf6) 30%, rgba(0, 0, 0, 0.08)) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .settings-panel {
+  background: rgba(16, 12, 26, 0.82) !important;
+  backdrop-filter: blur(35px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(35px) saturate(180%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  box-shadow: 
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.05),
+    0 20px 50px rgba(0, 0, 0, 0.6),
+    0 2px 8px color-mix(in srgb, var(--accent-primary, #8b5cf6) 10%, transparent) !important;
+  color: #ffffff !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .settings-header {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  background: transparent !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .settings-header h2 {
+  color: #ffffff !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .close-btn {
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  color: #a1a1aa !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .close-btn:hover {
+  background: rgba(255, 255, 255, 0.05) !important;
+  color: #ffffff !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .settings-sidebar {
+  background: transparent !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .settings-sidebar::before {
+  display: none !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .settings-content {
+  background: transparent !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .settings-tabs {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  background: transparent !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .settings-tab {
+  color: rgba(255, 255, 255, 0.55) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .settings-tab:hover {
+  color: rgba(255, 255, 255, 0.85) !important;
+  background: rgba(255, 255, 255, 0.04) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .settings-tab.active {
+  color: var(--accent-primary, #8b5cf6) !important;
+  border-bottom-color: var(--accent-primary, #8b5cf6) !important;
+  text-shadow: 0 0 8px color-mix(in srgb, var(--accent-primary, #8b5cf6) 50%, transparent) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .settings-nav-item {
+  color: rgba(255, 255, 255, 0.6) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .settings-nav-item:hover {
+  background: rgba(255, 255, 255, 0.05) !important;
+  color: #fff !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .settings-nav-item.active {
+  background: color-mix(in srgb, var(--accent-primary, #8b5cf6) 18%, rgba(255, 255, 255, 0.08)) !important;
+  color: #fff !important;
+  border: 1px solid color-mix(in srgb, var(--accent-primary, #8b5cf6) 35%, rgba(255, 255, 255, 0.15)) !important;
+  box-shadow: 
+    0 4px 12px rgba(0, 0, 0, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .section-header h3 {
+  color: #ffffff !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .section-description,
+html.modern-ui-v3[data-theme="light"] .form-group label {
+  color: rgba(255, 255, 255, 0.6) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .form-group input {
+  background: rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  color: #ffffff !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .form-group input:focus {
+  border-color: rgba(255, 255, 255, 0.2) !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.05) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .form-group input::placeholder {
+  color: rgba(255, 255, 255, 0.4) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .type-selector button {
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  color: #ffffff !important;
+  background: rgba(255, 255, 255, 0.04) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .type-selector button:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: #ffffff !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .type-selector button.active {
+  background: rgba(255, 255, 255, 0.12) !important;
+  border-color: rgba(255, 255, 255, 0.22) !important;
+  color: var(--accent-primary, #8b5cf6) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .cancel-btn {
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  color: rgba(255, 255, 255, 0.6) !important;
+  background: rgba(255, 255, 255, 0.04) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .cancel-btn:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: #ffffff !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .save-btn,
+html.modern-ui-v3[data-theme="light"] .sync-btn,
+html.modern-ui-v3[data-theme="light"] .add-btn {
+  border: 1px solid transparent !important;
+  background: var(--accent-primary, #8b5cf6) !important;
+  color: #121424 !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .save-btn:hover:not(:disabled),
+html.modern-ui-v3[data-theme="light"] .sync-btn:hover:not(:disabled),
+html.modern-ui-v3[data-theme="light"] .add-btn:hover {
+  background: color-mix(in srgb, var(--accent-primary, #8b5cf6) 80%, white) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .source-item {
+  background: rgba(255, 255, 255, 0.03) !important;
+  border: 1px solid rgba(255, 255, 255, 0.06) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .source-item:hover {
+  background: rgba(255, 255, 255, 0.06) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .source-item .source-name {
+  color: #ffffff !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .source-type {
+  background: rgba(255, 255, 255, 0.1) !important;
+  color: #e4e4e7 !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .source-actions button {
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  color: rgba(255, 255, 255, 0.6) !important;
+  background: rgba(255, 255, 255, 0.04) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .source-actions button:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: #ffffff !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .settings-content select {
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  background: rgba(255, 255, 255, 0.04) !important;
+  color: #ffffff !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .settings-content select:focus {
+  border-color: rgba(255, 255, 255, 0.2) !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .settings-content select option {
+  background: #141624 !important;
+  color: #ffffff !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .settings-disclaimer,
+html.modern-ui-v3[data-theme="light"] .settings-content small,
+html.modern-ui-v3[data-theme="light"] .settings-section p.section-description {
+  color: rgba(255, 255, 255, 0.5) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .settings-tab-content::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .settings-tab-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2) !important;
+}
+
+/* Disable glow text-shadows in light theme EPG for clean readability */
+html.modern-ui-v3[data-theme="light"] .program-block-title,
+html.modern-ui-v3[data-theme="light"] .program-block-desc,
+html.modern-ui-v3[data-theme="light"] .guide-channel-name,
+html.modern-ui-v3[data-theme="light"] .guide-channel-number,
+html.modern-ui-v3[data-theme="light"] .guide-channel-playlist-name {
+  text-shadow: none !important;
+}
+
+
+/* DVR, Sports, Stremio, Nuvio topbar active/hover tabs in light theme */
+html.modern-ui-v3[data-theme="light"] .dvr-topbar-item.active,
+html.modern-ui-v3[data-theme="light"] .dvr-topbar-item:hover,
+html.modern-ui-v3[data-theme="light"] .sports-topbar-item.active,
+html.modern-ui-v3[data-theme="light"] .sports-topbar-item:hover,
+html.modern-ui-v3[data-theme="light"] .stremio-topbar-item.active,
+html.modern-ui-v3[data-theme="light"] .stremio-topbar-item:hover,
+html.modern-ui-v3[data-theme="light"] .nuvio-topbar-item.active,
+html.modern-ui-v3[data-theme="light"] .nuvio-topbar-item:hover {
+  color: #0f172a !important;
+}
+
+/* Sports World Cup page container in light theme - styled dark so all EPG/stats text is legible */
+html.modern-ui-v3[data-theme="light"] .wc-hub-container {
+  background: rgba(16, 12, 26, 0.92) !important;
+  border-radius: 16px !important;
+  padding: 20px !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3) !important;
+  box-sizing: border-box !important;
+  min-height: 100% !important;
+  height: auto !important;
+}
+
+/* Nuvio login form page styling overrides for Light Theme */
+html.modern-ui-v3[data-theme="light"] .nuvio-login-input {
+  background: rgba(255, 255, 255, 0.6) !important;
+  border: 1px solid rgba(0, 0, 0, 0.12) !important;
+  color: #0f172a !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .nuvio-login-input:focus {
+  background: #ffffff !important;
+  border-color: var(--accent-primary, #8b5cf6) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .nuvio-login-input::placeholder {
+  color: #94a3b8 !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .nuvio-login-title,
+html.modern-ui-v3[data-theme="light"] .nuvio-login-card-title {
+  color: #0f172a !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .nuvio-login-desc,
+html.modern-ui-v3[data-theme="light"] .nuvio-login-toggle-btn,
+html.modern-ui-v3[data-theme="light"] .nuvio-login-disclaimer {
+  color: #475569 !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .nuvio-login-toggle-btn:hover {
+  color: #0f172a !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .nuvio-login-card {
+  background: rgba(255, 255, 255, 0.5) !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02) !important;
+}
+
+
+/* ==========================================================================
+   4. True Dark Themes (Solid/Static Near-Black Backgrounds)
+   Bypasses the V3 animated glass gradient background for solid dark themes.
+   ========================================================================== */
+html.modern-ui-v3[data-theme="dark"] .livetv-liquid-glass-bg {
+  background: #050508 !important;
+}
+html.modern-ui-v3[data-theme="dark-crimson"] .livetv-liquid-glass-bg { background: #0c0205 !important; }
+html.modern-ui-v3[data-theme="dark-cyan"] .livetv-liquid-glass-bg { background: #020a0d !important; }
+html.modern-ui-v3[data-theme="dark-purple"] .livetv-liquid-glass-bg { background: #06020c !important; }
+html.modern-ui-v3[data-theme="dark-emerald"] .livetv-liquid-glass-bg { background: #020c06 !important; }
+html.modern-ui-v3[data-theme="dark-orange"] .livetv-liquid-glass-bg { background: #0d0602 !important; }
+html.modern-ui-v3[data-theme="dark-pink"] .livetv-liquid-glass-bg { background: #0d0208 !important; }
+html.modern-ui-v3[data-theme="dark-blue"] .livetv-liquid-glass-bg { background: #02050e !important; }
+html.modern-ui-v3[data-theme="dark-gold"] .livetv-liquid-glass-bg { background: #0c0a02 !important; }
+html.modern-ui-v3[data-theme="dark-lime"] .livetv-liquid-glass-bg { background: #050c02 !important; }
+html.modern-ui-v3[data-theme="dark-indigo"] .livetv-liquid-glass-bg { background: #02030f !important; }
+
+/* Hide animated blobs and ambient glows for standard dark and dark-color themes */
+html.modern-ui-v3[data-theme="dark"] .livetv-liquid-glass-bg .glass-blob,
+html.modern-ui-v3[data-theme="dark"] .livetv-liquid-glass-bg::before,
+html.modern-ui-v3[data-theme="dark"] .livetv-liquid-glass-bg::after,
+html.modern-ui-v3[data-theme*="dark-"] .livetv-liquid-glass-bg .glass-blob,
+html.modern-ui-v3[data-theme*="dark-"] .livetv-liquid-glass-bg::before,
+html.modern-ui-v3[data-theme*="dark-"] .livetv-liquid-glass-bg::after {
+  display: none !important;
+}
+
 
 
 
