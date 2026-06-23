@@ -2186,41 +2186,34 @@
 
 /* Gently highlighted block for currently airing programs (ambient glow, not solid block) */
 html.modern-ui-v3 .program-block.current {
-  background: rgba(139, 92, 246, 0.12) !important;
-  background: color-mix(in srgb, var(--accent-primary, #8b5cf6) 12%, transparent) !important;
-  border-top: 1px solid rgba(139, 92, 246, 0.28) !important;
-  border-top: 1px solid color-mix(in srgb, var(--accent-primary, #8b5cf6) 28%, transparent) !important;
-  border-bottom: 1px solid rgba(139, 92, 246, 0.28) !important;
-  border-bottom: 1px solid color-mix(in srgb, var(--accent-primary, #8b5cf6) 28%, transparent) !important;
-  border-left: none !important;
+  background: color-mix(in srgb, var(--accent-primary) 22%, transparent) !important;
+  border-top: 1px solid color-mix(in srgb, var(--accent-primary) 45%, transparent) !important;
+  border-bottom: 1px solid color-mix(in srgb, var(--accent-primary) 45%, transparent) !important;
+  border-left: 3px solid color-mix(in srgb, var(--accent-primary) 80%, transparent) !important;
   border-right: none !important;
   box-shadow: none !important;
 }
 
 html.modern-ui-v3 .program-block.current:hover {
-  background: rgba(139, 92, 246, 0.18) !important;
-  background: color-mix(in srgb, var(--accent-primary, #8b5cf6) 18%, transparent) !important;
-  border-color: rgba(139, 92, 246, 0.35) !important;
-  border-color: color-mix(in srgb, var(--accent-primary, #8b5cf6) 35%, transparent) !important;
+  background: color-mix(in srgb, var(--accent-primary) 28%, transparent) !important;
+  border-color: color-mix(in srgb, var(--accent-primary) 55%, transparent) !important;
+  border-left-color: color-mix(in srgb, var(--accent-primary) 90%, transparent) !important;
   transform: translateY(-1px) scale(1.01) !important;
   z-index: 20 !important;
 }
 
 /* Slightly stronger highlight for the active channel you are currently watching */
 html.modern-ui-v3 .guide-channel-row.currently-playing .program-block.current {
-  background: rgba(139, 92, 246, 0.22) !important;
-  background: color-mix(in srgb, var(--accent-primary, #8b5cf6) 22%, transparent) !important;
-  border: 1px solid rgba(139, 92, 246, 0.4) !important;
-  border: 1px solid color-mix(in srgb, var(--accent-primary, #8b5cf6) 40%, transparent) !important;
-  box-shadow: 0 0 16px rgba(139, 92, 246, 0.15) !important;
-  box-shadow: 0 0 16px color-mix(in srgb, var(--accent-primary, #8b5cf6) 15%, transparent) !important;
+  background: color-mix(in srgb, var(--accent-primary) 32%, transparent) !important;
+  border: 1px solid color-mix(in srgb, var(--accent-primary) 55%, transparent) !important;
+  border-left: 3px solid color-mix(in srgb, var(--accent-primary) 90%, transparent) !important;
+  box-shadow: 0 0 16px color-mix(in srgb, var(--accent-primary) 25%, transparent) !important;
 }
 
 html.modern-ui-v3 .guide-channel-row.currently-playing .program-block.current:hover {
-  background: rgba(139, 92, 246, 0.28) !important;
-  background: color-mix(in srgb, var(--accent-primary, #8b5cf6) 28%, transparent) !important;
-  border-color: rgba(139, 92, 246, 0.5) !important;
-  border-color: color-mix(in srgb, var(--accent-primary, #8b5cf6) 50%, transparent) !important;
+  background: color-mix(in srgb, var(--accent-primary) 38%, transparent) !important;
+  border-color: color-mix(in srgb, var(--accent-primary) 70%, transparent) !important;
+  border-left-color: color-mix(in srgb, var(--accent-primary) 100%, transparent) !important;
   transform: translateY(-1px) scale(1.01) !important;
   z-index: 20 !important;
 }
@@ -3497,6 +3490,40 @@ html.modern-ui-v3[data-theme="light"] .ufc-detail-fighter-img {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
 }
 
+.modern-ui-v3 .back-button-overlay__btn {
+  background: rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 20px !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  color: rgba(255, 255, 255, 0.85) !important;
+  padding: 8px 18px !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 4px 16px rgba(0, 0, 0, 0.3) !important;
+}
+
+.modern-ui-v3 .back-button-overlay__btn:hover {
+  background: rgba(255, 255, 255, 0.12) !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+  color: #fff !important;
+  transform: translateX(-2px) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.15),
+    0 6px 24px rgba(0, 0, 0, 0.35) !important;
+}
+
+.modern-ui-v3 .back-button-overlay__btn:active {
+  transform: translateX(-2px) scale(0.97) !important;
+}
+
+.modern-ui-v3 .back-button-overlay__icon {
+  color: rgba(200, 180, 255, 0.9) !important;
+}
+
 .modern-ui-v3 .stremio-detail-tag {
   background: rgba(255, 255, 255, 0.04) !important;
   border: 1px solid rgba(255, 255, 255, 0.08) !important;
@@ -3789,6 +3816,28 @@ html.modern-ui-v3[data-theme="light"] .stremio-detail-season-select:hover {
   border-color: rgba(0, 0, 0, 0.15) !important;
   color: #000 !important;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .back-button-overlay__btn {
+  background: rgba(0, 0, 0, 0.04) !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  color: rgba(0, 0, 0, 0.8) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    0 4px 16px rgba(0, 0, 0, 0.1) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .back-button-overlay__btn:hover {
+  background: rgba(0, 0, 0, 0.08) !important;
+  border-color: rgba(0, 0, 0, 0.15) !important;
+  color: #000 !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    0 6px 24px rgba(0, 0, 0, 0.12) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .back-button-overlay__icon {
+  color: rgba(139, 92, 246, 0.8) !important;
 }
 
 html.modern-ui-v3[data-theme="light"] .stremio-detail-action-btn.in-library {
