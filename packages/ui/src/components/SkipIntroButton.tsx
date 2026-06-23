@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import './SkipIntroButton.css';
 
 interface SkipIntroButtonProps {
@@ -9,14 +9,16 @@ interface SkipIntroButtonProps {
 
 export function SkipIntroButton({ visible, countdown, onSkip }: SkipIntroButtonProps) {
   const [hiding, setHiding] = useState(false);
+  const hasRenderedVisible = useRef(false);
 
   useEffect(() => {
-    if (!visible) {
+    if (visible) {
+      hasRenderedVisible.current = true;
+      setHiding(false);
+    } else if (hasRenderedVisible.current) {
       setHiding(true);
       const timer = setTimeout(() => setHiding(false), 300);
       return () => clearTimeout(timer);
-    } else {
-      setHiding(false);
     }
   }, [visible]);
 

@@ -3248,11 +3248,9 @@ function App() {
 
       {/* Background - transparent over mpv */}
       <div className="video-background">
-        {!currentChannel && !error && !isRestoring && (
+        {!currentChannel && !error && !isRestoring && activeView !== 'guide' && activeView !== 'sports' && (
           <div className="placeholder">
-            {activeView !== 'guide' && activeView !== 'sports' && (
-              <Logo className="placeholder__logo" />
-            )}
+            <Logo className="placeholder__logo" />
             {(channelSyncing || vodSyncing || tmdbMatching) ? (
               <div className="sync-status">
                 <div className="sync-status__spinner" />

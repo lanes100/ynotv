@@ -12,9 +12,9 @@ A feature-rich, open source IPTV player for Windows built on [Tauri v2](https://
 
 [Documentation](https://tbeezy.github.io/ynotvdoc)
 
-[![Watch the video](https://i.imgur.com/JiMwuw1.png)](https://streamable.com/jxjq9n)
+[![Watch the video](https://i.ibb.co/27SmHvtn/ynotv-c-IZc-SQ6-HAb.png)](https://streamable.com/jxjq9n)
 
-[Video Demonstration](https://streamable.com/jxjq9n)
+[Old Video Demonstration](https://streamable.com/jxjq9n)
 
 ---
 
@@ -22,13 +22,13 @@ A feature-rich, open source IPTV player for Windows built on [Tauri v2](https://
 
 | EPG with preview | Play screen |
 | :-------------------------------------: | :--------------------------------------: |
-| ![EPG with preview](https://i.ibb.co/Q7FHXSwD/EPG.png) | ![Play screen](https://i.ibb.co/gCqPTFb/Playing.jpg) |
+| ![EPG with preview](https://i.ibb.co/27SmHvtn/ynotv-c-IZc-SQ6-HAb.png) | ![Play screen](https://i.ibb.co/gCqPTFb/Playing.jpg) |
 | Playlist Editor | EPG Editor |
 | ![Playlist Editor](https://i.ibb.co/h1LfVMNG/playlisteditor.png) | ![EPG Editor](https://i.ibb.co/kg2drZYn/EPGEditor.png) |
 | Watchlist Option with autoswitch | Strem View |
 | ![Watchlist Option with autoswitch](https://i.ibb.co/YTQwhPV5/Watchlist.png) | ![Strem View](https://i.ibb.co/4nyYbYLC/ynotv-XJPd86-Vi-FJ.jpg) |
 | Sports View | Vod Page |
-| ![Sports View](https://i.ibb.co/yn5ZWb2F/Sports.png) | ![Vod Page](https://i.ibb.co/nsvmdbTp/Vod.jpg) |
+| ![Sports View](https://i.ibb.co/yn5ZWb2F/Sports.png) | ![Vod Page](https://i.ibb.co/ZRGw1RJQ/ynotv-t-FGIwr7ec-C.jpg) |
 | Multiview Menu | PiP View |
 | ![Multiview Menu](https://i.ibb.co/b5RBSYDc/Multiview.jpg) | ![PiP View](https://i.ibb.co/bjY4vbxB/Pip.jpg) |
 | Multiview 2x2 | DVR Page |

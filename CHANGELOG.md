@@ -1,5 +1,21 @@
 # Changelog
 
+## v2.1.3
+
+### Added
+
+- **UI Overhaul v3** - A comprehensive visual refresh delivering a more polished look across the application. Themes have been updated to take advantage of the new design, so existing themes may appear different from previous versions. The prior UI versions remain available under `Settings → UI → UI Design` (v1 or v2) if you wish to opt out.
+- **Source selector in media bar for Stremio and Nuvio** - A source selector has been added to the media bar, allowing quick switching between sources without leaving the player.
+- **Always on Top toggle in Popout Player** - A toggle button has been added to the Popout Player media bar to control the Always on Top behaviour directly from the player.
+- **Playlist name in Favourites** - A toggle button in the Favourites view allows the source playlist name to be displayed inside each channel tile, making it easy to identify which source a channel belongs to.
+
+### Fixed
+
+- **Nuvio API update** - The Nuvio API integration has been updated to align with NuvioDesktop, restoring watchlist sync functionality.
+- **Popout Player not staying on top** - Resolved an issue causing the Popout Player to lose its Always on Top state unexpectedly.
+- **Alphabetical category sort not applying automatically** - Categories will now sort alphabetically in real time when the sort order is set to Alphabetical, without requiring a visit to Manage Categories.
+
+
 ## v2.1.2
 
 ### Added
