@@ -4537,6 +4537,25 @@ html.modern-ui-v3[data-theme] .tvcp-page {
   right: 16px !important;
   width: calc(100% - 32px) !important;
   height: calc(100% - 32px) !important;
+  border-radius: 24px !important;
+  box-sizing: border-box !important;
+}
+
+html.modern-ui-v3[data-theme] .tvcp-topbar {
+  background: transparent !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+html.modern-ui-v3[data-theme] .tvcp-topbar-item:hover {
+  background: rgba(255, 255, 255, 0.05) !important;
+  color: #fff !important;
+}
+
+html.modern-ui-v3[data-theme] .tvcp-topbar-item.active::after {
+  background: var(--accent-primary, #00d4ff) !important;
+  box-shadow: 0 0 8px var(--accent-primary, #00d4ff) !important;
+  height: 3px !important;
+  bottom: 0 !important;
 }
 
 html.modern-ui-v3[data-theme] .tvcp-sidebar {

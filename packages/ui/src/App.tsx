@@ -1234,7 +1234,7 @@ function App() {
   const [previewVideoRect, setPreviewVideoRect] = useState<{ left: number; top: number; width: number; height: number } | null>(null);
 
   useEffect(() => {
-    if (activeView === 'guide' || activeView === 'movies' || activeView === 'series' || activeView === 'dvr' || activeView === 'sports' || activeView === 'stremio' || activeView === 'nuvio') {
+    if (activeView === 'guide' || activeView === 'movies' || activeView === 'series' || activeView === 'dvr' || activeView === 'sports' || activeView === 'stremio' || activeView === 'nuvio' || activeView === 'calendar') {
       const schemes = ['scheme-apple', 'scheme-sunset', 'scheme-aurora', 'scheme-forest'];
       const chosen = schemes[Math.floor(Math.random() * schemes.length)];
       setRandomScheme(chosen);
@@ -3638,7 +3638,7 @@ function App() {
         const hasPreviewRect = !!previewVideoRect;
         const shouldRenderGlassBg = liveTvDesign === 'v3' && (
           (isPreviewView && !guideTransparent && (!currentChannel || hasPreviewRect)) ||
-          ((activeView === 'movies' || activeView === 'series' || activeView === 'dvr' || activeView === 'stremio' || activeView === 'nuvio') && !guideTransparent) ||
+          ((activeView === 'movies' || activeView === 'series' || activeView === 'dvr' || activeView === 'stremio' || activeView === 'nuvio' || activeView === 'calendar') && !guideTransparent) ||
           (activeView === 'none' && !currentChannel)
         );
 
