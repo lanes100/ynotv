@@ -7233,19 +7233,52 @@ html.modern-ui-v3 .now-playing-bar .npb-live-btn {
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
 }
 
-html.modern-ui-v3 .now-playing-bar .npb-live-btn:hover {
-  background: rgba(255, 64, 96, 0.22) !important;
-  border-color: rgba(255, 64, 96, 0.65) !important;
-  color: #ff8099 !important;
-  transform: translateY(-1px) !important;
+/* ============================================
+   V3 LIQUID GLASS — TITLE BAR SCRIM
+   Gradient vignette so the nav is always
+   readable over bright video content.
+   ============================================ */
+
+/* Much darker backing — readable on any video */
+html.modern-ui-v3 .title-bar {
+  background: rgba(0, 0, 0, 0.82) !important;
+  backdrop-filter: blur(24px) saturate(120%) brightness(0.75) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(120%) brightness(0.75) !important;
+}
+
+
+
+/* Nav text & icons — strong drop-shadow on every element */
+html.modern-ui-v3 .title-bar .segmented-btn,
+html.modern-ui-v3 .title-bar .title-bar-logo,
+html.modern-ui-v3 .title-bar .title-bar-settings-btn,
+html.modern-ui-v3 .title-bar .title-bar-calendar-btn,
+html.modern-ui-v3 .title-bar .title-bar-recording-indicator {
+  filter: drop-shadow(0 1px 4px rgba(0, 0, 0, 0.95)) !important;
+}
+
+/* Unified nav pill — dark glass for high contrast */
+html.modern-ui-v3 .title-bar-unified {
+  background: rgba(0, 0, 0, 0.45) !important;
+  border-color: rgba(255, 255, 255, 0.16) !important;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.1),
-    0 4px 14px rgba(255, 64, 96, 0.3) !important;
+    0 2px 12px rgba(0, 0, 0, 0.6) !important;
 }
 
-/* ── Empty state ── */
-html.modern-ui-v3 .now-playing-bar .npb-empty-state span,
-html.modern-ui-v3 .now-playing-bar .npb-empty-state-text span {
-  color: rgba(255, 255, 255, 0.3) !important;
+/* Active nav segment */
+html.modern-ui-v3 .title-bar .segmented-btn.active {
+  background: rgba(255, 255, 255, 0.16) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    0 2px 8px rgba(0, 0, 0, 0.4) !important;
 }
 
+/* All nav text fully white in v3 */
+html.modern-ui-v3 .title-bar .segmented-btn {
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+
+html.modern-ui-v3 .title-bar .segmented-btn:hover {
+  color: #ffffff !important;
+}
