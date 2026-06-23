@@ -1,6 +1,13 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+* {
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
 /* Modern Glass-Morphism UI Enhancement
  * This file contains modern styling that can be toggled on/off via Settings
  */
+
 
 /* Modern Category Strip - Fixed Widths */
 .modern-ui .category-strip {
@@ -3026,6 +3033,181 @@ html.modern-ui-v3[data-theme="light"] .sports-hub.with-preview .sports-content {
   transform: translateY(-2px) !important;
 }
 
+/* Sports Match Detail Modals Liquid Glass Styling */
+.modern-ui-v3 .game-detail-overlay {
+  background: rgba(8, 8, 12, 0.4) !important;
+  backdrop-filter: blur(10px) !important;
+  -webkit-backdrop-filter: blur(10px) !important;
+}
+
+.modern-ui-v3 .game-detail-modal {
+  background: rgba(255, 255, 255, 0.06) !important;
+  backdrop-filter: blur(24px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  box-shadow: 
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.05),
+    0 24px 50px rgba(0, 0, 0, 0.6),
+    0 2px 8px color-mix(in srgb, var(--accent-primary, #8b5cf6) 10%, transparent) !important;
+}
+
+/* Inner Sections Transparency */
+.modern-ui-v3 .game-detail-header,
+.modern-ui-v3 .game-detail-scoreboard,
+.modern-ui-v3 .ufc-detail-title-bar,
+.modern-ui-v3 .ufc-detail-main-event,
+.modern-ui-v3 .racing-detail-title-bar,
+.modern-ui-v3 .golf-detail-title-bar,
+.modern-ui-v3 .tennis-detail-title-bar {
+  background: transparent !important;
+}
+
+.modern-ui-v3 .game-detail-header {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+.modern-ui-v3 .game-detail-scoreboard {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
+}
+
+.modern-ui-v3 .ufc-detail-title-bar,
+.modern-ui-v3 .ufc-detail-main-event,
+.modern-ui-v3 .racing-detail-title-bar,
+.modern-ui-v3 .golf-detail-title-bar,
+.modern-ui-v3 .tennis-detail-title-bar {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+/* Tabs */
+.modern-ui-v3 .game-detail-tab {
+  color: rgba(255, 255, 255, 0.6) !important;
+  transition: all 0.2s ease !important;
+}
+
+.modern-ui-v3 .game-detail-tab:hover {
+  color: #fff !important;
+  background: rgba(255, 255, 255, 0.04) !important;
+}
+
+.modern-ui-v3 .game-detail-tab.active {
+  color: var(--accent-primary, #00d4ff) !important;
+  border-bottom-color: var(--accent-primary, #00d4ff) !important;
+  text-shadow: 0 0 8px color-mix(in srgb, var(--accent-primary, #00d4ff) 50%, transparent) !important;
+  background: transparent !important;
+}
+
+/* Tables and Lists */
+.modern-ui-v3 .game-detail-stats-table th,
+.modern-ui-v3 .game-detail-players-table th {
+  border-bottom: 2px solid rgba(255, 255, 255, 0.1) !important;
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+
+.modern-ui-v3 .game-detail-stats-table td,
+.modern-ui-v3 .game-detail-players-table td {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+  color: rgba(255, 255, 255, 0.8) !important;
+}
+
+.modern-ui-v3 .game-detail-stats-table tbody tr:hover,
+.modern-ui-v3 .game-detail-players-table tbody tr:hover {
+  background: rgba(255, 255, 255, 0.04) !important;
+}
+
+/* Channel buttons & scoring plays */
+.modern-ui-v3 .game-detail-channel-btn {
+  background: rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  color: rgba(255, 255, 255, 0.8) !important;
+  border-radius: 10px !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.modern-ui-v3 .game-detail-channel-btn:hover {
+  background: rgba(255, 255, 255, 0.12) !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+  color: #fff !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+}
+
+.modern-ui-v3 .game-detail-scoring-play {
+  background: rgba(255, 255, 255, 0.03) !important;
+  border: 1px solid rgba(255, 255, 255, 0.04) !important;
+}
+
+.modern-ui-v3 .ufc-detail-fighter-img {
+  background: rgba(255, 255, 255, 0.04) !important;
+  border: 2px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Light theme overrides */
+html.modern-ui-v3[data-theme="light"] .game-detail-header,
+html.modern-ui-v3[data-theme="light"] .game-detail-scoreboard,
+html.modern-ui-v3[data-theme="light"] .ufc-detail-title-bar,
+html.modern-ui-v3[data-theme="light"] .ufc-detail-main-event,
+html.modern-ui-v3[data-theme="light"] .racing-detail-title-bar,
+html.modern-ui-v3[data-theme="light"] .golf-detail-title-bar,
+html.modern-ui-v3[data-theme="light"] .tennis-detail-title-bar {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .game-detail-tab {
+  color: rgba(0, 0, 0, 0.6) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .game-detail-tab:hover {
+  color: #000 !important;
+  background: rgba(0, 0, 0, 0.04) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .game-detail-tab.active {
+  color: var(--accent-primary, #00d4ff) !important;
+  border-bottom-color: var(--accent-primary, #00d4ff) !important;
+  text-shadow: none !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .game-detail-stats-table th,
+html.modern-ui-v3[data-theme="light"] .game-detail-players-table th {
+  border-bottom: 2px solid rgba(0, 0, 0, 0.1) !important;
+  color: rgba(0, 0, 0, 0.9) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .game-detail-stats-table td,
+html.modern-ui-v3[data-theme="light"] .game-detail-players-table td {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05) !important;
+  color: rgba(0, 0, 0, 0.8) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .game-detail-stats-table tbody tr:hover,
+html.modern-ui-v3[data-theme="light"] .game-detail-players-table tbody tr:hover {
+  background: rgba(0, 0, 0, 0.03) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .game-detail-channel-btn {
+  background: rgba(0, 0, 0, 0.04) !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  color: rgba(0, 0, 0, 0.8) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .game-detail-channel-btn:hover {
+  background: rgba(0, 0, 0, 0.08) !important;
+  border-color: rgba(0, 0, 0, 0.15) !important;
+  color: #000 !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .game-detail-scoring-play {
+  background: rgba(0, 0, 0, 0.02) !important;
+  border: 1px solid rgba(0, 0, 0, 0.04) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .ufc-detail-fighter-img {
+  background: rgba(0, 0, 0, 0.04) !important;
+  border: 2px solid rgba(0, 0, 0, 0.1) !important;
+}
+
 /* 11. Alphabet Rail Glass Styling */
 .modern-ui-v3 .alphabet-rail {
   background: rgba(12, 14, 24, 0.3) !important;
@@ -3203,6 +3385,329 @@ html.modern-ui-v3[data-theme="light"] .sports-hub.with-preview .sports-content {
   box-shadow: 
     inset 0 1px 0 rgba(255, 255, 255, 0.2),
     inset 0 -1px 0 rgba(255, 255, 255, 0.05) !important;
+}
+
+/* Stremio & Nuvio Detail Views Elements (Liquid Glass Styles) */
+.modern-ui-v3 .stremio-detail-back-btn,
+.modern-ui-v3 .nuvio-folder-detail-back-btn,
+.modern-ui-v3 .nuvio-person-back-btn {
+  border-radius: 20px !important;
+  background: rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.8)) !important;
+  padding: 7px 16px !important;
+  font-size: 0.8rem !important;
+  font-weight: 600 !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  width: fit-content !important;
+  margin-bottom: 32px !important;
+}
+
+.modern-ui-v3 .stremio-detail-back-btn:hover,
+.modern-ui-v3 .nuvio-folder-detail-back-btn:hover,
+.modern-ui-v3 .nuvio-person-back-btn:hover {
+  background: rgba(255, 255, 255, 0.12) !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+  color: #fff !important;
+  transform: translateX(-2px) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+}
+
+.modern-ui-v3 .stremio-detail-tag {
+  background: rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.8)) !important;
+  padding: 6px 14px !important;
+  border-radius: 20px !important;
+  font-size: 0.8rem !important;
+  font-weight: 500 !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.modern-ui-v3 .stremio-detail-tag:hover {
+  background: rgba(255, 255, 255, 0.12) !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+  color: #fff !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+}
+
+.modern-ui-v3 .stremio-detail-action-btn {
+  border-radius: 20px !important;
+  background: rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.85)) !important;
+  padding: 8px 18px !important;
+  font-size: 0.85rem !important;
+  font-weight: 600 !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+}
+
+.modern-ui-v3 .stremio-detail-action-btn:hover {
+  background: rgba(255, 255, 255, 0.12) !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+  color: #fff !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+}
+
+.modern-ui-v3 .stremio-detail-action-btn.in-library {
+  background: color-mix(in srgb, var(--accent-primary, #00d4ff) 15%, rgba(255, 255, 255, 0.05)) !important;
+  border-color: color-mix(in srgb, var(--accent-primary, #00d4ff) 35%, rgba(255, 255, 255, 0.15)) !important;
+  color: var(--accent-primary, #00d4ff) !important;
+  box-shadow: 
+    0 4px 12px rgba(0, 0, 0, 0.15),
+    0 0 10px color-mix(in srgb, var(--accent-primary, #00d4ff) 10%, transparent) !important;
+}
+
+.modern-ui-v3 .stremio-detail-action-btn.in-library:hover {
+  background: color-mix(in srgb, var(--accent-primary, #00d4ff) 25%, rgba(255, 255, 255, 0.1)) !important;
+  border-color: color-mix(in srgb, var(--accent-primary, #00d4ff) 50%, rgba(255, 255, 255, 0.25)) !important;
+  color: var(--accent-primary, #00d4ff) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 
+    0 6px 16px rgba(0, 0, 0, 0.2),
+    0 0 15px color-mix(in srgb, var(--accent-primary, #00d4ff) 20%, transparent) !important;
+}
+
+.modern-ui-v3 .stremio-detail-nav-btn {
+  border-radius: 20px !important;
+  background: rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.8)) !important;
+  padding: 6px 14px !important;
+  font-size: 0.8rem !important;
+  font-weight: 600 !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.modern-ui-v3 .stremio-detail-nav-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.12) !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+  color: #fff !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+}
+
+.modern-ui-v3 .stremio-detail-nav-btn:disabled {
+  opacity: 0.25 !important;
+  cursor: not-allowed !important;
+}
+
+.modern-ui-v3 .stremio-detail-season-select {
+  border-radius: 20px !important;
+  background: rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  color: var(--text-primary, #fff) !important;
+  font-weight: 600 !important;
+  padding: 6px 12px !important;
+  font-size: 0.8rem !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.modern-ui-v3 .stremio-detail-season-select:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-color: rgba(255, 255, 255, 0.15) !important;
+}
+
+.modern-ui-v3 .stremio-detail-search-videos input {
+  border-radius: 20px !important;
+  background: rgba(255, 255, 255, 0.03) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  transition: all 0.2s ease !important;
+}
+
+.modern-ui-v3 .stremio-detail-search-videos input:focus {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-color: var(--accent-primary, #00d4ff) !important;
+  box-shadow: 0 0 10px var(--accent-glow, rgba(0, 212, 255, 0.15)) !important;
+}
+
+/* Cast Photos Liquid Glass Border */
+.modern-ui-v3 .stremio-detail-cast-photo {
+  border: none !important;
+  position: relative !important;
+  padding: 2px !important;
+  background: linear-gradient(135deg, 
+    var(--accent-primary, #00d4ff) 0%, 
+    color-mix(in srgb, var(--accent-primary, #00d4ff) 30%, #8b5cf6) 50%, 
+    #8b5cf6 100%
+  ) !important;
+  border-radius: 50% !important;
+  box-shadow: 
+    0 4px 12px rgba(0, 0, 0, 0.25),
+    0 0 8px color-mix(in srgb, var(--accent-primary, #00d4ff) 20%, transparent) !important;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.modern-ui-v3 .stremio-detail-cast-photo img,
+.modern-ui-v3 .stremio-detail-cast-photo-placeholder {
+  border-radius: 50% !important;
+}
+
+.modern-ui-v3 .stremio-detail-cast-photo-placeholder {
+  background: rgba(255, 255, 255, 0.04) !important;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.8)) !important;
+}
+
+.modern-ui-v3 .stremio-detail-cast-member:hover .stremio-detail-cast-photo {
+  transform: scale(1.08) !important;
+  box-shadow: 
+    0 6px 16px rgba(0, 0, 0, 0.3),
+    0 0 16px color-mix(in srgb, var(--accent-primary, #00d4ff) 50%, transparent) !important;
+}
+
+/* Addon filters & loadings */
+.modern-ui-v3 .stremio-addon-filter-btn {
+  background: rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.7)) !important;
+  padding: 6px 14px !important;
+  border-radius: 20px !important;
+  font-size: 0.8rem !important;
+  font-weight: 600 !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+}
+
+.modern-ui-v3 .stremio-addon-filter-btn:hover {
+  background: rgba(255, 255, 255, 0.12) !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+  color: #fff !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+}
+
+.modern-ui-v3 .stremio-addon-filter-btn.active {
+  background: color-mix(in srgb, var(--accent-primary, #00d4ff) 15%, rgba(255, 255, 255, 0.05)) !important;
+  border-color: color-mix(in srgb, var(--accent-primary, #00d4ff) 35%, rgba(255, 255, 255, 0.15)) !important;
+  color: var(--accent-primary, #00d4ff) !important;
+  box-shadow: 
+    0 4px 12px rgba(0, 0, 0, 0.15),
+    0 0 10px color-mix(in srgb, var(--accent-primary, #00d4ff) 10%, transparent) !important;
+}
+
+.modern-ui-v3 .stremio-detail-streams-loading-mini {
+  background: rgba(255, 255, 255, 0.03) !important;
+  border: 1px solid rgba(255, 255, 255, 0.06) !important;
+  border-radius: 10px !important;
+}
+
+/* Divider before Recommendations */
+.modern-ui-v3 .stremio-detail-section.stremio-detail-recs-section {
+  border-top: none !important;
+  position: relative !important;
+  padding-top: 24px !important;
+  margin-top: 32px !important;
+}
+
+.modern-ui-v3 .stremio-detail-section.stremio-detail-recs-section::before {
+  content: '' !important;
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  height: 1px !important;
+  background: linear-gradient(90deg, 
+    transparent 0%, 
+    color-mix(in srgb, var(--accent-primary, #00d4ff) 30%, transparent) 20%, 
+    color-mix(in srgb, var(--accent-primary, #00d4ff) 30%, transparent) 80%, 
+    transparent 100%
+  ) !important;
+}
+
+/* Light Theme overrides for Stremio/Nuvio detail views */
+html.modern-ui-v3[data-theme="light"] .stremio-detail-back-btn,
+html.modern-ui-v3[data-theme="light"] .nuvio-folder-detail-back-btn,
+html.modern-ui-v3[data-theme="light"] .nuvio-person-back-btn,
+html.modern-ui-v3[data-theme="light"] .stremio-detail-tag,
+html.modern-ui-v3[data-theme="light"] .stremio-detail-action-btn,
+html.modern-ui-v3[data-theme="light"] .stremio-detail-nav-btn,
+html.modern-ui-v3[data-theme="light"] .stremio-detail-season-select {
+  background: rgba(0, 0, 0, 0.04) !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  color: rgba(0, 0, 0, 0.8) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .stremio-detail-back-btn:hover,
+html.modern-ui-v3[data-theme="light"] .nuvio-folder-detail-back-btn:hover,
+html.modern-ui-v3[data-theme="light"] .nuvio-person-back-btn:hover,
+html.modern-ui-v3[data-theme="light"] .stremio-detail-tag:hover,
+html.modern-ui-v3[data-theme="light"] .stremio-detail-action-btn:hover,
+html.modern-ui-v3[data-theme="light"] .stremio-detail-nav-btn:hover:not(:disabled),
+html.modern-ui-v3[data-theme="light"] .stremio-detail-season-select:hover {
+  background: rgba(0, 0, 0, 0.08) !important;
+  border-color: rgba(0, 0, 0, 0.15) !important;
+  color: #000 !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .stremio-detail-action-btn.in-library {
+  background: color-mix(in srgb, var(--accent-primary, #00d4ff) 15%, rgba(0, 0, 0, 0.04)) !important;
+  border-color: color-mix(in srgb, var(--accent-primary, #00d4ff) 35%, rgba(0, 0, 0, 0.08)) !important;
+  color: var(--accent-primary, #00d4ff) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .stremio-detail-action-btn.in-library:hover {
+  background: color-mix(in srgb, var(--accent-primary, #00d4ff) 25%, rgba(0, 0, 0, 0.08)) !important;
+  border-color: color-mix(in srgb, var(--accent-primary, #00d4ff) 50%, rgba(0, 0, 0, 0.15)) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .stremio-detail-search-videos input {
+  background: rgba(0, 0, 0, 0.03) !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  color: #000 !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .stremio-detail-search-videos input:focus {
+  background: rgba(0, 0, 0, 0.06) !important;
+  border-color: var(--accent-primary, #00d4ff) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .stremio-detail-cast-photo-placeholder {
+  background: rgba(0, 0, 0, 0.04) !important;
+  color: rgba(0, 0, 0, 0.6) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .stremio-detail-section.stremio-detail-recs-section::before {
+  background: linear-gradient(90deg, 
+    transparent 0%, 
+    rgba(0, 0, 0, 0.08) 20%, 
+    rgba(0, 0, 0, 0.08) 80%, 
+    transparent 100%
+  ) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .stremio-addon-filter-btn {
+  background: rgba(0, 0, 0, 0.04) !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  color: rgba(0, 0, 0, 0.7) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .stremio-addon-filter-btn:hover {
+  background: rgba(0, 0, 0, 0.08) !important;
+  border-color: rgba(0, 0, 0, 0.15) !important;
+  color: #000 !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .stremio-addon-filter-btn.active {
+  background: color-mix(in srgb, var(--accent-primary, #00d4ff) 15%, rgba(0, 0, 0, 0.04)) !important;
+  border-color: color-mix(in srgb, var(--accent-primary, #00d4ff) 35%, rgba(0, 0, 0, 0.08)) !important;
+  color: var(--accent-primary, #00d4ff) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .stremio-detail-streams-loading-mini {
+  background: rgba(0, 0, 0, 0.03) !important;
+  border: 1px solid rgba(0, 0, 0, 0.06) !important;
 }
 
 /* Modals */
@@ -3961,6 +4466,7 @@ html.modern-ui-v3[data-theme="light"] .stremio-account-modal,
 html.modern-ui-v3[data-theme="light"] .stremio-picker-modal,
 html.modern-ui-v3[data-theme="light"] .nuvio-pin-modal-card,
 html.modern-ui-v3[data-theme="light"] .nuvio-detail-panel,
+html.modern-ui-v3[data-theme="light"] .game-detail-modal,
 html.modern-ui-v3[data-theme="light"] .stremio-detail-right {
   background: rgba(255, 255, 255, 0.45) !important;
   backdrop-filter: blur(30px) saturate(190%) !important;
@@ -4341,6 +4847,114 @@ html.modern-ui-v3[data-theme*="dark-"] .livetv-liquid-glass-bg::before,
 html.modern-ui-v3[data-theme*="dark-"] .livetv-liquid-glass-bg::after {
   display: none !important;
 }
+
+
+/* ==========================================================================
+   LiveTV V3 Theme Text Readability Overrides (Excludes Light Theme)
+   ========================================================================== */
+
+/* 1. Base Text Colors: Sidebar Category Names, Channel Names, and EPG Program Titles */
+html.modern-ui-v3:not([data-theme="light"]) .category-name,
+html.modern-ui-v3:not([data-theme="light"]) .source-name,
+html.modern-ui-v3:not([data-theme="light"]) .guide-channel-name,
+html.modern-ui-v3:not([data-theme="light"]) .program-block-title {
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+
+/* Ensure currently playing channel name is not tinted with accent color */
+html.modern-ui-v3:not([data-theme="light"]) .guide-channel-row.currently-playing .guide-channel-name {
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+
+/* 2. Active/Selected Category Item Text (Keep/Use Accent Color) */
+html.modern-ui-v3:not([data-theme="light"]) .category-item.selected .category-name,
+html.modern-ui-v3:not([data-theme="light"]) .category-list-bar.selected .category-name,
+html.modern-ui-v3:not([data-theme="light"]) .category-item.active .category-name,
+html.modern-ui-v3:not([data-theme="light"]) .category-list-bar.active .category-name {
+  color: var(--accent-primary, #00d4ff) !important;
+}
+
+/* 3. Hover States: Brighter Full White, No Accent Color */
+html.modern-ui-v3:not([data-theme="light"]) .category-item:hover:not(.selected) .category-name,
+html.modern-ui-v3:not([data-theme="light"]) .category-list-bar:hover:not(.selected) .category-name,
+html.modern-ui-v3:not([data-theme="light"]) button.category-source-header:hover .source-name,
+html.modern-ui-v3:not([data-theme="light"]) .guide-channel-info:hover .guide-channel-name,
+html.modern-ui-v3:not([data-theme="light"]) .guide-channel-row:hover .guide-channel-name,
+html.modern-ui-v3:not([data-theme="light"]) .program-block:hover .program-block-title {
+  color: rgba(255, 255, 255, 1) !important;
+}
+
+/* Ensure currently playing channel name is full white on hover (no accent) */
+html.modern-ui-v3:not([data-theme="light"]) .guide-channel-row.currently-playing:hover .guide-channel-name {
+  color: rgba(255, 255, 255, 1) !important;
+}
+
+/* 5. Secondary/Subtitle Text: Dimmed White, Never a Tinted Accent Color */
+html.modern-ui-v3:not([data-theme="light"]) .category-count,
+html.modern-ui-v3:not([data-theme="light"]) .source-count,
+html.modern-ui-v3:not([data-theme="light"]) .program-block-desc,
+html.modern-ui-v3:not([data-theme="light"]) .guide-channel-number,
+html.modern-ui-v3:not([data-theme="light"]) .guide-channel-playlist-name {
+  color: rgba(255, 255, 255, 0.45) !important;
+}
+
+/* 6. Typography & Weight Hierarchy Overrides */
+/* Sidebar category names (parent sources) */
+.modern-ui-v3 .category-strip button.category-source-header,
+.modern-ui-v3 .category-strip button.category-source-header .source-name {
+  font-weight: 600 !important;
+  font-size: 0.76rem !important;
+  letter-spacing: 0.06em !important;
+  text-transform: uppercase !important;
+}
+
+/* Sidebar child category names */
+.modern-ui-v3 .category-item .category-name,
+.modern-ui-v3 .category-list-bar .category-name {
+  font-weight: 500 !important;
+  font-size: 0.82rem !important;
+}
+
+/* Channel names in EPG left column */
+.modern-ui-v3 .guide-channel-name {
+  font-weight: 600 !important;
+  font-size: 0.78rem !important;
+}
+
+/* EPG program titles */
+.modern-ui-v3 .program-block-title {
+  font-weight: 500 !important;
+  font-size: 0.82rem !important;
+}
+
+/* EPG program descriptions */
+.modern-ui-v3 .program-block-desc {
+  font-weight: 400 !important;
+  font-size: 0.75rem !important;
+  opacity: 0.55 !important;
+}
+
+/* Time stamps and counts (tabular-nums to prevent live shifts) */
+.modern-ui-v3 .guide-time-header,
+.modern-ui-v3 .guide-program-meta,
+.modern-ui-v3 .category-count,
+.modern-ui-v3 .source-count,
+.modern-ui-v3 .guide-channel-number,
+.modern-ui-v3 .npb-time-elapsed,
+.modern-ui-v3 .npb-time-remaining,
+.modern-ui-v3 .npb-time-tooltip,
+.modern-ui-v3 .npb-timeshift-window {
+  font-weight: 400 !important;
+  font-variant-numeric: tabular-nums !important;
+}
+
+/* Info pane show title (right panel) */
+.modern-ui-v3 .guide-info-pane .guide-program-title {
+  font-weight: 700 !important;
+  letter-spacing: -0.02em !important;
+}
+
+
 
 
 

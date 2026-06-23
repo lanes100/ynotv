@@ -3218,7 +3218,9 @@ function App() {
       <div className="video-background">
         {!currentChannel && !error && !isRestoring && (
           <div className="placeholder">
-            <Logo className="placeholder__logo" />
+            {activeView !== 'guide' && activeView !== 'sports' && (
+              <Logo className="placeholder__logo" />
+            )}
             {(channelSyncing || vodSyncing || tmdbMatching) ? (
               <div className="sync-status">
                 <div className="sync-status__spinner" />
