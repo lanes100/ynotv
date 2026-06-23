@@ -2184,16 +2184,43 @@
   z-index: 20 !important;
 }
 
-.modern-ui-v3 .program-block.current {
-  background: color-mix(in srgb, var(--accent-primary, #8b5cf6) 18%, transparent) !important;
-  border: 1px solid color-mix(in srgb, var(--accent-primary, #8b5cf6) 40%, transparent) !important;
-  box-shadow: 0 0 20px color-mix(in srgb, var(--accent-primary, #8b5cf6) 20%, transparent) !important;
+/* Gently highlighted block for currently airing programs (ambient glow, not solid block) */
+html.modern-ui-v3 .program-block.current {
+  background: rgba(139, 92, 246, 0.12) !important;
+  background: color-mix(in srgb, var(--accent-primary, #8b5cf6) 12%, transparent) !important;
+  border-top: 1px solid rgba(139, 92, 246, 0.28) !important;
+  border-top: 1px solid color-mix(in srgb, var(--accent-primary, #8b5cf6) 28%, transparent) !important;
+  border-bottom: 1px solid rgba(139, 92, 246, 0.28) !important;
+  border-bottom: 1px solid color-mix(in srgb, var(--accent-primary, #8b5cf6) 28%, transparent) !important;
+  border-left: none !important;
+  border-right: none !important;
+  box-shadow: none !important;
 }
 
-.modern-ui-v3 .program-block.current:hover {
-  background: color-mix(in srgb, var(--accent-primary, #8b5cf6) 25%, transparent) !important;
-  border-color: color-mix(in srgb, var(--accent-primary, #8b5cf6) 60%, transparent) !important;
-  box-shadow: 0 0 25px color-mix(in srgb, var(--accent-primary, #8b5cf6) 30%, transparent) !important;
+html.modern-ui-v3 .program-block.current:hover {
+  background: rgba(139, 92, 246, 0.18) !important;
+  background: color-mix(in srgb, var(--accent-primary, #8b5cf6) 18%, transparent) !important;
+  border-color: rgba(139, 92, 246, 0.35) !important;
+  border-color: color-mix(in srgb, var(--accent-primary, #8b5cf6) 35%, transparent) !important;
+  transform: translateY(-1px) scale(1.01) !important;
+  z-index: 20 !important;
+}
+
+/* Slightly stronger highlight for the active channel you are currently watching */
+html.modern-ui-v3 .guide-channel-row.currently-playing .program-block.current {
+  background: rgba(139, 92, 246, 0.22) !important;
+  background: color-mix(in srgb, var(--accent-primary, #8b5cf6) 22%, transparent) !important;
+  border: 1px solid rgba(139, 92, 246, 0.4) !important;
+  border: 1px solid color-mix(in srgb, var(--accent-primary, #8b5cf6) 40%, transparent) !important;
+  box-shadow: 0 0 16px rgba(139, 92, 246, 0.15) !important;
+  box-shadow: 0 0 16px color-mix(in srgb, var(--accent-primary, #8b5cf6) 15%, transparent) !important;
+}
+
+html.modern-ui-v3 .guide-channel-row.currently-playing .program-block.current:hover {
+  background: rgba(139, 92, 246, 0.28) !important;
+  background: color-mix(in srgb, var(--accent-primary, #8b5cf6) 28%, transparent) !important;
+  border-color: rgba(139, 92, 246, 0.5) !important;
+  border-color: color-mix(in srgb, var(--accent-primary, #8b5cf6) 50%, transparent) !important;
   transform: translateY(-1px) scale(1.01) !important;
   z-index: 20 !important;
 }
@@ -2309,6 +2336,58 @@
 }
 
 .modern-ui-v3 .category-strip-top .category-list-bar:not(.custom-group-item).selected .category-count {
+  background: rgba(255, 255, 255, 0.12) !important;
+  color: var(--text-primary, #fff) !important;
+}
+
+/* 8a2. LiveTV Custom Groups match the Top Categories clean look in V3 */
+.modern-ui-v3 .custom-groups-section .category-list-bar.custom-group-item {
+  border-radius: 0 !important;
+  margin: 2px 8px !important;
+  width: calc(100% - 16px) !important;
+  box-sizing: border-box !important;
+  border-left: none !important;
+  border-right: none !important;
+  border-top: 1px solid transparent !important;
+  border-bottom: 1px solid transparent !important;
+  background: transparent !important;
+  color: var(--text-secondary, #888) !important;
+  padding: 10px 12px !important;
+}
+
+.modern-ui-v3 .custom-groups-section .category-list-bar.custom-group-item:hover {
+  background: rgba(255, 255, 255, 0.05) !important;
+  color: var(--text-primary, #fff) !important;
+  transform: none !important;
+  border-color: transparent !important;
+}
+
+.modern-ui-v3 .custom-groups-section .category-list-bar.custom-group-item.selected {
+  background: rgba(255, 255, 255, 0.1) !important;
+  border-top-color: rgba(255, 255, 255, 0.08) !important;
+  border-bottom-color: rgba(255, 255, 255, 0.08) !important;
+  color: var(--text-primary, #ffffff) !important;
+  box-shadow:
+    0 4px 12px rgba(0, 0, 0, 0.15),
+    0 0 0 1px rgba(255, 255, 255, 0.04) inset !important;
+  position: relative !important;
+  padding-left: 16px !important;
+}
+
+.modern-ui-v3 .custom-groups-section .category-list-bar.custom-group-item.selected::before {
+  content: '' !important;
+  position: absolute !important;
+  left: 0 !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  width: 3px !important;
+  height: 50% !important;
+  background: var(--accent-primary, #e50914) !important;
+  border-radius: 0 2px 2px 0 !important;
+  box-shadow: 0 0 8px var(--accent-primary, #e50914) !important;
+}
+
+.modern-ui-v3 .custom-groups-section .category-list-bar.custom-group-item.selected .category-count {
   background: rgba(255, 255, 255, 0.12) !important;
   color: var(--text-primary, #fff) !important;
 }
@@ -5325,15 +5404,6 @@ html.modern-ui-v3:not([data-theme="light"]) .guide-channel-playlist-name {
   transform: translateY(-2px) !important;
 }
 
-/* 5. Section Headers */
-.modern-ui-v3 .nuvio-row-title {
-  font-family: 'Inter', sans-serif !important;
-  font-weight: 700 !important;
-  font-size: 1rem !important;
-  letter-spacing: -0.01em !important;
-  color: rgba(255, 255, 255, 0.95) !important;
-}
-
 /* 6. Hero Banner Container */
 .modern-ui-v3 .stremio-hero-banner {
   border-radius: 12px !important;
@@ -5342,3 +5412,991 @@ html.modern-ui-v3:not([data-theme="light"]) .guide-channel-playlist-name {
   box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.04),
               0 20px 60px rgba(0, 0, 0, 0.5) !important;
 }
+
+/* ==========================================================================
+   V3 LIQUID GLASS - SETTINGS MODALS OVERRIDES
+   Upgrades Manage Categories, Manage Channels, and Add/Edit Source modals.
+   ========================================================================== */
+
+/* 1. Backdrop Overlays */
+.modern-ui-v3 .category-manager-overlay,
+.modern-ui-v3 .channel-manager-overlay,
+.modern-ui-v3 .source-form-overlay {
+  background: rgba(8, 8, 12, 0.4) !important;
+  backdrop-filter: blur(10px) !important;
+  -webkit-backdrop-filter: blur(10px) !important;
+}
+
+/* 2. Modal Card Containers */
+.modern-ui-v3 .category-manager-modal,
+.modern-ui-v3 .channel-manager-modal,
+.modern-ui-v3 .source-form {
+  background: rgba(16, 12, 26, 0.82) !important;
+  backdrop-filter: blur(35px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(35px) saturate(180%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  box-shadow: 
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.05),
+    0 20px 50px rgba(0, 0, 0, 0.6),
+    0 2px 8px color-mix(in srgb, var(--accent-primary, #8b5cf6) 10%, transparent) !important;
+  border-radius: 20px !important;
+  color: #fff !important;
+}
+
+/* 3. Headers */
+.modern-ui-v3 .category-manager-header,
+.modern-ui-v3 .channel-manager-header,
+.modern-ui-v3 .source-form h3 {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  background: transparent !important;
+  padding: 20px 24px !important;
+}
+
+.modern-ui-v3 .source-form h3 {
+  margin: -24px -24px 20px -24px !important;
+  font-size: 1.15rem !important;
+  font-weight: 600 !important;
+  color: #fff !important;
+}
+
+.modern-ui-v3 .category-manager-header h2,
+.modern-ui-v3 .channel-manager-header h2 {
+  font-size: 1.15rem !important;
+  font-weight: 600 !important;
+  color: #fff !important;
+}
+
+/* 4. Close Buttons & Stats */
+.modern-ui-v3 .category-manager-header .close-btn,
+.modern-ui-v3 .channel-manager-header .close-btn {
+  border-radius: 50% !important;
+  width: 32px !important;
+  height: 32px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background: rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  color: rgba(255, 255, 255, 0.6) !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.modern-ui-v3 .category-manager-header .close-btn:hover,
+.modern-ui-v3 .channel-manager-header .close-btn:hover {
+  background: rgba(255, 255, 255, 0.12) !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+  color: #fff !important;
+}
+
+.modern-ui-v3 .category-manager-stats,
+.modern-ui-v3 .channel-manager-stats {
+  padding: 12px 24px !important;
+  color: rgba(255, 255, 255, 0.5) !important;
+  font-size: 0.85rem !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
+  background: rgba(255, 255, 255, 0.02) !important;
+}
+
+/* Inline stats buttons customize order/reset alphabetical overrides */
+.modern-ui-v3 .category-manager-stats button {
+  background: rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 8px !important;
+  color: rgba(255, 255, 255, 0.8) !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.modern-ui-v3 .category-manager-stats button:hover {
+  background: rgba(255, 255, 255, 0.12) !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+  color: #fff !important;
+}
+
+/* 5. Inputs & Search Fields */
+.modern-ui-v3 .category-search input,
+.modern-ui-v3 .channel-search input,
+.modern-ui-v3 .source-form input,
+.modern-ui-v3 .filter-words-input-row input {
+  border-radius: 10px !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  background: rgba(255, 255, 255, 0.04) !important;
+  color: #fff !important;
+  padding: 10px 14px !important;
+  transition: all 0.2s ease !important;
+}
+
+.modern-ui-v3 .category-search input:focus,
+.modern-ui-v3 .channel-search input:focus,
+.modern-ui-v3 .source-form input:focus,
+.modern-ui-v3 .filter-words-input-row input:focus {
+  border-color: rgba(255, 255, 255, 0.2) !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.05) !important;
+  outline: none !important;
+}
+
+/* 6. List Scrollbar Styling */
+.modern-ui-v3 .category-list,
+.modern-ui-v3 .channel-list {
+  background: transparent !important;
+}
+
+.modern-ui-v3 .category-list::-webkit-scrollbar-thumb,
+.modern-ui-v3 .channel-list::-webkit-scrollbar-thumb,
+.modern-ui-v3 .source-form::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-radius: 3px !important;
+}
+
+.modern-ui-v3 .category-list::-webkit-scrollbar-thumb:hover,
+.modern-ui-v3 .channel-list::-webkit-scrollbar-thumb:hover,
+.modern-ui-v3 .source-form::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-primary, #00d4ff) !important;
+}
+
+/* 7. List Items (Categories & Channels) */
+.modern-ui-v3 .category-item,
+.modern-ui-v3 .channel-item {
+  background: rgba(255, 255, 255, 0.02) !important;
+  border: 1px solid rgba(255, 255, 255, 0.04) !important;
+  border-radius: 10px !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  margin-bottom: 8px !important;
+  padding: 12px !important;
+}
+
+.modern-ui-v3 .category-item:hover,
+.modern-ui-v3 .channel-item:hover {
+  background: rgba(255, 255, 255, 0.06) !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+  transform: translateY(-0.5px) !important;
+}
+
+.modern-ui-v3 .category-item.selected-for-move {
+  background: color-mix(in srgb, var(--accent-primary, #8b5cf6) 12%, rgba(255, 255, 255, 0.04)) !important;
+  border-color: var(--accent-primary, #8b5cf6) !important;
+  box-shadow: 0 0 12px color-mix(in srgb, var(--accent-primary, #8b5cf6) 20%, transparent) !important;
+}
+
+.modern-ui-v3 .category-item.dragging,
+.modern-ui-v3 .channel-item.dragging {
+  background: rgba(255, 255, 255, 0.12) !important;
+  border-color: var(--accent-primary, #00d4ff) !important;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3) !important;
+  opacity: 0.8 !important;
+}
+
+.modern-ui-v3 .category-item.drag-over,
+.modern-ui-v3 .channel-item.drag-over {
+  border-top: 2px solid var(--accent-primary, #00d4ff) !important;
+  background: rgba(255, 255, 255, 0.06) !important;
+}
+
+.modern-ui-v3 .category-checkbox input[type="checkbox"],
+.modern-ui-v3 .channel-checkbox input[type="checkbox"] {
+  accent-color: var(--accent-primary, #00d4ff) !important;
+}
+
+.modern-ui-v3 .category-name,
+.modern-ui-v3 .channel-name {
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+
+.modern-ui-v3 .channel-item.disabled {
+  opacity: 0.4 !important;
+}
+
+.modern-ui-v3 .drag-handle {
+  color: rgba(255, 255, 255, 0.25) !important;
+}
+.modern-ui-v3 .category-item:hover .drag-handle,
+.modern-ui-v3 .channel-item:hover .drag-handle {
+  color: rgba(255, 255, 255, 0.6) !important;
+}
+
+/* 8. Action Buttons & Toggles */
+.modern-ui-v3 .category-manager-actions,
+.modern-ui-v3 .channel-manager-actions {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  background: transparent !important;
+  padding: 16px 24px !important;
+}
+
+.modern-ui-v3 .category-manager-actions button,
+.modern-ui-v3 .channel-manager-actions button,
+.modern-ui-v3 .type-selector button,
+.modern-ui-v3 .import-btn,
+.modern-ui-v3 .change-file-btn,
+.modern-ui-v3 .add-backup-btn,
+.modern-ui-v3 .confirm-btn,
+.modern-ui-v3 .swap-btn,
+.modern-ui-v3 .order-btn,
+.modern-ui-v3 .filter-add-btn {
+  background: rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  color: rgba(255, 255, 255, 0.8) !important;
+  border-radius: 8px !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  font-weight: 500 !important;
+}
+
+.modern-ui-v3 .category-manager-actions button:hover,
+.modern-ui-v3 .channel-manager-actions button:hover,
+.modern-ui-v3 .type-selector button:hover,
+.modern-ui-v3 .import-btn:hover,
+.modern-ui-v3 .change-file-btn:hover,
+.modern-ui-v3 .add-backup-btn:hover,
+.modern-ui-v3 .confirm-btn:hover,
+.modern-ui-v3 .swap-btn:hover,
+.modern-ui-v3 .order-btn:hover:not(:disabled),
+.modern-ui-v3 .filter-add-btn:hover {
+  background: rgba(255, 255, 255, 0.12) !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+  color: #fff !important;
+  transform: translateY(-1px) !important;
+}
+
+.modern-ui-v3 .category-manager-actions button.active-toggle,
+.modern-ui-v3 .channel-manager-actions button.active-toggle,
+.modern-ui-v3 .type-selector button.active {
+  background: color-mix(in srgb, var(--accent-primary, #00d4ff) 18%, rgba(255, 255, 255, 0.08)) !important;
+  color: #fff !important;
+  border: 1px solid color-mix(in srgb, var(--accent-primary, #00d4ff) 35%, rgba(255, 255, 255, 0.15)) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+  font-weight: 600 !important;
+}
+
+.modern-ui-v3 .cancel-select-btn {
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  background: rgba(255, 255, 255, 0.02) !important;
+  color: rgba(255, 255, 255, 0.6) !important;
+}
+
+.modern-ui-v3 .cancel-select-btn:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+  color: #fff !important;
+}
+
+.modern-ui-v3 .manage-channels-btn {
+  background: color-mix(in srgb, var(--accent-primary, #00d4ff) 15%, transparent) !important;
+  border: 1px solid color-mix(in srgb, var(--accent-primary, #00d4ff) 30%, transparent) !important;
+  color: var(--accent-primary, #00d4ff) !important;
+  border-radius: 8px !important;
+  font-weight: 600 !important;
+  transition: all 0.2s ease !important;
+  padding: 6px 12px !important;
+}
+
+.modern-ui-v3 .manage-channels-btn:hover {
+  background: color-mix(in srgb, var(--accent-primary, #00d4ff) 25%, transparent) !important;
+  border-color: var(--accent-primary, #00d4ff) !important;
+  transform: translateY(-0.5px) !important;
+}
+
+/* 9. Filter Words Panel specific styles */
+.modern-ui-v3 .filter-words-panel {
+  background: rgba(255, 255, 255, 0.02) !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.06) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
+  padding: 16px 20px !important;
+}
+
+.modern-ui-v3 .filter-word-tag {
+  background: rgba(255, 255, 255, 0.06) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  color: rgba(255, 255, 255, 0.85) !important;
+  border-radius: 6px !important;
+}
+
+/* 10. Form Details / Catchup */
+.modern-ui-v3 .form-details {
+  background: rgba(255, 255, 255, 0.02) !important;
+  border: 1px solid rgba(255, 255, 255, 0.06) !important;
+  border-radius: 10px !important;
+  margin-bottom: 16px !important;
+  overflow: hidden !important;
+}
+
+.modern-ui-v3 .form-details-summary {
+  padding: 12px 16px !important;
+  background: rgba(255, 255, 255, 0.03) !important;
+  color: rgba(255, 255, 255, 0.85) !important;
+  font-weight: 500 !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+}
+
+.modern-ui-v3 .form-details-summary:hover {
+  background: rgba(255, 255, 255, 0.06) !important;
+}
+
+.modern-ui-v3 .form-details-content {
+  padding: 16px !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.06) !important;
+}
+
+/* 11. Footers & Action buttons (Save/Cancel) */
+.modern-ui-v3 .category-manager-footer,
+.modern-ui-v3 .channel-manager-footer,
+.modern-ui-v3 .form-actions {
+  border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
+  background: transparent !important;
+  padding: 20px 24px !important;
+  display: flex !important;
+  justify-content: flex-end !important;
+  gap: 12px !important;
+}
+
+.modern-ui-v3 .save-btn {
+  background: var(--accent-primary, #00d4ff) !important;
+  color: #121424 !important;
+  font-weight: 600 !important;
+  border: 1px solid transparent !important;
+  border-radius: 10px !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  box-shadow: 0 4px 12px rgba(0, 212, 255, 0.25) !important;
+  cursor: pointer !important;
+}
+
+.modern-ui-v3 .save-btn:hover:not(:disabled) {
+  background: #33e0ff !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 6px 16px rgba(0, 212, 255, 0.4) !important;
+}
+
+.modern-ui-v3 .save-btn:disabled {
+  opacity: 0.5 !important;
+  cursor: not-allowed !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+.modern-ui-v3 .cancel-btn {
+  background: rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  color: rgba(255, 255, 255, 0.8) !important;
+  border-radius: 10px !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  cursor: pointer !important;
+}
+
+.modern-ui-v3 .cancel-btn:hover {
+  background: rgba(255, 255, 255, 0.12) !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+  color: #fff !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* ==========================================================================
+   V3 LIQUID GLASS - LIGHT THEME OVERRIDES
+   Applies adaptive styling for Light Theme settings modals.
+   ========================================================================== */
+
+html.modern-ui-v3[data-theme="light"] .category-manager-modal,
+html.modern-ui-v3[data-theme="light"] .channel-manager-modal,
+html.modern-ui-v3[data-theme="light"] .source-form {
+  background: rgba(255, 255, 255, 0.45) !important;
+  backdrop-filter: blur(30px) saturate(190%) !important;
+  -webkit-backdrop-filter: blur(30px) saturate(190%) !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  box-shadow: 
+    inset 0 1px 0 rgba(255, 255, 255, 0.6),
+    0 8px 32px rgba(0, 0, 0, 0.08),
+    0 2px 8px rgba(0, 0, 0, 0.02) !important;
+  color: #000 !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .category-manager-header,
+html.modern-ui-v3[data-theme="light"] .channel-manager-header,
+html.modern-ui-v3[data-theme="light"] .source-form h3 {
+  border-bottom-color: rgba(0, 0, 0, 0.08) !important;
+  color: #000 !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .category-manager-header h2,
+html.modern-ui-v3[data-theme="light"] .channel-manager-header h2 {
+  color: #000 !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .category-manager-stats,
+html.modern-ui-v3[data-theme="light"] .channel-manager-stats {
+  color: rgba(0, 0, 0, 0.6) !important;
+  border-bottom-color: rgba(0, 0, 0, 0.06) !important;
+  background: rgba(0, 0, 0, 0.01) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .category-manager-header .close-btn,
+html.modern-ui-v3[data-theme="light"] .channel-manager-header .close-btn {
+  background: rgba(0, 0, 0, 0.04) !important;
+  border-color: rgba(0, 0, 0, 0.08) !important;
+  color: rgba(0, 0, 0, 0.6) !important;
+}
+html.modern-ui-v3[data-theme="light"] .category-manager-header .close-btn:hover,
+html.modern-ui-v3[data-theme="light"] .channel-manager-header .close-btn:hover {
+  background: rgba(0, 0, 0, 0.08) !important;
+  border-color: rgba(0, 0, 0, 0.15) !important;
+  color: #000 !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .category-search input,
+html.modern-ui-v3[data-theme="light"] .channel-search input,
+html.modern-ui-v3[data-theme="light"] .source-form input,
+html.modern-ui-v3[data-theme="light"] .filter-words-input-row input {
+  background: rgba(0, 0, 0, 0.02) !important;
+  border-color: rgba(0, 0, 0, 0.08) !important;
+  color: #000 !important;
+}
+html.modern-ui-v3[data-theme="light"] .category-search input:focus,
+html.modern-ui-v3[data-theme="light"] .channel-search input:focus,
+html.modern-ui-v3[data-theme="light"] .source-form input:focus,
+html.modern-ui-v3[data-theme="light"] .filter-words-input-row input:focus {
+  background: rgba(0, 0, 0, 0.05) !important;
+  border-color: rgba(0, 0, 0, 0.15) !important;
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.03) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .category-item,
+html.modern-ui-v3[data-theme="light"] .channel-item {
+  background: rgba(0, 0, 0, 0.01) !important;
+  border-color: rgba(0, 0, 0, 0.04) !important;
+}
+html.modern-ui-v3[data-theme="light"] .category-item:hover,
+html.modern-ui-v3[data-theme="light"] .channel-item:hover {
+  background: rgba(0, 0, 0, 0.04) !important;
+  border-color: rgba(0, 0, 0, 0.08) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04) !important;
+}
+html.modern-ui-v3[data-theme="light"] .category-item.selected-for-move {
+  background: color-mix(in srgb, var(--accent-primary, #8b5cf6) 8%, rgba(0, 0, 0, 0.02)) !important;
+  border-color: var(--accent-primary, #8b5cf6) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .category-name,
+html.modern-ui-v3[data-theme="light"] .channel-name {
+  color: rgba(0, 0, 0, 0.85) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .drag-handle {
+  color: rgba(0, 0, 0, 0.25) !important;
+}
+html.modern-ui-v3[data-theme="light"] .category-item:hover .drag-handle,
+html.modern-ui-v3[data-theme="light"] .channel-item:hover .drag-handle {
+  color: rgba(0, 0, 0, 0.5) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .category-manager-actions,
+html.modern-ui-v3[data-theme="light"] .channel-manager-actions {
+  border-bottom-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .category-manager-actions button,
+html.modern-ui-v3[data-theme="light"] .channel-manager-actions button,
+html.modern-ui-v3[data-theme="light"] .type-selector button,
+html.modern-ui-v3[data-theme="light"] .import-btn,
+html.modern-ui-v3[data-theme="light"] .change-file-btn,
+html.modern-ui-v3[data-theme="light"] .add-backup-btn,
+html.modern-ui-v3[data-theme="light"] .confirm-btn,
+html.modern-ui-v3[data-theme="light"] .swap-btn,
+html.modern-ui-v3[data-theme="light"] .order-btn,
+html.modern-ui-v3[data-theme="light"] .filter-add-btn,
+html.modern-ui-v3[data-theme="light"] .category-manager-stats button {
+  background: rgba(0, 0, 0, 0.03) !important;
+  border-color: rgba(0, 0, 0, 0.08) !important;
+  color: rgba(0, 0, 0, 0.75) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .category-manager-actions button:hover,
+html.modern-ui-v3[data-theme="light"] .channel-manager-actions button:hover,
+html.modern-ui-v3[data-theme="light"] .type-selector button:hover,
+html.modern-ui-v3[data-theme="light"] .import-btn:hover,
+html.modern-ui-v3[data-theme="light"] .change-file-btn:hover,
+html.modern-ui-v3[data-theme="light"] .add-backup-btn:hover,
+html.modern-ui-v3[data-theme="light"] .confirm-btn:hover,
+html.modern-ui-v3[data-theme="light"] .swap-btn:hover,
+html.modern-ui-v3[data-theme="light"] .order-btn:hover:not(:disabled),
+html.modern-ui-v3[data-theme="light"] .filter-add-btn:hover,
+html.modern-ui-v3[data-theme="light"] .category-manager-stats button:hover {
+  background: rgba(0, 0, 0, 0.06) !important;
+  border-color: rgba(0, 0, 0, 0.15) !important;
+  color: #000 !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .category-manager-actions button.active-toggle,
+html.modern-ui-v3[data-theme="light"] .channel-manager-actions button.active-toggle,
+html.modern-ui-v3[data-theme="light"] .type-selector button.active {
+  background: color-mix(in srgb, var(--accent-primary, #00d4ff) 12%, rgba(0, 0, 0, 0.04)) !important;
+  color: var(--accent-primary, #00d4ff) !important;
+  border-color: color-mix(in srgb, var(--accent-primary, #00d4ff) 25%, rgba(0, 0, 0, 0.1)) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .filter-words-panel {
+  background: rgba(0, 0, 0, 0.01) !important;
+  border-top-color: rgba(0, 0, 0, 0.06) !important;
+  border-bottom-color: rgba(0, 0, 0, 0.06) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .filter-word-tag {
+  background: rgba(0, 0, 0, 0.04) !important;
+  border-color: rgba(0, 0, 0, 0.08) !important;
+  color: rgba(0, 0, 0, 0.8) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .form-details {
+  background: rgba(0, 0, 0, 0.01) !important;
+  border-color: rgba(0, 0, 0, 0.06) !important;
+}
+html.modern-ui-v3[data-theme="light"] .form-details-summary {
+  background: rgba(0, 0, 0, 0.02) !important;
+  color: rgba(0, 0, 0, 0.8) !important;
+}
+html.modern-ui-v3[data-theme="light"] .form-details-summary:hover {
+  background: rgba(0, 0, 0, 0.04) !important;
+}
+html.modern-ui-v3[data-theme="light"] .form-details-content {
+  border-top-color: rgba(0, 0, 0, 0.06) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .category-manager-footer,
+html.modern-ui-v3[data-theme="light"] .channel-manager-footer,
+html.modern-ui-v3[data-theme="light"] .form-actions {
+  border-top-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .cancel-btn {
+  background: rgba(0, 0, 0, 0.03) !important;
+  border-color: rgba(0, 0, 0, 0.08) !important;
+  color: rgba(0, 0, 0, 0.7) !important;
+}
+html.modern-ui-v3[data-theme="light"] .cancel-btn:hover {
+  background: rgba(0, 0, 0, 0.06) !important;
+  border-color: rgba(0, 0, 0, 0.15) !important;
+  color: #000 !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05) !important;
+}
+
+/* ==========================================================================
+   V3 LIQUID GLASS - AUDIO & SUBTITLE SELECTOR MODALS OVERRIDES
+   ========================================================================== */
+
+/* 1. Backdrop Overlays */
+.modern-ui-v3 .track-modal-overlay,
+.modern-ui-v3 .subtitle-modal-overlay {
+  background: rgba(8, 8, 12, 0.4) !important;
+  backdrop-filter: blur(10px) !important;
+  -webkit-backdrop-filter: blur(10px) !important;
+}
+
+/* 2. Modal Card Containers */
+.modern-ui-v3 .track-modal,
+.modern-ui-v3 .subtitle-modal {
+  background: rgba(255, 255, 255, 0.06) !important;
+  backdrop-filter: blur(24px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  box-shadow: 
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.05),
+    0 20px 50px rgba(0, 0, 0, 0.6),
+    0 2px 8px color-mix(in srgb, var(--accent-primary, #8b5cf6) 10%, transparent) !important;
+  border-radius: 20px !important;
+  color: #fff !important;
+  overflow: hidden !important;
+}
+
+/* 3. Headers & Footers */
+.modern-ui-v3 .track-modal-header,
+.modern-ui-v3 .subtitle-modal-header {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  background: transparent !important;
+  padding: 16px 20px !important;
+}
+
+.modern-ui-v3 .track-modal-header h3,
+.modern-ui-v3 .subtitle-modal-header h3 {
+  font-size: 1.15rem !important;
+  font-weight: 600 !important;
+  color: #fff !important;
+  margin: 0 !important;
+}
+
+.modern-ui-v3 .track-modal-footer {
+  border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
+  background: transparent !important;
+  padding: 16px 20px !important;
+}
+
+/* 4. Close Buttons */
+.modern-ui-v3 .track-modal-close,
+.modern-ui-v3 .subtitle-modal-close {
+  border-radius: 50% !important;
+  width: 32px !important;
+  height: 32px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background: rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  color: rgba(255, 255, 255, 0.6) !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  font-size: 1.4rem !important;
+}
+
+.modern-ui-v3 .track-modal-close:hover,
+.modern-ui-v3 .subtitle-modal-close:hover {
+  background: rgba(255, 255, 255, 0.12) !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+  color: #fff !important;
+}
+
+/* 5. SubSource Search Input Controls */
+.modern-ui-v3 .subtitle-header-search-input {
+  border-radius: 10px !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  background: rgba(255, 255, 255, 0.04) !important;
+  color: #fff !important;
+  padding: 8px 12px !important;
+  transition: all 0.2s ease !important;
+}
+
+.modern-ui-v3 .subtitle-header-search-input:focus {
+  border-color: rgba(255, 255, 255, 0.2) !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.05) !important;
+  outline: none !important;
+}
+
+.modern-ui-v3 .subtitle-header-search-btn {
+  background: rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  color: rgba(255, 255, 255, 0.8) !important;
+  border-radius: 10px !important;
+  padding: 8px 14px !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  font-weight: 600 !important;
+}
+
+.modern-ui-v3 .subtitle-header-search-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.12) !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+  color: #fff !important;
+  opacity: 1 !important;
+}
+
+/* 6. List Separator Borders & Titles */
+.modern-ui-v3 .subtitle-col {
+  border-right: 1px solid rgba(255, 255, 255, 0.06) !important;
+}
+.modern-ui-v3 .subtitle-col-title {
+  color: rgba(255, 255, 255, 0.45) !important;
+  font-size: 0.7rem !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.06em !important;
+}
+.modern-ui-v3 .track-section-title {
+  color: rgba(255, 255, 255, 0.45) !important;
+  font-size: 0.72rem !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+}
+
+/* 7. Modal Items & List Buttons */
+.modern-ui-v3 .track-item,
+.modern-ui-v3 .subtitle-lang-btn,
+.modern-ui-v3 .subtitle-track-btn,
+.modern-ui-v3 .subtitle-movie-btn,
+.modern-ui-v3 .subtitle-result-btn {
+  background: rgba(255, 255, 255, 0.02) !important;
+  border: 1px solid rgba(255, 255, 255, 0.04) !important;
+  border-radius: 8px !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  margin: 4px 8px !important;
+  padding: 10px 12px !important;
+  color: rgba(255, 255, 255, 0.8) !important;
+  text-align: left !important;
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+}
+
+.modern-ui-v3 .subtitle-lang-btn {
+  margin: 2px 6px !important;
+  padding: 8px 10px !important;
+}
+
+.modern-ui-v3 .track-item:hover,
+.modern-ui-v3 .subtitle-lang-btn:hover,
+.modern-ui-v3 .subtitle-track-btn:hover,
+.modern-ui-v3 .subtitle-movie-btn:hover,
+.modern-ui-v3 .subtitle-result-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.06) !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+  color: #fff !important;
+  transform: translateY(-0.5px) !important;
+}
+
+.modern-ui-v3 .track-item.selected,
+.modern-ui-v3 .subtitle-lang-btn.active,
+.modern-ui-v3 .subtitle-track-btn.active,
+.modern-ui-v3 .subtitle-episode-filter.active {
+  background: color-mix(in srgb, var(--accent-primary, #00d4ff) 18%, rgba(255, 255, 255, 0.06)) !important;
+  color: #fff !important;
+  border: 1px solid color-mix(in srgb, var(--accent-primary, #00d4ff) 35%, rgba(255, 255, 255, 0.15)) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+  font-weight: 600 !important;
+}
+
+.modern-ui-v3 .track-item.selected {
+  border-left: 3px solid var(--accent-primary, #00d4ff) !important;
+}
+
+.modern-ui-v3 .subtitle-track-btn.active .subtitle-track-variant-title {
+  color: var(--accent-primary, #00d4ff) !important;
+}
+
+.modern-ui-v3 .subtitle-track-variant-title {
+  color: #fff !important;
+}
+
+/* 8. Subtitle Settings Controls (Delay, Size, Offset) */
+.modern-ui-v3 .subtitle-control-nudge {
+  background: rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  color: #fff !important;
+  border-radius: 6px !important;
+  transition: all 0.2s ease !important;
+}
+
+.modern-ui-v3 .subtitle-control-nudge:hover {
+  background: rgba(255, 255, 255, 0.12) !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+.modern-ui-v3 .subtitle-control-item input[type="range"] {
+  accent-color: var(--accent-primary, #00d4ff) !important;
+}
+
+.modern-ui-v3 .subtitle-toggle-slider {
+  background: rgba(255, 255, 255, 0.12) !important;
+}
+
+.modern-ui-v3 .subtitle-toggle-switch input:checked + .subtitle-toggle-slider {
+  background: color-mix(in srgb, var(--accent-primary, #00d4ff) 60%, transparent) !important;
+}
+
+/* 9. Action Buttons */
+.modern-ui-v3 .track-modal-btn {
+  background: rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  color: rgba(255, 255, 255, 0.8) !important;
+  border-radius: 8px !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  padding: 8px 16px !important;
+}
+
+.modern-ui-v3 .track-modal-btn:hover {
+  background: rgba(255, 255, 255, 0.12) !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+  color: #fff !important;
+  transform: translateY(-1px) !important;
+}
+
+.modern-ui-v3 .subtitle-result-action {
+  background: color-mix(in srgb, var(--accent-primary, #00d4ff) 15%, transparent) !important;
+  color: var(--accent-primary, #00d4ff) !important;
+  border: 1px solid color-mix(in srgb, var(--accent-primary, #00d4ff) 30%, transparent) !important;
+  transition: all 0.2s ease !important;
+}
+
+.modern-ui-v3 .subtitle-result-btn:hover:not(:disabled) .subtitle-result-action {
+  background: color-mix(in srgb, var(--accent-primary, #00d4ff) 25%, transparent) !important;
+  border-color: var(--accent-primary, #00d4ff) !important;
+}
+
+.modern-ui-v3 .subtitle-episode-filter {
+  background: rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  color: rgba(255, 255, 255, 0.6) !important;
+  transition: all 0.2s ease !important;
+}
+
+.modern-ui-v3 .subtitle-episode-filter:hover {
+  background: rgba(255, 255, 255, 0.12) !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+  color: #fff !important;
+}
+
+.modern-ui-v3 .subtitle-episode-filter.active {
+  background: color-mix(in srgb, var(--accent-primary, #00d4ff) 18%, rgba(255, 255, 255, 0.06)) !important;
+  border-color: color-mix(in srgb, var(--accent-primary, #00d4ff) 35%, rgba(255, 255, 255, 0.15)) !important;
+  color: #fff !important;
+}
+
+/* 10. Scrollbar customization */
+.modern-ui-v3 .track-modal-content::-webkit-scrollbar-thumb,
+.modern-ui-v3 .subtitle-col::-webkit-scrollbar-thumb,
+.modern-ui-v3 .subtitle-search-results::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-radius: 3px !important;
+}
+
+.modern-ui-v3 .track-modal-content::-webkit-scrollbar-thumb:hover,
+.modern-ui-v3 .subtitle-col::-webkit-scrollbar-thumb:hover,
+.modern-ui-v3 .subtitle-search-results::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-primary, #00d4ff) !important;
+}
+
+/* ==========================================================================
+   V3 LIQUID GLASS - LIGHT THEME OVERRIDES FOR AUDIO/SUBTITLE SELECTORS
+   ========================================================================== */
+
+html.modern-ui-v3[data-theme="light"] .track-modal,
+html.modern-ui-v3[data-theme="light"] .subtitle-modal {
+  background: rgba(255, 255, 255, 0.45) !important;
+  border-color: rgba(0, 0, 0, 0.08) !important;
+  box-shadow: 
+    inset 0 1px 0 rgba(255, 255, 255, 0.6),
+    0 8px 32px rgba(0, 0, 0, 0.08),
+    0 2px 8px rgba(0, 0, 0, 0.02) !important;
+  color: #000 !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .track-modal-header,
+html.modern-ui-v3[data-theme="light"] .subtitle-modal-header {
+  border-bottom-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .track-modal-header h3,
+html.modern-ui-v3[data-theme="light"] .subtitle-modal-header h3 {
+  color: #000 !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .track-modal-footer {
+  border-top-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .track-modal-close,
+html.modern-ui-v3[data-theme="light"] .subtitle-modal-close {
+  background: rgba(0, 0, 0, 0.04) !important;
+  border-color: rgba(0, 0, 0, 0.08) !important;
+  color: rgba(0, 0, 0, 0.6) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .track-modal-close:hover,
+html.modern-ui-v3[data-theme="light"] .subtitle-modal-close:hover {
+  background: rgba(0, 0, 0, 0.08) !important;
+  border-color: rgba(0, 0, 0, 0.15) !important;
+  color: #000 !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .subtitle-header-search-input {
+  background: rgba(0, 0, 0, 0.02) !important;
+  border-color: rgba(0, 0, 0, 0.08) !important;
+  color: #000 !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .subtitle-header-search-input:focus {
+  background: rgba(0, 0, 0, 0.05) !important;
+  border-color: rgba(0, 0, 0, 0.15) !important;
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.03) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .subtitle-header-search-btn {
+  background: rgba(0, 0, 0, 0.03) !important;
+  border-color: rgba(0, 0, 0, 0.08) !important;
+  color: rgba(0, 0, 0, 0.75) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .subtitle-header-search-btn:hover:not(:disabled) {
+  background: rgba(0, 0, 0, 0.06) !important;
+  border-color: rgba(0, 0, 0, 0.15) !important;
+  color: #000 !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .subtitle-col {
+  border-right-color: rgba(0, 0, 0, 0.06) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .subtitle-col-title,
+html.modern-ui-v3[data-theme="light"] .track-section-title {
+  color: rgba(0, 0, 0, 0.45) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .track-section-title {
+  border-bottom-color: rgba(0, 0, 0, 0.05) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .track-item,
+html.modern-ui-v3[data-theme="light"] .subtitle-lang-btn,
+html.modern-ui-v3[data-theme="light"] .subtitle-track-btn,
+html.modern-ui-v3[data-theme="light"] .subtitle-movie-btn,
+html.modern-ui-v3[data-theme="light"] .subtitle-result-btn {
+  background: rgba(0, 0, 0, 0.01) !important;
+  border-color: rgba(0, 0, 0, 0.04) !important;
+  color: rgba(0, 0, 0, 0.8) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .track-item:hover,
+html.modern-ui-v3[data-theme="light"] .subtitle-lang-btn:hover,
+html.modern-ui-v3[data-theme="light"] .subtitle-track-btn:hover,
+html.modern-ui-v3[data-theme="light"] .subtitle-movie-btn:hover,
+html.modern-ui-v3[data-theme="light"] .subtitle-result-btn:hover:not(:disabled) {
+  background: rgba(0, 0, 0, 0.04) !important;
+  border-color: rgba(0, 0, 0, 0.08) !important;
+  color: #000 !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .track-item.selected,
+html.modern-ui-v3[data-theme="light"] .subtitle-lang-btn.active,
+html.modern-ui-v3[data-theme="light"] .subtitle-track-btn.active,
+html.modern-ui-v3[data-theme="light"] .subtitle-episode-filter.active {
+  background: color-mix(in srgb, var(--accent-primary, #00d4ff) 12%, rgba(0, 0, 0, 0.03)) !important;
+  border-color: color-mix(in srgb, var(--accent-primary, #00d4ff) 25%, rgba(0, 0, 0, 0.08)) !important;
+  color: #000 !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .subtitle-control-nudge {
+  background: rgba(0, 0, 0, 0.03) !important;
+  border-color: rgba(0, 0, 0, 0.08) !important;
+  color: #000 !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .subtitle-control-nudge:hover {
+  background: rgba(0, 0, 0, 0.06) !important;
+  border-color: rgba(0, 0, 0, 0.15) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .subtitle-toggle-slider {
+  background: rgba(0, 0, 0, 0.08) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .track-modal-btn,
+html.modern-ui-v3[data-theme="light"] .subtitle-episode-filter {
+  background: rgba(0, 0, 0, 0.03) !important;
+  border-color: rgba(0, 0, 0, 0.08) !important;
+  color: rgba(0, 0, 0, 0.7) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .track-modal-btn:hover,
+html.modern-ui-v3[data-theme="light"] .subtitle-episode-filter:hover {
+  background: rgba(0, 0, 0, 0.06) !important;
+  border-color: rgba(0, 0, 0, 0.15) !important;
+  color: #000 !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .subtitle-episode-filter.active {
+  background: color-mix(in srgb, var(--accent-primary, #00d4ff) 12%, rgba(0, 0, 0, 0.03)) !important;
+  border-color: color-mix(in srgb, var(--accent-primary, #00d4ff) 25%, rgba(0, 0, 0, 0.08)) !important;
+  color: #000 !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .subtitle-track-variant-title {
+  color: #000 !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .subtitle-track-btn.active .subtitle-track-variant-title {
+  color: var(--accent-primary, #00d4ff) !important;
+}
+

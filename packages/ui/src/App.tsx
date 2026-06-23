@@ -1225,7 +1225,7 @@ function App() {
   const transparentGuideFlashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [guideTransparent, setGuideTransparent] = useState(false);
   const [isTransparentGuideZapActive, setIsTransparentGuideZapActive] = useState(false);
-  const [liveTvDesign, setLiveTvDesign] = useState<'v1' | 'v2' | 'v3'>('v2');
+  const [liveTvDesign, setLiveTvDesign] = useState<'v1' | 'v2' | 'v3'>('v3');
   const [randomScheme, setRandomScheme] = useState<string>('scheme-apple');
   const [previewVideoRect, setPreviewVideoRect] = useState<{ left: number; top: number; width: number; height: number } | null>(null);
 
@@ -2647,20 +2647,29 @@ function App() {
             const rawHours = settingsResult.data.epgVisibleHours;
             setEpgVisibleHours(rawHours === 'auto' ? 'auto' : Number(rawHours));
           }
-          // Apply modern UI setting (default to true if never set)
-          const modernUiVal = settingsResult.data.modernUiEnabled;
-          const design = modernUiVal === 'v3' ? 'v3' : (modernUiVal === false || modernUiVal === 'v1' ? 'v1' : 'v2');
-          setLiveTvDesign(design);
+          // Apply modern UI setting (default to v3 if never set or migrating to v3 default)
+          let modernUiVal = settingsResult.data.modernUiEnabled;
+          let design: 'v1' | 'v2' | 'v3' = 'v3';
+
+          if (!settingsResult.data.v3DefaultMigrated) {
+            // First time running with V3 as default. Migrate new and old users.
+            modernUiVal = 'v3';
+            design = 'v3';
+            setLiveTvDesign('v3');
+            await window.storage.updateSettings({
+              modernUiEnabled: 'v3',
+              v3DefaultMigrated: true
+            });
+          } else {
+            design = modernUiVal === 'v3' ? 'v3' : (modernUiVal === false || modernUiVal === 'v1' ? 'v1' : 'v2');
+            setLiveTvDesign(design);
+          }
 
           document.documentElement.classList.remove('modern-ui', 'modern-ui-v3');
           if (design === 'v3') {
             document.documentElement.classList.add('modern-ui', 'modern-ui-v3');
           } else if (design === 'v2') {
             document.documentElement.classList.add('modern-ui');
-          }
-          // Persist the default value on first run so future reads are explicit
-          if (settingsResult.data.modernUiEnabled === undefined) {
-            await window.storage.updateSettings({ modernUiEnabled: 'v2' });
           }
         }
 

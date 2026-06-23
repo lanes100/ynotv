@@ -123,6 +123,7 @@
     border-radius: 6px;
     color: var(--text-primary, white);
     font-size: var(--channel-font-size, 14px);
+    box-sizing: border-box;
 }
 
 .channel-search input:focus {

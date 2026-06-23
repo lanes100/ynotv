@@ -1,7 +1,7 @@
 .spm-overlay {
   position: fixed;
   inset: 0;
-  background: var(--bg-overlay, rgba(0, 0, 0, 0.6));
+  background: rgba(0, 0, 0, 0.6);
   z-index: 300;
   display: flex;
   align-items: center;
@@ -12,24 +12,29 @@
   width: 680px;
   max-width: 90vw;
   max-height: 80vh;
-  background: var(--surface-color, rgba(20, 20, 30, 0.98));
-  border: var(--glass-border, 1px solid rgba(255, 255, 255, 0.1));
+  background: rgba(20, 8, 45, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 16px;
   display: flex;
   flex-direction: column;
-  backdrop-filter: blur(var(--glass-blur, 20px)) saturate(var(--glass-saturation, 150%));
-  -webkit-backdrop-filter: blur(var(--glass-blur, 20px)) saturate(var(--glass-saturation, 150%));
+  backdrop-filter: blur(32px) saturate(180%);
+  -webkit-backdrop-filter: blur(32px) saturate(180%);
   overflow: hidden;
-  box-shadow: var(--glass-shadow, 0 8px 32px rgba(0, 0, 0, 0.5));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    0 24px 64px rgba(0, 0, 0, 0.6),
+    0 0 0 1px rgba(139, 92, 246, 0.1);
 }
 
 .spm-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 20px 24px;
-  border-bottom: 1px solid var(--surface-border, rgba(255, 255, 255, 0.06));
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 16px 16px 0 0;
 }
 
 .spm-title {
@@ -43,40 +48,44 @@
 }
 
 .spm-current-source {
-  font-size: 0.75rem;
-  font-weight: 400;
-  color: var(--text-muted, rgba(255, 255, 255, 0.5));
-  background: rgba(0, 212, 255, 0.1);
-  border: 1px solid rgba(0, 212, 255, 0.2);
-  padding: 2px 8px;
-  border-radius: 4px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: rgba(200, 180, 255, 0.95);
+  background: rgba(139, 92, 246, 0.2);
+  border: 1px solid rgba(139, 92, 246, 0.4);
+  padding: 3px 10px;
+  border-radius: 20px;
 }
 
 .spm-close {
-  background: none;
-  border: none;
-  color: var(--text-muted, rgba(255, 255, 255, 0.4));
-  font-size: 1.2rem;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  width: 32px;
+  height: 32px;
+  color: rgba(255, 255, 255, 0.7);
   cursor: pointer;
-  padding: 4px 8px;
-  border-radius: 4px;
+  font-size: 1.1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   transition: all 0.15s;
   flex-shrink: 0;
 }
 
 .spm-close:hover {
-  color: var(--text-primary, white);
-  background: var(--surface-hover, rgba(255, 255, 255, 0.1));
+  background: rgba(255, 255, 255, 0.15);
+  color: rgba(255, 255, 255, 1);
 }
 
 .spm-body {
-  padding: 16px 24px;
+  padding: 16px 20px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 12px;
   scrollbar-width: thin;
-  scrollbar-color: var(--surface-hover, rgba(255, 255, 255, 0.15)) transparent;
+  scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
 }
 
 .spm-body::-webkit-scrollbar {
@@ -88,12 +97,12 @@
 }
 
 .spm-body::-webkit-scrollbar-thumb {
-  background: var(--surface-hover, rgba(255, 255, 255, 0.15));
-  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 2px;
 }
 
 .spm-body::-webkit-scrollbar-thumb:hover {
-  background: var(--accent-primary, rgba(0, 212, 255, 0.5));
+  background: rgba(139, 92, 246, 0.5);
 }
 
 .spm-filters {
@@ -105,25 +114,29 @@
 }
 
 .spm-filter-btn {
-  padding: 4px 10px;
-  font-size: 0.75rem;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 6px;
-  color: var(--text-secondary, rgba(255, 255, 255, 0.7));
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  padding: 5px 16px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.55);
   cursor: pointer;
-  transition: all 0.15s;
+  transition: all 0.15s ease;
 }
 
 .spm-filter-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.07);
+  color: rgba(255, 255, 255, 0.8);
 }
 
 .spm-filter-btn.active {
-  background: rgba(0, 212, 255, 0.15);
-  border-color: rgba(0, 212, 255, 0.3);
-  color: #00d4ff;
+  background: rgba(139, 92, 246, 0.25);
+  border-color: rgba(139, 92, 246, 0.5);
+  color: rgba(255, 255, 255, 0.95);
+  box-shadow:
+    0 0 12px rgba(139, 92, 246, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
 }
 
 .spm-loading {
@@ -132,7 +145,7 @@
   justify-content: center;
   gap: 10px;
   padding: 40px 0;
-  color: var(--text-muted, rgba(255, 255, 255, 0.5));
+  color: rgba(255, 255, 255, 0.5);
   font-size: 0.9rem;
 }
 
@@ -140,7 +153,7 @@
   width: 20px;
   height: 20px;
   border: 2px solid rgba(255, 255, 255, 0.1);
-  border-top-color: #00d4ff;
+  border-top-color: rgba(139, 92, 246, 0.8);
   border-radius: 50%;
   animation: spm-spin 0.8s linear infinite;
 }
@@ -151,7 +164,7 @@
 
 .spm-empty {
   text-align: center;
-  color: var(--text-muted, rgba(255, 255, 255, 0.4));
+  color: rgba(255, 255, 255, 0.4);
   padding: 32px 0;
   font-size: 0.9rem;
 }
@@ -159,30 +172,32 @@
 .spm-list {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
 }
 
 .spm-item {
-  padding: 12px 16px;
-  border: 1px solid var(--surface-border, rgba(255, 255, 255, 0.06));
-  background: var(--surface-color, rgba(255, 255, 255, 0.03));
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.07);
   border-radius: 10px;
-  color: var(--text-secondary, rgba(255, 255, 255, 0.8));
+  padding: 12px 16px;
+  color: rgba(255, 255, 255, 0.8);
   cursor: pointer;
   text-align: left;
-  transition: all 0.15s;
+  transition: all 0.15s ease;
   position: relative;
 }
 
 .spm-item:hover {
-  background: var(--surface-hover, rgba(255, 255, 255, 0.08));
-  border-color: var(--accent-primary, rgba(0, 212, 255, 0.3));
-  box-shadow: 0 0 12px var(--accent-glow, rgba(0, 212, 255, 0.1));
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.15);
 }
 
 .spm-item-active {
-  border-color: rgba(0, 212, 255, 0.4);
-  background: rgba(0, 212, 255, 0.06);
+  background: rgba(139, 92, 246, 0.15);
+  border-color: rgba(139, 92, 246, 0.35);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 0 16px rgba(139, 92, 246, 0.15);
 }
 
 .spm-item-header {
@@ -200,7 +215,7 @@
 
 .spm-item-addon {
   font-size: 0.7rem;
-  color: var(--text-muted, rgba(255, 255, 255, 0.3));
+  color: rgba(255, 255, 255, 0.3);
   flex-shrink: 0;
 }
 
@@ -221,7 +236,7 @@
 
 .spm-item-desc {
   font-size: 0.8rem;
-  color: var(--text-muted, rgba(255, 255, 255, 0.5));
+  color: rgba(255, 255, 255, 0.5);
   margin-top: 4px;
   line-height: 1.4;
   white-space: pre-wrap;
@@ -237,12 +252,12 @@
 
 .spm-item-active-tag {
   position: absolute;
-  top: 8px;
+  bottom: 8px;
   right: 10px;
   font-size: 0.65rem;
-  color: #00d4ff;
-  background: rgba(0, 212, 255, 0.12);
-  border: 1px solid rgba(0, 212, 255, 0.25);
-  padding: 1px 6px;
-  border-radius: 4px;
+  color: rgba(200, 180, 255, 0.95);
+  background: rgba(139, 92, 246, 0.2);
+  border: 1px solid rgba(139, 92, 246, 0.4);
+  padding: 2px 8px;
+  border-radius: 20px;
 }

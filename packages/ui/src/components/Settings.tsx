@@ -293,7 +293,7 @@ export function Settings({
     overlayAutohideTimer?: number;
     uiScale?: number;
   }>({
-    modernUiEnabled: 'v2',
+    modernUiEnabled: 'v3',
     collapseSourceCategoriesOnStartup: false,
     overlayAutohideTimer: 3,
     uiScale: 100,
@@ -666,6 +666,7 @@ export function Settings({
         epgView?: 'traditional' | 'alternate';
         collapseSourceCategoriesOnStartup?: boolean;
         modernUiEnabled?: boolean | string;
+        v3DefaultMigrated?: boolean;
         overlayAutohideTimer?: number;
         uiScale?: number;
         epgVisibleHours?: 'auto' | number;
@@ -799,7 +800,14 @@ export function Settings({
       }
 
       // Load UI settings
-      const loadedModernUi = settings.modernUiEnabled ?? true;
+      let loadedModernUi = settings.modernUiEnabled;
+      if (!settings.v3DefaultMigrated) {
+        loadedModernUi = 'v3';
+        window.storage.updateSettings({
+          modernUiEnabled: 'v3',
+          v3DefaultMigrated: true
+        });
+      }
       const loadedUiSettings = {
         startupWidth: settings.startupWidth,
         startupHeight: settings.startupHeight,
@@ -829,10 +837,6 @@ export function Settings({
       }
       if (onLiveTvDesignChange) {
         onLiveTvDesignChange(design);
-      }
-      // Persist default if not already saved
-      if (settings.modernUiEnabled === undefined) {
-        await window.storage.updateSettings({ modernUiEnabled: 'v2' });
       }
 
       // Load startup settings
