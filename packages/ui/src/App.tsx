@@ -3614,20 +3614,34 @@ function App() {
             className={`livetv-liquid-glass-bg ${randomScheme}`}
             style={
               previewVideoRect && currentChannel
-                ? {
-                    clipPath: `polygon(
-                      0% 0%, 
-                      100% 0%, 
-                      100% 100%, 
-                      0% 100%, 
-                      0% 0%, 
-                      ${previewVideoRect.left}px ${previewVideoRect.top}px, 
-                      ${previewVideoRect.left}px ${previewVideoRect.top + previewVideoRect.height}px, 
-                      ${previewVideoRect.left + previewVideoRect.width}px ${previewVideoRect.top + previewVideoRect.height}px, 
-                      ${previewVideoRect.left + previewVideoRect.width}px ${previewVideoRect.top}px, 
-                      ${previewVideoRect.left}px ${previewVideoRect.top}px
-                    )`
-                  }
+                ? (() => {
+                    // Build a clip-path using SVG path() so we can use arc commands
+                    // for the rounded corners (20px radius, matching the CSS border-radius).
+                    // Technique: draw the full-screen rect (outer) then the rounded-rect
+                    // video cutout (inner) as a sub-path. The browser's evenodd fill rule
+                    // makes the inner shape a transparent hole in the background.
+                    const r = 20; // border-radius in px - must match CSS border-radius on .guide-preview-video
+                    const { left: x, top: y, width: w, height: h } = previewVideoRect;
+                    const W = window.innerWidth;
+                    const H = window.innerHeight;
+                    // Outer rectangle (full screen, clockwise)
+                    const outer = `M 0 0 L ${W} 0 L ${W} ${H} L 0 ${H} Z`;
+                    // Inner rounded rectangle (the video cutout, counter-clockwise so evenodd cuts it out)
+                    // Start at top-left corner after the radius, go clockwise
+                    const inner = [
+                      `M ${x + r} ${y}`,
+                      `L ${x + w - r} ${y}`,                            // top edge
+                      `A ${r} ${r} 0 0 1 ${x + w} ${y + r}`,           // top-right arc
+                      `L ${x + w} ${y + h - r}`,                        // right edge
+                      `A ${r} ${r} 0 0 1 ${x + w - r} ${y + h}`,       // bottom-right arc
+                      `L ${x + r} ${y + h}`,                             // bottom edge
+                      `A ${r} ${r} 0 0 1 ${x} ${y + h - r}`,           // bottom-left arc
+                      `L ${x} ${y + r}`,                                 // left edge
+                      `A ${r} ${r} 0 0 1 ${x + r} ${y}`,               // top-left arc
+                      `Z`,
+                    ].join(' ');
+                    return { clipPath: `path(evenodd, '${outer} ${inner}')` };
+                  })()
                 : undefined
             }
           >

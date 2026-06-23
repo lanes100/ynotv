@@ -2015,6 +2015,35 @@
 .modern-ui-v3 .guide-preview-pane {
   border-right: none !important;
   border-bottom: none !important;
+  margin-bottom: 16px !important; /* Align bottom with the info pane */
+}
+
+.modern-ui-v3 .guide-preview-video {
+  border-radius: 20px !important;
+  overflow: hidden !important;
+  background: transparent !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.05),
+    0 8px 32px rgba(0, 0, 0, 0.3),
+    0 2px 8px color-mix(in srgb, var(--accent-primary, #8b5cf6) 10%, transparent) !important;
+}
+
+
+/* Glass border around the rounded video */
+.modern-ui-v3 .video-glass-border {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  pointer-events: none;
+  z-index: 11;
+  box-shadow: 
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.05);
 }
 
 .modern-ui-v3 .guide-info-pane {

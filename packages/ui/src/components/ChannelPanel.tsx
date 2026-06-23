@@ -1709,6 +1709,8 @@ export function ChannelPanel({
               onClose();
             }}
           >
+            {/* Glass border overlay */}
+            <div className="video-glass-border" />
             {/* The actual video is rendered by MPV "under" this transparent div */}
             {/* Only show placeholder when truly no channel is selected (not in watchlist/favorites mode with a selection) */}
             {!selectedChannel && !isWatchlistMode && categoryId !== '__favorites__' && categoryId !== '__recent__' && (
