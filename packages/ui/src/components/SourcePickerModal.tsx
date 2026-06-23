@@ -10,6 +10,8 @@ interface SourcePickerModalProps {
   type: string;
   id: string;
   currentAddonName?: string;
+  currentUrl?: string;
+  compiledBadgeRules?: { pattern: RegExp; badge: StremioStreamBadge }[];
   onSelect: (stream: StremioStream) => void;
   onClose: () => void;
 }
@@ -27,6 +29,8 @@ export function SourcePickerModal({
   type,
   id,
   currentAddonName,
+  currentUrl,
+  compiledBadgeRules = [],
   onSelect,
   onClose,
 }: SourcePickerModalProps) {
@@ -34,6 +38,7 @@ export function SourcePickerModal({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedAddonFilter, setSelectedAddonFilter] = useState('All');
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   const addonsRef = useRef<InstalledAddon[]>([]);
 
@@ -77,6 +82,14 @@ export function SourcePickerModal({
     };
     load();
     return () => { active = false; };
+  }, [source, type, id, refreshTrigger]);
+
+  const handleRefresh = useCallback(() => {
+    const cacheKey = `${source}:${type}:${id}`;
+    streamCache.delete(cacheKey);
+    setLoading(true);
+    setError(null);
+    setRefreshTrigger((prev) => prev + 1);
   }, [source, type, id]);
 
   const addonNames = Array.from(new Set(streams.map((s) => s.addonName).filter(Boolean))).sort() as string[];
@@ -85,8 +98,6 @@ export function SourcePickerModal({
     if (selectedAddonFilter === 'All') return true;
     return s.addonName === selectedAddonFilter;
   });
-
-  const compiledBadgeRules: { pattern: RegExp; badge: StremioStreamBadge }[] = [];
 
   const handleStreamClick = useCallback((stream: StremioStream) => {
     onSelect(stream);
@@ -107,11 +118,26 @@ export function SourcePickerModal({
           const bgColor = badge.color || '#1a1a1a';
           const isLight = isLightColor(bgColor);
           const textColor = badge.textColor || (isLight ? '#000000' : '#ffffff');
-          return (
+          return badge.imageUrl ? (
+            <span
+              key={badge.label}
+              className="spm-badge-img"
+              style={{
+                backgroundColor: bgColor,
+                borderColor: badge.borderColor,
+              }}
+            >
+              <img src={badge.imageUrl} alt={badge.label} title={badge.label} />
+            </span>
+          ) : (
             <span
               key={badge.label}
               className="spm-badge"
-              style={{ backgroundColor: bgColor, color: textColor, borderColor: badge.borderColor }}
+              style={{
+                backgroundColor: bgColor,
+                color: textColor,
+                borderColor: badge.borderColor,
+              }}
             >
               {badge.label}
             </span>
@@ -131,7 +157,28 @@ export function SourcePickerModal({
               <span className="spm-current-source">Current: {currentAddonName}</span>
             )}
           </h3>
-          <button className="spm-close" onClick={onClose}>✕</button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <button
+              className="spm-refresh-btn"
+              onClick={handleRefresh}
+              disabled={loading}
+              title="Refresh streams"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                width="12"
+                height="12"
+                className={loading ? 'spm-spin' : ''}
+              >
+                <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67" />
+              </svg>
+              Refresh
+            </button>
+            <button className="spm-close" onClick={onClose}>✕</button>
+          </div>
         </div>
 
         <div className="spm-body">
@@ -171,7 +218,8 @@ export function SourcePickerModal({
                 const desc = stream.description || stream.title || '';
                 const displayName = name || desc || `Stream #${idx + 1}`;
                 const displayDesc = name ? desc : '';
-                const isActive = stream.addonName === currentAddonName;
+                const streamUrl = stream.url || (stream.infoHash ? `infoHash:${stream.infoHash}${stream.fileIdx !== undefined ? `:${stream.fileIdx}` : ''}` : null);
+                const isActive = !!(currentUrl && streamUrl && streamUrl === currentUrl);
 
                 return (
                   <div

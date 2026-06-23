@@ -10,7 +10,7 @@ import { StalkerClient } from '@ynotv/local-adapter';
 import { useModal } from './Modal';
 import { type AspectRatioMode, getAspectRatioLabel } from '../services/tauri-bridge';
 import { SourcePickerModal } from './SourcePickerModal';
-import type { StremioStream } from '../types/stremio';
+import type { StremioStream, StremioStreamBadge } from '../types/stremio';
 import './NowPlayingBar.css';
 
 interface NowPlayingBarProps {
@@ -67,6 +67,8 @@ interface NowPlayingBarProps {
   onNavigateDvr?: () => void;
   onReplayStream?: () => void;
   onSwitchStream?: (stream: StremioStream) => void;
+  compiledBadgeRules?: { pattern: RegExp; badge: StremioStreamBadge }[];
+  compiledNuvioBadgeRules?: { pattern: RegExp; badge: StremioStreamBadge }[];
 }
 
 // Format seconds to "H:MM:SS" or "M:SS"
@@ -123,6 +125,8 @@ export function NowPlayingBar({
   onNavigateDvr,
   onReplayStream,
   onSwitchStream,
+  compiledBadgeRules,
+  compiledNuvioBadgeRules,
 }: NowPlayingBarProps) {
   // scrubMode: 'timeshift' | 'epgcatchup' — local toggle when channel supports both
   const [scrubMode, setScrubMode] = useState<'timeshift' | 'epgcatchup'>('timeshift');
@@ -984,6 +988,8 @@ export function NowPlayingBar({
               type={stremioSourceType}
               id={stremioSourceId}
               currentAddonName={vodInfo?.addonName}
+              currentUrl={vodInfo?.url}
+              compiledBadgeRules={vodInfo?.source_id === 'nuvio' ? (compiledNuvioBadgeRules || compiledBadgeRules) : compiledBadgeRules}
               onSelect={(stream) => {
                 setShowSourcePicker(false);
                 onSwitchStream(stream);

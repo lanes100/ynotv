@@ -103,7 +103,7 @@ import { pushNuvioWatchProgress } from './services/nuvio-api';
 import { SkipIntroButton } from './components/SkipIntroButton';
 import { useSkipIntro } from './hooks/useSkipIntro';
 import { BackButtonOverlay } from './components/BackButtonOverlay';
-import { DEFAULT_BADGE_SOURCES, mergeDefaultBadgeSources } from './utils/streamBadges';
+import { DEFAULT_BADGE_SOURCES, mergeDefaultBadgeSources, compileBadgeSources } from './utils/streamBadges';
 
 // NEW: Extracted hooks
 import { useAppSettings } from './hooks/useAppSettings';
@@ -244,6 +244,8 @@ function App() {
     }
   }, []);
 
+  const compiledBadgeRules = useMemo(() => compileBadgeSources(badgeSources), [badgeSources]);
+
   // Stremio badge size
   const [stremioBadgeSize, setStremioBadgeSize] = useState(100);
   const handleStremioBadgeSizeChange = useCallback(async (size: number) => {
@@ -297,6 +299,8 @@ function App() {
       await window.storage.updateSettings({ nuvioBadgeSources: sources });
     }
   }, []);
+
+  const compiledNuvioBadgeRules = useMemo(() => compileBadgeSources(nuvioBadgeSources), [nuvioBadgeSources]);
 
   const [nuvioBadgeSize, setNuvioBadgeSize] = useState(100);
   const handleNuvioBadgeSizeChange = useCallback(async (size: number) => {
@@ -3509,6 +3513,8 @@ function App() {
         onNavigateDvr={() => setActiveView('dvr')}
         onReplayStream={currentChannel ? () => handlePlayChannelWrapper(currentChannel) : undefined}
         onSwitchStream={handleSwitchStream}
+        compiledBadgeRules={compiledBadgeRules}
+        compiledNuvioBadgeRules={compiledNuvioBadgeRules}
         overlay={
           <FailoverGroupOverlay
             currentChannel={currentChannel}

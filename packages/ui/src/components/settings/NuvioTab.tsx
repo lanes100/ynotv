@@ -5,6 +5,7 @@ import { useNuvioAddonStore } from '../../stores/nuvioAddonStore';
 import { useNuvioCollectionStore } from '../../stores/nuvioCollectionStore';
 import { useUIStore } from '../../stores/uiStore';
 import { NuvioPinModal } from '../nuvio/NuvioPinModal';
+import { useModal } from '../Modal';
 import { TraktCatalogsModal } from './TraktCatalogsModal';
 import { getEffectiveNuvioUrl, getEffectiveNuvioKey } from '../../services/nuvio-api';
 import type { InstalledAddon, BadgeSource, StreamAutoPlayMode, StreamAutoPlaySourceScope } from '../../types/stremio';
@@ -158,6 +159,7 @@ export const NuvioTab = forwardRef<{ save: () => Promise<void> }, NuvioTabProps>
   const pluginStore = useNuvioPluginStore();
   const addonsStore = useNuvioAddonStore();
   const collectionStore = useNuvioCollectionStore();
+  const { showConfirm, ModalComponent } = useModal();
 
   const token = authStore.token;
   const profile = authStore.activeProfile;
@@ -1090,9 +1092,11 @@ export const NuvioTab = forwardRef<{ save: () => Promise<void> }, NuvioTabProps>
                         {authStore.profiles.length > 1 && (
                           <button
                             onClick={() => {
-                              if (confirm(`Are you sure you want to delete profile "${p.name}"? This deletes all synced data for this profile.`)) {
-                                authStore.deleteProfile(p.profile_index);
-                              }
+                              showConfirm(
+                                'Delete Profile',
+                                `Are you sure you want to delete profile "${p.name}"? This deletes all synced data for this profile.`,
+                                () => authStore.deleteProfile(p.profile_index)
+                              );
                             }}
                             title="Delete profile data"
                             style={{
@@ -2827,6 +2831,8 @@ export const NuvioTab = forwardRef<{ save: () => Promise<void> }, NuvioTabProps>
           onClose={() => setShowTraktModal(false)}
         />
       )}
+
+      <ModalComponent />
     </div>
   );
 });
