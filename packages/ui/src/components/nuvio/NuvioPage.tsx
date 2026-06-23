@@ -25,9 +25,12 @@ import {
 import {
   fetchNuvioLibrary,
   fetchNuvioWatchProgress,
+  fetchNuvioWatchProgressDeltaCursor,
+  fetchNuvioWatchProgressDelta,
   pushNuvioLibrary,
   type NuvioLibrarySyncItem,
   type NuvioWatchProgressSyncEntry,
+  type NuvioWatchProgressDeltaEvent,
   type NuvioCollectionFolder,
   type NuvioCollectionSource,
   type NuvioCollection
@@ -84,6 +87,9 @@ interface NuvioPageProps {
   onNuvioCacheFetchResultsChange?: (show: boolean) => Promise<void> | void;
   nuvioCacheFetchTimeout?: number;
   onNuvioCacheFetchTimeoutChange?: (timeout: number) => void;
+  onCardMouseEnter?: (item: StremioMetaPreview, element: HTMLElement, event?: React.MouseEvent) => void;
+  onCardMouseLeave?: () => void;
+  onCardClick?: () => void;
 }
 
 const getFolderShapeClass = (folderShape: string | undefined): string => {
@@ -262,9 +268,14 @@ export function NuvioPage(props: NuvioPageProps) {
   const addons = addonsStore.enabledAddons;
   return (
     <StremioHoverProvider addons={addons} disabled={!props.showNuvioHoverDetails}>
-      <NuvioPageContent {...props} />
+      <NuvioPageContentWithHover {...props} />
     </StremioHoverProvider>
   );
+}
+
+function NuvioPageContentWithHover(props: NuvioPageProps) {
+  const hoverHandlers = useStremioHover();
+  return <NuvioPageContent {...props} {...hoverHandlers} />;
 }
 
 function NuvioPageContent({
@@ -298,6 +309,9 @@ function NuvioPageContent({
   onNuvioCacheFetchResultsChange,
   nuvioCacheFetchTimeout = 5,
   onNuvioCacheFetchTimeoutChange,
+  onCardMouseEnter: onCardMouseEnterProp,
+  onCardMouseLeave: onCardMouseLeaveProp,
+  onCardClick: onCardClickProp,
 }: NuvioPageProps) {
   const compiledBadgeRules = useMemo(() => compileBadgeSources(nuvioBadgeSources), [nuvioBadgeSources]);
   const addonsStore = useNuvioAddonStore();
@@ -332,7 +346,9 @@ function NuvioPageContent({
   const nuvioHistory = useUIStore((s) => s.nuvioHistory);
   const currentFrame = nuvioHistory[nuvioHistory.length - 1];
   const initialCatalogKey = (currentFrame && currentFrame.view === 'search') ? (currentFrame as any).catalogKey : null;
-  const { onCardMouseEnter, onCardMouseLeave, onCardClick } = useStremioHover();
+  const onCardMouseEnter = onCardMouseEnterProp || (() => {});
+  const onCardMouseLeave = onCardMouseLeaveProp || (() => {});
+  const onCardClick = onCardClickProp || (() => {});
   const [pinPromptProfile, setPinPromptProfile] = useState<any | null>(null);
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
@@ -815,13 +831,72 @@ function NuvioPageContent({
     return [];
   };
 
+  const deltaCursorRef = useRef<number>(0);
+
+  const applyWatchProgressDelta = (existing: NuvioWatchProgressSyncEntry[], events: NuvioWatchProgressDeltaEvent[]): NuvioWatchProgressSyncEntry[] => {
+    const map = new Map(existing.map(e => [e.progress_key || e.video_id, e]));
+    const deleteKeys = new Set<string>();
+
+    for (const event of events) {
+      const key = event.progress_key || event.video_id;
+      if (event.operation === 'delete') {
+        deleteKeys.add(key);
+        map.delete(key);
+      } else {
+        deleteKeys.delete(key);
+        map.set(key, {
+          content_id: event.content_id,
+          content_type: event.content_type,
+          video_id: event.video_id,
+          season: event.season,
+          episode: event.episode,
+          position: event.position,
+          duration: event.duration,
+          last_watched: event.last_watched,
+          progress_key: event.progress_key,
+        });
+      }
+    }
+
+    return Array.from(map.values());
+  };
+
+  const loadWatchProgressDelta = async (profileId: number, existingEntries: NuvioWatchProgressSyncEntry[]): Promise<NuvioWatchProgressSyncEntry[]> => {
+    const cursor = deltaCursorRef.current;
+    const events = await fetchNuvioWatchProgressDelta(token!, profileId, cursor, 900);
+    if (!events || events.length === 0) return existingEntries;
+
+    const maxEventId = Math.max(...events.map(e => e.event_id));
+    deltaCursorRef.current = maxEventId;
+
+    return applyWatchProgressDelta(existingEntries, events);
+  };
+
   const loadSyncedData = async (background = false) => {
     if (!token || !profile) return;
     if (!background) setLoading(true);
     try {
-      // Start both fetches concurrently
-      const progressPromise = fetchNuvioWatchProgress(token, profile.profile_index, null, 100);
       const libraryPromise = fetchNuvioLibrary(token, profile.profile_index, 500);
+
+      // Try delta sync first, fall back to full pull
+      let progressPromise: Promise<NuvioWatchProgressSyncEntry[]>;
+      if (deltaCursorRef.current === 0) {
+        // First load: try to initialize delta cursor
+        progressPromise = (async () => {
+          try {
+            const cursor = await fetchNuvioWatchProgressDeltaCursor(token!, profile.profile_index);
+            if (cursor > 0) {
+              deltaCursorRef.current = 0;
+              const entries = await loadWatchProgressDelta(profile.profile_index, []);
+              return entries;
+            }
+          } catch {}
+          // Fallback to full pull
+          return fetchNuvioWatchProgress(token!, profile.profile_index, null, 100);
+        })();
+      } else {
+        progressPromise = loadWatchProgressDelta(profile.profile_index, rawWatchProgress);
+      }
 
       // Handle progress promise resolution as soon as it resolves
       progressPromise.then((progress) => {

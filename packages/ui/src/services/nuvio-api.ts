@@ -192,7 +192,7 @@ async function executeNuvioRequest<T>(
     'apikey': getEffectiveNuvioKey(),
     'Content-Type': 'application/json',
     'Accept': 'application/json',
-    'User-Agent': 'NuvioDesktop/0.1.5-alpha',
+    'User-Agent': 'NuvioDesktop/0.1.8-alpha',
   };
 
   if (token) {
@@ -489,6 +489,44 @@ export async function pushNuvioLibrary(token: string, profileId: number, items: 
 }
 
 // ==========================================
+// WATCH PROGRESS DELTA SYNC
+// ==========================================
+
+export async function fetchNuvioWatchProgressDeltaCursor(token: string, profileId: number): Promise<number> {
+  const res = await callNuvioApi<number[]>('POST', 'rest/v1/rpc/sync_get_watch_progress_delta_cursor', {
+    p_profile_id: profileId,
+  }, token);
+  return Array.isArray(res) ? (res[0] ?? 0) : (res ?? 0);
+}
+
+export interface NuvioWatchProgressDeltaEvent {
+  event_id: number;
+  operation: string; // 'upsert' | 'delete'
+  progress_key: string;
+  content_id: string;
+  content_type: string;
+  video_id: string;
+  season: number | null;
+  episode: number | null;
+  position: number;
+  duration: number;
+  last_watched: number;
+}
+
+export async function fetchNuvioWatchProgressDelta(
+  token: string,
+  profileId: number,
+  sinceEventId: number,
+  limit = 900,
+): Promise<NuvioWatchProgressDeltaEvent[]> {
+  return callNuvioApi<NuvioWatchProgressDeltaEvent[]>('POST', 'rest/v1/rpc/sync_pull_watch_progress_delta', {
+    p_profile_id: profileId,
+    p_since_event_id: sinceEventId,
+    p_limit: limit,
+  }, token);
+}
+
+// ==========================================
 // WATCH PROGRESS
 // ==========================================
 
@@ -514,6 +552,41 @@ export async function deleteNuvioWatchProgress(token: string, profileId: number,
   await callNuvioApi<void>('POST', 'rest/v1/rpc/sync_delete_watch_progress', {
     p_profile_id: profileId,
     p_keys: keys,
+  }, token);
+}
+
+// ==========================================
+// WATCHED HISTORY DELTA SYNC
+// ==========================================
+
+export async function fetchNuvioWatchedItemsDeltaCursor(token: string, profileId: number): Promise<number> {
+  const res = await callNuvioApi<number[]>('POST', 'rest/v1/rpc/sync_get_watched_items_delta_cursor', {
+    p_profile_id: profileId,
+  }, token);
+  return Array.isArray(res) ? (res[0] ?? 0) : (res ?? 0);
+}
+
+export interface NuvioWatchedDeltaEvent {
+  event_id: number;
+  operation: string; // 'upsert' | 'delete'
+  content_id: string;
+  content_type: string;
+  title: string;
+  season: number | null;
+  episode: number | null;
+  watched_at: number;
+}
+
+export async function fetchNuvioWatchedItemsDelta(
+  token: string,
+  profileId: number,
+  sinceEventId: number,
+  limit = 900,
+): Promise<NuvioWatchedDeltaEvent[]> {
+  return callNuvioApi<NuvioWatchedDeltaEvent[]>('POST', 'rest/v1/rpc/sync_pull_watched_items_delta', {
+    p_profile_id: profileId,
+    p_since_event_id: sinceEventId,
+    p_limit: limit,
   }, token);
 }
 
@@ -553,7 +626,7 @@ export interface NuvioSettingsBlobResponse {
   updated_at: string | null;
 }
 
-export async function fetchNuvioProfileSettings(token: string, profileId: number, platform = 'mobile'): Promise<any | null> {
+export async function fetchNuvioProfileSettings(token: string, profileId: number, platform = 'desktop'): Promise<any | null> {
   const res = await callNuvioApi<NuvioSettingsBlobResponse[]>('POST', 'rest/v1/rpc/sync_pull_profile_settings_blob', {
     p_profile_id: profileId,
     p_platform: platform,
@@ -561,7 +634,7 @@ export async function fetchNuvioProfileSettings(token: string, profileId: number
   return res[0]?.settings_json || null;
 }
 
-export async function pushNuvioProfileSettings(token: string, profileId: number, settings: any, platform = 'mobile'): Promise<void> {
+export async function pushNuvioProfileSettings(token: string, profileId: number, settings: any, platform = 'desktop'): Promise<void> {
   await callNuvioApi<void>('POST', 'rest/v1/rpc/sync_push_profile_settings_blob', {
     p_profile_id: profileId,
     p_platform: platform,
