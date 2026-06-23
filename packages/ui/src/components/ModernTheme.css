@@ -2810,6 +2810,49 @@ html.modern-ui-v3 .guide-channel-row.currently-playing .program-block.current:ho
   background: linear-gradient(to left, rgba(12, 14, 24, 0.4) 0%, transparent 100%) !important;
 }
 
+.modern-ui-v3 .stremio-row-nav-btn {
+  border-radius: 50% !important;
+  background: rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.7)) !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.modern-ui-v3 .stremio-row-nav-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.12) !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+  color: #fff !important;
+  box-shadow: 0 0 12px rgba(255, 255, 255, 0.08) !important;
+}
+
+.modern-ui-v3 .stremio-row-see-all-btn {
+  border-radius: 20px !important;
+  background: rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.8)) !important;
+  padding: 0 14px !important;
+  height: 32px !important;
+  font-size: 0.75rem !important;
+  font-weight: 600 !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.modern-ui-v3 .stremio-row-see-all-btn:hover {
+  background: rgba(255, 255, 255, 0.12) !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+  color: #fff !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+}
+
+.modern-ui-v3 .stremio-row-fade-left {
+  background: linear-gradient(to right, rgba(12, 14, 24, 0.4) 0%, transparent 100%) !important;
+}
+
+.modern-ui-v3 .stremio-row-fade-right {
+  background: linear-gradient(to left, rgba(12, 14, 24, 0.4) 0%, transparent 100%) !important;
+}
+
 .modern-ui-v3 .media-card {
   border-radius: 12px !important;
   overflow: hidden !important;
