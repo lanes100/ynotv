@@ -6449,3 +6449,426 @@ html.modern-ui-v3[data-theme="light"] .subtitle-track-btn.active .subtitle-track
   color: var(--accent-primary, #00d4ff) !important;
 }
 
+/* ==========================================================================
+   V3 LIQUID GLASS - ADVANCED SEARCH MODAL OVERRIDES
+   ========================================================================== */
+
+/* 1. Backdrop Overlays */
+.modern-ui-v3 .advanced-search-overlay {
+  background: rgba(8, 8, 12, 0.4) !important;
+  backdrop-filter: blur(10px) !important;
+  -webkit-backdrop-filter: blur(10px) !important;
+}
+
+/* 2. Modal Card Containers */
+.modern-ui-v3 .advanced-search-modal {
+  background: rgba(255, 255, 255, 0.06) !important;
+  backdrop-filter: blur(24px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  box-shadow: 
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.05),
+    0 20px 50px rgba(0, 0, 0, 0.6),
+    0 2px 8px color-mix(in srgb, var(--accent-primary, #00d4ff) 10%, transparent) !important;
+  border-radius: 20px !important;
+  color: #fff !important;
+  overflow: hidden !important;
+}
+
+/* 3. Headers & Footers */
+.modern-ui-v3 .advanced-search-header {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  background: transparent !important;
+  padding: 20px 24px 16px !important;
+}
+
+.modern-ui-v3 .advanced-search-title h2 {
+  font-size: 1.15rem !important;
+  font-weight: 600 !important;
+  color: #fff !important;
+  margin: 0 !important;
+}
+
+.modern-ui-v3 .advanced-search-title svg {
+  color: var(--accent-primary, #00d4ff) !important;
+}
+
+.modern-ui-v3 .advanced-search-footer {
+  border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
+  background: transparent !important;
+  padding: 16px 24px 20px !important;
+}
+
+/* 4. Close Buttons */
+.modern-ui-v3 .advanced-search-close-btn {
+  border-radius: 50% !important;
+  width: 32px !important;
+  height: 32px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background: rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  color: rgba(255, 255, 255, 0.6) !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.modern-ui-v3 .advanced-search-close-btn:hover {
+  background: rgba(255, 255, 255, 0.12) !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+  color: #fff !important;
+}
+
+/* 5. Labels & Links */
+.modern-ui-v3 .advanced-search-label {
+  color: rgba(255, 255, 255, 0.45) !important;
+  font-size: 0.7rem !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.06em !important;
+}
+
+.modern-ui-v3 .action-link {
+  color: var(--accent-primary, #00d4ff) !important;
+  transition: opacity 0.2s ease !important;
+}
+
+.modern-ui-v3 .action-link:hover {
+  opacity: 0.8 !important;
+}
+
+.modern-ui-v3 .action-divider {
+  color: rgba(255, 255, 255, 0.15) !important;
+}
+
+/* 6. Search Input Controls */
+.modern-ui-v3 .advanced-search-input-wrap {
+  background: rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 10px !important;
+  padding: 0 14px !important;
+  height: 44px !important;
+  transition: all 0.2s ease !important;
+}
+
+.modern-ui-v3 .advanced-search-input-wrap:focus-within {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.05) !important;
+}
+
+.modern-ui-v3 .advanced-search-input {
+  color: #fff !important;
+  font-size: 14px !important;
+}
+
+.modern-ui-v3 .advanced-search-input::placeholder {
+  color: rgba(255, 255, 255, 0.3) !important;
+}
+
+.modern-ui-v3 .advanced-search-input-clear {
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: rgba(255, 255, 255, 0.6) !important;
+  border-radius: 6px !important;
+  transition: all 0.2s ease !important;
+}
+
+.modern-ui-v3 .advanced-search-input-clear:hover {
+  background: rgba(255, 255, 255, 0.15) !important;
+  color: #fff !important;
+}
+
+/* 7. Scope Buttons */
+.modern-ui-v3 .scope-btn {
+  background: rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  color: rgba(255, 255, 255, 0.7) !important;
+  border-radius: 8px !important;
+  font-weight: 600 !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.modern-ui-v3 .scope-btn:hover {
+  background: rgba(255, 255, 255, 0.12) !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+  color: #fff !important;
+}
+
+.modern-ui-v3 .scope-btn.active {
+  background: color-mix(in srgb, var(--accent-primary, #00d4ff) 18%, rgba(255, 255, 255, 0.06)) !important;
+  border-color: color-mix(in srgb, var(--accent-primary, #00d4ff) 35%, rgba(255, 255, 255, 0.15)) !important;
+  color: #fff !important;
+}
+
+/* 8. Filters & Checkboxes */
+.modern-ui-v3 .advanced-search-filters {
+  background: rgba(0, 0, 0, 0.15) !important;
+  border: 1px solid rgba(255, 255, 255, 0.06) !important;
+  border-radius: 10px !important;
+}
+
+.modern-ui-v3 .filter-source-header,
+.modern-ui-v3 .filter-category-item {
+  transition: background 0.15s ease !important;
+}
+
+.modern-ui-v3 .filter-source-header:hover,
+.modern-ui-v3 .filter-category-item:hover {
+  background: rgba(255, 255, 255, 0.05) !important;
+}
+
+.modern-ui-v3 .filter-source-name {
+  color: rgba(255, 255, 255, 0.85) !important;
+}
+
+.modern-ui-v3 .filter-category-name {
+  color: rgba(255, 255, 255, 0.6) !important;
+  transition: color 0.15s ease !important;
+}
+
+.modern-ui-v3 .filter-category-item.selected .filter-category-name {
+  color: #fff !important;
+}
+
+.modern-ui-v3 .filter-checkbox {
+  border-color: rgba(255, 255, 255, 0.3) !important;
+  border-radius: 5px !important;
+  background: transparent !important;
+}
+
+.modern-ui-v3 .filter-checkbox.checked {
+  background: var(--accent-primary, #00d4ff) !important;
+  border-color: var(--accent-primary, #00d4ff) !important;
+}
+
+.modern-ui-v3 .filter-checkbox.indeterminate {
+  background: color-mix(in srgb, var(--accent-primary, #00d4ff) 50%, transparent) !important;
+  border-color: color-mix(in srgb, var(--accent-primary, #00d4ff) 70%, transparent) !important;
+}
+
+/* 9. Loading & Empty States */
+.modern-ui-v3 .advanced-search-loading {
+  color: rgba(255, 255, 255, 0.5) !important;
+}
+
+.modern-ui-v3 .spinner-small {
+  border-color: rgba(255, 255, 255, 0.15) !important;
+  border-top-color: var(--accent-primary, #00d4ff) !important;
+}
+
+.modern-ui-v3 .advanced-search-empty {
+  color: rgba(255, 255, 255, 0.4) !important;
+}
+
+/* 10. Toggles & Switches */
+.modern-ui-v3 .advanced-search-modal .toggle-switch {
+  background: rgba(255, 255, 255, 0.15) !important;
+}
+
+.modern-ui-v3 .advanced-search-modal .toggle-switch.on {
+  background: var(--accent-primary, #00d4ff) !important;
+}
+
+.modern-ui-v3 .advanced-search-modal .toggle-label {
+  color: rgba(255, 255, 255, 0.75) !important;
+}
+
+/* 11. Footer buttons */
+.modern-ui-v3 .advanced-search-btn.primary {
+  background: var(--accent-primary, #00d4ff) !important;
+  color: #121424 !important;
+  font-weight: 600 !important;
+  border: 1px solid transparent !important;
+  box-shadow: 0 4px 12px rgba(0, 212, 255, 0.25) !important;
+}
+
+.modern-ui-v3 .advanced-search-btn.primary:hover:not(.disabled) {
+  background: #33e0ff !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 6px 16px rgba(0, 212, 255, 0.4) !important;
+}
+
+.modern-ui-v3 .advanced-search-btn.secondary {
+  background: rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  color: rgba(255, 255, 255, 0.8) !important;
+}
+
+.modern-ui-v3 .advanced-search-btn.secondary:hover {
+  background: rgba(255, 255, 255, 0.12) !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+  color: #fff !important;
+}
+
+/* 12. Scrollbar customization */
+.modern-ui-v3 .advanced-search-filters::-webkit-scrollbar-thumb,
+.modern-ui-v3 .advanced-search-body::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.08) !important;
+}
+
+.modern-ui-v3 .advanced-search-filters::-webkit-scrollbar-thumb:hover,
+.modern-ui-v3 .advanced-search-body::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-primary, #00d4ff) !important;
+}
+
+/* ==========================================================================
+   V3 LIQUID GLASS - ADVANCED SEARCH LIGHT THEME OVERRIDES
+   ========================================================================== */
+
+html.modern-ui-v3[data-theme="light"] .advanced-search-modal {
+  background: rgba(255, 255, 255, 0.45) !important;
+  border-color: rgba(0, 0, 0, 0.08) !important;
+  box-shadow: 
+    inset 0 1px 0 rgba(255, 255, 255, 0.6),
+    0 8px 32px rgba(0, 0, 0, 0.08),
+    0 2px 8px rgba(0, 0, 0, 0.02) !important;
+  color: #000 !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .advanced-search-header {
+  border-bottom-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .advanced-search-title h2 {
+  color: #000 !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .advanced-search-title svg {
+  color: var(--accent-primary, #00d4ff) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .advanced-search-footer {
+  border-top-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .advanced-search-close-btn {
+  background: rgba(0, 0, 0, 0.04) !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  color: rgba(0, 0, 0, 0.6) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .advanced-search-close-btn:hover {
+  background: rgba(0, 0, 0, 0.08) !important;
+  border-color: rgba(0, 0, 0, 0.15) !important;
+  color: #000 !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .advanced-search-label {
+  color: rgba(0, 0, 0, 0.45) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .action-divider {
+  color: rgba(0, 0, 0, 0.15) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .advanced-search-input-wrap {
+  background: rgba(0, 0, 0, 0.02) !important;
+  border-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .advanced-search-input-wrap:focus-within {
+  background: rgba(0, 0, 0, 0.05) !important;
+  border-color: rgba(0, 0, 0, 0.15) !important;
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.03) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .advanced-search-input {
+  color: #000 !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .advanced-search-input::placeholder {
+  color: rgba(0, 0, 0, 0.3) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .advanced-search-input-clear {
+  background: rgba(0, 0, 0, 0.05) !important;
+  color: rgba(0, 0, 0, 0.6) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .advanced-search-input-clear:hover {
+  background: rgba(0, 0, 0, 0.1) !important;
+  color: #000 !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .scope-btn {
+  background: rgba(0, 0, 0, 0.03) !important;
+  border-color: rgba(0, 0, 0, 0.08) !important;
+  color: rgba(0, 0, 0, 0.7) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .scope-btn:hover {
+  background: rgba(0, 0, 0, 0.06) !important;
+  border-color: rgba(0, 0, 0, 0.15) !important;
+  color: #000 !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .scope-btn.active {
+  background: color-mix(in srgb, var(--accent-primary, #00d4ff) 12%, rgba(0, 0, 0, 0.03)) !important;
+  border-color: color-mix(in srgb, var(--accent-primary, #00d4ff) 25%, rgba(0, 0, 0, 0.08)) !important;
+  color: #000 !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .advanced-search-filters {
+  background: rgba(0, 0, 0, 0.03) !important;
+  border-color: rgba(0, 0, 0, 0.06) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .filter-source-header:hover,
+html.modern-ui-v3[data-theme="light"] .filter-category-item:hover {
+  background: rgba(0, 0, 0, 0.04) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .filter-source-name {
+  color: rgba(0, 0, 0, 0.85) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .filter-category-name {
+  color: rgba(0, 0, 0, 0.6) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .filter-category-item.selected .filter-category-name {
+  color: #000 !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .filter-checkbox {
+  border-color: rgba(0, 0, 0, 0.25) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .filter-source-count,
+html.modern-ui-v3[data-theme="light"] .filter-category-count {
+  color: rgba(0, 0, 0, 0.35) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .advanced-search-loading {
+  color: rgba(0, 0, 0, 0.5) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .advanced-search-empty {
+  color: rgba(0, 0, 0, 0.4) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .advanced-search-modal .toggle-switch {
+  background: rgba(0, 0, 0, 0.08) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .advanced-search-modal .toggle-switch.on {
+  background: var(--accent-primary, #00d4ff) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .advanced-search-modal .toggle-label {
+  color: rgba(0, 0, 0, 0.7) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .advanced-search-btn.secondary {
+  background: rgba(0, 0, 0, 0.03) !important;
+  border-color: rgba(0, 0, 0, 0.08) !important;
+  color: rgba(0, 0, 0, 0.7) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .advanced-search-btn.secondary:hover {
+  background: rgba(0, 0, 0, 0.06) !important;
+  border-color: rgba(0, 0, 0, 0.15) !important;
+  color: #000 !important;
+}
+
+
