@@ -1511,13 +1511,14 @@ export function ChannelPanel({
   // Handle Video Resizing for Preview Mode via ResizeObserver
   // This ensures we exactly match the CSS dimensions regardless of resolution or layout state
   useEffect(() => {
+    if (!visible) return;
     // if (!window.mpv) return; // Bridge handles this
 
     const updateVideoPosition = () => {
       // Use last known channel ID if current selection is null but we have one cached
       const effectiveChannelId = selectedChannel?.stream_id || lastChannelIdRef.current;
 
-      if (!previewRef.current || !effectiveChannelId || !visible) {
+      if (!previewRef.current || !effectiveChannelId) {
         if (onPreviewVideoRectChange) {
           onPreviewVideoRectChange(null);
         }
