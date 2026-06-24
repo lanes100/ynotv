@@ -253,9 +253,9 @@ export function ChannelPanel({
 
   const channelSortOrder = useChannelSortOrder();
   const epgHiddenButtons = useUIStore((s) => s.epgHiddenButtons);
-  // Optimization: Skip loading the main channel grid when in Search or Watchlist mode
+  // Optimization: Skip loading the main channel grid when in Search or Watchlist mode, or when the panel is hidden
   // This prevents loading 40k+ channels in the background which causes UI lag
-  const shouldSkipGrid = isSearchMode || isWatchlistMode;
+  const shouldSkipGrid = !visible || isSearchMode || isWatchlistMode;
   const channels = useChannels(categoryId, channelSortOrder, { skip: shouldSkipGrid });
   const categories = useCategories();
   const [currentTime, setCurrentTime] = useState(new Date());
