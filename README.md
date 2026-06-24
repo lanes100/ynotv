@@ -20,21 +20,19 @@ A feature-rich, open source IPTV player for Windows built on [Tauri v2](https://
 
 ## Screenshots:
 
-| EPG with preview | Play screen |
+| EPG with preview | VOD |
 | :-------------------------------------: | :--------------------------------------: |
-| ![EPG with preview](https://i.ibb.co/207znsrw/ynotv-go-Ckngt-Ezr.png) | ![Play screen](https://i.ibb.co/gCqPTFb/Playing.jpg) |
+| ![EPG with preview](https://i.ibb.co/207znsrw/ynotv-go-Ckngt-Ezr.png) | ![VOD](https://i.imgur.com/eR2b3jb.jpeg) |
 | Playlist Editor | EPG Editor |
-| ![Playlist Editor](https://i.ibb.co/h1LfVMNG/playlisteditor.png) | ![EPG Editor](https://i.ibb.co/kg2drZYn/EPGEditor.png) |
+| ![Playlist Editor](https://i.imgur.com/oMc7ecE.png) | ![EPG Editor](https://i.imgur.com/rv2ewdz.png) |
 | Watchlist Option with autoswitch | Strem View |
-| ![Watchlist Option with autoswitch](https://i.ibb.co/YTQwhPV5/Watchlist.png) | ![Strem View](https://i.ibb.co/4nyYbYLC/ynotv-XJPd86-Vi-FJ.jpg) |
-| Sports View | Vod Page |
-| ![Sports View](https://i.ibb.co/yn5ZWb2F/Sports.png) | ![Vod Page](https://i.ibb.co/ZRGw1RJQ/ynotv-t-FGIwr7ec-C.jpg) |
+| ![Watchlist Option with autoswitch](https://i.imgur.com/7PzZPz0.png) | ![Strem View](https://i.imgur.com/2woHM6m.jpeg) |
+| Sports View | Themes |
+| ![Sports View](https://i.imgur.com/Hr6wtiY.png) | ![Themes](https://i.imgur.com/WDjMMSh.png) |
 | Multiview Menu | PiP View |
-| ![Multiview Menu](https://i.ibb.co/b5RBSYDc/Multiview.jpg) | ![PiP View](https://i.ibb.co/bjY4vbxB/Pip.jpg) |
+| ![Multiview Menu](https://i.imgur.com/KOXyWBs.jpeg) | ![PiP View](https://i.imgur.com/LxweTiN.jpeg) |
 | Multiview 2x2 | DVR Page |
-| ![Multiview 2x2](https://i.ibb.co/BH8pF1VL/multi2x2.jpg) | ![DVR Page](https://i.ibb.co/Ng4dX9Yh/DVR.png) |
-| Themes | Add Source |
-| ![Themes](https://i.ibb.co/r23W6Mpj/Themes.png) | ![Add Source](https://i.ibb.co/5hr6Bpjn/Add-Source.png) |
+| ![Multiview 2x2](https://i.imgur.com/V2v5DCy.jpeg) | ![DVR Page](https://i.imgur.com/Pwojil9.png) |
 
 
 ---
