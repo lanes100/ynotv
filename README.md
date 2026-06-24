@@ -12,7 +12,7 @@ A feature-rich, open source IPTV player for Windows built on [Tauri v2](https://
 
 [Documentation](https://tbeezy.github.io/ynotvdoc)
 
-[![Watch the video](https://i.ibb.co/27SmHvtn/ynotv-c-IZc-SQ6-HAb.png)](https://i.ibb.co/27SmHvtn/ynotv-c-IZc-SQ6-HAb.png)
+[![Watch the video](https://i.ibb.co/207znsrw/ynotv-go-Ckngt-Ezr.png)](https://i.ibb.co/207znsrw/ynotv-go-Ckngt-Ezr.png)
 
 [Old Video Demonstration](https://streamable.com/jxjq9n)
 
@@ -22,7 +22,7 @@ A feature-rich, open source IPTV player for Windows built on [Tauri v2](https://
 
 | EPG with preview | Play screen |
 | :-------------------------------------: | :--------------------------------------: |
-| ![EPG with preview](https://i.ibb.co/27SmHvtn/ynotv-c-IZc-SQ6-HAb.png) | ![Play screen](https://i.ibb.co/gCqPTFb/Playing.jpg) |
+| ![EPG with preview](https://i.ibb.co/207znsrw/ynotv-go-Ckngt-Ezr.png) | ![Play screen](https://i.ibb.co/gCqPTFb/Playing.jpg) |
 | Playlist Editor | EPG Editor |
 | ![Playlist Editor](https://i.ibb.co/h1LfVMNG/playlisteditor.png) | ![EPG Editor](https://i.ibb.co/kg2drZYn/EPGEditor.png) |
 | Watchlist Option with autoswitch | Strem View |
