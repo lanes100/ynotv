@@ -35,7 +35,7 @@ import {
   type NuvioCollectionSource,
   type NuvioCollection
 } from '../../services/nuvio-api';
-import { fetchCatalog, fetchMeta } from '../../services/stremio-addon';
+import { fetchCatalog, fetchMeta, parseAddonUrl } from '../../services/stremio-addon';
 import { NuvioHeroBanner } from './NuvioHeroBanner';
 import { StremioCatalogRow } from '../stremio/StremioCatalogRow';
 import { StremioHoverProvider, useStremioHover } from '../../contexts/StremioHoverContext';
@@ -219,6 +219,41 @@ const fuzzyMatchAddon = (source: NuvioCollectionSource, addon: InstalledAddon): 
   return false;
 };
 
+// Mirrors Nuvio Desktop's CollectionCatalogResolver.findCollectionCatalog:
+// 1) Exact manifest.id match + catalog check
+// 2) Heuristic (fuzzy) match + catalog check
+// 3) Scan ALL enabled addons for catalogId+type (ignoring addonId)
+const findAddonForSource = (
+  source: NuvioCollectionSource,
+  addons: InstalledAddon[]
+): InstalledAddon | undefined => {
+  const catalogType = source.type === 'tv' ? 'series' : (source.type || 'movie');
+  const catalogId = source.catalogId || 'top';
+  const targetId = (source.addonId || '').trim().toLowerCase();
+
+  const hasMatchingCatalog = (a: InstalledAddon) =>
+    a.manifest?.catalogs?.some(
+      c => (c.type === catalogType || (c.type === 'tv' && catalogType === 'series')) &&
+           (c.id === catalogId || c.id === catalogId.split(',')[0])
+    );
+
+  if (targetId) {
+    const exactMatch = addons.find(a => (a.manifest?.id || a.id || '').toLowerCase() === targetId);
+    if (exactMatch && hasMatchingCatalog(exactMatch)) return exactMatch;
+  }
+
+  const heuristicMatch = addons.find(a => hasMatchingCatalog(a) && fuzzyMatchAddon(source, a));
+  if (heuristicMatch) return heuristicMatch;
+
+  return addons.find(hasMatchingCatalog);
+};
+
+// Mirrors Nuvio Desktop's CollectionModels.normalizedOptionalGenre()
+const normalizeGenre = (genre: string | null | undefined): string | undefined => {
+  const g = (genre || '').trim();
+  return g && !/^none$/i.test(g) ? g : undefined;
+};
+
 const getSourceLabel = (
   source: NuvioCollectionSource,
   index: number,
@@ -231,22 +266,13 @@ const getSourceLabel = (
     return `Trakt - ${source.title || 'List'}`;
   }
   
-  const catalogType = source.type === 'tv' ? 'series' : (source.type || 'movie');
-
-  // Find matching addons, preferring the one that has the target catalog
-  const matchingAddons = activeAddons.filter(a => fuzzyMatchAddon(source, a));
-  const resolvedAddon = source.catalogId
-    ? matchingAddons.find(a =>
-        a.manifest?.catalogs?.some(
-          c => (c.type === catalogType || (c.type === 'tv' && catalogType === 'series')) && c.id === source.catalogId
-        )
-      ) || matchingAddons[0]
-    : matchingAddons[0];
+  const resolvedAddon = findAddonForSource(source, activeAddons);
 
   let catalogName: string;
   if (resolvedAddon) {
+    const catalogType2 = source.type === 'tv' ? 'series' : (source.type || 'movie');
     const catalog = resolvedAddon.manifest?.catalogs?.find(
-      c => (c.type === catalogType || (c.type === 'tv' && catalogType === 'series')) && c.id === source.catalogId
+      c => (c.type === catalogType2 || (c.type === 'tv' && catalogType2 === 'series')) && c.id === (source.catalogId || '').split(',')[0]
     );
     if (catalog) {
       catalogName = catalog.name;
@@ -258,7 +284,7 @@ const getSourceLabel = (
   }
 
   const typeLabel = source.type === 'tv' || source.type === 'series' ? 'Series' : 'Movie';
-  const genreSuffix = source.genre ? ` · ${source.genre}` : '';
+  const genreSuffix = normalizeGenre(source.genre) ? ` · ${normalizeGenre(source.genre)}` : '';
   
   return `${catalogName} (${typeLabel})${genreSuffix}`;
 };
@@ -825,7 +851,7 @@ function NuvioPageContent({
         addonId: cs.addonId,
         type: cs.type,
         catalogId: cs.catalogId,
-        genre: cs.genre
+        genre: normalizeGenre(cs.genre),
       }));
     }
     return [];
@@ -941,7 +967,7 @@ function NuvioPageContent({
       Object.keys(groups).map(async (contentId) => {
         const items = groups[contentId];
         const first = items[0];
-        const type = first.content_type === 'series' || first.content_type === 'show' ? 'series' : 'movie';
+        const type = first.content_type === 'series' || first.content_type === 'show' || first.content_type === 'tv' ? 'series' : 'movie';
 
         if (type === 'movie') {
           // Find the latest in-progress entry for the movie
@@ -985,7 +1011,7 @@ function NuvioPageContent({
     const resolved = await Promise.all(
       filteredCandidates.map(async (entry) => {
         try {
-          const type = entry.content_type === 'series' || entry.content_type === 'show' ? 'series' : 'movie';
+          const type = entry.content_type === 'series' || entry.content_type === 'show' || entry.content_type === 'tv' ? 'series' : 'movie';
           const meta = await fetchMeta(activeAddons, type, entry.content_id);
           if (meta) {
             if ((entry as any)._generateNextEpisode && type === 'series') {
@@ -1043,7 +1069,7 @@ function NuvioPageContent({
             };
           }
         } catch (e) {
-          console.warn('[NuvioPage] Failed to resolve metadata for:', entry.content_id, e);
+          // Ignore
         }
         // Remove marker
         const { _generateNextEpisode, ...rest } = entry as any;
@@ -1195,7 +1221,7 @@ function NuvioPageContent({
 
     const libItem: NuvioLibrarySyncItem = {
       content_id: item.id,
-      content_type: item.type === 'series' || item.type === 'show' ? 'series' : 'movie',
+      content_type: item.type === 'series' || item.type === 'show' || item.type === 'tv' ? 'series' : 'movie',
       name: item.name,
       poster: item.poster || null,
       poster_shape: 'POSTER',
@@ -1222,14 +1248,14 @@ function NuvioPageContent({
       folderScrollPosRef.current = el.scrollTop;
     }
 
-    if ((item.content_type === 'series' || item.content_type === 'show') && item.video_id) {
+    if ((item.content_type === 'series' || item.content_type === 'show' || item.content_type === 'tv') && item.video_id) {
       setNuvioPreselectVideoId(item.video_id);
     }
     nuvioNavigate({
       view: 'detail',
       meta: {
         id: item.content_id,
-        type: item.content_type === 'series' || item.content_type === 'show' ? 'series' : 'movie',
+        type: item.content_type === 'series' || item.content_type === 'show' || item.content_type === 'tv' ? 'series' : 'movie',
         name: item.name,
         poster: item.poster,
         background: item.background ?? item.poster ?? null,
@@ -1341,16 +1367,21 @@ function NuvioPageContent({
         const catalogType = source.type === 'tv' ? 'series' : (source.type || 'movie');
         const catalogId = source.catalogId || 'top';
 
-        const matchingAddons = activeAddons.filter(a => fuzzyMatchAddon(source, a));
-        const resolvedAddon = matchingAddons.find(a =>
-          a.manifest?.catalogs?.some(
-            c => (c.type === catalogType || (c.type === 'tv' && catalogType === 'series')) && c.id === catalogId
-          )
-        ) || matchingAddons[0];
+        const resolvedAddon = findAddonForSource(source, activeAddons);
 
         if (resolvedAddon) {
+          const matchingAddonsForError = (source.addonId
+            ? activeAddons.filter(a => fuzzyMatchAddon(source, a))
+            : activeAddons.filter(a =>
+                a.manifest?.catalogs?.some(
+                  c => (c.type === catalogType || (c.type === 'tv' && catalogType === 'series')) &&
+                       (c.id === catalogId || c.id === catalogId.split(',')[0])
+                )
+              )
+          );
           const matchingCatalog = resolvedAddon.manifest?.catalogs?.find(
-            c => (c.type === catalogType || (c.type === 'tv' && catalogType === 'series')) && c.id === catalogId
+            c => (c.type === catalogType || (c.type === 'tv' && catalogType === 'series')) &&
+                 (c.id === catalogId || c.id === catalogId.split(',')[0])
           );
 
           if (!matchingCatalog) {
@@ -1361,7 +1392,7 @@ function NuvioPageContent({
                 .join(', ');
               setFolderError(
                 `Catalog "${catalogId}" not found in addon "${resolvedAddon.manifest?.name || resolvedAddon.id}". ` +
-                `Matching addons: ${matchingAddons.map(a => a.manifest?.name || a.id).join(', ')}. ` +
+                `Matching addons: ${matchingAddonsForError.map(a => a.manifest?.name || a.id).join(', ')}. ` +
                 `Available catalogs in selected addon: ${availableCatalogs || 'none'}. ` +
                 `Edit the folder sources in the Collections tab to use a valid catalog.`
               );
@@ -1369,13 +1400,14 @@ function NuvioPageContent({
           } else {
             const skip = append ? folderSkipRef.current : 0;
             const extra: Record<string, string> = {};
-            if (source.genre) extra.genre = source.genre;
+            const normalizedGenre = normalizeGenre(source.genre);
+            if (normalizedGenre) extra.genre = normalizedGenre;
             if (skip > 0) extra.skip = String(skip);
             extra.limit = '100';
 
             const resp = await fetchCatalog(
               resolvedAddon.baseUrl,
-              catalogType,
+              matchingCatalog.type,
               catalogId,
               extra
             );

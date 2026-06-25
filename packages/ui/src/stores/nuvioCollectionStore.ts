@@ -1,7 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { type NuvioCollection, fetchNuvioCollections, pushNuvioCollections } from '../services/nuvio-api';
-
 interface NuvioCollectionState {
   collections: NuvioCollection[];
   isLoading: boolean;
@@ -28,8 +27,8 @@ export const useNuvioCollectionStore = create<NuvioCollectionState>()(
           const collections = await fetchNuvioCollections(token, activeProfile.profile_index);
           set({ collections, error: null });
         } catch (e: any) {
-          set({ error: e.message || 'Failed to load collections' });
           console.error('[NuvioCollectionStore] loadCollections failed:', e);
+          set({ error: e.message || 'Failed to load collections' });
         } finally {
           set({ isLoading: false });
         }

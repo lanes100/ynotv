@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { InstalledAddon } from '../types/stremio';
-import { fetchManifest, clearCatalogCache } from '../services/stremio-addon';
+import { fetchManifest, clearCatalogCache, cleanAddonUrl, getManifestUrl } from '../services/stremio-addon';
 
 const STORAGE_KEY = 'stremio-addons';
 
@@ -54,7 +54,7 @@ export const useStremioAddonStore = create<StremioAddonStore>()(
         if (auth.authKey && auth.syncAddons) {
           const { setStremioAddons } = await import('../services/stremio-api');
           const toPush = state.addons.map(a => ({
-            transportUrl: `${a.baseUrl}/manifest.json`,
+            transportUrl: getManifestUrl(a.baseUrl),
             manifest: a.manifest,
           }));
           await setStremioAddons(auth.authKey, toPush);
@@ -78,7 +78,7 @@ export const useStremioAddonStore = create<StremioAddonStore>()(
                   ...s.addons,
                   {
                     id: manifest.id,
-                    baseUrl: def.url.replace(/\/manifest\.json$/, ''),
+                    baseUrl: cleanAddonUrl(def.url),
                     manifest,
                     installedAt: Date.now(),
                     isDefault: true,
@@ -101,7 +101,7 @@ export const useStremioAddonStore = create<StremioAddonStore>()(
         }
         const addon: InstalledAddon = {
           id: manifest.id,
-          baseUrl: url.replace(/\/manifest\.json$/, ''),
+          baseUrl: cleanAddonUrl(url),
           manifest,
           installedAt: Date.now(),
         };
@@ -116,7 +116,7 @@ export const useStremioAddonStore = create<StremioAddonStore>()(
           if (auth.authKey && auth.syncAddons) {
             import('../services/stremio-api').then(({ setStremioAddons }) => {
               const toPush = newAddons.map(a => ({
-                transportUrl: `${a.baseUrl}/manifest.json`,
+                transportUrl: getManifestUrl(a.baseUrl),
                 manifest: a.manifest,
               }));
               setStremioAddons(auth.authKey!, toPush)
@@ -139,7 +139,7 @@ export const useStremioAddonStore = create<StremioAddonStore>()(
           if (auth.authKey && auth.syncAddons) {
             import('../services/stremio-api').then(({ setStremioAddons }) => {
               const toPush = newAddons.map(a => ({
-                transportUrl: `${a.baseUrl}/manifest.json`,
+                transportUrl: getManifestUrl(a.baseUrl),
                 manifest: a.manifest,
               }));
               setStremioAddons(auth.authKey!, toPush)
@@ -164,7 +164,7 @@ export const useStremioAddonStore = create<StremioAddonStore>()(
           if (auth.authKey && auth.syncAddons) {
             import('../services/stremio-api').then(({ setStremioAddons }) => {
               const toPush = newAddons.map(a => ({
-                transportUrl: `${a.baseUrl}/manifest.json`,
+                transportUrl: getManifestUrl(a.baseUrl),
                 manifest: a.manifest,
               }));
               setStremioAddons(auth.authKey!, toPush)

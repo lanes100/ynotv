@@ -1,5 +1,9 @@
 import type { InstalledAddon, StremioManifest, StremioCatalogResponse, StremioMeta, StremioStream, StremioSubtitle } from '../types/stremio';
 
+function encodeAddonPathSegment(val: string): string {
+  return encodeURIComponent(val).replace(/[!'()*]/g, (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`);
+}
+
 const MANIFEST_CACHE = new Map<string, { manifest: StremioManifest; ts: number }>();
 const CACHE_TTL = 5 * 60 * 1000;
 
@@ -29,8 +33,27 @@ async function fetchJson(url: string): Promise<any> {
   return await res.json();
 }
 
+export function parseAddonUrl(url: string): { baseUrl: string; query: string } {
+  const parts = url.split('?');
+  let cleanUrl = parts[0];
+  const query = parts[1] ? `?${parts[1]}` : '';
+  cleanUrl = cleanUrl.replace(/\/manifest\.json$/i, '');
+  cleanUrl = cleanUrl.replace(/\/+$/, '');
+  return { baseUrl: cleanUrl, query };
+}
+
+export function cleanAddonUrl(url: string): string {
+  const parsed = parseAddonUrl(url);
+  return parsed.baseUrl + parsed.query;
+}
+
+export function getManifestUrl(baseUrl: string): string {
+  const parsed = parseAddonUrl(baseUrl);
+  return `${parsed.baseUrl}/manifest.json${parsed.query}`;
+}
+
 function normalizeBaseUrl(url: string): string {
-  return url.replace(/\/manifest\.json$/, '').replace(/\/+$/, '');
+  return parseAddonUrl(url).baseUrl;
 }
 
 function addonHasResource(addon: InstalledAddon, resource: string): boolean {
@@ -56,7 +79,8 @@ export function getCachedCatalog(
   id: string,
   extra?: Record<string, string>
 ): StremioCatalogResponse | undefined {
-  let url = `${normalizeBaseUrl(baseUrl)}/catalog/${type}/${id}`;
+  const parsed = parseAddonUrl(baseUrl);
+  let url = `${parsed.baseUrl}/catalog/${encodeAddonPathSegment(type)}/${encodeAddonPathSegment(id)}`;
   const extraArgs = extra
     ? Object.entries(extra)
       .filter(([, v]) => v)
@@ -66,7 +90,7 @@ export function getCachedCatalog(
   if (extraArgs) {
     url += `/${extraArgs}`;
   }
-  url += '.json';
+  url += `.json${parsed.query}`;
   return CATALOG_RESPONSE_CACHE.get(url);
 }
 
@@ -76,7 +100,8 @@ export async function fetchCatalog(
   id: string,
   extra?: Record<string, string>
 ): Promise<StremioCatalogResponse> {
-  let url = `${normalizeBaseUrl(baseUrl)}/catalog/${type}/${id}`;
+  const parsed = parseAddonUrl(baseUrl);
+  let url = `${parsed.baseUrl}/catalog/${encodeAddonPathSegment(type)}/${encodeAddonPathSegment(id)}`;
   const extraArgs = extra
     ? Object.entries(extra)
       .filter(([, v]) => v)
@@ -86,7 +111,7 @@ export async function fetchCatalog(
   if (extraArgs) {
     url += `/${extraArgs}`;
   }
-  url += '.json';
+  url += `.json${parsed.query}`;
 
   const cachedResponse = CATALOG_RESPONSE_CACHE.get(url);
   if (cachedResponse) {
@@ -131,7 +156,8 @@ export async function fetchMeta(
     for (const addon of addons) {
       if (!addonHasResource(addon, 'meta')) continue;
       try {
-        const url = `${normalizeBaseUrl(addon.baseUrl)}/meta/${type}/${id}.json`;
+        const parsed = parseAddonUrl(addon.baseUrl);
+        const url = `${parsed.baseUrl}/meta/${encodeAddonPathSegment(type)}/${encodeAddonPathSegment(id)}.json${parsed.query}`;
         const data = await fetchJson(url) as { meta: StremioMeta };
         if (data?.meta) {
           META_RESPONSE_CACHE.set(cacheKey, data.meta);
@@ -165,7 +191,8 @@ export async function fetchStreams(
   const promises = addons.map(async (addon) => {
     if (!addonHasResource(addon, 'stream')) return;
     try {
-      const url = `${normalizeBaseUrl(addon.baseUrl)}/stream/${type}/${id}.json`;
+      const parsed = parseAddonUrl(addon.baseUrl);
+      const url = `${parsed.baseUrl}/stream/${encodeAddonPathSegment(type)}/${encodeAddonPathSegment(id)}.json${parsed.query}`;
       const data = await fetchJson(url) as { streams: StremioStream[] };
       if (data?.streams) {
         const addonStreams = data.streams.map(s => ({
@@ -197,7 +224,8 @@ export async function fetchSubtitles(
   const promises = addons.map(async (addon) => {
     if (!addonHasResource(addon, 'subtitles')) return;
     try {
-      let url = `${normalizeBaseUrl(addon.baseUrl)}/subtitles/${type}/${id}`;
+      const parsed = parseAddonUrl(addon.baseUrl);
+      let url = `${parsed.baseUrl}/subtitles/${encodeAddonPathSegment(type)}/${encodeAddonPathSegment(id)}`;
       const extraArgs = extra
         ? Object.entries(extra)
           .filter(([, v]) => v)
@@ -207,7 +235,7 @@ export async function fetchSubtitles(
       if (extraArgs) {
         url += `/${extraArgs}`;
       }
-      url += '.json';
+      url += `.json${parsed.query}`;
       const data = await fetchJson(url) as { subtitles: StremioSubtitle[] };
       if (data?.subtitles) {
         const addonSubtitles = data.subtitles.map(sub => ({

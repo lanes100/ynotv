@@ -14,7 +14,7 @@ import {
 import { useStremioAddonStore } from './stremioAddonStore';
 import { useStremioLibraryStore } from './stremioLibraryStore';
 import { useStremioWatchStore } from './stremioWatchStore';
-import { fetchMeta, fetchManifest } from '../services/stremio-addon';
+import { fetchMeta, fetchManifest, cleanAddonUrl, getManifestUrl } from '../services/stremio-addon';
 import type { StremioMeta } from '../types/stremio';
 
 // Helper to decode Stremio watched bitset
@@ -202,7 +202,7 @@ export const useStremioAuthStore = create<StremioAuthStore>()(
             let changed = false;
 
             for (const ca of cloudAddons) {
-              const caBaseUrl = ca.transportUrl.replace(/\/manifest\.json$/, '');
+              const caBaseUrl = cleanAddonUrl(ca.transportUrl);
               const exists = localAddons.some(la => la.baseUrl === caBaseUrl || la.id === ca.manifest.id);
               if (!exists) {
                 mergedAddons.push({
@@ -224,7 +224,7 @@ export const useStremioAuthStore = create<StremioAuthStore>()(
 
             // Sync merged list back to cloud
             const toPushAddons: StremioAddon[] = mergedAddons.map(a => ({
-              transportUrl: `${a.baseUrl}/manifest.json`,
+              transportUrl: getManifestUrl(a.baseUrl),
               manifest: a.manifest,
             }));
             await setStremioAddons(authKey, toPushAddons);

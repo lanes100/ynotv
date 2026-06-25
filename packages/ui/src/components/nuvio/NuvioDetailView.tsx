@@ -151,7 +151,7 @@ export function NuvioDetailView({
     if (!meta.id || fetchedIdsRef.current.has(meta.id)) return;
 
     const isTmdbId = meta.id.startsWith('tmdb:');
-    const isSeriesItem = meta.type === 'series';
+    const isSeriesItem = meta.type === 'series' || meta.type === 'show' || meta.type === 'tv';
     const isIncomplete = isTmdbId;
 
     if (!isIncomplete) {
@@ -248,7 +248,7 @@ export function NuvioDetailView({
 
   // ─── Fetch watch progress ──────────────────────────────────
   const loadWatchProgress = useCallback(() => {
-    if (!token || !profile || meta.type !== 'series') return;
+    if (!token || !profile || !(meta.type === 'series' || meta.type === 'show' || meta.type === 'tv')) return;
     fetchNuvioWatchProgress(token, profile.profile_index, null, 500)
       .then((items: NuvioWatchProgressSyncEntry[]) => {
         const map: Record<string, { progressFraction: number; finished: boolean }> = {};
@@ -280,7 +280,7 @@ export function NuvioDetailView({
   const setPreselectVideoId = useSetNuvioPreselectVideoId();
 
   useEffect(() => {
-    if (meta.type !== 'series' || !preselectVideoId || !fullMeta || !fullMeta.videos) return;
+    if (!(meta.type === 'series' || meta.type === 'show' || meta.type === 'tv') || !preselectVideoId || !fullMeta || !fullMeta.videos) return;
     const video = fullMeta.videos.find((v) => v.id === preselectVideoId);
     if (video) {
       if (video.season != null) setSelectedSeason(video.season);
@@ -378,7 +378,7 @@ export function NuvioDetailView({
 
   // Movie streams on mount
   useEffect(() => {
-    if (meta.type === 'series') return;
+    if (meta.type === 'series' || meta.type === 'show' || meta.type === 'tv') return;
     let active = true;
     const loadStreams = async () => {
       const cacheKey = `${effectiveMeta.type}:${effectiveMeta.id}`;
@@ -411,7 +411,7 @@ export function NuvioDetailView({
 
   // Series streams when episode selected
   useEffect(() => {
-    if (meta.type !== 'series' || !selectedVideo) return;
+    if (!(meta.type === 'series' || meta.type === 'show' || meta.type === 'tv') || !selectedVideo) return;
     let active = true;
     const loadStreams = async () => {
       const cacheKey = `series:${selectedVideo.id}`;
@@ -443,7 +443,7 @@ export function NuvioDetailView({
   }, [selectedVideo, addons.map((a) => `${a.id}:${a.enabled !== false}`).join(','), refreshTrigger, nuvioCacheFetchResults, nuvioCacheFetchTimeout]);
 
   // ─── Computed values ───────────────────────────────────────
-  const isSeries = meta.type === 'series';
+  const isSeries = meta.type === 'series' || meta.type === 'show' || meta.type === 'tv';
   const effectiveTrailerUrl = effectiveMeta.trailer || tmdbTrailerUrl;
 
   const seasons = useMemo(() => {
@@ -540,7 +540,7 @@ export function NuvioDetailView({
   }, []);
 
   const handleRefresh = useCallback(() => {
-    const key = meta.type === 'series' && selectedVideo
+    const key = (meta.type === 'series' || meta.type === 'show' || meta.type === 'tv') && selectedVideo
       ? `series:${selectedVideo.id}`
       : `${effectiveMeta.type}:${effectiveMeta.id}`;
     streamCache.delete(key);
@@ -553,7 +553,7 @@ export function NuvioDetailView({
 
     const libItem: NuvioLibrarySyncItem = {
       content_id: effectiveMeta.id,
-      content_type: effectiveMeta.type === 'series' ? 'series' : 'movie',
+      content_type: effectiveMeta.type === 'series' || effectiveMeta.type === 'show' || effectiveMeta.type === 'tv' ? 'series' : 'movie',
       name: effectiveMeta.name,
       poster: effectiveMeta.poster || null,
       poster_shape: 'POSTER',
@@ -586,7 +586,7 @@ export function NuvioDetailView({
       try {
         await pushNuvioWatchProgress(token, profile.profile_index, [{
           content_id: effectiveMeta.id,
-          content_type: effectiveMeta.type,
+          content_type: effectiveMeta.type === 'series' || effectiveMeta.type === 'show' || effectiveMeta.type === 'tv' ? 'series' : 'movie',
           video_id: ep.id,
           season: ep.season ?? null,
           episode: ep.episode ?? null,

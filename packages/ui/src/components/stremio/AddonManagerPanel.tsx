@@ -3,6 +3,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { useStremioAddonStore } from '../../stores/stremioAddonStore';
 import { useStremioAuthStore } from '../../stores/stremioAuthStore';
 import type { InstalledAddon } from '../../types/stremio';
+import { parseAddonUrl } from '../../services/stremio-addon';
 import './AddonManagerPanel.css';
 
 interface AddonManagerPanelProps {
@@ -27,7 +28,8 @@ export function AddonManagerPanel({ onClose }: AddonManagerPanelProps) {
   const [syncingPositions, setSyncingPositions] = useState(false);
 
   const openConfigureUrl = async (baseUrl: string) => {
-    const url = `${baseUrl.replace(/\/$/, '')}/configure`;
+    const parsed = parseAddonUrl(baseUrl);
+    const url = `${parsed.baseUrl}/configure${parsed.query}`;
     try {
       await invoke('open_external_url', { url });
     } catch (e) {

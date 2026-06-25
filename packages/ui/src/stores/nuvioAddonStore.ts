@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { InstalledAddon } from '../types/stremio';
-import { fetchManifest, clearCatalogCache } from '../services/stremio-addon';
+import { fetchManifest, clearCatalogCache, cleanAddonUrl, getManifestUrl } from '../services/stremio-addon';
 import { fetchNuvioAddons, pushNuvioAddons, type NuvioAddonRow } from '../services/nuvio-api';
 
 interface NuvioAddonStore {
@@ -52,7 +52,7 @@ export const useNuvioAddonStore = create<NuvioAddonStore>()(
             rows.map(async (row) => {
               const url = row.url;
               const existing = currentAddons.find(
-                (a) => a.baseUrl === url.replace(/\/manifest\.json$/, '') || `${a.baseUrl}/manifest.json` === url
+                (a) => a.baseUrl === cleanAddonUrl(url) || getManifestUrl(a.baseUrl) === url
               );
 
               const isPlaceholder = existing && (
@@ -72,7 +72,7 @@ export const useNuvioAddonStore = create<NuvioAddonStore>()(
                 const manifest = await fetchManifest(url);
                 return {
                   id: manifest.id,
-                  baseUrl: url.replace(/\/manifest\.json$/, ''),
+                  baseUrl: cleanAddonUrl(url),
                   manifest,
                   installedAt: Date.now(),
                   enabled: row.enabled,
@@ -82,7 +82,7 @@ export const useNuvioAddonStore = create<NuvioAddonStore>()(
                 // Return a placeholder so we don't silently lose the addon URL
                 return {
                   id: url,
-                  baseUrl: url.replace(/\/manifest\.json$/, ''),
+                  baseUrl: cleanAddonUrl(url),
                   manifest: {
                     id: url,
                     name: row.name || url,
@@ -124,7 +124,7 @@ export const useNuvioAddonStore = create<NuvioAddonStore>()(
 
           const newAddon: InstalledAddon = {
             id: manifest.id,
-            baseUrl: url.replace(/\/manifest\.json$/, ''),
+            baseUrl: cleanAddonUrl(url),
             manifest,
             installedAt: Date.now(),
             enabled: true,
@@ -135,7 +135,7 @@ export const useNuvioAddonStore = create<NuvioAddonStore>()(
           
           // Push to Nuvio backend
           const rows: NuvioAddonRow[] = updatedAddons.map((a, index) => ({
-            url: `${a.baseUrl}/manifest.json`,
+            url: getManifestUrl(a.baseUrl),
             name: a.manifest.name,
             enabled: a.enabled !== false,
             sort_order: index,
@@ -159,7 +159,7 @@ export const useNuvioAddonStore = create<NuvioAddonStore>()(
           clearCatalogCache();
 
           const rows: NuvioAddonRow[] = updatedAddons.map((a, index) => ({
-            url: `${a.baseUrl}/manifest.json`,
+            url: getManifestUrl(a.baseUrl),
             name: a.manifest.name,
             enabled: a.enabled !== false,
             sort_order: index,
@@ -185,7 +185,7 @@ export const useNuvioAddonStore = create<NuvioAddonStore>()(
           clearCatalogCache();
 
           const rows: NuvioAddonRow[] = updatedAddons.map((a, index) => ({
-            url: `${a.baseUrl}/manifest.json`,
+            url: getManifestUrl(a.baseUrl),
             name: a.manifest.name,
             enabled: a.enabled !== false,
             sort_order: index,
