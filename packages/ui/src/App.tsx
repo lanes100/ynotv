@@ -3520,6 +3520,7 @@ function App() {
           onRemoveWhatsNext={handleRemoveWhatsNextOverlay}
           onRemoveCustomGroup={handleRemoveCustomGroupWidget}
           onAddCustomGroup={() => setGroupPickerOpen(true)}
+          liveTvDesign={liveTvDesign}
         />
       )}
 

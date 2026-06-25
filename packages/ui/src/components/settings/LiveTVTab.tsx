@@ -2,10 +2,9 @@ import { useState, useEffect } from 'react';
 import { ChannelsTab } from './ChannelsTab';
 import { LiveViewTab } from './LiveViewTab';
 import { WidgetsTab } from './WidgetsTab';
-import { PlaylistsTab } from './PlaylistsTab';
 import './PlaybackTab.css'; // Reuse existing tab styles
 
-export type LiveTVSubTabId = 'epg' | 'font-size' | 'sort-order' | 'search' | 'live-view' | 'widgets' | 'playlists';
+export type LiveTVSubTabId = 'epg' | 'font-size' | 'sort-order' | 'search' | 'live-view' | 'widgets';
 
 interface LiveTVTabProps {
   initialSubTab?: LiveTVSubTabId;
@@ -140,7 +139,7 @@ export function LiveTVTab({
   transparentGuideSidebarOpacity,
   onTransparentGuideSidebarOpacityChange,
 }: LiveTVTabProps) {
-  const [activeSubTab, setActiveSubTab] = useState<'epg' | 'font-size' | 'sort-order' | 'search' | 'live-view' | 'widgets' | 'playlists'>('epg');
+  const [activeSubTab, setActiveSubTab] = useState<'epg' | 'font-size' | 'sort-order' | 'search' | 'live-view' | 'widgets'>('epg');
 
   useEffect(() => {
     if (initialSubTab) {
@@ -186,12 +185,6 @@ export function LiveTVTab({
           onClick={() => setActiveSubTab('widgets')}
         >
           Widgets
-        </button>
-        <button
-          className={`settings-tab ${activeSubTab === 'playlists' ? 'active' : ''}`}
-          onClick={() => setActiveSubTab('playlists')}
-        >
-          Playlists
         </button>
       </div>
 
@@ -699,10 +692,6 @@ export function LiveTVTab({
             sportsBgOpacity={sportsBgOpacity}
             onSportsBgOpacityChange={onSportsBgOpacityChange}
           />
-        )}
-
-        {activeSubTab === 'playlists' && (
-          <PlaylistsTab />
         )}
       </div>
     </div>

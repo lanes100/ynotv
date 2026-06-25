@@ -657,7 +657,7 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
 
   // Handle pending catchup seek when duration becomes available
   useEffect(() => {
-    if (pendingCatchupSeekRef.current !== null && duration > 0) {
+    if (pendingCatchupSeekRef.current !== null && duration > 0 && !coreIdle) {
       const targetSeek = pendingCatchupSeekRef.current;
       pendingCatchupSeekRef.current = null;
       logInfo(`[usePlayback] Seeking Catchup to position: ${targetSeek} seconds`);
@@ -669,11 +669,11 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
         cancelSeek();
       };
     }
-  }, [duration, setPosition, seekWithRetry, catchupInfo]);
+  }, [duration, setPosition, seekWithRetry, catchupInfo, coreIdle]);
 
   // Handle pending Stremio synced progress seek when duration becomes available
   useEffect(() => {
-    if (pendingStremioSeekFractionRef.current !== null && duration > 0) {
+    if (pendingStremioSeekFractionRef.current !== null && duration > 0 && !coreIdle) {
       const fraction = pendingStremioSeekFractionRef.current;
       pendingStremioSeekFractionRef.current = null;
       const targetSeek = Math.floor(fraction * duration);
@@ -688,11 +688,11 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
         };
       }
     }
-  }, [duration, setPosition, seekWithRetry, vodInfo]);
+  }, [duration, setPosition, seekWithRetry, vodInfo, coreIdle]);
 
   // Handle pending database resume seek when duration becomes available (immune to load delays)
   useEffect(() => {
-    if (pendingResumeSeekRef.current !== null && duration > 0) {
+    if (pendingResumeSeekRef.current !== null && duration > 0 && !coreIdle) {
       const targetSeek = pendingResumeSeekRef.current;
       pendingResumeSeekRef.current = null;
       logInfo(`[usePlayback] Seeking VOD to database resume position: ${targetSeek} seconds`);
@@ -704,7 +704,7 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
         cancelSeek();
       };
     }
-  }, [duration, setPosition, seekWithRetry, vodInfo]);
+  }, [duration, setPosition, seekWithRetry, vodInfo, coreIdle]);
 
   // Periodic progress saving for VOD playback + save on app close
   useEffect(() => {

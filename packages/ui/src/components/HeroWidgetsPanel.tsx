@@ -19,6 +19,7 @@ interface HeroWidgetsPanelProps {
   onRemoveWhatsNext: () => void;
   onRemoveCustomGroup?: (groupId: string) => void;
   onAddCustomGroup: () => void;
+  liveTvDesign?: 'v1' | 'v2' | 'v3';
 }
 
 export function HeroWidgetsPanel({
@@ -39,12 +40,13 @@ export function HeroWidgetsPanel({
   onRemoveWhatsNext,
   onRemoveCustomGroup,
   onAddCustomGroup,
+  liveTvDesign,
 }: HeroWidgetsPanelProps) {
   const hasCustomGroups = customGroupIds.length > 0;
   const hasAnyWidget = sportsWidget !== null || recentWidget !== null || favoritesWidget || whatsNextWidget || hasCustomGroups;
 
   return (
-    <div className="hero-widgets-panel">
+    <div className={`hero-widgets-panel${liveTvDesign === 'v3' ? ' design-v3' : ''}`}>
       {hasAnyWidget && (
         <div className="widgets-panel-section">
           <div className="widgets-panel-header">Active Widgets</div>

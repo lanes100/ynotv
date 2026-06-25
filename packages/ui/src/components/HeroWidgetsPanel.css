@@ -16,7 +16,20 @@
   box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
   user-select: none;
   font-family: inherit;
-  transition: top 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: top 0.3s cubic-bezier(0.4, 0, 0.2, 1), background 0.3s ease, backdrop-filter 0.3s ease, border-color 0.3s ease;
+}
+
+/* --- V3 Liquid Glass Design --- */
+.hero-widgets-panel.design-v3 {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(24px) saturate(220%);
+  -webkit-backdrop-filter: blur(24px) saturate(220%);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  box-shadow: 
+    0 4px 30px rgba(0, 0, 0, 0.1),
+    inset 0 1px 1px rgba(255, 255, 255, 0.05),
+    0 10px 50px rgba(0, 0, 0, 0.3);
+  border-radius: 16px;
 }
 
 /* Push down when live sports overlay ticker is active at the top */
@@ -40,6 +53,12 @@
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   padding-bottom: 6px;
   margin-bottom: 2px;
+  transition: color 0.3s ease, border-color 0.3s ease;
+}
+
+.hero-widgets-panel.design-v3 .widgets-panel-header {
+  color: rgba(255, 255, 255, 0.5);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .widgets-panel-list {
@@ -58,6 +77,7 @@
   font-weight: 500;
   color: rgba(255, 255, 255, 0.75);
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid transparent;
 }
 
 .widgets-panel-item svg {
@@ -71,6 +91,12 @@
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.03);
   color: rgba(255, 255, 255, 0.9);
+}
+
+.hero-widgets-panel.design-v3 .widgets-panel-item.active-item {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.05);
 }
 
 /* Active sports item has a blue dot */
@@ -107,6 +133,12 @@
   background: rgba(255, 255, 255, 0.08);
   color: #fff;
   transform: translateX(4px);
+}
+
+.hero-widgets-panel.design-v3 .widgets-panel-item.click-item:hover {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 0 12px rgba(255, 255, 255, 0.05);
 }
 
 .widgets-panel-item.click-item:active {
