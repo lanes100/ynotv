@@ -63,7 +63,7 @@ A feature-rich, open source IPTV player for Windows built on [Tauri v2](https://
 - **Watchlist & Reminders** - auto-swaps to a channel when a program goes live
 - **Built-in DVR** - record any stream or schedule for later
 - **TV Calendar** - powered by TVMaze for auto-setting reminders on upcoming shows
-- **Reprogrammable Hotkeys** - fast navigation
+- **Reprogrammable Hotkeys** - Fast navigation with ease of access
 - **40+ Built-in Themes** - something for every preference
 
 ---
