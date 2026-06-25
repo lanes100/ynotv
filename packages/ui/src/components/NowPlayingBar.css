@@ -804,3 +804,18 @@
   border-color: rgba(255, 64, 64, 0.7);
   color: #ff8080;
 }
+
+/* Playback Speed Controls */
+.npb-speed-controls {
+  margin-left: 8px;
+  padding-left: 12px;
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.npb-speed-btn {
+  font-size: 0.8rem;
+  font-weight: 600;
+  min-width: 40px;
+  width: auto;
+  padding: 0 8px;
+}

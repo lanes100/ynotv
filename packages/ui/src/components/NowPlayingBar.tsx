@@ -8,7 +8,7 @@ import { MetadataBadge } from './MetadataBadge';
 import { scheduleRecording, getDvrSettings, updatePlayingStream, detectScheduleConflicts, db, type DvrSchedule } from '../db';
 import { StalkerClient } from '@ynotv/local-adapter';
 import { useModal } from './Modal';
-import { type AspectRatioMode, getAspectRatioLabel } from '../services/tauri-bridge';
+import { type AspectRatioMode, getAspectRatioLabel, Bridge } from '../services/tauri-bridge';
 import { SourcePickerModal } from './SourcePickerModal';
 import type { StremioStream, StremioStreamBadge } from '../types/stremio';
 import './NowPlayingBar.css';
@@ -141,6 +141,31 @@ export function NowPlayingBar({
   const canControl = mpvReady && channel !== null;
   const currentProgram = useCurrentProgram(channel?.stream_id ?? null);
   const { showSuccess, showError, showConfirmThree, showPrompt, ModalComponent } = useModal();
+
+  // Playback speed state
+  const [speed, setSpeed] = useState<number>(1);
+  const lastUrlRef = useRef<string | null>(null);
+  const currentUrl = isVod ? vodInfo?.url : channel?.direct_url;
+
+  useEffect(() => {
+    if (currentUrl !== lastUrlRef.current) {
+      setSpeed(1);
+      lastUrlRef.current = currentUrl || null;
+    }
+  }, [currentUrl, isVod]);
+
+  const handleToggleSpeed = useCallback(() => {
+    let nextSpeed = 1.0;
+    if (speed === 1.0) {
+      nextSpeed = 1.5;
+    } else if (speed === 1.5) {
+      nextSpeed = 2.0;
+    } else {
+      nextSpeed = 1.0;
+    }
+    setSpeed(nextSpeed);
+    Bridge.setProperty('speed', nextSpeed).catch(console.error);
+  }, [speed]);
 
   // Source picker modal state
   const [showSourcePicker, setShowSourcePicker] = useState(false);
@@ -906,6 +931,20 @@ export function NowPlayingBar({
                     ))}
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* Playback speed controls (VOD only) */}
+            {isVod && (
+              <div className="npb-controls npb-speed-controls">
+                <button
+                  className="npb-btn npb-speed-btn"
+                  onClick={handleToggleSpeed}
+                  disabled={!canControl}
+                  title={`Playback Speed: ${speed}x`}
+                >
+                  {speed === 1 ? '1x' : speed === 1.5 ? '1.5x' : '2x'}
+                </button>
               </div>
             )}
 
