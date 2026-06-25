@@ -849,9 +849,10 @@ export function useProgramSearch(
       }
 
       // Split query into individual words for AND matching across all words
+      // Match against both title and subtitle
       const queryWords = query.trim().toLowerCase().split(/\s+/).filter(w => w.length > 0);
-      const wordLikeClauses = queryWords.map(() => `p.title LIKE ?`).join(' AND ');
-      const wordLikeParams = queryWords.map(w => `%${w}%`);
+      const wordLikeClauses = queryWords.map(() => `(p.title LIKE ? OR p.subtitle LIKE ?)`).join(' AND ');
+      const wordLikeParams = queryWords.flatMap(w => [`%${w}%`, `%${w}%`]);
 
       const nowIso = new Date().toISOString();
       // For alphabetical order, join with channels to sort by channel name

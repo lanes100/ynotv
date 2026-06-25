@@ -8,6 +8,7 @@
 export interface XmltvProgram {
   channel_id: string;
   title: string;
+  subtitle: string;
   description: string;
   start: Date;
   stop: Date;
@@ -26,6 +27,7 @@ export function parseXmltv(xml: string): XmltvProgram[] {
   const stopAttr = /stop="([^"]+)"/;
   const channelAttr = /channel="([^"]+)"/;
   const titlePattern = /<title[^>]*>([^<]*)<\/title>/i;
+  const subTitlePattern = /<sub-title[^>]*>([^<]*)<\/sub-title>/i;
   const descPattern = /<desc[^>]*>([^<]*)<\/desc>/i;
 
   let match;
@@ -39,9 +41,11 @@ export function parseXmltv(xml: string): XmltvProgram[] {
     if (!startMatch || !stopMatch || !channelMatch) continue;
 
     const titleMatch = content.match(titlePattern);
+    const subTitleMatch = content.match(subTitlePattern);
     const descMatch = content.match(descPattern);
 
     const title = titleMatch ? decodeXmlEntities(titleMatch[1]) : '';
+    const subtitle = subTitleMatch ? decodeXmlEntities(subTitleMatch[1]) : '';
     const desc = descMatch ? decodeXmlEntities(descMatch[1]) : '';
 
     // Parse XMLTV date format: YYYYMMDDHHmmss +0000
@@ -52,6 +56,7 @@ export function parseXmltv(xml: string): XmltvProgram[] {
       programs.push({
         channel_id: channelMatch[1],
         title,
+        subtitle,
         description: desc,
         start,
         stop,

@@ -149,6 +149,13 @@ export function ChannelInfoOverlay({
               {activeProgram.title}
             </div>
 
+            {/* Subtitle */}
+            {(activeProgram as any).subtitle && (
+              <div className="cio-program-subtitle" title={(activeProgram as any).subtitle}>
+                {(activeProgram as any).subtitle}
+              </div>
+            )}
+
             {/* Time row: start - end | time remaining */}
             <div className="cio-time-row">
               <span className="cio-time-range">

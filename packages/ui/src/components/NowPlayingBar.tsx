@@ -588,9 +588,16 @@ export function NowPlayingBar({
                     </span>
                     <MetadataBadge streamId={channel.stream_id} variant="detailed" />
                     {currentProgram ? (
-                      <span className="npb-program-title" title={currentProgram.title}>
-                        {currentProgram.title}
-                      </span>
+                      <>
+                        <span className="npb-program-title" title={currentProgram.title}>
+                          {currentProgram.title}
+                        </span>
+                        {(currentProgram as any).subtitle && (
+                          <span className="npb-program-subtitle" title={(currentProgram as any).subtitle}>
+                            {(currentProgram as any).subtitle}
+                          </span>
+                        )}
+                      </>
                     ) : (
                       <span className="npb-no-program">No program info</span>
                     )}

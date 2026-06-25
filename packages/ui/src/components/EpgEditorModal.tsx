@@ -79,6 +79,7 @@ function ProgramRow({
 }) {
   const [editing, setEditing] = useState(false);
   const [title, setTitle] = useState(prog.title);
+  const [subtitle, setSubtitle] = useState(prog.subtitle);
   const [desc, setDesc] = useState(prog.description);
   const [start, setStart] = useState(formatDatetimeLocal(prog.start));
   const [end, setEnd] = useState(formatDatetimeLocal(prog.end));
@@ -86,6 +87,7 @@ function ProgramRow({
   // Reset edit fields when prog changes externally
   useEffect(() => {
     setTitle(prog.title);
+    setSubtitle(prog.subtitle);
     setDesc(prog.description);
     setStart(formatDatetimeLocal(prog.start));
     setEnd(formatDatetimeLocal(prog.end));
@@ -95,6 +97,7 @@ function ProgramRow({
   function handleSave() {
     onSave({
       title,
+      subtitle,
       description: desc,
       start: datetimeLocalToIso(start),
       end: datetimeLocalToIso(end),
@@ -110,6 +113,9 @@ function ProgramRow({
       </div>
       <div className="epg-program-info">
         <div className="epg-program-title">{prog.title || '(No title)'}</div>
+        {prog.subtitle && (
+          <div className="epg-program-subtitle" style={{ fontSize: '0.85em', opacity: 0.7, marginTop: 2 }}>{prog.subtitle}</div>
+        )}
         <div className="epg-program-badges">
           {prog.has_override && !prog.is_deleted && !prog.is_custom && (
             <span className="epg-badge epg-badge-modified">Modified</span>
@@ -125,6 +131,14 @@ function ProgramRow({
                 placeholder="Title"
                 value={title}
                 onChange={e => setTitle(e.target.value)}
+              />
+            </div>
+            <div className="full-width">
+              <input
+                className="epg-editor-input"
+                placeholder="Subtitle (optional)"
+                value={subtitle}
+                onChange={e => setSubtitle(e.target.value)}
               />
             </div>
             <div className="full-width">
@@ -201,6 +215,7 @@ export function EpgEditorModal({ channel: initialChannel, sourceId, sourceName, 
   const [programsLoading, setProgramsLoading] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
   const [newTitle, setNewTitle] = useState('');
+  const [newSubtitle, setNewSubtitle] = useState('');
   const [newDesc, setNewDesc]   = useState('');
   const [newStart, setNewStart] = useState('');
   const [newEnd, setNewEnd]     = useState('');
@@ -385,6 +400,7 @@ export function EpgEditorModal({ channel: initialChannel, sourceId, sourceName, 
       id: prog.id,
       stream_id: prog.stream_id,
       title: changes.title ?? prog.title,
+      subtitle: changes.subtitle ?? prog.subtitle,
       description: changes.description ?? prog.description,
       start: changes.start ?? prog.start,
       end: changes.end ?? prog.end,
@@ -437,6 +453,7 @@ export function EpgEditorModal({ channel: initialChannel, sourceId, sourceName, 
       id,
       stream_id: channel.stream_id,
       title: newTitle.trim(),
+      subtitle: newSubtitle.trim(),
       description: newDesc.trim(),
       start: startIso,
       end: endIso,
@@ -445,13 +462,13 @@ export function EpgEditorModal({ channel: initialChannel, sourceId, sourceName, 
     });
     const newProg: EditorProgram = {
       id, stream_id: channel.stream_id,
-      title: newTitle.trim(), description: newDesc.trim(),
+      title: newTitle.trim(), subtitle: newSubtitle.trim(), description: newDesc.trim(),
       start: startIso, end: endIso,
       source_id: '', has_override: true,
       is_deleted: false, is_custom: true,
     };
     setPrograms(prev => [...prev, newProg].sort((a, b) => a.start.localeCompare(b.start)));
-    setNewTitle(''); setNewDesc(''); setNewStart(''); setNewEnd('');
+    setNewTitle(''); setNewSubtitle(''); setNewDesc(''); setNewStart(''); setNewEnd('');
     setShowAddForm(false);
   }
 
@@ -790,6 +807,10 @@ export function EpgEditorModal({ channel: initialChannel, sourceId, sourceName, 
                     <div style={{ gridColumn: '1/-1' }}>
                       <label className="epg-editor-label">Title *</label>
                       <input className="epg-editor-input" value={newTitle} onChange={e => setNewTitle(e.target.value)} placeholder="Program title" />
+                    </div>
+                    <div style={{ gridColumn: '1/-1' }}>
+                      <label className="epg-editor-label">Subtitle</label>
+                      <input className="epg-editor-input" value={newSubtitle} onChange={e => setNewSubtitle(e.target.value)} placeholder="Optional subtitle" />
                     </div>
                     <div style={{ gridColumn: '1/-1' }}>
                       <label className="epg-editor-label">Description</label>

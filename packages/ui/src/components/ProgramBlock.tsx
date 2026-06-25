@@ -110,8 +110,9 @@ export const ProgramBlock = memo(function ProgramBlock({
     return null;
   }
 
-  // Determine if we should show description (only if block is wide enough)
-  const showDescription = style.width > 200 && program.description;
+  // Determine if we should show second line (only if block is wide enough)
+  const showSecondLine = style.width > 200;
+  const hasSubtitle = !!program.subtitle;
 
   // Determine if we should show the recording indicator (need enough space)
   const showRecordingIndicator = isRecording && style.width > 60;
@@ -127,7 +128,7 @@ export const ProgramBlock = memo(function ProgramBlock({
       }}
       onClick={handleProgramClick}
       onContextMenu={onContextMenu}
-      title={`${program.title}\n${formatTime(program.start)} - ${formatTime(program.end)}${program.description ? `\n\n${program.description}` : ''}${isCatchupAvailable && (isPast || isCurrent) ? '\n\nClick to play Catchup archive' : ''}`}
+      title={`${program.title}${program.subtitle ? `\n${program.subtitle}` : ''}\n${formatTime(program.start)} - ${formatTime(program.end)}${program.description ? `\n\n${program.description}` : ''}${isCatchupAvailable && (isPast || isCurrent) ? '\n\nClick to play Catchup archive' : ''}`}
     >
       {showRecordingIndicator && (
         <div className="program-recording-indicator">
@@ -140,7 +141,10 @@ export const ProgramBlock = memo(function ProgramBlock({
         </div>
       )}
       <span className="program-block-title">{program.title}</span>
-      {showDescription && (
+      {showSecondLine && hasSubtitle && (
+        <span className="program-block-title">{program.subtitle}</span>
+      )}
+      {showSecondLine && !hasSubtitle && program.description && (
         <span className="program-block-desc">{program.description}</span>
       )}
     </div>

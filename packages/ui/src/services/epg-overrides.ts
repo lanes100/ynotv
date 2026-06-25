@@ -57,6 +57,8 @@ export interface EditorProgram {
   stream_id: string;
   /** Effective title (override wins if set) */
   title: string;
+  /** Effective subtitle */
+  subtitle: string;
   /** Effective description */
   description: string;
   /** Effective start ISO string */
@@ -93,20 +95,21 @@ export async function getEditorProgramsForStream(
       p.id,
       p.stream_id,
       COALESCE(o.title,       p.title)       AS title,
+      COALESCE(o.subtitle,    p.subtitle)    AS subtitle,
       COALESCE(o.description, p.description) AS description,
       COALESCE(o.start,
         CASE WHEN IFNULL(sm.epg_timeshift_hours, 0) + IFNULL(co.timeshift_hours, 0) = 0
           THEN p.start
           ELSE strftime('%Y-%m-%dT%H:%M:%SZ', p.start,
                  CAST((IFNULL(sm.epg_timeshift_hours, 0) + IFNULL(co.timeshift_hours, 0)) * 60 AS INTEGER) || ' minutes')
-        END
+          END
       ) AS start,
       COALESCE(o.end,
         CASE WHEN IFNULL(sm.epg_timeshift_hours, 0) + IFNULL(co.timeshift_hours, 0) = 0
           THEN p.end
           ELSE strftime('%Y-%m-%dT%H:%M:%SZ', p.end,
                  CAST((IFNULL(sm.epg_timeshift_hours, 0) + IFNULL(co.timeshift_hours, 0)) * 60 AS INTEGER) || ' minutes')
-        END
+          END
       ) AS end,
       p.source_id,
       CASE WHEN o.id IS NOT NULL THEN 1 ELSE 0 END AS has_override,
@@ -128,6 +131,7 @@ export async function getEditorProgramsForStream(
       id,
       stream_id,
       title,
+      subtitle,
       description,
       start,
       end,
@@ -146,6 +150,7 @@ export async function getEditorProgramsForStream(
     id: r.id,
     stream_id: r.stream_id,
     title: r.title ?? '',
+    subtitle: r.subtitle ?? '',
     description: r.description ?? '',
     start: r.start ?? '',
     end: r.end ?? '',
@@ -217,11 +222,11 @@ export async function copyProgramsFromEpgChannel(
   // 2. Copy future/current programs to the target stream with new IDs matching the sync format.
   // INSERT OR REPLACE ensures the next sync can overwrite with official data seamlessly.
   await dbInstance.execute(
-    `INSERT OR REPLACE INTO programs (id, stream_id, title, description, start, end, source_id)
+    `INSERT OR REPLACE INTO programs (id, stream_id, title, subtitle, description, start, end, source_id)
      SELECT
        $1 || '_' || CAST(CAST(strftime('%s', start) AS INTEGER) * 1000 AS TEXT) AS id,
        $1 AS stream_id,
-       title, description, start, end, source_id
+       title, subtitle, description, start, end, source_id
      FROM programs
      WHERE stream_id = $2
        AND end >= datetime('now', '-1 hour')`,
@@ -267,11 +272,11 @@ export async function resetChannelToDefault(streamId: string): Promise<void> {
     if (srcRows.length > 0) {
       const sourceStreamId = srcRows[0].stream_id;
       await dbInstance.execute(
-        `INSERT OR REPLACE INTO programs (id, stream_id, title, description, start, end, source_id)
+        `INSERT OR REPLACE INTO programs (id, stream_id, title, subtitle, description, start, end, source_id)
          SELECT
            $1 || '_' || CAST(CAST(strftime('%s', start) AS INTEGER) * 1000 AS TEXT) AS id,
            $1 AS stream_id,
-           title, description, start, end, source_id
+           title, subtitle, description, start, end, source_id
          FROM programs
          WHERE stream_id = $2
            AND end >= datetime('now', '-1 hour')`,
@@ -293,12 +298,13 @@ export async function upsertProgramOverride(override: EpgProgramOverride): Promi
   // regardless of which fields are present in the override object.
   await dbInstance.execute(
     `INSERT OR REPLACE INTO epg_program_overrides
-       (id, stream_id, title, description, start, end, is_deleted, is_custom)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+       (id, stream_id, title, subtitle, description, start, end, is_deleted, is_custom)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
     [
       override.id,
       override.stream_id,
       override.title ?? null,
+      override.subtitle ?? null,
       override.description ?? null,
       override.start ?? null,
       override.end ?? null,

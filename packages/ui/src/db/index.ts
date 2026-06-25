@@ -117,6 +117,7 @@ export interface StoredProgram {
   id: string; // `${stream_id}_${start}` compound key
   stream_id: string;
   title: string;
+  subtitle?: string;
   description: string;
   start: Date | string;
   raw_start?: string;
@@ -300,6 +301,7 @@ export interface EpgProgramOverride {
   id: string;           // Same compound key as programs.id  OR a uuid for custom programs
   stream_id: string;
   title?: string;
+  subtitle?: string;
   description?: string;
   start?: string;       // ISO8601
   end?: string;         // ISO8601
@@ -483,7 +485,7 @@ class YnotvDatabase extends SqliteDatabase {
     // Each version block runs exactly ONCE. To add new columns in the future,
     // increment DB_VERSION and add a new case (do NOT modify existing cases).
     // ─────────────────────────────────────────────────────────────────────────
-    const DB_VERSION = 18;
+    const DB_VERSION = 19;
     const versionResult = await db.select('PRAGMA user_version') as Array<{ user_version: number }>;
     const currentVersion = versionResult[0]?.user_version ?? 0;
 
@@ -831,6 +833,16 @@ class YnotvDatabase extends SqliteDatabase {
         await addColumn('dvr_recordings', 'last_watched_at', 'INTEGER');
       }
 
+      // v19: Add subtitle column to programs and epg_program_overrides
+      if (currentVersion < 19) {
+        console.log('[DB] v19 migration: Adding subtitle column to programs and epg_program_overrides');
+        const addColumn = async (table: string, col: string, type: string) => {
+          try { await db.execute(`ALTER TABLE ${table} ADD COLUMN ${col} ${type}`); } catch { /* already exists */ }
+        };
+        await addColumn('programs', 'subtitle', 'TEXT');
+        await addColumn('epg_program_overrides', 'subtitle', 'TEXT');
+      }
+
       // Bump the stored version so these migrations never run again
       await db.execute(`PRAGMA user_version = ${DB_VERSION}`);
       console.log(`[DB] Migration to v${DB_VERSION} complete`);
@@ -885,6 +897,7 @@ class YnotvDatabase extends SqliteDatabase {
         id TEXT PRIMARY KEY,
         stream_id TEXT,
         title TEXT,
+        subtitle TEXT,
         description TEXT,
         start TEXT,
         end TEXT,
@@ -1207,6 +1220,8 @@ class YnotvDatabase extends SqliteDatabase {
     try { await db.execute(`ALTER TABLE categories ADD COLUMN alias TEXT`); } catch (e) {}
     try { await db.execute(`ALTER TABLE channels ADD COLUMN alias TEXT`); } catch (e) {}
     try { await db.execute(`ALTER TABLE channels ADD COLUMN xtream_stream_id TEXT`); } catch (e) {}
+    try { await db.execute(`ALTER TABLE programs ADD COLUMN subtitle TEXT`); } catch (e) {}
+    try { await db.execute(`ALTER TABLE epg_program_overrides ADD COLUMN subtitle TEXT`); } catch (e) {}
 
     // ── EPG Editor: Override Tables ───────────────────────────────────────────
 
@@ -1223,6 +1238,7 @@ class YnotvDatabase extends SqliteDatabase {
       id          TEXT PRIMARY KEY,
       stream_id   TEXT NOT NULL,
       title       TEXT,
+      subtitle    TEXT,
       description TEXT,
       start       TEXT,
       end         TEXT,
@@ -1289,6 +1305,7 @@ class YnotvDatabase extends SqliteDatabase {
         p.id,
         p.stream_id,
         COALESCE(o.title,       p.title)       AS title,
+        COALESCE(o.subtitle,    p.subtitle)    AS subtitle,
         COALESCE(o.description, p.description) AS description,
         COALESCE(o.start,
           CASE WHEN IFNULL(sm.epg_timeshift_hours, 0) + IFNULL(co.timeshift_hours, 0) = 0
@@ -1317,6 +1334,7 @@ class YnotvDatabase extends SqliteDatabase {
         id,
         stream_id,
         title,
+        subtitle,
         description,
         start,
         end,

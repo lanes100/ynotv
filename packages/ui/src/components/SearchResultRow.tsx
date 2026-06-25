@@ -226,10 +226,13 @@ export const SearchResultRow = memo(function SearchResultRow({
                 }}
                 onClick={onPlay}
                 onContextMenu={(e) => handleProgramContextMenu(e, program)}
-                title={`${program.title} (${formatProgramTime(program.start)} - ${formatProgramTime(program.end)})`}
+                title={`${program.title}${program.subtitle ? ` - ${program.subtitle}` : ''} (${formatProgramTime(program.start)} - ${formatProgramTime(program.end)})`}
               >
                 <div className="search-program-content">
                   <div className="search-program-title">{program.title}</div>
+                  {program.subtitle && (
+                    <div className="search-program-subtitle">{program.subtitle}</div>
+                  )}
                   <div className="search-program-datetime">
                     {formatProgramDate(program.start)} {formatProgramTime(program.start)}
                   </div>

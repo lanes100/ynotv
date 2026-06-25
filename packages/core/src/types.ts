@@ -94,6 +94,7 @@ export interface Program {
   id?: string;            // Optional unique ID
   channel_id: string;     // Matches Channel.epg_channel_id
   title: string;
+  subtitle?: string;      // XMLTV <sub-title> element
   start: Date;
   stop: Date;
   desc?: string;

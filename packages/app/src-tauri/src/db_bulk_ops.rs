@@ -162,6 +162,8 @@ pub struct BulkProgram {
     pub stream_id: String,
     pub title: String,
     #[serde(default)]
+    pub subtitle: Option<String>,
+    #[serde(default)]
     pub description: Option<String>,
     pub start: String, // ISO 8601 datetime string
     pub end: String,   // ISO 8601 datetime string
@@ -533,8 +535,8 @@ fn bulk_replace_programs_inner(
     // Insert new programs (use OR IGNORE to skip duplicates)
     let mut stmt = tx.prepare(
         "INSERT OR IGNORE INTO programs (
-            id, stream_id, title, description, start, end, source_id
-        ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+            id, stream_id, title, subtitle, description, start, end, source_id
+        ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
     )?;
 
     let mut inserted = 0;
@@ -545,6 +547,7 @@ fn bulk_replace_programs_inner(
             program.id,
             program.stream_id,
             program.title,
+            program.subtitle,
             program.description,
             program.start,
             program.end,

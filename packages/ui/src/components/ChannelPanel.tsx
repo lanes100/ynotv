@@ -1996,6 +1996,9 @@ export function ChannelPanel({
                 <div className="guide-program-title">
                   {selectedProgram ? selectedProgram.title : (selectedChannel.name || 'No Program Name')}
                 </div>
+                {selectedProgram?.subtitle && (
+                  <div className="guide-program-subtitle">{selectedProgram.subtitle}</div>
+                )}
                 <div className="guide-program-meta">
                   <span>{selectedProgram ? `${formatTime(new Date(selectedProgram.start))} - ${formatTime(new Date(selectedProgram.end))}` : ''}</span>
                   {selectedProgram && (

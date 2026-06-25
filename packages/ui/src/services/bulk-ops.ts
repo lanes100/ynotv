@@ -68,6 +68,7 @@ export interface BulkProgram {
   id: string;
   stream_id: string;
   title: string;
+  subtitle?: string;
   description?: string;
   start: string; // ISO 8601 datetime
   end: string;

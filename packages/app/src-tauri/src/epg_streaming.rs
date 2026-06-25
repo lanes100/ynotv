@@ -147,6 +147,7 @@ fn parse_xmltv_date(date_str: &str) -> String {
 pub struct EpgProgram {
     pub channel_id: String,
     pub title: String,
+    pub sub_title: Option<String>,
     pub description: Option<String>,
     pub start: String,  // ISO 8601 format
     pub stop: String,   // ISO 8601 format
@@ -1254,7 +1255,7 @@ async fn parse_and_stream_batches<R: tauri::Runtime>(
 
                         current_program = Some(program);
                     }
-                    "title" | "desc" => {
+                    "title" | "desc" | "sub-title" => {
                         current_element = Some(name);
                         current_text.clear();
                     }
@@ -1355,6 +1356,12 @@ async fn parse_and_stream_batches<R: tauri::Runtime>(
                         }
                         current_element = None;
                     }
+                    "sub-title" => {
+                        if let Some(ref mut program) = current_program {
+                            program.sub_title = Some(current_text.clone());
+                        }
+                        current_element = None;
+                    }
                     _ => {}
                 }
             }
@@ -1451,7 +1458,7 @@ async fn parse_and_stream_batches_multi<R: tauri::Runtime>(
                         }
                         current_program = Some(program);
                     }
-                    "title" | "desc" => {
+                    "title" | "desc" | "sub-title" => {
                         current_element = Some(name);
                         current_text.clear();
                     }
@@ -1542,6 +1549,12 @@ async fn parse_and_stream_batches_multi<R: tauri::Runtime>(
                     "desc" => {
                         if let Some(ref mut program) = current_program {
                             program.description = Some(current_text.clone());
+                        }
+                        current_element = None;
+                    }
+                    "sub-title" => {
+                        if let Some(ref mut program) = current_program {
+                            program.sub_title = Some(current_text.clone());
                         }
                         current_element = None;
                     }
@@ -1693,10 +1706,11 @@ async fn insert_programs_batch_inner(
 
     let mut stmt = tx.prepare(
         "INSERT INTO programs (
-            id, stream_id, title, description, start, end, source_id
-        ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
+            id, stream_id, title, subtitle, description, start, end, source_id
+        ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
         ON CONFLICT(id) DO UPDATE SET
             title = excluded.title,
+            subtitle = excluded.subtitle,
             description = excluded.description,
             start = excluded.start,
             end = excluded.end",
@@ -1712,6 +1726,7 @@ async fn insert_programs_batch_inner(
             id,
             stream_id,
             program.title,
+            program.sub_title.as_deref().unwrap_or(""),
             program.description.as_deref().unwrap_or(""),
             program.start,
             program.stop,
