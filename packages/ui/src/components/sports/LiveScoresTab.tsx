@@ -32,7 +32,7 @@ export function LiveScoresTab({
   
   const { liveLeagues, loaded, loadSettings } = useSportsSettingsStore();
 
-  const { events, loading, error, lastUpdated, refresh, isPolling } = useSportsPolling({
+  const { events, loading, error, lastUpdated, refresh, isPolling, progress } = useSportsPolling({
     pollingInterval: 30000,
     enabled: loaded,
     leagues: loaded ? liveLeagues : undefined,
@@ -76,32 +76,6 @@ export function LiveScoresTab({
     return a.localeCompare(b);
   });
 
-  if (loading && events.length === 0) {
-    return (
-      <div className="sports-tab-content">
-        <div className="live-header">
-          <div className="live-header-title">
-            <h2>Live Scores</h2>
-          </div>
-        </div>
-        <div className="skeleton-grid">
-          {Array.from({ length: 6 }, (_, i) => (
-            <GameCardSkeleton key={i} />
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  if (error && events.length === 0) {
-    return (
-      <div className="sports-error">
-        <p>{error}</p>
-        <button className="sports-btn" onClick={refresh}>Retry</button>
-      </div>
-    );
-  }
-
   return (
     <div className="sports-tab-content">
       <div className="live-header">
@@ -116,12 +90,17 @@ export function LiveScoresTab({
         </div>
         <div className="live-header-divider" />
         <div className="live-controls">
-          {lastUpdated && (
+          {progress ? (
+            <span className="live-last-updated">
+              <span className="live-loading-progress-dot" />
+              Fetching leagues ({progress.completed}/{progress.total})
+            </span>
+          ) : lastUpdated ? (
             <span className="live-last-updated">
               Updated {formatLastUpdated(lastUpdated)}
               {isPolling && <span className="live-polling-indicator" title="Auto-refreshing" />}
             </span>
-          )}
+          ) : null}
           <button
             className="live-refresh-btn"
             onClick={refresh}
@@ -156,7 +135,11 @@ export function LiveScoresTab({
               const leagues = getLeaguesByCategory(cat.id);
               return leagues.some(l => l.id === e.league.id);
             }).length;
-            if (count === 0) return null;
+            
+            const hasEnabledLeagues = cat.leagues.some(l => liveLeagues.includes(l));
+            const shouldShow = count > 0 || (loading && events.length === 0 && hasEnabledLeagues);
+            if (!shouldShow) return null;
+            
             return (
               <button
                 key={cat.id}
@@ -164,7 +147,7 @@ export function LiveScoresTab({
                 onClick={() => setSelectedCategory(cat.id)}
               >
                 {cat.name}
-                <span className="live-category-count">{count}</span>
+                {count > 0 && <span className="live-category-count">{count}</span>}
               </button>
             );
           })}
@@ -224,7 +207,18 @@ export function LiveScoresTab({
         </button>
       </div>
 
-      {sortedLeagues.length === 0 ? (
+      {loading && events.length === 0 ? (
+        <div className="skeleton-grid">
+          {Array.from({ length: 6 }, (_, i) => (
+            <GameCardSkeleton key={i} />
+          ))}
+        </div>
+      ) : error && events.length === 0 ? (
+        <div className="sports-error">
+          <p>{error}</p>
+          <button className="sports-btn" onClick={refresh}>Retry</button>
+        </div>
+      ) : sortedLeagues.length === 0 ? (
         <div className="sports-empty">
           <div className="sports-empty-icon">
             <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">

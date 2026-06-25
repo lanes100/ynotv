@@ -16,6 +16,7 @@ interface UseSportsPollingResult {
   lastUpdated: Date | null;
   refresh: () => Promise<void>;
   isPolling: boolean;
+  progress: { completed: number; total: number } | null;
 }
 
 // Global cache to persist data across component mounts and navigation
@@ -191,6 +192,7 @@ export function useSportsPolling(options: UseSportsPollingOptions = {}): UseSpor
     return cache.lastUpdated;
   });
   const [isPolling, setIsPolling] = useState(false);
+  const [progress, setProgress] = useState<{ completed: number; total: number } | null>(null);
 
   // Normalize leagues for comparison (undefined = default leagues)
   const normalizedLeagues = leagues ?? DEFAULT_LIVE_LEAGUES;
@@ -262,12 +264,22 @@ export function useSportsPolling(options: UseSportsPollingOptions = {}): UseSpor
       // Determine which leagues to fetch
       const leaguesToFetch = getLeaguesToFetch(leagues, currentEvents, isPolling);
 
+      // Set initial progress
+      setProgress({ completed: 0, total: leaguesToFetch.length > 0 ? leaguesToFetch.length : leagues.length });
+
       // Track if we've received any data during batch fetching
       let hasReceivedData = false;
 
       // Progressive callback - update UI immediately as batches complete
-      const onProgress = (batchEvents: SportsEvent[], batchIndex: number, totalBatches: number) => {
+      const onProgress = (
+        batchEvents: SportsEvent[],
+        batchIndex: number,
+        totalBatches: number,
+        completedApis: number,
+        totalApis: number
+      ) => {
         hasReceivedData = batchEvents.length > 0 || hasReceivedData;
+        setProgress({ completed: completedApis, total: totalApis });
 
         // Only update React state and global cache if we have actual data or no prior cache.
         // This prevents temporarily wiping events to [] when an early batch returns empty.
@@ -331,6 +343,7 @@ export function useSportsPolling(options: UseSportsPollingOptions = {}): UseSpor
       setError('Failed to load scores. Retrying...');
     } finally {
       setLoading(false);
+      setProgress(null);
       isRefreshingRef.current = false;
       setGlobalFetching(false);
     }
@@ -512,6 +525,7 @@ function leaguesEqual(a: string[], b: string[]): boolean {
     lastUpdated,
     refresh,
     isPolling,
+    progress,
   };
 }
 

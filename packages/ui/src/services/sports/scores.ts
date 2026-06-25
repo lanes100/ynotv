@@ -109,7 +109,13 @@ function sortEvents(events: SportsEvent[]): SportsEvent[] {
 /**
  * Progressive callback type for receiving batch updates
  */
-export type OnBatchProgress = (events: SportsEvent[], batchIndex: number, totalBatches: number) => void;
+export type OnBatchProgress = (
+  events: SportsEvent[],
+  batchIndex: number,
+  totalBatches: number,
+  completedApis: number,
+  totalApis: number
+) => void;
 
 /**
  * Internal function to fetch scores for specific leagues with optional progress callback
@@ -129,6 +135,8 @@ async function getScoresForLeaguesInternal(
   }
 
   const totalBatches = batches.length;
+  const totalApis = targetLeagues.length;
+  let completedApis = 0;
   console.log(`[ESPN API] Fetching ${targetLeagues.length} leagues in ${totalBatches} batches of ${BATCH_SIZE}`);
 
   for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
@@ -142,24 +150,26 @@ async function getScoresForLeaguesInternal(
 
     // Fetch current batch in parallel
     console.log(`[ESPN API] Fetching batch ${batchIndex + 1}/${totalBatches}: ${batch.join(', ')}`);
-    const batchPromises = batch.map(sportKey => fetchSportScores(sportKey));
-    const batchResults = await Promise.all(batchPromises);
+    const batchPromises = batch.map(async (sportKey) => {
+      try {
+        const res = await fetchSportScores(sportKey);
+        const uniqueEvents = res.filter(e => !existingIds.has(e.id));
+        uniqueEvents.forEach(e => existingIds.add(e.id));
+        allEvents.push(...uniqueEvents);
+      } catch (err) {
+        console.error(`[ESPN API] Error in progressive fetch for ${sportKey}:`, err);
+      } finally {
+        completedApis++;
+        if (onProgress) {
+          const filtered = filterLiveEvents([...allEvents]);
+          const sorted = sortEvents(filtered);
+          onProgress(sorted, batchIndex, totalBatches, completedApis, totalApis);
+        }
+      }
+    });
 
-    // Flatten batch results, avoiding duplicates
-    const batchEvents = batchResults.flat().filter(e => !existingIds.has(e.id));
-    batchEvents.forEach(e => existingIds.add(e.id));
-
-    // Add to accumulated results
-    allEvents.push(...batchEvents);
-
-    // Call progress callback immediately with current results
-    if (onProgress) {
-      const filtered = filterLiveEvents([...allEvents]);
-      const sorted = sortEvents(filtered);
-      onProgress(sorted, batchIndex, totalBatches);
-    }
-
-    console.log(`[ESPN API] Batch ${batchIndex + 1}/${totalBatches} complete: ${batchEvents.length} events`);
+    await Promise.all(batchPromises);
+    console.log(`[ESPN API] Batch ${batchIndex + 1}/${totalBatches} complete`);
   }
 
   // Final filter and sort

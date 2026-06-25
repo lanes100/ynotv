@@ -5305,6 +5305,16 @@
   animation: game-pulse 1.5s ease-in-out infinite;
 }
 
+.live-loading-progress-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent-color, #3b82f6);
+  animation: game-pulse 1.5s ease-in-out infinite;
+  display: inline-block;
+  margin-right: 6px;
+}
+
 .live-categories {
   display: flex;
   flex-wrap: wrap;
