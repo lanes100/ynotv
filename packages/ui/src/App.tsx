@@ -11,6 +11,7 @@ import type { SettingsTabId } from './components/settings/SettingsSidebar';
 import { useModal } from './components/Modal';
 
 import { NowPlayingBar } from './components/NowPlayingBar';
+import { PiPMediaBar } from './components/PiPMediaBar';
 import { ChannelInfoOverlay } from './components/ChannelInfoOverlay';
 import { FailoverGroupOverlay } from './components/FailoverGroupOverlay';
 import { TrackSelectionModal } from './components/TrackSelectionModal';
@@ -112,6 +113,7 @@ import { useNavigation } from './hooks/useNavigation';
 import { useWatchlist } from './hooks/useWatchlist';
 import { useWindowManager } from './hooks/useWindowManager';
 import { usePopoutPlayer } from './hooks/usePopoutPlayer';
+import { usePipMode } from './hooks/usePipMode';
 
 // ============================================================================
 // TransitionView Component
@@ -961,6 +963,17 @@ function App() {
     handleMouseMove,
   } = nav;
 
+  // ==========================================================================
+  // PiP (Picture-in-Picture) Mode
+  // ==========================================================================
+  const pip = usePipMode();
+  const { pipMode, pipControlsVisible, togglePip, showPipControls } = pip;
+
+  const handleMouseMovePip = useCallback(() => {
+    handleMouseMove();
+    if (pipMode) showPipControls();
+  }, [handleMouseMove, pipMode, showPipControls]);
+
   const { showConfirm, ModalComponent } = useModal();
   const nuvioHasUnsavedHomeLayout = useUIStore((s) => s.nuvioHasUnsavedHomeLayout);
   const nuvioTabSaveFn = useUIStore((s) => s.nuvioTabSaveFn);
@@ -1168,6 +1181,35 @@ function App() {
       applyAspectRatio('fit').catch(() => {});
     }
   }, [activeView, mpvReady, heroAspectRatio]);
+
+  // ==========================================================================
+  // PiP Aspect Ratio (independent from main / hero aspect ratio)
+  // ==========================================================================
+  const [pipAspectRatio, setPipAspectRatio] = useState<AspectRatioMode>(() => {
+    try {
+      const v = localStorage.getItem('ynotv_pip_aspect_ratio');
+      return (v as AspectRatioMode) || 'fit';
+    } catch { return 'fit'; }
+  });
+
+  // Persist & apply PiP aspect ratio
+  const handleSetPipAspectRatio = useCallback(async (mode: AspectRatioMode) => {
+    setPipAspectRatio(mode);
+    try { localStorage.setItem('ynotv_pip_aspect_ratio', mode); } catch {}
+    if (mpvReady && pipMode) {
+      await applyAspectRatio(mode).catch(() => {});
+    }
+  }, [mpvReady, pipMode]);
+
+  // Apply PiP ratio on enter, restore hero ratio on exit
+  useEffect(() => {
+    if (!mpvReady) return;
+    if (pipMode) {
+      applyAspectRatio(pipAspectRatio).catch(() => {});
+    } else {
+      applyAspectRatio(activeView === 'none' ? heroAspectRatio : 'fit').catch(() => {});
+    }
+  }, [pipMode, mpvReady, pipAspectRatio, heroAspectRatio, activeView]);
 
   // ==========================================================================
   // Apply Startup View
@@ -2863,7 +2905,7 @@ function App() {
   // Render
   // ==========================================================================
   return (
-    <div className={`app${showControls ? '' : ' controls-hidden'}${sportsOverlayWidget === 'autohide' ? ' has-live-sports-autohide' : ''}${sportsOverlayWidget === 'persistent' ? ' has-live-sports-persistent' : ''}${recentOverlayWidget !== null ? ' has-recent-widget' : ''}${favoritesOverlayWidget ? ' has-favorites-widget' : ''}`} onMouseMove={handleMouseMove}>
+    <div className={`app${showControls ? '' : ' controls-hidden'}${pipMode ? ' pip-mode' : ''}${sportsOverlayWidget === 'autohide' ? ' has-live-sports-autohide' : ''}${sportsOverlayWidget === 'persistent' ? ' has-live-sports-persistent' : ''}${recentOverlayWidget !== null ? ' has-recent-widget' : ''}${favoritesOverlayWidget ? ' has-favorites-widget' : ''}`} onMouseMove={handleMouseMovePip}>
       <BackButtonOverlay
         visible={showControls && activeView === 'none'}
         sourceView={playbackSourceView}
@@ -2905,7 +2947,7 @@ function App() {
         </div>
       )}
       {/* Custom title bar for frameless window */}
-      <div className={`title-bar${showControls ? ' visible' : ''}`} data-tauri-drag-region>
+      <div className={`title-bar${showControls ? ' visible' : ''}${pipMode ? ' pip-mode' : ''}`} data-tauri-drag-region>
         <div className="title-bar-left-group" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           {!(activeView === 'none' && playbackSourceView) && (
             <>
@@ -3459,10 +3501,11 @@ function App() {
         onSkip={skipIntro.handleSkip}
       />
 
-      {/* Now Playing Bar */}
+      {/* Now Playing Bar (hidden in PiP mode) */}
       <NowPlayingBar
         visible={
           showControls &&
+          !pipMode &&
           activeView !== 'guide' &&
           !categoriesOpen &&
           multiviewLayout !== '2x2' &&
@@ -3513,6 +3556,8 @@ function App() {
         onSwitchStream={handleSwitchStream}
         compiledBadgeRules={compiledBadgeRules}
         compiledNuvioBadgeRules={compiledNuvioBadgeRules}
+        pipMode={pipMode}
+        onTogglePip={togglePip}
         overlay={
           <FailoverGroupOverlay
             currentChannel={currentChannel}
@@ -3521,6 +3566,36 @@ function App() {
           />
         }
       />
+
+      {/* PiP drag overlay + media bar */}
+      {pipMode && (
+        <>
+          <div
+            className="pip-drag-overlay"
+            onMouseDown={(e) => {
+              getCurrentWindow().startDragging().catch(() => {});
+            }}
+            onDoubleClick={() => togglePip()}
+          />
+          <PiPMediaBar
+            visible={pipControlsVisible}
+            playing={playing}
+            muted={muted}
+            volume={volume}
+            position={position}
+            duration={duration}
+            isVod={currentChannel?.stream_id === 'vod' || currentChannel?.stream_id?.startsWith('recording_')}
+            timeshiftState={timeshiftState}
+            aspectRatio={pipAspectRatio}
+            onTogglePlay={handleTogglePlay}
+            onToggleMute={handleToggleMute}
+            onVolumeChange={handleVolumeChange}
+            onSeek={handleSeek}
+            onExitPip={togglePip}
+            onSetAspectRatio={handleSetPipAspectRatio}
+          />
+        </>
+      )}
 
       {/* Channel Info Overlay */}
       <ChannelInfoOverlay

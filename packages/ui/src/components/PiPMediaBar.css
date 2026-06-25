@@ -1,0 +1,232 @@
+.pip-media-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 60;
+  display: flex;
+  align-items: flex-end;
+  padding: 0;
+  background: linear-gradient(transparent, rgba(0,0,0,0.65));
+  transition: opacity 0.25s ease;
+  pointer-events: none;
+}
+
+.pip-media-bar.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.pip-media-bar.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.pip-media-bar-inner {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 6px 8px 8px;
+  background: rgba(0,0,0,0.6);
+  backdrop-filter: blur(8px);
+  box-sizing: border-box;
+}
+
+.pip-exit-btn,
+.pip-play-btn,
+.pip-mute-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  border-radius: 4px;
+  color: rgba(255,255,255,0.85);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.pip-exit-btn:hover,
+.pip-play-btn:hover,
+.pip-mute-btn:hover {
+  background: rgba(255,255,255,0.12);
+}
+
+.pip-exit-btn:hover {
+  color: #ff6b6b;
+}
+
+/* Seek bar */
+.pip-seek-bar {
+  position: relative;
+  flex: 1;
+  min-width: 30px;
+  height: 3px;
+  background: rgba(255,255,255,0.15);
+  border-radius: 2px;
+  cursor: pointer;
+  transition: height 0.15s ease;
+}
+
+.pip-seek-bar.active {
+  height: 5px;
+}
+
+.pip-seek-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #00d4ff, #00a8cc);
+  border-radius: 2px;
+}
+
+.pip-scrubber {
+  position: absolute;
+  top: 50%;
+  width: 10px;
+  height: 10px;
+  background: white;
+  border-radius: 50%;
+  transform: translate(-50%, -50%) scale(0);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+  transition: transform 0.15s ease;
+  pointer-events: none;
+}
+
+.pip-seek-bar:hover .pip-scrubber,
+.pip-seek-bar.active .pip-scrubber {
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.pip-scrubber.dragging {
+  transform: translate(-50%, -50%) scale(1.15);
+}
+
+.pip-time-tip {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  transform: translateX(-50%);
+  background: rgba(20,20,20,0.95);
+  color: white;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.6rem;
+  white-space: nowrap;
+  pointer-events: none;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+}
+
+.pip-time-tip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 4px solid transparent;
+  border-top-color: rgba(20,20,20,0.95);
+}
+
+.pip-time {
+  font-size: 0.6rem;
+  color: rgba(255,255,255,0.6);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+/* Aspect ratio */
+.pip-ar-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.pip-ar-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: none;
+  border: none;
+  border-radius: 4px;
+  color: rgba(255,255,255,0.85);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.pip-ar-btn:hover {
+  background: rgba(255,255,255,0.12);
+}
+
+.pip-ar-menu {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  right: 0;
+  background: rgba(20,20,20,0.95);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 6px;
+  padding: 2px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 80px;
+  z-index: 70;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+}
+
+.pip-ar-item {
+  background: none;
+  border: none;
+  color: rgba(255,255,255,0.75);
+  padding: 5px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.7rem;
+  text-align: left;
+  transition: all 0.15s;
+}
+
+.pip-ar-item:hover {
+  background: rgba(255,255,255,0.1);
+  color: #fff;
+}
+
+.pip-ar-item.active {
+  background: rgba(0,212,255,0.12);
+  color: #00d4ff;
+  font-weight: 600;
+}
+
+/* Volume slider */
+.pip-volume-slider {
+  width: 50px;
+  height: 3px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: rgba(255,255,255,0.2);
+  border-radius: 2px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.pip-volume-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 10px;
+  height: 10px;
+  background: white;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.pip-volume-slider::-moz-range-thumb {
+  width: 10px;
+  height: 10px;
+  background: white;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+}

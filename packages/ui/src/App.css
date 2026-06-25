@@ -1032,3 +1032,29 @@
     transform: scale(1.02);
   }
 }
+
+/* PiP Mode: hide titlebar */
+.title-bar.pip-mode {
+  display: none;
+}
+
+/* PiP Mode: adjust app container */
+.app.pip-mode {
+  cursor: default;
+}
+
+/* PiP drag overlay — covers video area for window dragging */
+.pip-drag-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 55;
+  cursor: grab;
+}
+
+.pip-drag-overlay:active {
+  cursor: grabbing;
+}
+

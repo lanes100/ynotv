@@ -69,6 +69,8 @@ interface NowPlayingBarProps {
   onSwitchStream?: (stream: StremioStream) => void;
   compiledBadgeRules?: { pattern: RegExp; badge: StremioStreamBadge }[];
   compiledNuvioBadgeRules?: { pattern: RegExp; badge: StremioStreamBadge }[];
+  onTogglePip?: () => void;
+  pipMode?: boolean;
 }
 
 // Format seconds to "H:MM:SS" or "M:SS"
@@ -127,6 +129,8 @@ export function NowPlayingBar({
   onSwitchStream,
   compiledBadgeRules,
   compiledNuvioBadgeRules,
+  onTogglePip,
+  pipMode,
 }: NowPlayingBarProps) {
   // scrubMode: 'timeshift' | 'epgcatchup' — local toggle when channel supports both
   const [scrubMode, setScrubMode] = useState<'timeshift' | 'epgcatchup'>('timeshift');
@@ -931,6 +935,18 @@ export function NowPlayingBar({
               <span className="npb-volume-value">{volume}</span>
             </div>
 
+            {/* PiP button */}
+            {onTogglePip && (
+              <button
+                className="npb-btn"
+                onClick={onTogglePip}
+                disabled={!canControl}
+                title={pipMode ? 'Exit Picture-in-Picture' : 'Picture-in-Picture (P)'}
+              >
+                <PiPIcon active={!!pipMode} />
+              </button>
+            )}
+
             {/* Fullscreen button */}
             <button
               className="npb-btn npb-fullscreen-btn"
@@ -1211,6 +1227,15 @@ function RecordIcon({ recording }: { recording: boolean }) {
       ) : (
         <circle cx="12" cy="12" r="8" />
       )}
+    </svg>
+  );
+}
+
+function PiPIcon({ active }: { active: boolean }) {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={active ? '#00d4ff' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="3" width="20" height="18" rx="2" />
+      <rect x="10" y="10" width="10" height="8" rx="1" fill={active ? '#00d4ff' : 'none'} />
     </svg>
   );
 }
