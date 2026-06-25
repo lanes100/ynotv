@@ -2920,7 +2920,7 @@ function App() {
   // Render
   // ==========================================================================
   return (
-    <div className={`app${showControls ? '' : ' controls-hidden'}${pipMode ? ' pip-mode' : ''}${sportsOverlayWidget === 'autohide' ? ' has-live-sports-autohide' : ''}${sportsOverlayWidget === 'persistent' ? ' has-live-sports-persistent' : ''}${recentOverlayWidget !== null ? ' has-recent-widget' : ''}${favoritesOverlayWidget ? ' has-favorites-widget' : ''}`} onMouseMove={handleMouseMovePip}>
+    <div className={`app${showControls ? '' : ' controls-hidden'}${pipMode ? ' pip-mode' : ''}${!pipMode && sportsOverlayWidget === 'autohide' ? ' has-live-sports-autohide' : ''}${!pipMode && sportsOverlayWidget === 'persistent' ? ' has-live-sports-persistent' : ''}${!pipMode && recentOverlayWidget !== null ? ' has-recent-widget' : ''}${!pipMode && favoritesOverlayWidget ? ' has-favorites-widget' : ''}`} onMouseMove={handleMouseMovePip}>
       <BackButtonOverlay
         visible={showControls && activeView === 'none' && !pipMode}
         sourceView={playbackSourceView}
@@ -3379,7 +3379,7 @@ function App() {
       )}
 
       {/* Live Sports Overlay Widget */}
-      {sportsOverlayWidget && !(currentChannel?.stream_id === 'vod' || currentChannel?.stream_id?.startsWith('recording_')) && (
+      {sportsOverlayWidget && !pipMode && !(currentChannel?.stream_id === 'vod' || currentChannel?.stream_id?.startsWith('recording_')) && (
         <LiveSportsOverlay
           mode={sportsOverlayWidget}
           showControls={showControls}
@@ -3391,6 +3391,7 @@ function App() {
            The bar owns positioning and scale; widgets are just flex children.
            Adding more widgets here is trivial — they automatically line up. */}
       {(recentOverlayWidget || favoritesOverlayWidget || whatsNextOverlayWidget || customGroupWidgetIds.length > 0) &&
+        !pipMode &&
         !(currentChannel?.stream_id === 'vod' || currentChannel?.stream_id?.startsWith('recording_')) && (
         <WidgetBar cioEnabled={channelInfoOverlayEnabled}>
           {(() => {

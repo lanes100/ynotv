@@ -1,5 +1,23 @@
 # Changelog
 
+## v2.1.4
+
+### Added
+
+- **Picture-in-Picture mode** - Activating PiP mode via the new button in the media bar resizes the player to a compact window with Always on Top enabled. Window size and position are saved on exit and restored when PiP mode is re-entered. Aspect ratio selected in PiP mode will not carry back to Main View when exiting PiP.
+- **Watch progress for recordings and downloads** - Playback position is now saved when watching a recording or download, and will be resumed automatically on next playback.
+- **VOD playback speed** - Playback speed for VOD content can be set to `1x`, `1.5x`, or `2x`.
+- **Widgets menu** - A widgets menu has been added to the home screen for easier access and discovery. The menu auto-hides when any stream is playing and can also be accessed during Live TV playback by right-clicking the home screen.
+- **Sports score overlay quick-access button** - A toggle button for the live sports score overlay has been added to `Sports → Live Now`, providing quick access and improving discoverability of the feature.
+- **Sports live score progress indicator** - A real-time indicator next to the refresh button now shows when live score data is being fetched by current/total, providing visual feedback during updates.
+
+### Fixed
+
+- **Memory spike on launch** - Resolved a bug that caused all EPGs to be loaded at startup, resulting in a temporary spike in memory usage.
+- **UI going transparent when selecting a stream from List Streams Here** - Opening a stream via List Streams Here in Sports will no longer cause the UI to become transparent.
+- **Bingecat add-on catalog URLs not resolving** - Resolved an issue where Bingecat add-on URLs were not being resolved correctly for catalog content.
+- **Inconsistent VOD resume playback** - Resume playback for VOD content on slower sources has been made more reliable.
+
 ## v2.1.3
 
 ### Added
