@@ -31,6 +31,7 @@ import { BackgroundContextMenu } from './components/BackgroundContextMenu';
 import { CustomGroupWidget } from './components/CustomGroupWidget';
 import { WhatsNextWidget } from './components/WhatsNextWidget';
 import { GroupPickerModal } from './components/GroupPickerModal';
+import { HeroWidgetsPanel } from './components/HeroWidgetsPanel';
 import { useActiveRecordings } from './hooks/useActiveRecordings';
 import { useSearchHistory } from './hooks/useSearchHistory';
 import { RecordingIndicator } from './components/RecordingIndicator';
@@ -3479,8 +3480,32 @@ function App() {
           onRemoveFavorites={handleRemoveFavoritesOverlay}
           onAddWhatsNext={handleAddWhatsNextOverlay}
           onRemoveWhatsNext={handleRemoveWhatsNextOverlay}
+          onRemoveCustomGroup={handleRemoveCustomGroupWidget}
           onAddCustomGroup={() => setGroupPickerOpen(true)}
           onClose={() => setBgContextMenu(null)}
+        />
+      )}
+
+      {/* Hero Screen Widgets Sidebar Panel */}
+      {activeView === 'none' && !currentChannel && !error && !isRestoring && (
+        <HeroWidgetsPanel
+          sportsWidget={sportsOverlayWidget}
+          recentWidget={recentOverlayWidget}
+          favoritesWidget={favoritesOverlayWidget}
+          whatsNextWidget={whatsNextOverlayWidget}
+          customGroupIds={customGroupWidgetIds}
+          onAddSportsAutohide={() => handleAddSportsOverlay('autohide')}
+          onAddSportsPersistent={() => handleAddSportsOverlay('persistent')}
+          onRemoveSports={handleRemoveSportsOverlay}
+          onAddRecent5={handleAddRecent5Overlay}
+          onAddRecent10={handleAddRecent10Overlay}
+          onRemoveRecent={handleRemoveRecentOverlay}
+          onAddFavorites={handleAddFavoritesOverlay}
+          onRemoveFavorites={handleRemoveFavoritesOverlay}
+          onAddWhatsNext={handleAddWhatsNextOverlay}
+          onRemoveWhatsNext={handleRemoveWhatsNextOverlay}
+          onRemoveCustomGroup={handleRemoveCustomGroupWidget}
+          onAddCustomGroup={() => setGroupPickerOpen(true)}
         />
       )}
 
@@ -4016,6 +4041,14 @@ function App() {
           onChannelUp={handleChannelUp}
           onChannelDown={handleChannelDown}
           onPreviewVideoRectChange={setPreviewVideoRect}
+          sportsOverlayWidget={sportsOverlayWidget}
+          onSportsOverlayWidgetChange={(mode) => {
+            if (mode === null) {
+              handleRemoveSportsOverlay();
+            } else {
+              handleAddSportsOverlay(mode);
+            }
+          }}
         />
       </TransitionView>
 

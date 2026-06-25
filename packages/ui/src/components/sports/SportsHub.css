@@ -6750,3 +6750,101 @@
   transform: translateX(4px);
   color: var(--accent-primary, #e50914);
 }
+
+/* --- Live Score Overlay Button & Tooltip --- */
+.live-header-overlay-btn {
+  margin-left: auto; /* push this and subsequent items to the right */
+  font-size: 0.8rem;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.45));
+  background: rgba(255, 255, 255, 0.03);
+  padding: 6px 12px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  outline: none;
+}
+
+.live-header-overlay-btn.active {
+  border-color: var(--accent-primary, #e50914);
+  background: rgba(229, 9, 20, 0.08);
+  color: var(--text-primary, #ffffff);
+}
+
+.live-header-overlay-btn:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.3);
+  color: var(--text-primary, #ffffff);
+}
+
+.live-header-overlay-btn.active:hover {
+  background: rgba(229, 9, 20, 0.15);
+  border-color: var(--accent-primary, #e50914);
+}
+
+.sports-tooltip-container {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  cursor: help;
+}
+
+.sports-tooltip-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 11px;
+  font-weight: 600;
+  transition: all 0.15s ease;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.sports-tooltip-container:hover .sports-tooltip-icon {
+  background: rgba(255, 255, 255, 0.15);
+  color: var(--text-primary, #ffffff);
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.sports-tooltip-content {
+  display: none;
+  position: absolute;
+  top: 130%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(20, 20, 20, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  padding: 8px 12px;
+  width: 240px;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.9);
+  line-height: 1.4;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  z-index: 100;
+  text-align: center;
+  backdrop-filter: blur(8px);
+}
+
+.sports-tooltip-container:hover .sports-tooltip-content {
+  display: block;
+}
+
+.sports-tooltip-content::after {
+  content: '';
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 5px;
+  border-style: solid;
+  border-color: transparent transparent rgba(20, 20, 20, 0.95) transparent;
+}

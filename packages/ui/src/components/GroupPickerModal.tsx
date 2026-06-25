@@ -77,7 +77,7 @@ export function GroupPickerModal({
                 <rect x="9" y="3" width="6" height="4" rx="1" />
               </svg>
               <span>No custom groups yet.</span>
-              <small>Create groups in Settings → Channel Manager.</small>
+              <small>Create custom group in LiveTV categories sidebar, clicking the + at the top</small>
             </div>
           ) : (
             groups!.map((group) => {

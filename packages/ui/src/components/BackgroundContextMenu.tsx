@@ -8,7 +8,6 @@ interface BackgroundContextMenuProps {
   recentWidget: '5' | '10' | null;
   favoritesWidget: boolean;
   whatsNextWidget: boolean;
-  /** IDs of groups currently active as widgets */
   customGroupIds: string[];
   onAddSportsAutohide: () => void;
   onAddSportsPersistent: () => void;
@@ -20,7 +19,7 @@ interface BackgroundContextMenuProps {
   onRemoveFavorites: () => void;
   onAddWhatsNext: () => void;
   onRemoveWhatsNext: () => void;
-  /** Open the group picker modal */
+  onRemoveCustomGroup?: (groupId: string) => void;
   onAddCustomGroup: () => void;
   onClose: () => void;
 }
@@ -42,6 +41,7 @@ export function BackgroundContextMenu({
   onRemoveFavorites,
   onAddWhatsNext,
   onRemoveWhatsNext,
+  onRemoveCustomGroup,
   onAddCustomGroup,
   onClose,
 }: BackgroundContextMenuProps) {
@@ -101,46 +101,93 @@ export function BackgroundContextMenu({
         <>
           <div className="context-menu-header">Active Widgets</div>
           {sportsWidget && (
-            <div className="context-menu-item context-menu-item-info">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="12" cy="12" r="10" />
-                <polyline points="12 6 12 12 16 14" />
-              </svg>
-              Live Sports ({sportsWidget === 'autohide' ? 'Autohide' : 'Persistent'})
+            <div className="context-menu-item context-menu-item-info" style={{ justifyContent: 'space-between' }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="12" cy="12" r="10" />
+                  <polyline points="12 6 12 12 16 14" />
+                </svg>
+                Live Sports ({sportsWidget === 'autohide' ? 'Autohide' : 'Persistent'})
+              </span>
+              <button 
+                className="context-menu-remove-btn" 
+                onClick={(e) => { e.stopPropagation(); onRemoveSports(); onClose(); }}
+                title="Stop Live Sports Overlay"
+              >
+                ✕
+              </button>
             </div>
           )}
           {recentWidget && (
-            <div className="context-menu-item context-menu-item-info">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <polyline points="1 4 1 10 7 10" />
-                <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
-              </svg>
-              Recent Channels ({recentWidget})
+            <div className="context-menu-item context-menu-item-info" style={{ justifyContent: 'space-between' }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <polyline points="1 4 1 10 7 10" />
+                  <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
+                </svg>
+                Recent Channels ({recentWidget})
+              </span>
+              <button 
+                className="context-menu-remove-btn" 
+                onClick={(e) => { e.stopPropagation(); onRemoveRecent(); onClose(); }}
+                title="Stop Recent Channels"
+              >
+                ✕
+              </button>
             </div>
           )}
           {favoritesWidget && (
-            <div className="context-menu-item context-menu-item-info">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-              </svg>
-              Favorites
+            <div className="context-menu-item context-menu-item-info" style={{ justifyContent: 'space-between' }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                </svg>
+                Favorites
+              </span>
+              <button 
+                className="context-menu-remove-btn" 
+                onClick={(e) => { e.stopPropagation(); onRemoveFavorites(); onClose(); }}
+                title="Stop Favorites"
+              >
+                ✕
+              </button>
             </div>
           )}
           {whatsNextWidget && (
-            <div className="context-menu-item context-menu-item-info">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <polyline points="9 18 15 12 9 6" />
-              </svg>
-              What&apos;s Next
+            <div className="context-menu-item context-menu-item-info" style={{ justifyContent: 'space-between' }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <polyline points="9 18 15 12 9 6" />
+                </svg>
+                What&apos;s Next
+              </span>
+              <button 
+                className="context-menu-remove-btn" 
+                onClick={(e) => { e.stopPropagation(); onRemoveWhatsNext(); onClose(); }}
+                title="Stop What's Next"
+              >
+                ✕
+              </button>
             </div>
           )}
           {hasCustomGroups && customGroupIds.map((gid) => (
-            <div key={gid} className="context-menu-item context-menu-item-info">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" />
-                <rect x="14" y="14" width="7" height="7" /><rect x="3" y="14" width="7" height="7" />
-              </svg>
-              Custom Group
+            <div key={gid} className="context-menu-item context-menu-item-info" style={{ justifyContent: 'space-between' }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" />
+                  <rect x="14" y="14" width="7" height="7" /><rect x="3" y="14" width="7" height="7" />
+                </svg>
+                Custom Group
+              </span>
+              {onRemoveCustomGroup && (
+                <button 
+                  className="context-menu-remove-btn" 
+                  onClick={(e) => { e.stopPropagation(); onRemoveCustomGroup(gid); onClose(); }}
+                  title="Stop Custom Group"
+                >
+                  ✕
+                </button>
+              )}
             </div>
           ))}
           <div className="context-menu-separator" />
@@ -148,23 +195,23 @@ export function BackgroundContextMenu({
       )}
 
       <div className="context-menu-header">Add Widget</div>
-      {!sportsWidget && (
-        <>
-          <div className="context-menu-item" onClick={() => { onAddSportsAutohide(); onClose(); }}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <circle cx="12" cy="12" r="10" />
-              <polyline points="12 6 12 12 16 14" />
-            </svg>
-            Live Sports Overlay (Autohide)
-          </div>
-          <div className="context-menu-item" onClick={() => { onAddSportsPersistent(); onClose(); }}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <circle cx="12" cy="12" r="10" />
-              <polyline points="12 6 12 12 16 14" />
-            </svg>
-            Live Sports Overlay (Persistent)
-          </div>
-        </>
+      {sportsWidget !== 'autohide' && (
+        <div className="context-menu-item" onClick={() => { onAddSportsAutohide(); onClose(); }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <circle cx="12" cy="12" r="10" />
+            <polyline points="12 6 12 12 16 14" />
+          </svg>
+          Live Sports Overlay (Autohide)
+        </div>
+      )}
+      {sportsWidget !== 'persistent' && (
+        <div className="context-menu-item" onClick={() => { onAddSportsPersistent(); onClose(); }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <circle cx="12" cy="12" r="10" />
+            <polyline points="12 6 12 12 16 14" />
+          </svg>
+          Live Sports Overlay (Persistent)
+        </div>
       )}
       {!recentWidget && (
         <>
@@ -208,59 +255,6 @@ export function BackgroundContextMenu({
         </svg>
         Custom Group…
       </div>
-
-      {hasAnyWidget && (
-        <>
-          <div className="context-menu-separator" />
-          <div className="context-menu-header">Remove Widget</div>
-          {sportsWidget && (
-            <div className="context-menu-item context-menu-item-danger" onClick={() => { onRemoveSports(); onClose(); }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <polyline points="3 6 5 6 21 6" />
-                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-              </svg>
-              Live Sports Overlay
-            </div>
-          )}
-          {recentWidget && (
-            <div className="context-menu-item context-menu-item-danger" onClick={() => { onRemoveRecent(); onClose(); }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <polyline points="3 6 5 6 21 6" />
-                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-              </svg>
-              Recent Channels
-            </div>
-          )}
-          {favoritesWidget && (
-            <div className="context-menu-item context-menu-item-danger" onClick={() => { onRemoveFavorites(); onClose(); }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <polyline points="3 6 5 6 21 6" />
-                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-              </svg>
-              Favorites
-            </div>
-          )}
-          {whatsNextWidget && (
-            <div className="context-menu-item context-menu-item-danger" onClick={() => { onRemoveWhatsNext(); onClose(); }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <polyline points="3 6 5 6 21 6" />
-                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-              </svg>
-              What&apos;s Next
-            </div>
-          )}
-          {/* Manage custom groups via the picker (re-opens so user can remove from there) */}
-          {hasCustomGroups && (
-            <div className="context-menu-item context-menu-item-danger" onClick={() => { onAddCustomGroup(); onClose(); }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" />
-                <rect x="14" y="14" width="7" height="7" /><rect x="3" y="14" width="7" height="7" />
-              </svg>
-              Manage Custom Groups…
-            </div>
-          )}
-        </>
-      )}
     </div>,
     document.body
   );

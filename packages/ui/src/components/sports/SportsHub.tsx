@@ -34,6 +34,8 @@ interface SportsHubProps {
   aspectRatio?: AspectRatioMode;
   onSetAspectRatio?: (mode: AspectRatioMode) => void;
   onPreviewVideoRectChange?: (rect: { left: number; top: number; width: number; height: number } | null) => void;
+  sportsOverlayWidget?: 'autohide' | 'persistent' | null;
+  onSportsOverlayWidgetChange?: (mode: 'autohide' | 'persistent' | null) => void;
 }
 
 export function SportsHub({
@@ -51,6 +53,8 @@ export function SportsHub({
   aspectRatio = 'fit',
   onSetAspectRatio,
   onPreviewVideoRectChange,
+  sportsOverlayWidget,
+  onSportsOverlayWidgetChange,
 }: SportsHubProps) {
   const [transitionCompleted, setTransitionCompleted] = useState(visible === undefined);
 
@@ -491,7 +495,14 @@ export function SportsHub({
     const tabContent = (() => {
       switch (activeTab) {
         case 'live':
-          return <LiveScoresTab onSearchChannels={handleSearchChannels} onPlayChannel={onPlayChannel} />;
+          return (
+            <LiveScoresTab
+              onSearchChannels={handleSearchChannels}
+              onPlayChannel={onPlayChannel}
+              sportsOverlayWidget={sportsOverlayWidget}
+              onSportsOverlayWidgetChange={onSportsOverlayWidgetChange}
+            />
+          );
         case 'upcoming':
           return <UpcomingTab onSearchChannels={handleSearchChannels} onPlayChannel={onPlayChannel} />;
         case 'worldcup':

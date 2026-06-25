@@ -16,9 +16,16 @@ import './LoadingSkeleton.css';
 interface LiveScoresTabProps {
   onSearchChannels?: (channelName: string) => void;
   onPlayChannel?: (channel: import('../../db').StoredChannel) => void;
+  sportsOverlayWidget?: 'autohide' | 'persistent' | null;
+  onSportsOverlayWidgetChange?: (mode: 'autohide' | 'persistent' | null) => void;
 }
 
-export function LiveScoresTab({ onSearchChannels, onPlayChannel }: LiveScoresTabProps) {
+export function LiveScoresTab({
+  onSearchChannels,
+  onPlayChannel,
+  sportsOverlayWidget,
+  onSportsOverlayWidgetChange,
+}: LiveScoresTabProps) {
   const [selectedEvent, setSelectedEvent] = useState<SportsEvent | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const setSelectedTab = useSetSportsSelectedTab();
@@ -162,8 +169,50 @@ export function LiveScoresTab({ onSearchChannels, onPlayChannel }: LiveScoresTab
             );
           })}
         </div>
+        {onSportsOverlayWidgetChange && (
+          <>
+            <button
+              className={`live-header-overlay-btn ${sportsOverlayWidget ? 'active' : ''}`}
+              onClick={() => {
+                if (sportsOverlayWidget === null) {
+                  onSportsOverlayWidgetChange('autohide');
+                } else if (sportsOverlayWidget === 'autohide') {
+                  onSportsOverlayWidgetChange('persistent');
+                } else {
+                  onSportsOverlayWidgetChange(null);
+                }
+              }}
+              title="Cycle live score overlay modes"
+            >
+              {sportsOverlayWidget === 'autohide' && (
+                <>
+                  <span className="live-count-dot" style={{ display: 'inline-block', marginRight: '4px', background: '#3b82f6', animation: 'none' }} />
+                  Live Sports Overlay (Autohide)
+                </>
+              )}
+              {sportsOverlayWidget === 'persistent' && (
+                <>
+                  <span className="live-count-dot" style={{ display: 'inline-block', marginRight: '4px', background: '#10b981', animation: 'none' }} />
+                  Live Sports Overlay (Persistent)
+                </>
+              )}
+              {sportsOverlayWidget === null && (
+                <>
+                  Enable Live Score Overlay
+                </>
+              )}
+            </button>
+            <div className="sports-tooltip-container" style={{ marginRight: '8px' }}>
+              <span className="sports-tooltip-icon">?</span>
+              <div className="sports-tooltip-content">
+                Enables Live Sports Overlay - Shows live scores as widgets at the top when in Main view. Cycles through: Autohide (fades when inactive) and Persistent (always visible).
+              </div>
+            </div>
+          </>
+        )}
         <button
           className="live-header-settings-reminder"
+          style={{ marginLeft: 0 }}
           onClick={() => setSelectedTab('settings')}
           title="Configure active leagues in Settings"
         >
