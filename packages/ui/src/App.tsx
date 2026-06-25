@@ -2922,7 +2922,7 @@ function App() {
   return (
     <div className={`app${showControls ? '' : ' controls-hidden'}${pipMode ? ' pip-mode' : ''}${sportsOverlayWidget === 'autohide' ? ' has-live-sports-autohide' : ''}${sportsOverlayWidget === 'persistent' ? ' has-live-sports-persistent' : ''}${recentOverlayWidget !== null ? ' has-recent-widget' : ''}${favoritesOverlayWidget ? ' has-favorites-widget' : ''}`} onMouseMove={handleMouseMovePip}>
       <BackButtonOverlay
-        visible={showControls && activeView === 'none'}
+        visible={showControls && activeView === 'none' && !pipMode}
         sourceView={playbackSourceView}
         onBack={handleStop}
       />
