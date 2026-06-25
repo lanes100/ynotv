@@ -129,6 +129,8 @@ impl DvrDatabase {
                 error_message TEXT,
                 auto_delete_policy TEXT DEFAULT 'space_needed',
                 created_at INTEGER NOT NULL,
+                progress_seconds INTEGER DEFAULT 0,
+                last_watched_at INTEGER,
                 FOREIGN KEY (schedule_id) REFERENCES dvr_schedules(id)
             )",
             [],
@@ -178,6 +180,22 @@ impl DvrDatabase {
             [],
         ); // Ignore error if column already exists
         println!("[DVR DB] thumbnail_path migration check complete");
+
+        // Migration: Add progress_seconds column to existing databases
+        println!("[DVR DB] Checking for progress_seconds column migration...");
+        let _ = conn.execute(
+            "ALTER TABLE dvr_recordings ADD COLUMN progress_seconds INTEGER DEFAULT 0",
+            [],
+        ); // Ignore error if column already exists
+        println!("[DVR DB] progress_seconds migration check complete");
+
+        // Migration: Add last_watched_at column to existing databases
+        println!("[DVR DB] Checking for last_watched_at column migration...");
+        let _ = conn.execute(
+            "ALTER TABLE dvr_recordings ADD COLUMN last_watched_at INTEGER",
+            [],
+        ); // Ignore error if column already exists
+        println!("[DVR DB] last_watched_at migration check complete");
 
         // Migration: Add airstamp column to tv_episodes for timezone-aware display
         println!("[DVR DB] Checking for airstamp column migration...");

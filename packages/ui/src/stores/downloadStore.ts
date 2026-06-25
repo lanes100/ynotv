@@ -19,6 +19,7 @@ export interface DownloadItem {
   userAgent?: string;
   durationSecs?: number;
   poster?: string;
+  watchProgressSeconds?: number;
 }
 
 interface DownloadState {
@@ -46,6 +47,11 @@ interface DownloadState {
     file_path: string;
     error: string | null;
   }) => void;
+  saveDownloadProgress: (
+    savePath: string,
+    progressSeconds: number,
+    durationSecs?: number
+  ) => void;
 }
 
 export const useDownloadStore = create<DownloadState>()(
@@ -244,6 +250,28 @@ export const useDownloadStore = create<DownloadState>()(
         ) {
           get().processQueue();
         }
+      },
+
+      saveDownloadProgress: (savePath, progressSeconds, durationSecs) => {
+        const normalize = (p: string) => p.replace(/\\/g, '/').replace(/^file:\/\/\/?/, '').toLowerCase();
+        const normSavePath = normalize(savePath);
+
+        set((state) => {
+          const list = state.downloads || [];
+          const idx = list.findIndex((d) => normalize(d.savePath) === normSavePath);
+          if (idx === -1) return state;
+
+          const updated = [...list];
+          updated[idx] = {
+            ...updated[idx],
+            watchProgressSeconds: progressSeconds,
+          };
+          if (durationSecs && durationSecs > 0) {
+            updated[idx].durationSecs = durationSecs;
+          }
+
+          return { downloads: updated };
+        });
       },
     }),
     {

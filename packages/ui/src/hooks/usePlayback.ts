@@ -8,7 +8,8 @@ import type { VodPlayInfo } from '../types/media';
 import { Bridge, registerOnAppClose, unregisterOnAppClose } from '../services/tauri-bridge';
 import { resolvePlayUrl } from '../services/stream-resolver';
 import { addToRecentChannels } from '../utils/recentChannels';
-import { db, recordVodWatch, updateVodWatchProgress, getVodWatchProgress, recordEpisodeWatch, getEpisodeProgress } from '../db';
+import { db, recordVodWatch, updateVodWatchProgress, getVodWatchProgress, recordEpisodeWatch, getEpisodeProgress, updateDvrRecordingProgress } from '../db';
+import { useDownloadStore } from '../stores/downloadStore';
 import { useStremioWatchStore } from '../stores/stremioWatchStore';
 import { useNuvioAuthStore } from '../stores/nuvioAuthStore';
 import { fetchNuvioWatchProgress } from '../services/nuvio-api';
@@ -354,8 +355,9 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
     let timeoutId: any = null;
 
     const execute = () => {
-      if (!playingRef.current) {
-        logInfo(`[Playback] Aborting seek retry for ${description}: player is no longer playing`);
+      const isStillActive = playingRef.current || isInitialSeekPendingRef.current || vodInfoRef.current !== null || catchupInfoRef.current !== null;
+      if (!isStillActive) {
+        logInfo(`[Playback] Aborting seek retry for ${description}: player is no longer active`);
         cancelPendingSeekRef.current = null;
         return;
       }
@@ -368,8 +370,9 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
         })
         .catch(e => {
           attempts++;
-          if (!playingRef.current) {
-            logInfo(`[Playback] Aborting seek retry for ${description}: player is no longer playing`);
+          const isActive = playingRef.current || isInitialSeekPendingRef.current || vodInfoRef.current !== null || catchupInfoRef.current !== null;
+          if (!isActive) {
+            logInfo(`[Playback] Aborting seek retry for ${description}: player is no longer active`);
             cancelPendingSeekRef.current = null;
             return;
           }
@@ -421,6 +424,16 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
     duration: number;
     programDesc?: string;
   } | null>(null);
+
+  const vodInfoRef = useRef(vodInfo);
+  useEffect(() => {
+    vodInfoRef.current = vodInfo;
+  }, [vodInfo]);
+
+  const catchupInfoRef = useRef(catchupInfo);
+  useEffect(() => {
+    catchupInfoRef.current = catchupInfo;
+  }, [catchupInfo]);
 
   // Retry state for Live TV stream recovery
   const [retryState, setRetryState] = useState<RetryState | null>(null);
@@ -600,8 +613,6 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
   }, []);
   // Stable refs for use inside intervals (avoids stale closure issues)
   const currentChannelRef = useRef(currentChannel);
-  const vodInfoRef2 = useRef(vodInfo);
-  const catchupInfoRef = useRef(catchupInfo);
 
   // Failover state
   const failoverActiveRef = useRef(false);
@@ -614,20 +625,12 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
   const failoverFailedDuringSwitchRef = useRef(false);
 
   useEffect(() => { currentChannelRef.current = currentChannel; }, [currentChannel]);
-  useEffect(() => { vodInfoRef2.current = vodInfo; }, [vodInfo]);
-  useEffect(() => { catchupInfoRef.current = catchupInfo; }, [catchupInfo]);
 
 
 
   // Refs to track current values for interval callbacks
-  const vodInfoRef = useRef(vodInfo);
   const positionRef = useRef(position);
   const durationRef = useRef(duration);
-  
-  // Update refs whenever values change
-  useEffect(() => {
-    vodInfoRef.current = vodInfo;
-  }, [vodInfo]);
   
   useEffect(() => {
     positionRef.current = position;
@@ -657,6 +660,7 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
     if (pendingCatchupSeekRef.current !== null && duration > 0) {
       const targetSeek = pendingCatchupSeekRef.current;
       pendingCatchupSeekRef.current = null;
+      logInfo(`[usePlayback] Seeking Catchup to position: ${targetSeek} seconds`);
       setPosition(targetSeek);
       const cancelSeek = seekWithRetry(targetSeek, 'catchup', () => {
         isInitialSeekPendingRef.current = false;
@@ -665,7 +669,7 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
         cancelSeek();
       };
     }
-  }, [duration, setPosition, seekWithRetry]);
+  }, [duration, setPosition, seekWithRetry, catchupInfo]);
 
   // Handle pending Stremio synced progress seek when duration becomes available
   useEffect(() => {
@@ -684,7 +688,7 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
         };
       }
     }
-  }, [duration, setPosition, seekWithRetry]);
+  }, [duration, setPosition, seekWithRetry, vodInfo]);
 
   // Handle pending database resume seek when duration becomes available (immune to load delays)
   useEffect(() => {
@@ -700,7 +704,7 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
         cancelSeek();
       };
     }
-  }, [duration, setPosition, seekWithRetry]);
+  }, [duration, setPosition, seekWithRetry, vodInfo]);
 
   // Periodic progress saving for VOD playback + save on app close
   useEffect(() => {
@@ -728,58 +732,67 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
         return;
       }
       
-      const mediaId = currentVodInfo.mediaId || (currentVodInfo.source_id && currentVodInfo.url
-        ? `${currentVodInfo.source_id}_${currentVodInfo.url}`
-        : null);
-      
-      if (mediaId && currentVodInfo.type !== 'recording' && currentPosition > 0) {
-        console.log('[Playback] Auto-saving progress:', Math.floor(currentPosition), '/', Math.floor(currentDuration));
-        
-        // For series episodes, save both levels
-        if (currentVodInfo.type === 'series' && mediaId.includes('_ep_')) {
-          const parts = mediaId.split('_ep_');
-          if (parts.length === 2) {
-            const seriesId = parts[0];
-            const episodeId = parts[1];
-            
-            // Save series-level progress (for Recently Watched)
-            void updateVodWatchProgress(
-              seriesId,
-              'series',
-              Math.floor(currentPosition),
-              Math.floor(currentDuration)
-            );
-            
-            // Save episode-level progress (for episode resume)
-            void recordEpisodeWatch(
-              episodeId,
-              seriesId,
-              currentVodInfo.source_id || '',
-              0,
-              0,
-              '',
-              Math.floor(currentPosition),
-              Math.floor(currentDuration)
-            );
-            
-            console.log('[Playback] ✅ Auto-saved series progress at position:', Math.floor(currentPosition));
-          }
+      if (currentVodInfo.type === 'recording' && currentPosition > 0) {
+        console.log('[Playback] Auto-saving progress for recording:', Math.floor(currentPosition), '/', Math.floor(currentDuration));
+        if (currentVodInfo.recordingId) {
+          void updateDvrRecordingProgress(currentVodInfo.recordingId, Math.floor(currentPosition), Math.floor(currentDuration));
         } else {
-          // For movies or series without episode info
-          void updateVodWatchProgress(
-            mediaId,
-            currentVodInfo.type as 'movie' | 'series',
-            Math.floor(currentPosition),
-            Math.floor(currentDuration)
-          );
-          console.log('[Playback] ✅ Auto-saved VOD progress at position:', Math.floor(currentPosition));
+          useDownloadStore.getState().saveDownloadProgress(currentVodInfo.url, Math.floor(currentPosition), Math.floor(currentDuration));
         }
       } else {
-        console.log('[Playback] Save conditions not met:', { 
-          hasMediaId: !!mediaId, 
-          type: currentVodInfo?.type, 
-          position: currentPosition 
-        });
+        const mediaId = currentVodInfo.mediaId || (currentVodInfo.source_id && currentVodInfo.url
+          ? `${currentVodInfo.source_id}_${currentVodInfo.url}`
+          : null);
+        
+        if (mediaId && currentPosition > 0) {
+          console.log('[Playback] Auto-saving progress:', Math.floor(currentPosition), '/', Math.floor(currentDuration));
+          
+          // For series episodes, save both levels
+          if (currentVodInfo.type === 'series' && mediaId.includes('_ep_')) {
+            const parts = mediaId.split('_ep_');
+            if (parts.length === 2) {
+              const seriesId = parts[0];
+              const episodeId = parts[1];
+              
+              // Save series-level progress (for Recently Watched)
+              void updateVodWatchProgress(
+                seriesId,
+                'series',
+                Math.floor(currentPosition),
+                Math.floor(currentDuration)
+              );
+              
+              // Save episode-level progress (for episode resume)
+              void recordEpisodeWatch(
+                episodeId,
+                seriesId,
+                currentVodInfo.source_id || '',
+                0,
+                0,
+                '',
+                Math.floor(currentPosition),
+                Math.floor(currentDuration)
+              );
+              
+              console.log('[Playback] ✅ Auto-saved series progress at position:', Math.floor(currentPosition));
+            }
+          } else {
+            // For movies or series without episode info
+            void updateVodWatchProgress(
+              mediaId,
+              currentVodInfo.type as 'movie' | 'series',
+              Math.floor(currentPosition),
+              Math.floor(currentDuration)
+            );
+            console.log('[Playback] ✅ Auto-saved VOD progress at position:', Math.floor(currentPosition));
+          }
+        } else {
+          console.log('[Playback] Save conditions not met:', { 
+            hasMediaId: !!mediaId, 
+            type: currentVodInfo?.type, 
+            position: currentPosition 
+          });
+        }
       }
     };
 
@@ -1126,7 +1139,7 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
    */
   const handleStreamDied = useCallback(async () => {
     // Only retry for Live TV (not VOD, not catchup)
-    if (!currentChannelRef.current || vodInfoRef2.current || catchupInfoRef.current) return;
+    if (!currentChannelRef.current || vodInfoRef.current || catchupInfoRef.current) return;
     if (Bridge.getIsCasting?.()) {
       logInfo('[Retry] Ignoring stream failure — casting is active');
       return;
@@ -2110,6 +2123,37 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
         url = recording.file_path.startsWith('file://') ? recording.file_path : `file://${recording.file_path}`;
       }
 
+      // Check if we have saved watch progress to resume
+      let resumePosition = 0;
+      if (recording.id) {
+        // Real DVR recording (completed or partial)
+        const freshRecord = await db.dvrRecordings.get(recording.id);
+        if (freshRecord && freshRecord.progress_seconds && freshRecord.duration_sec) {
+          const progressPercent = (freshRecord.progress_seconds / freshRecord.duration_sec) * 100;
+          if (progressPercent > 5 && progressPercent < 95) {
+            resumePosition = freshRecord.progress_seconds;
+            logInfo(`[Playback] Resuming DVR recording at: ${resumePosition} seconds`);
+          }
+        }
+      } else {
+        // Completed Download (represented as fake recording without id)
+        const downloads = useDownloadStore.getState().downloads || [];
+        const normalize = (p: string) => p.replace(/\\/g, '/').replace(/^file:\/\/\/?/, '').toLowerCase();
+        const normUrl = normalize(recording.file_path);
+        const match = downloads.find(d => normalize(d.savePath) === normUrl);
+        if (match && match.watchProgressSeconds) {
+          let shouldResume = true;
+          if (match.durationSecs) {
+            const progressPercent = (match.watchProgressSeconds / match.durationSecs) * 100;
+            shouldResume = progressPercent > 5 && progressPercent < 95;
+          }
+          if (shouldResume) {
+            resumePosition = match.watchProgressSeconds;
+            logInfo(`[Playback] Resuming download at: ${resumePosition} seconds`);
+          }
+        }
+      }
+
       if (Bridge.getIsCasting?.()) {
         Bridge.setCastMetadata(recording.program_title, 'DVR Recording');
       }
@@ -2117,7 +2161,7 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
 
       if (result.success) {
         setCurrentChannel({
-          stream_id: `recording_${recording.id}`,
+          stream_id: `recording_${recording.id || 'download'}`,
           name: recording.program_title,
           stream_icon: '',
           epg_channel_id: '',
@@ -2132,10 +2176,18 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
           source_id: 'dvr',
           recordingStart: recording.actual_start,
           recordingStatus: recording.status,
+          recordingId: recording.id,
         });
         setCatchupInfo(null);
         setPlaying(true);
         applySubtitleSettings();
+
+        // Resume from saved position if available
+        if (resumePosition > 0) {
+          setPosition(resumePosition);
+          pendingResumeSeekRef.current = resumePosition;
+          isInitialSeekPendingRef.current = true;
+        }
 
         // Explicitly force MPV to unpause after loading
         if (!Bridge.getIsCasting?.()) {
@@ -2158,59 +2210,67 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
     if (isInitialSeekPendingRef.current) {
       console.log('[Playback] Initial seek was still pending on stop, skipping progress save');
     } else if (vodInfo && position > 0 && duration > 0) {
-      const mediaId = vodInfo.mediaId || (vodInfo.source_id && vodInfo.url
-        ? `${vodInfo.source_id}_${vodInfo.url}`
-        : null);
-      
-      if (mediaId && vodInfo.type !== 'recording') {
-        console.log('[Playback] Saving progress on stop:', position, '/', duration);
+      if (vodInfo.type === 'recording') {
+        console.log('[Playback] Saving progress for recording on stop:', position, '/', duration);
+        if (vodInfo.recordingId) {
+          await updateDvrRecordingProgress(vodInfo.recordingId, Math.floor(position), Math.floor(duration));
+        } else {
+          useDownloadStore.getState().saveDownloadProgress(vodInfo.url, Math.floor(position), Math.floor(duration));
+        }
+      } else {
+        const mediaId = vodInfo.mediaId || (vodInfo.source_id && vodInfo.url
+          ? `${vodInfo.source_id}_${vodInfo.url}`
+          : null);
         
-        // For series episodes, extract series_id and save both levels
-        if (vodInfo.type === 'series' && mediaId.includes('_ep_')) {
-          const parts = mediaId.split('_ep_');
-          if (parts.length === 2) {
-            const episodeId = parts[1];
-            const seriesId = parts[0];
-            
-            // Save series-level progress (for Recently Watched list)
-            console.log('[Playback] Saving series-level progress:', seriesId);
+        if (mediaId) {
+          console.log('[Playback] Saving progress on stop:', position, '/', duration);
+          
+          // For series episodes, extract series_id and save both levels
+          if (vodInfo.type === 'series' && mediaId.includes('_ep_')) {
+            const parts = mediaId.split('_ep_');
+            if (parts.length === 2) {
+              const episodeId = parts[1];
+              const seriesId = parts[0];
+              
+              // Save series-level progress (for Recently Watched list)
+              console.log('[Playback] Saving series-level progress:', seriesId);
+              await updateVodWatchProgress(
+                seriesId,  // Use series_id, not episode-specific mediaId
+                'series',
+                Math.floor(position),
+                Math.floor(duration)
+              );
+              
+              // Save episode-level progress (for episode resume)
+              console.log('[Playback] Saving episode-level progress:', episodeId, seriesId);
+              console.log('[Playback] Episode save values:', {
+                position: Math.floor(position),
+                duration: Math.floor(duration),
+                sourceId: vodInfo.source_id
+              });
+              await recordEpisodeWatch(
+                episodeId,
+                seriesId,
+                vodInfo.source_id || '',
+                0, // We'll update these from DB
+                0,
+                '',
+                Math.floor(position),
+                Math.floor(duration)
+              );
+            }
+          } else {
+            // For movies or series without episode info, save normally
             await updateVodWatchProgress(
-              seriesId,  // Use series_id, not episode-specific mediaId
-              'series',
-              Math.floor(position),
-              Math.floor(duration)
-            );
-            
-            // Save episode-level progress (for episode resume)
-            console.log('[Playback] Saving episode-level progress:', episodeId, seriesId);
-            console.log('[Playback] Episode save values:', {
-              position: Math.floor(position),
-              duration: Math.floor(duration),
-              sourceId: vodInfo.source_id
-            });
-            await recordEpisodeWatch(
-              episodeId,
-              seriesId,
-              vodInfo.source_id || '',
-              0, // We'll update these from DB
-              0,
-              '',
+              mediaId,
+              vodInfo.type as 'movie' | 'series',
               Math.floor(position),
               Math.floor(duration)
             );
           }
-        } else {
-          // For movies or series without episode info, save normally
-          await updateVodWatchProgress(
-            mediaId,
-            vodInfo.type as 'movie' | 'series',
-            Math.floor(position),
-            Math.floor(duration)
-          );
         }
-        
-        console.log('[Playback] ✅ Progress saved on stop');
       }
+      console.log('[Playback] ✅ Progress saved on stop');
     }
     
     clearPendingSeeks();

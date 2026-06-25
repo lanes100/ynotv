@@ -2973,7 +2973,8 @@ html.modern-ui-v3 .guide-channel-row.currently-playing .program-block.current:ho
 }
 
 .modern-ui-v3 .dvr-card,
-.modern-ui-v3 .dvr-media-card {
+.modern-ui-v3 .dvr-media-card,
+.modern-ui-v3 .dvr-download-card {
   background: rgba(255, 255, 255, 0.03) !important;
   border: 1px solid rgba(255, 255, 255, 0.06) !important;
   border-radius: 14px !important;
@@ -2981,7 +2982,8 @@ html.modern-ui-v3 .guide-channel-row.currently-playing .program-block.current:ho
 }
 
 .modern-ui-v3 .dvr-card:hover,
-.modern-ui-v3 .dvr-media-card:hover {
+.modern-ui-v3 .dvr-media-card:hover,
+.modern-ui-v3 .dvr-download-card:hover {
   border-color: rgba(255, 255, 255, 0.15) !important;
   box-shadow: 
     0 8px 24px rgba(0, 0, 0, 0.25),

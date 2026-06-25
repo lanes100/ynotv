@@ -116,6 +116,8 @@ export interface ExportData {
         autoDeletePolicy: string;
         createdAt: number;
         thumbnailPath?: string;
+        progressSeconds?: number;
+        lastWatchedAt?: number;
     }>;
     dvrSettings: Array<{ key: string; value: string }>;
     failoverGroups: Array<{
@@ -340,7 +342,9 @@ export async function exportAllData(): Promise<{ success: boolean; filePath?: st
             keepUntil: r.keep_until,
             autoDeletePolicy: r.auto_delete_policy,
             createdAt: r.created_at,
-            thumbnailPath: r.thumbnail_path
+            thumbnailPath: r.thumbnail_path,
+            progressSeconds: r.progress_seconds,
+            lastWatchedAt: r.last_watched_at
         }));
 
         const dvrSettings = await db.dvrSettings.toArray();
@@ -824,7 +828,9 @@ export async function importAllData(): Promise<{ success: boolean; error?: strin
                         keep_until: r.keepUntil,
                         auto_delete_policy: r.autoDeletePolicy,
                         created_at: r.createdAt,
-                        thumbnail_path: r.thumbnailPath
+                        thumbnail_path: r.thumbnailPath,
+                        progress_seconds: r.progressSeconds ?? (r as any).progress_seconds ?? 0,
+                        last_watched_at: r.lastWatchedAt ?? (r as any).last_watched_at
                     }));
                     await db.dvrRecordings.bulkAdd(recordings as any);
                 }

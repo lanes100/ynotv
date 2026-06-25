@@ -1212,6 +1212,89 @@
     min-width: 0;
 }
 
+/* Vertical grid layout when showPosters is active */
+.dvr-downloads-list.show-posters {
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+    gap: 24px;
+}
+
+.dvr-downloads-list.show-posters .dvr-download-card {
+    padding: 12px;
+    gap: 10px;
+    position: relative;
+    border-radius: 16px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Absolute header layout on card overlay */
+.dvr-downloads-list.show-posters .dvr-download-card-header {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    right: 20px;
+    z-index: 10;
+    justify-content: space-between;
+    pointer-events: none;
+}
+
+.dvr-downloads-list.show-posters .dvr-download-actions,
+.dvr-downloads-list.show-posters .dvr-download-status-badge {
+    pointer-events: auto;
+}
+
+/* Actions buttons styling to pop nicely on top of the image */
+.dvr-downloads-list.show-posters .dvr-download-actions .dvr-btn-icon {
+    background: rgba(0, 0, 0, 0.7) !important;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+    width: 32px;
+    height: 32px;
+}
+
+.dvr-downloads-list.show-posters .dvr-download-actions .dvr-btn-icon:hover {
+    background: rgba(255, 255, 255, 0.2) !important;
+    border-color: var(--accent-primary, #00d4ff) !important;
+    transform: scale(1.08);
+}
+
+.dvr-downloads-list.show-posters .dvr-download-card-content {
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
+}
+
+.dvr-downloads-list.show-posters .dvr-download-poster {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 2/3;
+    border-radius: 12px;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.45);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.dvr-downloads-list.show-posters .dvr-download-card-body {
+    width: 100%;
+    padding: 0 4px;
+}
+
+.dvr-downloads-list.show-posters .dvr-download-title {
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.dvr-downloads-list.show-posters .dvr-download-subtitle {
+    font-size: 11px;
+}
+
+.dvr-downloads-list.show-posters .dvr-download-path {
+    font-size: 9px;
+    opacity: 0.6;
+}
+
 /* Premium Glassmorphic Switch */
 .dvr-downloads-toggle-posters {
     display: inline-flex;

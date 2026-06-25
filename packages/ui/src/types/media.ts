@@ -55,6 +55,7 @@ export interface VodPlayInfo {
   episodeId?: string;     // Current episode ID
   recordingStart?: number; // Unix timestamp in seconds of when recording actually started
   recordingStatus?: string; // e.g. 'recording' or 'completed'
+  recordingId?: number;     // DVR recording database ID
   backdropUrl?: string;   // Backdrop/banner image URL from details page
   logoUrl?: string;       // Movie/series name picture/logo URL from details page
   addonName?: string;     // Current stream addon name (Stremio/Nuvio source)

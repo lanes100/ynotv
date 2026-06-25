@@ -2232,6 +2232,20 @@ function App() {
       return;
     }
 
+    if (vodInfo?.type === 'recording') {
+      if (scrobblingMediaRef.current) {
+        const finalPercent = lastKnownProgressPercentRef.current;
+        console.log('[Scrobbler] Playback ended, stopping scrobble at percent:', finalPercent);
+        scrobbler.stopScrobble(finalPercent).catch(console.error);
+        scrobblingMediaRef.current = null;
+      }
+      if (scrobbleTimerRef.current) {
+        clearInterval(scrobbleTimerRef.current);
+        scrobbleTimerRef.current = null;
+      }
+      return;
+    }
+
     if (playing && duration > 0) {
       // Playback active (either starting or resuming)
       const currentPercent = (position / duration) * 100;

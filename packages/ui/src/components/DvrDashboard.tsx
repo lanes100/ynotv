@@ -607,6 +607,24 @@ function RecordedTab({ recorded, onPlay, onDelete, formatDateTime }: RecordedTab
                                 </svg>
                             </div>
                         )}
+                        {/* Watch progress bar */}
+                        {item.progress_seconds && item.duration_sec ? (
+                            <div style={{
+                                position: 'absolute',
+                                bottom: 0,
+                                left: 0,
+                                width: '100%',
+                                height: '4px',
+                                background: 'rgba(255, 255, 255, 0.2)',
+                                zIndex: 2
+                            }}>
+                                <div style={{
+                                    width: `${Math.min(100, Math.max(0, (item.progress_seconds / item.duration_sec) * 100))}%`,
+                                    height: '100%',
+                                    background: 'linear-gradient(90deg, #c0392b, #e74c3c)'
+                                }} />
+                            </div>
+                        ) : null}
                         <div className="dvr-media-overlay">
                             {(item.status === 'completed' || item.status === 'partial' || item.status === 'recording') && item.file_path && onPlay && (
                                 <button
@@ -1142,7 +1160,7 @@ function DownloadsTab({ onPlay }: DownloadsTabProps) {
                     <p>Try searching for a different keyword</p>
                 </div>
             ) : (
-                <div className="dvr-downloads-list">
+                <div className={`dvr-downloads-list ${showPosters ? 'show-posters' : ''}`}>
                     {filteredDownloads.map((item) => {
                         const isDownloading = item.status === 'downloading';
                         const isQueued = item.status === 'queued';
@@ -1157,17 +1175,17 @@ function DownloadsTab({ onPlay }: DownloadsTabProps) {
                         return (
                             <div key={item.id} className={`dvr-download-card ${item.status} ${showPosters && item.poster ? 'has-poster' : ''}`}>
                                 <div className="dvr-download-card-header">
-                                    <span className={`dvr-download-status-badge ${item.status}`}>
-                                        {item.status === 'downloading'
-                                            ? 'DOWNLOADING'
-                                            : item.status === 'queued'
-                                            ? 'QUEUED'
-                                            : item.status === 'completed'
-                                            ? 'COMPLETED'
-                                            : item.status === 'failed'
-                                            ? 'FAILED'
-                                            : 'CANCELED'}
-                                    </span>
+                                    {item.status !== 'completed' && (
+                                        <span className={`dvr-download-status-badge ${item.status}`}>
+                                            {item.status === 'downloading'
+                                                ? 'DOWNLOADING'
+                                                : item.status === 'queued'
+                                                ? 'QUEUED'
+                                                : item.status === 'failed'
+                                                ? 'FAILED'
+                                                : 'CANCELED'}
+                                        </span>
+                                    )}
                                     <div className="dvr-download-actions">
                                         {isCompleted && onPlay && (
                                             <button
@@ -1222,7 +1240,7 @@ function DownloadsTab({ onPlay }: DownloadsTabProps) {
 
                                 <div className="dvr-download-card-content">
                                     {showPosters && item.poster && (
-                                        <div className="dvr-download-poster">
+                                        <div className="dvr-download-poster" style={{ position: 'relative' }}>
                                             <img
                                                 src={item.poster}
                                                 alt={item.title}
@@ -1231,6 +1249,23 @@ function DownloadsTab({ onPlay }: DownloadsTabProps) {
                                                     e.currentTarget.style.display = 'none';
                                                 }}
                                             />
+                                            {/* Watch progress overlay on poster */}
+                                            {item.status === 'completed' && item.watchProgressSeconds && item.durationSecs ? (
+                                                <div style={{
+                                                    position: 'absolute',
+                                                    bottom: 0,
+                                                    left: 0,
+                                                    width: '100%',
+                                                    height: '4px',
+                                                    background: 'rgba(255, 255, 255, 0.2)'
+                                                }}>
+                                                    <div style={{
+                                                        width: `${Math.min(100, Math.max(0, (item.watchProgressSeconds / item.durationSecs) * 100))}%`,
+                                                        height: '100%',
+                                                        background: 'linear-gradient(90deg, #c0392b, #e74c3c)'
+                                                    }} />
+                                                </div>
+                                            ) : null}
                                         </div>
                                     )}
                                     <div className="dvr-download-card-body">
@@ -1245,6 +1280,21 @@ function DownloadsTab({ onPlay }: DownloadsTabProps) {
                                         <p className="dvr-download-path" title={item.savePath}>
                                             {item.savePath}
                                         </p>
+
+                                        {/* Watch progress bar for completed downloads without posters */}
+                                        {item.status === 'completed' && item.watchProgressSeconds && item.durationSecs && (!showPosters || !item.poster) ? (
+                                            <div style={{ marginTop: '8px' }}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'rgba(255,255,255,0.5)', marginBottom: '4px' }}>
+                                                    <span>Watched: {Math.round((item.watchProgressSeconds / item.durationSecs) * 100)}%</span>
+                                                </div>
+                                                <div className="dvr-progress-bar">
+                                                    <div
+                                                        className="dvr-progress-fill"
+                                                        style={{ width: `${Math.min(100, Math.max(0, (item.watchProgressSeconds / item.durationSecs) * 100))}%` }}
+                                                    />
+                                                </div>
+                                            </div>
+                                        ) : null}
 
                                         {isDownloading && (
                                             <div className="dvr-download-progress-section">

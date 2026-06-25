@@ -195,6 +195,8 @@ export interface DvrRecording {
   created_at: number;
 
   thumbnail_path?: string;           // Path to thumbnail image
+  progress_seconds?: number;
+  last_watched_at?: number;
 }
 
 // DVR Settings
@@ -481,7 +483,7 @@ class YnotvDatabase extends SqliteDatabase {
     // Each version block runs exactly ONCE. To add new columns in the future,
     // increment DB_VERSION and add a new case (do NOT modify existing cases).
     // ─────────────────────────────────────────────────────────────────────────
-    const DB_VERSION = 17;
+    const DB_VERSION = 18;
     const versionResult = await db.select('PRAGMA user_version') as Array<{ user_version: number }>;
     const currentVersion = versionResult[0]?.user_version ?? 0;
 
@@ -819,6 +821,16 @@ class YnotvDatabase extends SqliteDatabase {
         console.log('[DB] v5 migration: Added season/episode columns to vod_history');
       }
 
+      if (currentVersion < 18) {
+        // v18: Add progress_seconds and last_watched_at columns to dvr_recordings
+        console.log('[DB] v18 migration: Adding watch progress columns to dvr_recordings');
+        const addColumn = async (table: string, col: string, type: string) => {
+          try { await db.execute(`ALTER TABLE ${table} ADD COLUMN ${col} ${type}`); } catch { /* already exists */ }
+        };
+        await addColumn('dvr_recordings', 'progress_seconds', 'INTEGER DEFAULT 0');
+        await addColumn('dvr_recordings', 'last_watched_at', 'INTEGER');
+      }
+
       // Bump the stored version so these migrations never run again
       await db.execute(`PRAGMA user_version = ${DB_VERSION}`);
       console.log(`[DB] Migration to v${DB_VERSION} complete`);
@@ -1063,7 +1075,9 @@ class YnotvDatabase extends SqliteDatabase {
       keep_until INTEGER,
       auto_delete_policy TEXT DEFAULT 'space_needed',
       created_at INTEGER NOT NULL,
-      thumbnail_path TEXT
+      thumbnail_path TEXT,
+      progress_seconds INTEGER DEFAULT 0,
+      last_watched_at INTEGER
     )`);
     await db.execute(`CREATE INDEX IF NOT EXISTS idx_dvr_recordings_schedule ON dvr_recordings(schedule_id)`);
     await db.execute(`CREATE INDEX IF NOT EXISTS idx_dvr_recordings_status ON dvr_recordings(status)`);
@@ -2048,6 +2062,34 @@ export async function cancelRecording(scheduleId: number): Promise<void> {
 export async function deleteRecording(recordingId: number): Promise<void> {
   await db.dvrRecordings.delete(recordingId);
   dbEvents.notify('dvr_recordings', 'delete');
+}
+
+/**
+ * Update watch progress and optional duration for a DVR recording
+ */
+export async function updateDvrRecordingProgress(
+  recordingId: number,
+  progressSeconds: number,
+  durationSec?: number
+): Promise<void> {
+  try {
+    const dbInstance = await (db as any).dbPromise;
+    if (durationSec && durationSec > 0) {
+      await dbInstance.execute(
+        `UPDATE dvr_recordings SET progress_seconds = ?, duration_sec = ?, last_watched_at = ? WHERE id = ?`,
+        [progressSeconds, durationSec, Date.now(), recordingId]
+      );
+    } else {
+      await dbInstance.execute(
+        `UPDATE dvr_recordings SET progress_seconds = ?, last_watched_at = ? WHERE id = ?`,
+        [progressSeconds, Date.now(), recordingId]
+      );
+    }
+    dbEvents.notify('dvr_recordings', 'update');
+  } catch (error) {
+    console.error('[DVR] Failed to update recording progress:', error);
+    throw error;
+  }
 }
 
 /** Manually convert a TS recording to MP4 or MKV */
