@@ -969,6 +969,28 @@ function App() {
   // ==========================================================================
   const pip = usePipMode();
   const { pipMode, pipControlsVisible, togglePip, showPipControls } = pip;
+  const pipFromPreviewRef = useRef<{ categoriesOpen: boolean } | null>(null);
+
+  // Wrapper used by all exit paths (PiPMediaBar, drag overlay, etc.)
+  // Reopens the guide + restores category sidebar when PiP was entered from preview.
+  const handleTogglePip = useCallback(async () => {
+    const wasInPip = pipMode;
+    await togglePip();
+    if (wasInPip && pipFromPreviewRef.current) {
+      const prev = pipFromPreviewRef.current;
+      pipFromPreviewRef.current = null;
+      setActiveView('guide');
+      setCategoriesOpen(prev.categoriesOpen);
+    }
+  }, [pipMode, togglePip]);
+
+  // Used by the PiP button inside the EPG preview video
+  const handlePipFromPreview = useCallback(async () => {
+    pipFromPreviewRef.current = { categoriesOpen };
+    setActiveView('none');
+    setCategoriesOpen(false);
+    await togglePip();
+  }, [togglePip, categoriesOpen, setCategoriesOpen]);
 
   const handleMouseMovePip = useCallback(() => {
     handleMouseMove();
@@ -3616,7 +3638,7 @@ function App() {
             onMouseDown={(e) => {
               getCurrentWindow().startDragging().catch(() => {});
             }}
-            onDoubleClick={() => togglePip()}
+            onDoubleClick={() => handleTogglePip()}
           />
           <PiPMediaBar
             visible={pipControlsVisible}
@@ -3632,7 +3654,7 @@ function App() {
             onToggleMute={handleToggleMute}
             onVolumeChange={handleVolumeChange}
             onSeek={handleSeek}
-            onExitPip={togglePip}
+            onExitPip={handleTogglePip}
             onSetAspectRatio={handleSetPipAspectRatio}
           />
         </>
@@ -3923,6 +3945,8 @@ function App() {
         timeshiftEnabled={timeshiftEnabled}
         timeshiftState={timeshiftState}
         onTimeshiftCatchUp={timeshiftState ? () => handleSeek(timeshiftState.cacheEnd - 1) : undefined}
+        pipMode={pipMode}
+        onTogglePip={handlePipFromPreview}
       />
 
       {/* Settings Panel - as popup overlay in main layout, or full view in multiview */}

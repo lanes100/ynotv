@@ -167,106 +167,290 @@
   transform: translate(-50%, -50%);
 }
 
-/* Mini Media Bar for EPG Preview - Transparent overlay in bottom right */
+/* Mini Media Bar for EPG Preview - Gradient scrim with floating pill buttons */
 .guide-preview-minibar {
   position: absolute;
-  bottom: 12px;
-  right: 12px;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 20;
+  padding: 10px 12px 10px;
+  background: linear-gradient(
+    to top,
+    rgba(0, 0, 0, 0.75) 0%,
+    rgba(0, 0, 0, 0.4) 70%,
+    transparent 100%
+  );
+  border-radius: 0 0 12px 12px;
+}
+
+/* Seek bar row */
+.guide-minibar-seek-row {
   display: flex;
   align-items: center;
   gap: 8px;
-  background: transparent;
-  z-index: 20;
-  padding: 4px;
 }
 
+.guide-minibar-seek-time {
+  font-size: 0.7rem;
+  font-variant-numeric: tabular-nums;
+  color: rgba(255, 255, 255, 0.7);
+  white-space: nowrap;
+  flex-shrink: 0;
+  min-width: 32px;
+}
+
+.guide-minibar-seek-bar {
+  position: relative;
+  flex: 1;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 2px;
+  cursor: pointer;
+  transition: height 0.15s ease;
+}
+
+.guide-minibar-seek-bar:hover,
+.guide-minibar-seek-bar.active {
+  height: 5px;
+}
+
+.guide-minibar-seek-fill {
+  position: relative;
+  height: 100%;
+  background: var(--accent-primary, #00d4ff);
+  border-radius: 2px;
+}
+
+/* Scrubber dot on hover via pseudo-element */
+.guide-minibar-seek-fill::after {
+  content: '';
+  position: absolute;
+  right: -4px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: white;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.guide-minibar-seek-bar:hover .guide-minibar-seek-fill::after,
+.guide-minibar-seek-bar.active .guide-minibar-seek-fill::after,
+.guide-minibar-seek-bar.dragging .guide-minibar-seek-fill::after {
+  opacity: 1;
+}
+
+.guide-minibar-seek-bar.dragging .guide-minibar-seek-fill::after {
+  transform: translateY(-50%) scale(1.15);
+}
+
+.guide-minibar-seek-tip {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  transform: translateX(-50%);
+  background: rgba(10, 10, 15, 0.95);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: white;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  white-space: nowrap;
+  pointer-events: none;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.guide-minibar-seek-tip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 4px solid transparent;
+  border-top-color: rgba(10, 10, 15, 0.95);
+}
+
+/* Buttons row — three floating groups */
+.guide-minibar-buttons {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.guide-minibar-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Volume — collapsible glass pill */
 .guide-minibar-volume {
   display: flex;
   align-items: center;
-  gap: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  height: 28px;
+  width: 28px;
+  overflow: hidden;
+  transition: width 0.25s cubic-bezier(0.16, 1, 0.3, 1), background 0.2s;
+}
+
+.guide-minibar-volume:hover {
+  width: 90px;
+  background: rgba(255, 255, 255, 0.16);
 }
 
 .guide-minibar-volume-slider {
   width: 0;
   opacity: 0;
+  margin-left: 2px;
+  margin-right: 6px;
   transition: all 0.2s ease;
-  height: 4px;
+  height: 3px;
   -webkit-appearance: none;
   appearance: none;
-  background: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.25);
   border-radius: 2px;
   cursor: pointer;
-  transform-origin: right center;
+  transform-origin: left center;
 }
 
 .guide-minibar-volume-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 10px;
-  height: 10px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
-  background: #fff;
+  background: white;
+  box-shadow: 0 0 6px rgba(0, 212, 255, 0.3);
   cursor: pointer;
 }
 
 .guide-minibar-volume:hover .guide-minibar-volume-slider {
-  width: 60px;
+  width: 42px;
   opacity: 1;
 }
 
+/* Volume button — nested inside the pill, flush to left */
+.guide-minibar-volume .guide-minibar-btn {
+  width: 28px !important;
+  height: 28px !important;
+  min-width: 28px;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  padding: 5px !important;
+  color: rgba(255, 255, 255, 0.85);
+  border-radius: 14px;
+}
+
+.guide-minibar-volume .guide-minibar-btn:hover {
+  color: var(--accent-primary, #00d4ff) !important;
+  transform: none !important;
+}
+
+/* Standard glass pill buttons (28×28, 6px radius) */
 .guide-minibar-btn {
-  width: 36px;
-  height: 36px;
-  background: rgba(0, 0, 0, 0.5);
-  border: none;
-  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
   color: rgba(255, 255, 255, 0.85);
   cursor: pointer;
-  padding: 8px;
+  padding: 5px;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: all 0.15s ease;
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
 }
 
 .guide-minibar-btn:hover {
-  background: rgba(0, 0, 0, 0.7);
-  color: rgba(255, 255, 255, 1);
-  transform: scale(1.05);
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.25);
+  color: white;
 }
 
 .guide-minibar-btn:active {
-  transform: scale(0.95);
+  transform: scale(0.92);
 }
 
-/* Aspect ratio menu for guide mini bar */
-.guide-minibar-aspect {
-  position: relative;
-}
-
-.guide-minibar-aspect-menu {
-  position: absolute;
-  bottom: calc(100% + 8px);
-  right: 0;
-  background: rgba(20, 20, 20, 0.95);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
-  padding: 4px;
+/* Primary button (play/pause) — larger circle with glow */
+.guide-minibar-btn-primary {
+  width: 34px;
+  height: 34px;
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  color: white;
+  cursor: pointer;
+  padding: 7px;
   display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 100px;
-  z-index: 100;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  box-shadow: 0 0 12px rgba(255, 255, 255, 0.1);
 }
 
+.guide-minibar-btn-primary:hover {
+  background: rgba(255, 255, 255, 0.3);
+  box-shadow: 0 0 16px rgba(255, 255, 255, 0.2);
+  color: white;
+}
+
+.guide-minibar-btn-primary:active {
+  transform: scale(0.92);
+}
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  backdrop-filter: blur(10px) saturate(140%);
+  -webkit-backdrop-filter: blur(10px) saturate(140%);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.guide-minibar-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(0, 212, 255, 0.3);
+  color: #00d4ff;
+  transform: scale(1.1);
+  box-shadow: 0 6px 16px rgba(0, 212, 255, 0.25), 0 0 8px rgba(0, 212, 255, 0.15);
+}
+
+.guide-minibar-btn:active {
+  transform: scale(0.92);
+}
+
+/* Hero Play/Pause Button */
+.guide-minibar-btn.guide-minibar-btn-play {
+  width: 38px;
+  height: 38px;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.guide-minibar-btn.guide-minibar-btn-play:hover {
+  background: rgba(255, 255, 255, 0.22);
+  border-color: rgba(0, 212, 255, 0.4);
+  color: #00d4ff;
+  transform: scale(1.1);
+  box-shadow: 0 8px 20px rgba(0, 212, 255, 0.3), 0 0 10px rgba(0, 212, 255, 0.2);
+}
 .guide-minibar-aspect-item {
-  background: none;
-  border: none;
-  color: rgba(255, 255, 255, 0.8);
-  padding: 6px 10px;
   border-radius: 4px;
   cursor: pointer;
   font-size: 0.8rem;

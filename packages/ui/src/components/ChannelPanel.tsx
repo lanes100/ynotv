@@ -18,6 +18,15 @@ import { useChannelSortOrder, useEpgView, useEpgVisibleHours, useUIStore } from 
 import { NowPlayingBar } from './NowPlayingBar';
 import type { StoredChannel, StoredProgram, WatchlistItem } from '../db';
 import { db } from '../db';
+
+function formatSeekTime(seconds: number): string {
+  if (!isFinite(seconds) || seconds < 0) return '0:00';
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = Math.floor(seconds % 60);
+  if (h > 0) return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  return `${m}:${s.toString().padStart(2, '0')}`;
+}
 import { syncSource, type SyncResult } from '../db/sync';
 import { VideoErrorOverlay } from './VideoErrorOverlay';
 import { StreamRetryOverlay, type RetryState } from './StreamRetryOverlay';
@@ -166,6 +175,8 @@ interface ChannelPanelProps {
   onTimeshiftCatchUp?: () => void;
   aspectRatio?: AspectRatioMode;
   onSetAspectRatio?: (mode: AspectRatioMode) => void;
+  pipMode?: boolean;
+  onTogglePip?: () => void;
   /** Retry state for Live TV — shown in preview pane */
   retryState?: RetryState | null;
   /** Failover state for Live TV — shown in preview pane */
@@ -243,6 +254,8 @@ export function ChannelPanel({
   popoutIsOpen = false,
   guideTransparent = false,
   onPreviewVideoRectChange,
+  pipMode = false,
+  onTogglePip,
 }: ChannelPanelProps) {
   const epgView = useEpgView();
   const epgVisibleHours = useEpgVisibleHours();
@@ -443,6 +456,58 @@ export function ChannelPanel({
   // Volume/mute state for mini media bar
   const [previewVolume, setPreviewVolume] = useState(100);
   const [previewMuted, setPreviewMuted] = useState(false);
+
+  // Seek bar state for mini media bar (timeshift / VOD)
+  const [seekHover, setSeekHover] = useState(false);
+  const [seekDrag, setSeekDrag] = useState(false);
+  const [hoverPos, setHoverPos] = useState(0);
+  const seekBarRef = useRef<HTMLDivElement>(null);
+
+  const hasTimeshift = timeshiftState && timeshiftState.cachedDuration > 1;
+  const showSeek = (timeshiftEnabled && !!hasTimeshift) && !!onSeek;
+
+  const getSeekRatio = useCallback((clientX: number): number => {
+    if (!seekBarRef.current) return 0;
+    const rect = seekBarRef.current.getBoundingClientRect();
+    return Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+  }, []);
+
+  const ts = hasTimeshift ? timeshiftState! : null;
+  const seekFillPct = ts ? ((ts.timePos - ts.cacheStart) / ts.cachedDuration) * 100 : 0;
+
+  const handleSeekClick = useCallback((e: React.MouseEvent) => {
+    if (!showSeek || !onSeek) return;
+    const ratio = getSeekRatio(e.clientX);
+    if (ts) {
+      onSeek(ts.cacheStart + ratio * ts.cachedDuration);
+    }
+  }, [showSeek, onSeek, getSeekRatio, ts]);
+
+  const handleSeekDragStart = useCallback((e: React.MouseEvent) => {
+    if (!showSeek || !onSeek) return;
+    e.preventDefault();
+    setSeekDrag(true);
+    const ratio = getSeekRatio(e.clientX);
+    setHoverPos(ts ? ts.cacheStart + ratio * ts.cachedDuration : 0);
+  }, [showSeek, onSeek, getSeekRatio, ts]);
+
+  useEffect(() => {
+    if (!seekDrag) return;
+    const onMove = (e: MouseEvent) => {
+      const ratio = getSeekRatio(e.clientX);
+      setHoverPos(ts ? ts.cacheStart + ratio * ts.cachedDuration : 0);
+    };
+    const onUp = (e: MouseEvent) => {
+      setSeekDrag(false);
+      if (onSeek) {
+        const ratio = getSeekRatio(e.clientX);
+        if (ts) onSeek(ts.cacheStart + ratio * ts.cachedDuration);
+      }
+    };
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+    return () => { document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp); };
+  }, [seekDrag, onSeek, getSeekRatio, ts]);
 
   // Aspect ratio menu state for mini media bar
   const [showAspectMenu, setShowAspectMenu] = useState(false);
@@ -1738,7 +1803,7 @@ export function ChannelPanel({
               />
             )}
           </div>
-          {/* Mini Media Bar for EPG Preview - transparent overlay in bottom right */}
+          {/* Mini Media Bar for EPG Preview - floating buttons overlay */}
           {isMiniBarVisible && (
             <div
               className="guide-preview-minibar"
@@ -1746,123 +1811,139 @@ export function ChannelPanel({
               onMouseEnter={() => setMiniBarHovered(true)}
               onMouseLeave={() => setMiniBarHovered(false)}
             >
-              {/* Play/Pause button */}
-              <button
-                className="guide-minibar-btn"
-                onClick={onTogglePlay}
-                onDoubleClick={(e) => e.stopPropagation()}
-                title={isPlaying ? 'Pause' : 'Play'}
-              >
-                {isPlaying ? (
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                    <rect x="6" y="4" width="4" height="16" rx="1" />
-                    <rect x="14" y="4" width="4" height="16" rx="1" />
-                  </svg>
-                ) : (
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M8 5v14l11-7z" />
-                  </svg>
-                )}
-              </button>
-              {/* Stop button */}
-              {onStop && (
-                <button
-                  className="guide-minibar-btn"
-                  onClick={onStop}
-                  onDoubleClick={(e) => e.stopPropagation()}
-                  title="Stop"
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                    <rect x="6" y="6" width="12" height="12" rx="1" />
-                  </svg>
-                </button>
-              )}
-              {/* Up button */}
-              {onChannelUp && (
-                <button
-                  className="guide-minibar-btn"
-                  onClick={onChannelUp}
-                  onDoubleClick={(e) => e.stopPropagation()}
-                  title="Previous Channel (Up)"
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M18 15l-6-6-6 6" />
-                  </svg>
-                </button>
-              )}
-              {/* Down button */}
-              {onChannelDown && (
-                <button
-                  className="guide-minibar-btn"
-                  onClick={onChannelDown}
-                  onDoubleClick={(e) => e.stopPropagation()}
-                  title="Next Channel (Down)"
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M6 9l6 6 6-6" />
-                  </svg>
-                </button>
-              )}
-              {/* Aspect Ratio button — hidden but kept for easy re-enable */}
-              {false && onSetAspectRatio && (
-                <div className="guide-minibar-aspect" ref={aspectMenuRef}>
-                  <button
-                    className="guide-minibar-btn"
-                    onClick={() => setShowAspectMenu(v => !v)}
-                    onDoubleClick={(e) => e.stopPropagation()}
-                    title="Aspect Ratio"
+              {/* Seek bar row (timeshift) */}
+              {showSeek && (
+                <div className="guide-minibar-seek-row">
+                  <span className="guide-minibar-seek-time">
+                    {formatSeekTime(ts ? ts.timePos - ts.cacheStart : (isVod ? 0 : 0))}
+                  </span>
+                  <div
+                    ref={seekBarRef}
+                    className={`guide-minibar-seek-bar ${seekHover || seekDrag ? 'active' : ''} ${seekDrag ? 'dragging' : ''}`}
+                    onClick={handleSeekClick}
+                    onMouseEnter={() => setSeekHover(true)}
+                    onMouseLeave={() => setSeekHover(false)}
+                    onMouseDown={handleSeekDragStart}
                   >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <rect x="2" y="5" width="20" height="14" rx="2" />
-                      <path d="M7 9h2M7 15h2M15 9h2M15 15h2" strokeLinecap="round" />
-                    </svg>
-                  </button>
-                  {showAspectMenu && (
-                    <div className="guide-minibar-aspect-menu">
-                      {(['fit', 'fill', 'stretch', '4:3', '16:9'] as AspectRatioMode[]).map((mode) => (
-                        <button
-                          key={mode}
-                          className={`guide-minibar-aspect-item ${aspectRatio === mode ? 'active' : ''}`}
-                          onClick={() => {
-                            onSetAspectRatio?.(mode);
-                            setShowAspectMenu(false);
-                          }}
-                        >
-                          {getAspectRatioLabel(mode)}
-                        </button>
-                      ))}
-                    </div>
-                  )}
+                    <div className="guide-minibar-seek-fill" style={{ width: `${seekFillPct}%` }} />
+                    {seekHover && !seekDrag && (
+                      <div className="guide-minibar-seek-tip" style={{ left: `${((hoverPos - (ts ? ts.cacheStart : 0)) / (ts ? ts.cachedDuration : 1)) * 100}%` }}>
+                        {formatSeekTime(hoverPos)}
+                      </div>
+                    )}
+                  </div>
+                  <span className="guide-minibar-seek-time">
+                    {ts ? `-${formatSeekTime(ts.behindLive)}` : ''}
+                  </span>
                 </div>
               )}
-              {/* Volume button with expandable slider */}
-              <div className="guide-minibar-volume" onDoubleClick={(e) => e.stopPropagation()}>
-                <button
-                  className="guide-minibar-btn"
-                  onClick={handlePreviewMuteToggle}
-                  onDoubleClick={(e) => e.stopPropagation()}
-                  title={previewMuted ? 'Unmute' : 'Mute'}
-                >
-                  {previewMuted || previewVolume === 0 ? (
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z" />
-                    </svg>
-                  ) : (
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z" />
-                    </svg>
+              {/* Buttons row — three groups: left (ch up/down), center (play/stop), right (volume/PiP) */}
+              <div className="guide-minibar-buttons">
+                {/* Left group: channel up/down */}
+                <div className="guide-minibar-group guide-minibar-group-left">
+                  {onChannelUp && (
+                    <button
+                      className="guide-minibar-btn"
+                      onClick={onChannelUp}
+                      onDoubleClick={(e) => e.stopPropagation()}
+                      title="Previous Channel (Up)"
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M18 15l-6-6-6 6" />
+                      </svg>
+                    </button>
                   )}
-                </button>
-                <input
-                  type="range"
-                  min="0"
-                  max="100"
-                  value={previewMuted ? 0 : previewVolume}
-                  onChange={handlePreviewVolumeChange}
-                  onDoubleClick={(e) => e.stopPropagation()}
-                  className="guide-minibar-volume-slider"
-                  title="Volume"
-                />
+                  {onChannelDown && (
+                    <button
+                      className="guide-minibar-btn"
+                      onClick={onChannelDown}
+                      onDoubleClick={(e) => e.stopPropagation()}
+                      title="Next Channel (Down)"
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M6 9l6 6 6-6" />
+                      </svg>
+                    </button>
+                  )}
+                </div>
+
+                {/* Center group: playback controls */}
+                <div className="guide-minibar-group guide-minibar-group-center">
+                  <button
+                    className="guide-minibar-btn guide-minibar-btn-primary"
+                    onClick={onTogglePlay}
+                    onDoubleClick={(e) => e.stopPropagation()}
+                    title={isPlaying ? 'Pause' : 'Play'}
+                  >
+                    {isPlaying ? (
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                        <rect x="6" y="4" width="4" height="16" rx="1" />
+                        <rect x="14" y="4" width="4" height="16" rx="1" />
+                      </svg>
+                    ) : (
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M8 5v14l11-7z" />
+                      </svg>
+                    )}
+                  </button>
+                  {onStop && (
+                    <button
+                      className="guide-minibar-btn"
+                      onClick={onStop}
+                      onDoubleClick={(e) => e.stopPropagation()}
+                      title="Stop"
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                        <rect x="6" y="6" width="12" height="12" rx="1" />
+                      </svg>
+                    </button>
+                  )}
+                </div>
+
+                {/* Right group: volume, PiP */}
+                <div className="guide-minibar-group guide-minibar-group-right">
+                  <div className="guide-minibar-volume" onDoubleClick={(e) => e.stopPropagation()}>
+                    <button
+                      className="guide-minibar-btn"
+                      onClick={handlePreviewMuteToggle}
+                      onDoubleClick={(e) => e.stopPropagation()}
+                      title={previewMuted ? 'Unmute' : 'Mute'}
+                    >
+                      {previewMuted || previewVolume === 0 ? (
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z" />
+                        </svg>
+                      ) : (
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z" />
+                        </svg>
+                      )}
+                    </button>
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      value={previewMuted ? 0 : previewVolume}
+                      onChange={handlePreviewVolumeChange}
+                      onDoubleClick={(e) => e.stopPropagation()}
+                      className="guide-minibar-volume-slider"
+                      title="Volume"
+                    />
+                  </div>
+                  {onTogglePip && (
+                    <button
+                      className="guide-minibar-btn"
+                      onClick={onTogglePip}
+                      onDoubleClick={(e) => e.stopPropagation()}
+                      title={pipMode ? 'Exit Picture-in-Picture' : 'Picture-in-Picture'}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="2" y="3" width="20" height="18" rx="2" />
+                        <rect x="10" y="10" width="10" height="8" rx="1" fill={pipMode ? 'currentColor' : 'none'} />
+                      </svg>
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           )}
@@ -1902,6 +1983,8 @@ export function ChannelPanel({
               onChannelUp={onChannelUp}
               onChannelDown={onChannelDown}
               onReplayStream={selectedChannel ? () => onPlayChannel(selectedChannel) : undefined}
+              pipMode={pipMode}
+              onTogglePip={onTogglePip}
             />
           )}
 
