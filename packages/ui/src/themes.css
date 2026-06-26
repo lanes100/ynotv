@@ -3034,6 +3034,142 @@
   --bg-gradient-3: #050505;
 }
 
+/* Dark Slate — cool charcoal with subtle silver-grey glass panels */
+[data-theme="dark-slate"] {
+  --bg-primary: #181a1c;
+  --bg-secondary: rgba(22, 24, 26, 0.92);
+  --bg-tertiary: rgba(28, 30, 33, 0.88);
+  --bg-overlay: rgba(14, 15, 16, 0.85);
+
+  --surface-color: rgba(255, 255, 255, 0.10);
+  --surface-hover: rgba(255, 255, 255, 0.14);
+  --surface-active: rgba(255, 255, 255, 0.18);
+  --surface-border: rgba(255, 255, 255, 0.14);
+  --surface-glow: rgba(255, 255, 255, 0.06);
+
+  --text-primary: #ffffff;
+  --text-secondary: rgba(210, 212, 220, 0.9);
+  --text-muted: rgba(170, 172, 185, 0.65);
+  --text-accent: #7B8AAA;
+
+  --accent-primary: #7B8AAA;
+  --accent-secondary: #6B7A99;
+  --accent-glow: rgba(123, 138, 170, 0.4);
+
+  --glass-blur: 22px;
+  --glass-saturation: 150%;
+  --glass-border: 1px solid rgba(255, 255, 255, 0.13);
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.45),
+    0 0 30px rgba(107, 122, 153, 0.10),
+    0 0 0 1px rgba(255, 255, 255, 0.10) inset;
+
+  --status-live: #7B8AAA;
+  --status-recording: #7B8AAA;
+  --status-new: #6B7A99;
+
+  --bg-gradient-1: #161718;
+  --bg-gradient-2: #1a1c1e;
+  --bg-gradient-3: #141516;
+}
+
+/* Dark Slate accent visibility overrides */
+[data-theme="dark-slate"] .guide-current-time-indicator {
+  background: #7B8AAA !important;
+  box-shadow: 0 0 10px rgba(123, 138, 170, 0.4) !important;
+}
+
+[data-theme="dark-slate"] .guide-program-progress-fill {
+  background: linear-gradient(90deg, #7B8AAA 0%, #9AABBF 100%) !important;
+  box-shadow: 0 0 8px rgba(123, 138, 170, 0.3) !important;
+}
+
+html.modern-ui-v3[data-theme="dark-slate"] .now-playing-bar .npb-progress-fill,
+[data-theme="dark-slate"] .npb-progress-fill {
+  background: linear-gradient(90deg, #6B7A99 0%, #7B8AAA 100%) !important;
+  box-shadow: 0 0 8px rgba(123, 138, 170, 0.3) !important;
+}
+
+[data-theme="dark-slate"] .metadata-badge .quality,
+[data-theme="dark-slate"] .metadata-badge .fps {
+  color: #7B8AAA !important;
+}
+
+html.modern-ui-v3[data-theme="dark-slate"] .category-item.selected,
+html.modern-ui-v3[data-theme="dark-slate"] .category-list-bar.selected {
+  background: rgba(123, 138, 170, 0.18) !important;
+  border-color: rgba(123, 138, 170, 0.35) !important;
+}
+
+html.modern-ui-v3[data-theme="dark-slate"] .category-item.selected .category-count,
+html.modern-ui-v3[data-theme="dark-slate"] .category-list-bar.selected .category-count {
+  background: rgba(123, 138, 170, 0.3) !important;
+  color: #ffffff !important;
+}
+
+[data-theme="dark-slate"] .metadata-badge.compact {
+  background: linear-gradient(135deg, rgba(123, 138, 170, 0.8), rgba(107, 122, 153, 0.9)) !important;
+}
+
+/* Dark Warm Grey */
+[data-theme="dark-warmgrey"] {
+  --bg-primary: #080808;
+  --bg-secondary: rgba(12, 12, 12, 0.98);
+  --bg-tertiary: rgba(20, 20, 20, 0.95);
+  --bg-overlay: rgba(0, 0, 0, 0.92);
+  --surface-color: rgba(15, 15, 15, 0.95);
+  --surface-hover: rgba(30, 30, 30, 0.98);
+  --surface-active: rgba(45, 45, 45, 0.98);
+  --surface-border: rgba(138, 138, 154, 0.35);
+  --surface-glow: rgba(138, 138, 154, 0.25);
+  --text-primary: #ffffff;
+  --text-secondary: rgba(255, 255, 255, 0.75);
+  --text-muted: rgba(255, 255, 255, 0.5);
+  --text-accent: #8A8A9A;
+  --accent-primary: #8A8A9A;
+  --accent-secondary: #6E6E7C;
+  --accent-glow: rgba(138, 138, 154, 0.5);
+  --glass-blur: 0px;
+  --glass-saturation: 100%;
+  --glass-border: 1px solid rgba(138, 138, 154, 0.3);
+  --glass-shadow: 0 0 24px rgba(138, 138, 154, 0.25);
+  --status-live: #8A8A9A;
+  --status-recording: #8A8A9A;
+  --status-new: #8A8A9A;
+  --bg-gradient-1: #080808;
+  --bg-gradient-2: #111111;
+  --bg-gradient-3: #050505;
+}
+
+/* Dark Steel */
+[data-theme="dark-steel"] {
+  --bg-primary: #080808;
+  --bg-secondary: rgba(12, 12, 12, 0.98);
+  --bg-tertiary: rgba(20, 20, 20, 0.95);
+  --bg-overlay: rgba(0, 0, 0, 0.92);
+  --surface-color: rgba(15, 15, 15, 0.95);
+  --surface-hover: rgba(30, 30, 30, 0.98);
+  --surface-active: rgba(45, 45, 45, 0.98);
+  --surface-border: rgba(92, 122, 158, 0.35);
+  --surface-glow: rgba(92, 122, 158, 0.25);
+  --text-primary: #ffffff;
+  --text-secondary: rgba(255, 255, 255, 0.75);
+  --text-muted: rgba(255, 255, 255, 0.5);
+  --text-accent: #5C7A9E;
+  --accent-primary: #5C7A9E;
+  --accent-secondary: #4A6280;
+  --accent-glow: rgba(92, 122, 158, 0.5);
+  --glass-blur: 0px;
+  --glass-saturation: 100%;
+  --glass-border: 1px solid rgba(92, 122, 158, 0.3);
+  --glass-shadow: 0 0 24px rgba(92, 122, 158, 0.25);
+  --status-live: #5C7A9E;
+  --status-recording: #5C7A9E;
+  --status-new: #5C7A9E;
+  --bg-gradient-1: #080808;
+  --bg-gradient-2: #111111;
+  --bg-gradient-3: #050505;
+}
+
 /* ============================================
    DARK ACCENT FAMILY APPLICATION STYLES
    Shared across all dark-* accent themes

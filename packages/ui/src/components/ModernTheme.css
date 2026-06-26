@@ -5254,6 +5254,16 @@ html.modern-ui-v3[data-theme="dark-blue"] .livetv-liquid-glass-bg { background: 
 html.modern-ui-v3[data-theme="dark-gold"] .livetv-liquid-glass-bg { background: #0c0a02 !important; }
 html.modern-ui-v3[data-theme="dark-lime"] .livetv-liquid-glass-bg { background: #050c02 !important; }
 html.modern-ui-v3[data-theme="dark-indigo"] .livetv-liquid-glass-bg { background: #02030f !important; }
+html.modern-ui-v3[data-theme="dark-slate"] .livetv-liquid-glass-bg { background: linear-gradient(135deg, #161718 0%, #1a1c1e 40%, #141516 100%) !important; }
+html.modern-ui-v3[data-theme="dark-slate"] .livetv-liquid-glass-bg .glass-blob { display: block !important; opacity: 0.28 !important; }
+html.modern-ui-v3[data-theme="dark-slate"] .livetv-liquid-glass-bg .blob-1,
+html.modern-ui-v3[data-theme="dark-slate"] .livetv-liquid-glass-bg .blob-3 { background: radial-gradient(circle, rgba(180, 185, 200, 0.2) 0%, transparent 70%) !important; }
+html.modern-ui-v3[data-theme="dark-slate"] .livetv-liquid-glass-bg .blob-2,
+html.modern-ui-v3[data-theme="dark-slate"] .livetv-liquid-glass-bg .blob-4 { background: radial-gradient(circle, rgba(160, 165, 180, 0.15) 0%, transparent 70%) !important; }
+html.modern-ui-v3[data-theme="dark-slate"] .livetv-liquid-glass-bg::before { display: block !important; background: radial-gradient(circle, rgba(180, 185, 200, 0.08) 0%, transparent 70%) !important; }
+html.modern-ui-v3[data-theme="dark-slate"] .livetv-liquid-glass-bg::after { display: block !important; background: radial-gradient(circle, rgba(160, 165, 180, 0.06) 0%, transparent 70%) !important; }
+html.modern-ui-v3[data-theme="dark-warmgrey"] .livetv-liquid-glass-bg { background: #080808 !important; }
+html.modern-ui-v3[data-theme="dark-steel"] .livetv-liquid-glass-bg { background: #080808 !important; }
 
 /* Hide animated blobs and ambient glows for standard dark and dark-color themes */
 html.modern-ui-v3[data-theme="dark"] .livetv-liquid-glass-bg .glass-blob,

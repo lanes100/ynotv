@@ -18,6 +18,10 @@ const THEMES: { id: ThemeId; name: string; description: string; preview: string;
   { id: 'dark-gold', name: 'Dark Gold', description: 'Golden yellow on black', preview: '#ffd700' },
   { id: 'dark-lime', name: 'Dark Lime', description: 'Acid lime on black', preview: '#76ff03' },
   { id: 'dark-indigo', name: 'Dark Indigo', description: 'Indigo on black', preview: '#536dfe' },
+  // Neutral Dark Themes
+  { id: 'dark-slate', name: 'Dark Slate', description: 'Cool slate blue-grey on black', preview: '#6B7A99' },
+  { id: 'dark-warmgrey', name: 'Dark Warm Grey', description: 'Subtle warm grey on black', preview: '#8A8A9A' },
+  { id: 'dark-steel', name: 'Dark Steel', description: 'Muted dusty blue on black', preview: '#5C7A9E' },
   { id: 'glass-ocean', name: 'Ocean Glass', description: 'Deep blues and teals with glass effect', preview: '#0a1628' },
   { id: 'glass-neon', name: 'Neon Glass', description: 'Cyberpunk vibes with neon accents', preview: '#0d0d1a' },
   { id: 'glass-galaxy', name: 'Galaxy Glass', description: 'Purple and pink nebula effect', preview: '#1a0b2e' },
