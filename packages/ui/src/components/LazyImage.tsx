@@ -16,7 +16,9 @@ export function LazyImage({ src, alt, rootMargin = '400px', className, style, fe
       ([entry]) => {
         if (entry.isIntersecting) {
           setInView(true);
-          observer.disconnect();
+        } else {
+          setInView(false);
+          setLoaded(false);
         }
       },
       { rootMargin }

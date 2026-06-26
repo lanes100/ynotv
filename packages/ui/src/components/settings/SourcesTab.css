@@ -380,6 +380,141 @@
     cursor: grabbing;
 }
 
+/* ─── Source Card — Stats Row ──────────────────────────────────────────────── */
+
+.source-details {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    margin-top: 2px;
+}
+
+/* ── Enabled / disabled left-border accent ── */
+.source-item.source-enabled {
+    border-left: 3px solid color-mix(in srgb, var(--accent-primary, #00d4ff) 60%, transparent) !important;
+}
+
+.source-item.source-disabled {
+    opacity: 0.55;
+    border-left: 3px solid rgba(255, 255, 255, 0.15) !important;
+}
+
+/* ── Base stat chip ── */
+.stat-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 9px 3px 7px;
+    border-radius: 20px;
+    font-size: 0.72rem;
+    font-weight: 500;
+    line-height: 1;
+    white-space: nowrap;
+    letter-spacing: 0.01em;
+    transition: background 0.15s ease;
+}
+
+.stat-chip svg {
+    opacity: 0.8;
+    flex-shrink: 0;
+}
+
+/* ── Divider inside a chip (movies | series) ── */
+.stat-chip-divider {
+    display: inline-block;
+    width: 1px;
+    height: 10px;
+    border-radius: 1px;
+    flex-shrink: 0;
+}
+
+/* ── Count chips — all unified, accent-tinted ── */
+.stat-chip--count {
+    background: color-mix(in srgb, var(--accent-primary, #00d4ff) 10%, transparent);
+    border: 1px solid color-mix(in srgb, var(--accent-primary, #00d4ff) 22%, transparent);
+    color: color-mix(in srgb, var(--accent-primary, #00d4ff) 85%, white);
+}
+
+.stat-chip--count svg {
+    color: var(--accent-primary, #00d4ff);
+}
+
+.stat-chip-divider {
+    background: color-mix(in srgb, var(--accent-primary, #00d4ff) 25%, rgba(255,255,255,0.15));
+}
+
+/* ── Expiry chip — muted by default, red only when warning ── */
+.stat-chip--expiry {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    color: rgba(255, 255, 255, 0.42);
+}
+
+.stat-chip--expiry.stat-chip--expiry-warn {
+    background: rgba(239, 68, 68, 0.12);
+    border-color: rgba(239, 68, 68, 0.28);
+    color: #f87171;
+}
+
+.stat-chip--expiry.stat-chip--expiry-warn svg {
+    color: #f87171;
+}
+
+/* ─── Source Action Buttons — hierarchy ────────────────────────────────────── */
+
+/* Primary: Sync Channels */
+.src-btn {
+    padding: 5px 12px;
+    border-radius: 6px;
+    font-size: 0.78rem;
+    font-weight: 500;
+    cursor: pointer;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    transition: all 0.15s ease;
+    border: 1px solid transparent;
+}
+
+.src-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.src-btn--primary {
+    background: color-mix(in srgb, var(--accent-primary, #00d4ff) 18%, transparent);
+    border-color: color-mix(in srgb, var(--accent-primary, #00d4ff) 35%, transparent);
+    color: white;
+}
+
+.src-btn--primary:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--accent-primary, #00d4ff) 26%, transparent);
+    border-color: color-mix(in srgb, var(--accent-primary, #00d4ff) 50%, transparent);
+}
+
+.src-btn--secondary {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.src-btn--secondary:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.18);
+    color: white;
+}
+
+.source-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex-shrink: 0;
+    align-items: flex-end;
+    align-self: center;
+}
+
 /* ─── Modern Global EPG Cards ─────────────────────────────────────────────── */
 
 .epg-links-list {

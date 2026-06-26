@@ -115,6 +115,19 @@ function formatExpiryDate(dateString?: string): string {
   return `${mm}/${dd}/${yy}`;
 }
 
+// Returns true if the expiry date is expired or within 30 days
+function isExpiryWarning(dateString?: string): boolean {
+  if (!dateString) return false;
+  const cleanString = dateString.replace(' at ', ' ');
+  let d = new Date(cleanString);
+  if (isNaN(d.getTime()) && !isNaN(Number(dateString))) {
+    d = new Date(Number(dateString) * 1000);
+  }
+  if (isNaN(d.getTime())) return false;
+  const daysLeft = (d.getTime() - Date.now()) / (1000 * 60 * 60 * 24);
+  return daysLeft <= 30;
+}
+
 // Format time difference in human-readable format
 function formatTimeAgo(date: Date | null | undefined): string {
   if (!date) return 'Never synced';
@@ -133,6 +146,69 @@ function formatTimeAgo(date: Date | null | undefined): string {
   const weeks = Math.floor(diffDays / 7);
   return `${weeks} week${weeks !== 1 ? 's' : ''} ago`;
 }
+
+const SettingsIcon = ({ size = 16 }: { size?: number }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline-block', verticalAlign: 'middle' }}>
+    <circle cx="12" cy="12" r="3" />
+    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+  </svg>
+);
+
+const TrashIcon = ({ size = 16 }: { size?: number }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline-block', verticalAlign: 'middle' }}>
+    <polyline points="3 6 5 6 21 6" />
+    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+    <line x1="10" y1="11" x2="10" y2="17" />
+    <line x1="14" y1="11" x2="14" y2="17" />
+  </svg>
+);
+
+const SpinnerIcon = ({ size = 16 }: { size?: number }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline-block', verticalAlign: 'middle', animation: 'epg-spin 1s linear infinite' }}>
+    <line x1="12" y1="2" x2="12" y2="6" />
+    <line x1="12" y1="18" x2="12" y2="22" />
+    <line x1="4.93" y1="4.93" x2="7.76" y2="7.76" />
+    <line x1="16.24" y1="16.24" x2="19.07" y2="19.07" />
+    <line x1="2" y1="12" x2="6" y2="12" />
+    <line x1="18" y1="12" x2="22" y2="12" />
+    <line x1="4.93" y1="19.07" x2="7.76" y2="16.24" />
+    <line x1="16.24" y1="7.76" x2="19.07" y2="4.93" />
+  </svg>
+);
+
+const TvIcon = ({ size = 12 }: { size?: number }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline-block', verticalAlign: 'middle', flexShrink: 0 }}>
+    <rect x="2" y="7" width="20" height="15" rx="2" ry="2" />
+    <polyline points="17 2 12 7 7 2" />
+  </svg>
+);
+
+const FilmIcon = ({ size = 12 }: { size?: number }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline-block', verticalAlign: 'middle', flexShrink: 0 }}>
+    <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18" />
+    <line x1="7" y1="2" x2="7" y2="22" />
+    <line x1="17" y1="2" x2="17" y2="22" />
+    <line x1="2" y1="12" x2="22" y2="12" />
+    <line x1="2" y1="7" x2="7" y2="7" />
+    <line x1="2" y1="17" x2="7" y2="17" />
+    <line x1="17" y1="17" x2="22" y2="17" />
+    <line x1="17" y1="7" x2="22" y2="7" />
+  </svg>
+);
+
+const LinkIcon = ({ size = 12 }: { size?: number }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline-block', verticalAlign: 'middle', flexShrink: 0 }}>
+    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+  </svg>
+);
+
+const ClockIcon = ({ size = 12 }: { size?: number }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline-block', verticalAlign: 'middle', flexShrink: 0 }}>
+    <circle cx="12" cy="12" r="10" />
+    <polyline points="12 6 12 12 16 14" />
+  </svg>
+);
 
 export function SourcesTab({
   initialSubTab,
@@ -1282,7 +1358,7 @@ export function SourcesTab({
               return (
                 <li
                   key={source.id}
-                  className={`source-item${isDragging ? ' dragging' : ''}${isDragOver ? ' drag-over' : ''}`}
+                  className={`source-item${isDragging ? ' dragging' : ''}${isDragOver ? ' drag-over' : ''}${source.enabled !== false ? ' source-enabled' : ' source-disabled'}`}
                 >
                   <span
                     className="drag-handle"
@@ -1296,7 +1372,7 @@ export function SourcesTab({
                     <div className="source-header">
                       <div className="source-name-type">
                         <span className="source-name">{source.name}</span>
-                        <span className="source-type">{source.type.toUpperCase()}</span>
+                        <span className="source-type" data-source-type={source.type}>{source.type.toUpperCase()}</span>
                         <label className="source-toggle">
                           <input
                             type="checkbox"
@@ -1320,13 +1396,21 @@ export function SourcesTab({
                       {meta && (
                         <>
                           {meta.channel_count > 0 && (
-                            <span className="stat-item">
-                              📡 {meta.channel_count} channels
+                            <span className="stat-chip stat-chip--count">
+                              <TvIcon size={11} />
+                              <span>{meta.channel_count.toLocaleString()} channels</span>
                             </span>
                           )}
                           {((meta.vod_movie_count ?? 0) + (meta.vod_series_count ?? 0)) > 0 && (
-                            <span className="stat-item">
-                              🎬 {meta.vod_movie_count ?? 0} movies, {meta.vod_series_count ?? 0} series
+                            <span className="stat-chip stat-chip--count">
+                              <FilmIcon size={11} />
+                              <span>{(meta.vod_movie_count ?? 0).toLocaleString()} movies</span>
+                              {(meta.vod_series_count ?? 0) > 0 && (
+                                <span className="stat-chip-divider" />
+                              )}
+                              {(meta.vod_series_count ?? 0) > 0 && (
+                                <span>{(meta.vod_series_count ?? 0).toLocaleString()} series</span>
+                              )}
                             </span>
                           )}
                         </>
@@ -1334,73 +1418,71 @@ export function SourcesTab({
 
                       {/* Connection stats for Xtream or M3U with Xtream Catchup */}
                       {(source.type === 'xtream' || (source as any).xtream_catchup) && meta && meta.active_cons && meta.max_connections && (
-                        <div className="source-connections">
-                          🔗 {meta.active_cons}/{meta.max_connections}
-                        </div>
+                        <span className="stat-chip stat-chip--count">
+                          <LinkIcon size={11} />
+                          <span>{meta.active_cons}/{meta.max_connections} connections</span>
+                        </span>
                       )}
 
-                      {/* Expiry date on separate row */}
+                      {/* Expiry — red only when expired or within 30 days */}
                       {meta && meta.expiry_date && (
-                        <div className="source-expiry">
-                          ⏰ Exp: {formatExpiryDate(meta.expiry_date)}
-                        </div>
+                        <span className={`stat-chip stat-chip--expiry${isExpiryWarning(meta.expiry_date) ? ' stat-chip--expiry-warn' : ''}`}>
+                          <ClockIcon size={11} />
+                          <span>Exp {formatExpiryDate(meta.expiry_date)}</span>
+                        </span>
                       )}
                     </div>
                   </div>
 
                   <div className="source-actions">
-                    {/* Per-source sync buttons */}
+                    {/* Primary: Sync Channels */}
                     <button
-                      className="sync-source-btn"
+                      className="src-btn src-btn--primary"
                       onClick={() => handleSourceSync(source.id)}
                       disabled={syncingSourceId === source.id || !source.enabled}
                       title="Sync channels for this source only"
-                      style={{
-                        padding: '4px 8px',
-                        fontSize: '0.65rem',
-                        ...(syncingSourceId === source.id ? { width: 'auto' } : {})
-                      }}
                     >
-                      {syncingSourceId === source.id ? (syncStatusMsg || '⟳') : ''} {syncingSourceId === source.id ? '' : 'Sync Channels'}
+                      {syncingSourceId === source.id ? <><SpinnerIcon size={13} /> {syncStatusMsg || 'Syncing…'}</> : 'Sync Channels'}
                     </button>
 
+                    {/* Secondary: Sync VOD */}
                     {(source.type === 'xtream' || source.type === 'stalker') && !source.live_tv_only && (
                       <button
-                        className="sync-source-btn"
+                        className="src-btn src-btn--secondary"
                         onClick={() => handleSourceVodSync(source.id)}
                         disabled={vodSyncingSourceId === source.id || !source.enabled}
                         title="Sync movies & series for this source only"
-                        style={{ padding: '4px 8px', fontSize: '0.65rem' }}
                       >
-                        {vodSyncingSourceId === source.id ? '⟳' : ''} Sync VOD
+                        {vodSyncingSourceId === source.id ? <><SpinnerIcon size={13} /> Syncing…</> : 'Sync VOD'}
                       </button>
                     )}
 
+                    {/* Secondary: Categories */}
                     <button
-                      className="sync-source-btn"
+                      className="src-btn src-btn--secondary"
                       onClick={() => setCategoryManagerSource({ id: source.id, name: source.name })}
                       title="Manage categories for this source"
-                      style={{ padding: '4px 8px', fontSize: '0.65rem' }}
                     >
                       Categories
                     </button>
 
+                    {/* Icon: Edit */}
                     <button
                       className="action-icon-btn"
                       onClick={() => handleEdit(source)}
                       title="Edit Source"
-                      style={{ padding: '4px 8px', fontSize: '0.8rem' }}
                     >
-                      ⚙️
+                      <SettingsIcon size={16} />
                     </button>
+
+                    {/* Icon: Delete */}
                     <button
                       className="action-icon-btn delete"
                       onClick={() => handleDeleteClick(source.id, source.name)}
                       disabled={isDeleting}
                       title="Delete Source"
-                      style={{ padding: '4px 8px', fontSize: '0.8rem' }}
                     >
-                      {isDeleting ? '⏳' : '🗑️'}
+                      {isDeleting ? <SpinnerIcon size={16} /> : <TrashIcon size={16} />}
                     </button>
                   </div>
                 </li>
@@ -2379,7 +2461,7 @@ export function SourcesTab({
                         onChange={() => toggleEpgSourceId(source.id)}
                       />
                       <span>{source.name}</span>
-                      <span className="source-type" style={{ marginLeft: 'auto' }}>{source.type.toUpperCase()}</span>
+                      <span className="source-type" data-source-type={source.type} style={{ marginLeft: 'auto' }}>{source.type.toUpperCase()}</span>
                     </label>
                   ))}
                 </div>
