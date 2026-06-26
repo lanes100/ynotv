@@ -277,7 +277,7 @@ export function ChannelPanel({
   // Resize persistence state
   const [previewWidthPct, setPreviewWidthPct] = useState(() => {
     const saved = localStorage.getItem('guidePreviewWidth');
-    return saved ? parseFloat(saved) : 42;
+    return saved ? parseFloat(saved) : 54;
   });
 
   const [previewHeightPx, setPreviewHeightPx] = useState(() => {
@@ -1286,12 +1286,12 @@ export function ChannelPanel({
         previewPaneRef.current.style.height = `360px`;
       }
     } else {
-      setPreviewWidthPct(42);
-      localStorage.setItem('guidePreviewWidth', '42');
+      setPreviewWidthPct(54);
+      localStorage.setItem('guidePreviewWidth', '54');
       if (previewPaneRef.current) {
-        previewPaneRef.current.style.flex = `0 0 42%`;
+        previewPaneRef.current.style.flex = `0 0 54%`;
         if (previewPaneRef.current.parentElement) {
-          previewPaneRef.current.parentElement.style.setProperty('--preview-width', '42%');
+          previewPaneRef.current.parentElement.style.setProperty('--preview-width', '54%');
         }
       }
     }
