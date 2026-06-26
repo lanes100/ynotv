@@ -4477,20 +4477,20 @@ html.modern-ui-v3[data-theme] .stat-chip {
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
 }
 
-/* All count chips share the accent color */
+/* All count chips — identical neutral white, no accent tint */
 html.modern-ui-v3[data-theme] .stat-chip--count {
-  background: color-mix(in srgb, var(--accent-primary, #00d4ff) 10%, rgba(255,255,255,0.03)) !important;
-  border-color: color-mix(in srgb, var(--accent-primary, #00d4ff) 28%, transparent) !important;
-  color: color-mix(in srgb, var(--accent-primary, #00d4ff) 90%, white) !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-color: rgba(255, 255, 255, 0.13) !important;
+  color: rgba(255, 255, 255, 0.88) !important;
 }
 
 html.modern-ui-v3[data-theme] .stat-chip--count svg {
-  color: var(--accent-primary, #00d4ff) !important;
-  opacity: 0.9 !important;
+  color: rgba(255, 255, 255, 0.5) !important;
+  opacity: 1 !important;
 }
 
 html.modern-ui-v3[data-theme] .stat-chip-divider {
-  background: color-mix(in srgb, var(--accent-primary, #00d4ff) 30%, rgba(255,255,255,0.12)) !important;
+  background: rgba(255, 255, 255, 0.2) !important;
 }
 
 /* Expiry — muted by default */
@@ -4552,20 +4552,21 @@ html.modern-ui-v3[data-theme] .src-btn {
 }
 
 html.modern-ui-v3[data-theme] .src-btn--primary {
-  background: color-mix(in srgb, var(--accent-primary, #00d4ff) 16%, rgba(255,255,255,0.04)) !important;
-  border-color: color-mix(in srgb, var(--accent-primary, #00d4ff) 38%, transparent) !important;
+  background: color-mix(in srgb, var(--accent-primary, #00d4ff) 25%, rgba(255,255,255,0.04)) !important;
+  border-color: color-mix(in srgb, var(--accent-primary, #00d4ff) 52%, transparent) !important;
   color: white !important;
+  font-weight: 600 !important;
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.12),
-    0 2px 8px color-mix(in srgb, var(--accent-primary, #00d4ff) 12%, transparent) !important;
+    inset 0 1px 0 rgba(255, 255, 255, 0.15),
+    0 2px 10px color-mix(in srgb, var(--accent-primary, #00d4ff) 18%, transparent) !important;
 }
 
 html.modern-ui-v3[data-theme] .src-btn--primary:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--accent-primary, #00d4ff) 24%, rgba(255,255,255,0.06)) !important;
-  border-color: color-mix(in srgb, var(--accent-primary, #00d4ff) 55%, transparent) !important;
+  background: color-mix(in srgb, var(--accent-primary, #00d4ff) 34%, rgba(255,255,255,0.06)) !important;
+  border-color: color-mix(in srgb, var(--accent-primary, #00d4ff) 65%, transparent) !important;
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.16),
-    0 4px 14px color-mix(in srgb, var(--accent-primary, #00d4ff) 20%, transparent) !important;
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    0 4px 16px color-mix(in srgb, var(--accent-primary, #00d4ff) 28%, transparent) !important;
 }
 
 html.modern-ui-v3[data-theme] .src-btn--secondary {

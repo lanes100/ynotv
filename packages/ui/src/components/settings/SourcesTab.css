@@ -429,19 +429,20 @@
     flex-shrink: 0;
 }
 
-/* ── Count chips — all unified, accent-tinted ── */
+/* ── Count chips — all identical neutral white ── */
 .stat-chip--count {
-    background: color-mix(in srgb, var(--accent-primary, #00d4ff) 10%, transparent);
-    border: 1px solid color-mix(in srgb, var(--accent-primary, #00d4ff) 22%, transparent);
-    color: color-mix(in srgb, var(--accent-primary, #00d4ff) 85%, white);
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: rgba(255, 255, 255, 0.85);
 }
 
 .stat-chip--count svg {
-    color: var(--accent-primary, #00d4ff);
+    color: rgba(255, 255, 255, 0.55);
+    opacity: 1;
 }
 
 .stat-chip-divider {
-    background: color-mix(in srgb, var(--accent-primary, #00d4ff) 25%, rgba(255,255,255,0.15));
+    background: rgba(255, 255, 255, 0.2);
 }
 
 /* ── Expiry chip — muted by default, red only when warning ── */
@@ -484,9 +485,10 @@
 }
 
 .src-btn--primary {
-    background: color-mix(in srgb, var(--accent-primary, #00d4ff) 18%, transparent);
-    border-color: color-mix(in srgb, var(--accent-primary, #00d4ff) 35%, transparent);
+    background: color-mix(in srgb, var(--accent-primary, #00d4ff) 25%, transparent);
+    border-color: color-mix(in srgb, var(--accent-primary, #00d4ff) 50%, transparent);
     color: white;
+    font-weight: 600;
 }
 
 .src-btn--primary:hover:not(:disabled) {
