@@ -1102,6 +1102,15 @@
   border-bottom: var(--glass-border);
 }
 
+/* Video active: strip glass from titlebar */
+[data-theme*="glass-"] .title-bar.video-active {
+  background: transparent !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border-bottom: none !important;
+  box-shadow: none !important;
+}
+
 /* Now playing bar with enhanced glass effect */
 [data-theme*="glass-"] .now-playing-bar {
   background: var(--surface-color);
@@ -2724,6 +2733,13 @@
   border-color: var(--surface-border);
 }
 
+/* Video active: strip solid background from titlebar */
+[data-theme*="solid-"] .title-bar.video-active {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
 [data-theme*="solid-"] .npb-progress-fill {
   background: linear-gradient(90deg, var(--accent-secondary), var(--accent-primary));
 }
@@ -3179,6 +3195,13 @@ html.modern-ui-v3[data-theme="dark-slate"] .category-list-bar.selected .category
 [data-theme^="dark-"] .title-bar {
   background: var(--surface-color);
   border-bottom-color: var(--surface-border);
+}
+
+[data-theme="dark-crimson"] .title-bar.video-active,
+[data-theme^="dark-"] .title-bar.video-active {
+  background: transparent !important;
+  border-bottom: none !important;
+  box-shadow: none !important;
 }
 
 [data-theme="dark-crimson"] .sidebar-nav,

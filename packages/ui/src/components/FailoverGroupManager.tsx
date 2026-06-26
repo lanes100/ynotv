@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { db, type StoredChannel, type StoredCategory } from '../db';
 import {
     addChannelToFailoverGroup,
@@ -473,7 +474,7 @@ export function FailoverGroupManager({ groupId, groupName, onClose }: FailoverGr
         if (e.key === 'Escape') setIsRenaming(false);
     };
 
-    return (
+    return createPortal(
         <div className="custom-group-manager-overlay" onClick={onClose}>
             <div className="custom-group-manager-modal" onClick={e => e.stopPropagation()}>
 
@@ -575,6 +576,7 @@ export function FailoverGroupManager({ groupId, groupName, onClose }: FailoverGr
                 </div>
 
             </div>
-        </div>
+        </div>,
+        document.body
     );
 }

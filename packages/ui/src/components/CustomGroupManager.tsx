@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { db, type StoredChannel, type StoredCategory } from '../db';
 import { addChannelsToGroup, removeChannelsFromGroup, reorderGroupChannels, renameCustomGroup } from '../services/custom-groups';
 import './CustomGroupManager.css';
@@ -468,7 +469,7 @@ export function CustomGroupManager({ groupId, groupName, onClose }: CustomGroupM
         if (e.key === 'Escape') setIsRenaming(false);
     };
 
-    return (
+    return createPortal(
         <div className="custom-group-manager-overlay" onClick={onClose}>
             <div className="custom-group-manager-modal" onClick={e => e.stopPropagation()}>
 
@@ -564,6 +565,7 @@ export function CustomGroupManager({ groupId, groupName, onClose }: CustomGroupM
                 </div>
 
             </div>
-        </div>
+        </div>,
+        document.body
     );
 }

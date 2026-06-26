@@ -2984,19 +2984,8 @@ function App() {
         </div>
       )}
       {/* Custom title bar for frameless window */}
-      <div className={`title-bar${showControls ? ' visible' : ''}${pipMode ? ' pip-mode' : ''}`} data-tauri-drag-region>
+      <div className={`title-bar${showControls ? ' visible' : ''}${pipMode ? ' pip-mode' : ''}${currentChannel ? ' video-active' : ''}`} data-tauri-drag-region>
         <div className="title-bar-left-group" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          {!(activeView === 'none' && playbackSourceView) && (
-            <>
-              <Logo className="title-bar-logo" />
-              <LayoutPicker
-                currentLayout={multiviewLayout}
-                onSelect={switchLayout}
-                engineMode={multiviewEngineMode}
-                onEngineChange={setMultiviewEngineMode}
-              />
-            </>
-          )}
         </div>
 
         <div className="title-bar-spacer"></div>
@@ -3270,6 +3259,16 @@ function App() {
           )}
           <DownloadIndicator size="small" />
         </div>
+
+        {/* Multiview Layout Picker */}
+        {!(activeView === 'none' && playbackSourceView) && (
+          <LayoutPicker
+            currentLayout={multiviewLayout}
+            onSelect={switchLayout}
+            engineMode={multiviewEngineMode}
+            onEngineChange={setMultiviewEngineMode}
+          />
+        )}
 
         {/* Calendar Button */}
         {!navHiddenTabs.includes('calendar') && (

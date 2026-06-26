@@ -126,8 +126,8 @@ export function useAppSettings(): AppSettings {
   const [layoutSettingsLoaded, setLayoutSettingsLoaded] = useState(false);
 
   // Timeshift settings (loaded from store)
-  const [timeshiftEnabled, setTimeshiftEnabled] = useState(false);
-  const [timeshiftCacheBytes, setTimeshiftCacheBytes] = useState(1_073_741_824); // Default 1GB
+  const [timeshiftEnabled, setTimeshiftEnabled] = useState(true);
+  const [timeshiftCacheBytes, setTimeshiftCacheBytes] = useState(268_435_456); // Default 256MB
   const [liveBufferOffset, setLiveBufferOffset] = useState(0); // Default 0 seconds behind live
 
   // Search settings
@@ -232,8 +232,8 @@ export function useAppSettings(): AppSettings {
         if (result.data) {
           setRememberLastChannels(result.data.rememberLastChannels ?? false);
           setReopenLastOnStartup(result.data.reopenLastOnStartup ?? false);
-          setTimeshiftEnabled(result.data.timeshiftEnabled ?? false);
-          setTimeshiftCacheBytes(result.data.timeshiftCacheBytes ?? 1_073_741_824);
+          setTimeshiftEnabled(result.data.timeshiftEnabled ?? true);
+          setTimeshiftCacheBytes(result.data.timeshiftCacheBytes ?? 268_435_456);
           setLiveBufferOffset(result.data.liveBufferOffset ?? 0);
           setIncludeSourceInSearch(result.data.includeSourceInSearch ?? false);
           setMaxSearchResults(result.data.maxSearchResults ?? 200);
@@ -320,6 +320,24 @@ export function useAppSettings(): AppSettings {
           // Load theme
           const savedTheme = result.data.theme || localStorageTheme || 'glass-neon';
           setThemeState(savedTheme as ThemeId);
+
+          // One-time migration: check if timeshiftMigrationCheck is not set
+          if (result.data.timeshiftMigrationCheck !== true) {
+            const hasTimeshift = result.data.timeshiftEnabled === true;
+            if (!hasTimeshift) {
+              setTimeshiftEnabled(true);
+              setTimeshiftCacheBytes(268_435_456); // 256MB
+              window.storage.updateSettings({
+                timeshiftEnabled: true,
+                timeshiftCacheBytes: 268_435_456,
+                timeshiftMigrationCheck: true,
+              }).catch((err) => console.warn('[useAppSettings] Failed to run timeshift migration:', err));
+            } else {
+              window.storage.updateSettings({
+                timeshiftMigrationCheck: true,
+              }).catch((err) => console.warn('[useAppSettings] Failed to save timeshift migration flag:', err));
+            }
+          }
         } else if (localStorageState) {
           // Fallback to localStorage if Tauri storage is empty
           setSavedLayoutState(localStorageState);

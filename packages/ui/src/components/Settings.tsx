@@ -316,8 +316,8 @@ export function Settings({
   // Playback settings state
   const [mpvParams, setMpvParams] = useState<string>('');
   const [mpvDisableWhitelist, setMpvDisableWhitelist] = useState(false);
-  const [timeshiftEnabled, setTimeshiftEnabled] = useState(false);
-  const [timeshiftCacheBytes, setTimeshiftCacheBytes] = useState(1_073_741_824);
+  const [timeshiftEnabled, setTimeshiftEnabled] = useState(true);
+  const [timeshiftCacheBytes, setTimeshiftCacheBytes] = useState(268_435_456);
   const [liveBufferOffset, setLiveBufferOffset] = useState(0);
   // Stream retry settings
   const [streamWatchdogSeconds, setStreamWatchdogSeconds] = useState(10);
@@ -850,8 +850,8 @@ export function Settings({
       // Load playback settings
       setMpvParams(settings.mpvParams ?? '');
       setMpvDisableWhitelist(settings.mpvDisableWhitelist ?? false);
-      setTimeshiftEnabled(settings.timeshiftEnabled ?? false);
-      setTimeshiftCacheBytes(settings.timeshiftCacheBytes ?? 1_073_741_824);
+      setTimeshiftEnabled(settings.timeshiftEnabled ?? true);
+      setTimeshiftCacheBytes(settings.timeshiftCacheBytes ?? 268_435_456);
       setLiveBufferOffset(settings.liveBufferOffset ?? 0);
       setStreamWatchdogSeconds(settings.streamWatchdogSeconds ?? 10);
       setStreamMaxRetries(settings.streamMaxRetries ?? 20);

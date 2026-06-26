@@ -145,49 +145,51 @@ export function CategoryContextMenu({
                     Add Category to Playlist
                 </div>
                 <div className="context-menu-separator" />
-                {playlists.length === 0 && (
-                    <div style={{ padding: '10px 16px', opacity: 0.5, fontSize: '0.85rem' }}>
-                        No playlists yet
-                    </div>
-                )}
-                {playlists.map(playlist => (
-                    <div
-                        key={playlist.playlist_id}
-                        className="context-menu-item"
-                        onClick={async () => {
-                            setAddingToPlaylist(playlist.playlist_id);
-                            try {
-                                const { addCategoryToPlaylist } = await import('../services/playlist-editor');
-                                await addCategoryToPlaylist(playlist.playlist_id, sourceId, categoryId);
-                            } finally {
-                                setAddingToPlaylist(null);
-                                onClose();
-                            }
-                        }}
-                        style={{
-                            opacity: addingToPlaylist === playlist.playlist_id ? 0.5 : 1
-                        }}
-                    >
-                        <span>
-                            {addingToPlaylist === playlist.playlist_id ? '⏳ ' : ''}{playlist.name}
-                        </span>
-                        {!playlist.isCustom && (
-                            <span style={{
-                                fontSize: '9px',
-                                opacity: 0.6,
-                                border: '1px solid var(--text-secondary, #888)',
-                                borderRadius: '3px',
-                                padding: '1px 4px',
-                                marginLeft: 'auto',
-                                textTransform: 'uppercase',
-                                letterSpacing: '0.5px',
-                                flexShrink: 0
-                            }}>
-                                Source
+                <div className="context-menu-scrollable-container">
+                    {playlists.length === 0 && (
+                        <div style={{ padding: '10px 16px', opacity: 0.5, fontSize: '0.85rem' }}>
+                            No playlists yet
+                        </div>
+                    )}
+                    {playlists.map(playlist => (
+                        <div
+                            key={playlist.playlist_id}
+                            className="context-menu-item"
+                            onClick={async () => {
+                                setAddingToPlaylist(playlist.playlist_id);
+                                try {
+                                    const { addCategoryToPlaylist } = await import('../services/playlist-editor');
+                                    await addCategoryToPlaylist(playlist.playlist_id, sourceId, categoryId);
+                                } finally {
+                                    setAddingToPlaylist(null);
+                                    onClose();
+                                }
+                            }}
+                            style={{
+                                opacity: addingToPlaylist === playlist.playlist_id ? 0.5 : 1
+                            }}
+                        >
+                            <span>
+                                {addingToPlaylist === playlist.playlist_id ? '⏳ ' : ''}{playlist.name}
                             </span>
-                        )}
-                    </div>
-                ))}
+                            {!playlist.isCustom && (
+                                <span style={{
+                                    fontSize: '9px',
+                                    opacity: 0.6,
+                                    border: '1px solid var(--text-secondary, #888)',
+                                    borderRadius: '3px',
+                                    padding: '1px 4px',
+                                    marginLeft: 'auto',
+                                    textTransform: 'uppercase',
+                                    letterSpacing: '0.5px',
+                                    flexShrink: 0
+                                }}>
+                                    Source
+                                </span>
+                            )}
+                        </div>
+                    ))}
+                </div>
                 <div className="context-menu-separator" />
                 <div className="context-menu-item context-menu-item-secondary" onClick={() => setCurrentView('main')}>
                     ← Back

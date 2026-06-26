@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { useLiveQuery } from '../hooks/useSqliteLiveQuery';
 import { db, type CustomPlaylist } from '../db';
 import {
@@ -365,7 +366,7 @@ export function PlaylistListModal({ onClose }: PlaylistListModalProps) {
     }
   };
 
-  return (
+  return createPortal(
     <>
       <div className="playlist-list-overlay" onClick={onClose}>
         <div className="playlist-list-modal" onClick={e => e.stopPropagation()}>
@@ -555,6 +556,7 @@ export function PlaylistListModal({ onClose }: PlaylistListModalProps) {
         />
       )}
       <ModalComponent />
-    </>
+    </>,
+    document.body
   );
 }

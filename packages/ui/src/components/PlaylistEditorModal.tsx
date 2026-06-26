@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { useLiveQuery } from '../hooks/useSqliteLiveQuery';
 import { db, type PlaylistCategoryLink, type PlaylistIndividualChannel, type StoredChannel, type StoredCategory } from '../db';
 import {
@@ -1177,7 +1178,7 @@ export function PlaylistEditorModal({ playlistId, playlistName, onClose }: Playl
 
   const visibleIndivCount = individualChannels.filter(c => showHidden || c.enabled !== false).length;
 
-  return (
+  return createPortal(
     <div className="playlist-editor-backdrop" onClick={onClose}>
       <div className="playlist-editor-modal" onClick={e => e.stopPropagation()}>
         {/* Header */}
@@ -1627,6 +1628,7 @@ export function PlaylistEditorModal({ playlistId, playlistName, onClose }: Playl
         </div>
       </div>
       <ModalComponent />
-    </div>
+    </div>,
+    document.body
   );
 }

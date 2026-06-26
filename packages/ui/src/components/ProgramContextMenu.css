@@ -190,3 +190,28 @@
     font-size: 0.75rem;
     color: var(--accent-primary, #00d4ff);
 }
+
+/* Scrollable container for context menu lists */
+.context-menu-scrollable-container {
+    max-height: 280px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-color, rgba(255, 255, 255, 0.15)) transparent;
+}
+
+.context-menu-scrollable-container::-webkit-scrollbar {
+    width: 6px;
+}
+
+.context-menu-scrollable-container::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.context-menu-scrollable-container::-webkit-scrollbar-thumb {
+    background: var(--border-color, rgba(255, 255, 255, 0.15));
+    border-radius: 3px;
+}
+
+.context-menu-scrollable-container::-webkit-scrollbar-thumb:hover {
+    background: var(--accent-primary, #00d4ff);
+}

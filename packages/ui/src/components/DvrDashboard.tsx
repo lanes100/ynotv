@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { listen } from '@tauri-apps/api/event';
 import {
     getScheduledRecordings,
@@ -907,7 +908,7 @@ function EditModal({
     saving,
     formatDateTime,
 }: EditModalProps) {
-    return (
+    return createPortal(
         <div className="dvr-modal-overlay" onClick={onCancel}>
             <div className="dvr-modal" onClick={(e) => e.stopPropagation()}>
                 <div className="dvr-modal-header">
@@ -967,7 +968,8 @@ function EditModal({
                     </button>
                 </div>
             </div>
-        </div>
+        </div>,
+        document.body
     );
 }
 

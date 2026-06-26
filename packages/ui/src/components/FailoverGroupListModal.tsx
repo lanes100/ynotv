@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import {
     listFailoverGroups,
     createFailoverGroup,
@@ -114,7 +115,7 @@ export function FailoverGroupListModal({ onClose }: FailoverGroupListModalProps)
         }
     };
 
-    return (
+    return createPortal(
         <>
             <div className="failover-group-list-overlay" onClick={onClose}>
                 <div className="failover-group-list-modal" onClick={e => e.stopPropagation()}>
@@ -215,6 +216,7 @@ export function FailoverGroupListModal({ onClose }: FailoverGroupListModalProps)
                     }}
                 />
             )}
-        </>
+        </>,
+        document.body
     );
 }

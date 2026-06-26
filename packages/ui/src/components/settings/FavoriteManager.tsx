@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { db, type StoredChannel, updateChannelsBatch } from '../../db';
 import './FavoriteManager.css';
 
@@ -115,7 +116,7 @@ export function FavoriteManager({ onClose, onChange }: FavoriteManagerProps) {
         }
     }, [favorites, onChange, onClose]);
 
-    return (
+    return createPortal(
         <div className="fav-manager-overlay" onClick={onClose}>
             <div className="fav-manager-modal" onClick={e => e.stopPropagation()}>
 
@@ -178,6 +179,7 @@ export function FavoriteManager({ onClose, onChange }: FavoriteManagerProps) {
                 </div>
 
             </div>
-        </div>
+        </div>,
+        document.body
     );
 }
