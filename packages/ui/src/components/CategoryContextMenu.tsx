@@ -64,7 +64,7 @@ export function CategoryContextMenu({
 
             setAdjustedPosition({ x, y });
         }
-    }, [position, currentView]);
+    }, [position, currentView, playlists]);
 
     // Close on click outside (ignore clicks inside modals since they are rendered in portals)
     useEffect(() => {

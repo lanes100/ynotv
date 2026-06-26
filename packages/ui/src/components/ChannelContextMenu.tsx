@@ -124,7 +124,7 @@ export function ChannelContextMenu({
 
             setAdjustedPosition({ x, y });
         }
-    }, [position, currentView]);
+    }, [position, currentView, customGroups, failoverGroups, creatingFailoverGroup, scheduling]);
 
     const getMenuStyle = (extra: React.CSSProperties = {}): React.CSSProperties => ({
         left: `${adjustedPosition.x}px`,
