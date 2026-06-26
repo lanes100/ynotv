@@ -1572,7 +1572,8 @@ function SidebarItemContextMenu({ position, title, onClose, onHide }: SidebarIte
   useLayoutEffect(() => {
     if (menuRef.current) {
       const menu = menuRef.current;
-      const rect = menu.getBoundingClientRect();
+      const menuWidth = menu.offsetWidth;
+      const menuHeight = menu.offsetHeight;
       const viewportWidth = window.innerWidth;
       const viewportHeight = window.innerHeight;
 
@@ -1581,13 +1582,13 @@ function SidebarItemContextMenu({ position, title, onClose, onHide }: SidebarIte
 
       const isBottomHalf = position.y > viewportHeight / 2;
       if (isBottomHalf) {
-        y = position.y - rect.height;
+        y = position.y - menuHeight;
       }
 
-      if (x + rect.width > viewportWidth) x = viewportWidth - rect.width - 10;
+      if (x + menuWidth > viewportWidth) x = viewportWidth - menuWidth - 10;
       if (x < 10) x = 10;
 
-      if (y + rect.height > viewportHeight) y = viewportHeight - rect.height - 10;
+      if (y + menuHeight > viewportHeight) y = viewportHeight - menuHeight - 10;
       if (y < 10) y = 10;
 
       setAdjustedPosition({ x, y });

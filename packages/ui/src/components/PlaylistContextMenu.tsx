@@ -28,33 +28,34 @@ export function PlaylistContextMenu({
 
     // Dynamic Position Adjustment (Flip upward if in bottom half)
     useLayoutEffect(() => {
-        if (menuRef.current) {
             const menu = menuRef.current;
-            const rect = menu.getBoundingClientRect();
-            const viewportWidth = window.innerWidth;
-            const viewportHeight = window.innerHeight;
+            if (menu) {
+                const menuWidth = menu.offsetWidth;
+                const menuHeight = menu.offsetHeight;
+                const viewportWidth = window.innerWidth;
+                const viewportHeight = window.innerHeight;
 
-            let x = position.x;
-            let y = position.y;
+                let x = position.x;
+                let y = position.y;
 
-            // Determine if click was in top or bottom half of the screen
-            const isBottomHalf = position.y > viewportHeight / 2;
+                // Determine if click was in top or bottom half of the screen
+                const isBottomHalf = position.y > viewportHeight / 2;
 
-            // Pop UP if cursor is below 50% screen height
-            if (isBottomHalf) {
-                y = position.y - rect.height;
+                // Pop UP if cursor is below 50% screen height
+                if (isBottomHalf) {
+                    y = position.y - menuHeight;
+                }
+
+                // Prevent menu from going off right edge
+                if (x + menuWidth > viewportWidth) x = viewportWidth - menuWidth - 10;
+                if (x < 10) x = 10;
+
+                // Safety bounds for Y-axis
+                if (y + menuHeight > viewportHeight) y = viewportHeight - menuHeight - 10;
+                if (y < 10) y = 10;
+
+                setAdjustedPosition({ x, y });
             }
-
-            // Prevent menu from going off right edge
-            if (x + rect.width > viewportWidth) x = viewportWidth - rect.width - 10;
-            if (x < 10) x = 10;
-
-            // Safety bounds for Y-axis
-            if (y + rect.height > viewportHeight) y = viewportHeight - rect.height - 10;
-            if (y < 10) y = 10;
-
-            setAdjustedPosition({ x, y });
-        }
     }, [position]);
 
     // Close on click outside (ignore clicks inside modals since they are rendered in portals)
