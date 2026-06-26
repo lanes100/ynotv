@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { Virtuoso } from 'react-virtuoso';
 import { useNuvioAuthStore } from '../../stores/nuvioAuthStore';
 import { useNuvioCollectionStore } from '../../stores/nuvioCollectionStore';
 import { useNuvioAddonStore } from '../../stores/nuvioAddonStore';
@@ -53,6 +54,7 @@ import { StreamingServiceView } from '../stremio/StreamingServiceView';
 import { compileBadgeSources } from '../../utils/streamBadges';
 import { NuvioTab } from '../settings/NuvioTab';
 import { NuvioSearchPage } from './NuvioSearchPage';
+import { LazyImage } from '../LazyImage';
 import '../Settings.css';
 import './NuvioPage.css';
 
@@ -472,8 +474,9 @@ function NuvioPageContent({
     setNuvioView(view);
   };
 
-  // Scroll-to-top button state
+  // Scroll-to-top button state (debounced to avoid re-render thrashing on scroll)
   const [showScrollTop, setShowScrollTop] = useState(false);
+  const scrollRAFRef = useRef<number>(0);
   const scrollToTop = useCallback(() => {
     const el = document.querySelector('.nuvio-main');
     if (el) {
@@ -488,10 +491,17 @@ function NuvioPageContent({
     setShowScrollTop(el.scrollTop > 400);
 
     const handleScroll = () => {
-      setShowScrollTop(el.scrollTop > 400);
+      if (scrollRAFRef.current) return;
+      scrollRAFRef.current = requestAnimationFrame(() => {
+        scrollRAFRef.current = 0;
+        setShowScrollTop(el.scrollTop > 400);
+      });
     };
     el.addEventListener('scroll', handleScroll, { passive: true });
-    return () => el.removeEventListener('scroll', handleScroll);
+    return () => {
+      el.removeEventListener('scroll', handleScroll);
+      if (scrollRAFRef.current) cancelAnimationFrame(scrollRAFRef.current);
+    };
   }, []);
 
 
@@ -2033,7 +2043,7 @@ function NuvioPageContent({
                     {(() => {
                       const backdropImg = selectedFolder.heroBackdropUrl || selectedFolder.coverImageUrl || null;
                       if (backdropImg) {
-                        return <img src={backdropImg} alt={selectedFolder.title} className="nuvio-folder-detail-banner-img" />;
+                        return <LazyImage rootMargin="200px" src={backdropImg} alt={selectedFolder.title} className="nuvio-folder-detail-banner-img" />;
                       }
                       return <div className="nuvio-folder-detail-banner-fallback" />;
                     })()}
@@ -2108,7 +2118,7 @@ function NuvioPageContent({
                             >
                               <div className="nuvio-folder-detail-poster-wrapper">
                                 {item.poster ? (
-                                  <img src={item.poster} alt={item.name} className="nuvio-folder-detail-poster" />
+                                  <LazyImage src={item.poster} alt={item.name} className="nuvio-folder-detail-poster" fetchPriority="low" />
                                 ) : (
                                   <div className="nuvio-folder-detail-poster-placeholder">{item.name}</div>
                                 )}
@@ -2169,7 +2179,7 @@ function NuvioPageContent({
                   )}
 
                   {/* Hero banner — fed from selected catalogs in settings */}
-                  <div style={{ marginBottom: '24px' }}>
+                  <div className="nuvio-home-section nuvio-home-section-hero" style={{ marginBottom: '24px' }}>
                     <NuvioHeroBanner
                       libraryIds={libraryIds}
                       onItemClick={(item) => handleItemClick({ content_id: item.id, content_type: item.type, name: item.name, poster: item.poster ?? null })}
@@ -2179,7 +2189,7 @@ function NuvioPageContent({
 
                   {/* Continue Watching (Watch Progress) — 3 styles configurable from Settings */}
                   {resolvedWatchProgress.length > 0 && (
-                    <div className="nuvio-row">
+                    <div className="nuvio-row nuvio-home-section nuvio-home-section-cw">
                       <div className="nuvio-row-header">
                         <h3 className="nuvio-row-title">Continue Watching</h3>
                         <div className="stremio-row-nav">
@@ -2232,7 +2242,7 @@ function NuvioPageContent({
                                   onClick={() => handleItemClick({ content_id: entry.content_id, content_type: entry.content_type, name: entry.name || entry.progress_key, poster: entry.poster || null, video_id: entry.video_id })}
                                 >
                                   {imgUrl ? (
-                                    <img src={imgUrl} alt={entry.name} className="nuvio-cw-wide-poster" />
+                                    <LazyImage src={imgUrl} alt={entry.name} className="nuvio-cw-wide-poster" fetchPriority="low" />
                                   ) : (
                                     <div className="nuvio-cw-wide-poster" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', color: 'rgba(255,255,255,0.3)' }}>{entry.name?.[0]}</div>
                                   )}
@@ -2270,7 +2280,7 @@ function NuvioPageContent({
                                   onClick={() => handleItemClick({ content_id: entry.content_id, content_type: entry.content_type, name: entry.name || entry.progress_key, poster: entry.poster || null, video_id: entry.video_id })}
                                 >
                                   {imgUrl ? (
-                                    <img src={imgUrl} alt={entry.name} className="nuvio-cw-poster-img" />
+                                    <LazyImage src={imgUrl} alt={entry.name} className="nuvio-cw-poster-img" fetchPriority="low" />
                                   ) : (
                                     <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', color: 'rgba(255,255,255,0.3)', padding: '12px', boxSizing: 'border-box', textAlign: 'center' }}>{entry.name}</div>
                                   )}
@@ -2313,7 +2323,7 @@ function NuvioPageContent({
                                 onClick={() => handleItemClick({ content_id: entry.content_id, content_type: entry.content_type, name: entry.name || entry.progress_key, poster: entry.poster || null, video_id: entry.video_id })}
                               >
                                 {cardImg ? (
-                                  <img src={cardImg} alt={entry.name} className="nuvio-cw-card-img" />
+                                  <LazyImage src={cardImg} alt={entry.name} className="nuvio-cw-card-img" fetchPriority="low" />
                                 ) : (
                                   <div style={{ width: '100%', height: '100%', background: 'rgba(255,255,255,0.03)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '12px', boxSizing: 'border-box', fontSize: '0.85rem', fontWeight: 600, color: 'rgba(255,255,255,0.5)' }}>
                                     {entry.name || entry.content_id}
@@ -2342,7 +2352,7 @@ function NuvioPageContent({
                   )}
 
                   {tmdbApiKey && streamingNuvioCatalogsEnabled && enabledStreamingServices.length > 0 && (
-                    <div className="nuvio-row" style={{ marginBottom: '24px', position: 'relative' }}>
+                    <div className="nuvio-row nuvio-home-section nuvio-home-section-sp" style={{ marginBottom: '24px', position: 'relative' }}>
                       <div className="nuvio-row-header">
                         <h3 className="nuvio-row-title">Streaming Platforms</h3>
                         <div className="stremio-row-nav">
@@ -2414,20 +2424,21 @@ function NuvioPageContent({
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                       {traktNuvioCatalogsBeforeAddon && filteredTraktRows.map((row) => (
+                        <div className="nuvio-home-section" key={row.key}>
                         <StremioCatalogRow
-                          key={row.key}
                           title={row.title}
                           items={row.items}
                           landscape={isLandscapePosters}
                           onItemClick={(item) => handleItemClick({ content_id: item.id, content_type: item.type, name: item.name, poster: item.poster ?? null })}
                         />
+                        </div>
                       ))}
 
                       {filteredRows.map((row: any) => {
                         if (row.type === 'collection') {
                           const coll = row.collection;
                           return (
-                            <div key={row.key} className="nuvio-row">
+                            <div key={row.key} className="nuvio-row nuvio-home-section">
                               <div className="nuvio-row-header">
                                 <h3 className="nuvio-row-title">{row.title}</h3>
                                 <div className="stremio-row-nav">
@@ -2474,7 +2485,7 @@ function NuvioPageContent({
                                     >
                                       <div className="nuvio-folder-card-inner">
                                         {folderImgUrl ? (
-                                          <img src={folderImgUrl} alt={folder.title} className="nuvio-folder-card-img" />
+                                          <LazyImage src={folderImgUrl} alt={folder.title} className="nuvio-folder-card-img" fetchPriority="low" />
                                         ) : folder.coverEmoji ? (
                                           <div className="nuvio-folder-card-emoji">{folder.coverEmoji}</div>
                                         ) : (
@@ -2497,8 +2508,8 @@ function NuvioPageContent({
                         } else {
                           // row.type === 'catalog'
                           return (
+                            <div className="nuvio-home-section" key={row.key}>
                             <StremioCatalogRow
-                              key={row.key}
                               title={row.title}
                               addon={row.addon}
                               catalog={row.catalog}
@@ -2508,18 +2519,20 @@ function NuvioPageContent({
                                 nuvioNavigate({ view: 'search', catalogKey: row.key } as any);
                               }}
                             />
+                            </div>
                           );
                         }
                       })}
 
                       {!traktNuvioCatalogsBeforeAddon && filteredTraktRows.map((row) => (
+                        <div className="nuvio-home-section" key={row.key}>
                         <StremioCatalogRow
-                          key={row.key}
                           title={row.title}
                           items={row.items}
                           landscape={isLandscapePosters}
                           onItemClick={(item) => handleItemClick({ content_id: item.id, content_type: item.type, name: item.name, poster: item.poster ?? null })}
                         />
+                        </div>
                       ))}
                     </div>
                   )}
@@ -2560,7 +2573,7 @@ function NuvioPageContent({
                             }}
                           >
                             {item.poster ? (
-                              <img src={item.poster} alt={item.name} className="nuvio-card-img" />
+                              <LazyImage src={item.poster} alt={item.name} className="nuvio-card-img" fetchPriority="low" />
                             ) : (
                               <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.02)', color: 'rgba(255,255,255,0.3)', padding: '12px', boxSizing: 'border-box', textAlign: 'center', fontSize: '0.75rem' }}>
                                 {item.name}

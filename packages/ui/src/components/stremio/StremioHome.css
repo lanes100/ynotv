@@ -157,6 +157,8 @@
 
 .stremio-row {
   position: relative;
+  content-visibility: auto;
+  contain-intrinsic-size: 280px;
 }
 
 .stremio-row-header {
@@ -251,6 +253,7 @@
   overflow: hidden;
   cursor: pointer;
   transition: transform 0.2s, box-shadow 0.2s;
+  contain: content;
 }
 
 .stremio-row-card:hover {
@@ -302,6 +305,7 @@
   bottom: 0;
   width: 40px;
   pointer-events: none;
+  will-change: opacity;
 }
 
 .stremio-row-fade-left {
@@ -508,9 +512,7 @@
   position: absolute;
   top: 6px;
   left: 6px;
-  background: rgba(15, 11, 28, 0.8);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
+  background: rgba(15, 11, 28, 0.9);
   border: 1px solid rgba(255, 255, 255, 0.08);
   color: var(--text-primary, rgba(255, 255, 255, 0.95));
   font-size: 0.65rem;
@@ -804,6 +806,7 @@
   background: linear-gradient(to top, rgba(0, 0, 0, 0.6) 0%, rgba(0, 0, 0, 0) 50%);
   pointer-events: none;
   z-index: 1;
+  will-change: opacity;
 }
 
 .stremio-row-landscape-logo {

@@ -3,6 +3,7 @@ import type { InstalledAddon, StremioManifestCatalog, StremioMetaPreview } from 
 import { fetchCatalog, getCachedCatalog } from '../../services/stremio-addon';
 import { useStremioHover } from '../../contexts/StremioHoverContext';
 import { useUIStore } from '../../stores/uiStore';
+import { LazyImage } from '../LazyImage';
 import './StremioHome.css';
 
 interface StremioCatalogRowProps {
@@ -206,23 +207,22 @@ export function StremioCatalogRow({
                   {cardImg || (item as any).progress != null ? (
                     <div style={{ position: 'relative', overflow: 'hidden', borderRadius: landscape ? '8px' : '0' }}>
                       {cardImg && (
-                        <img
+                        <LazyImage
                           className={`stremio-row-poster ${landscape ? 'landscape' : ''}`}
                           src={cardImg}
                           alt={item.name}
-                          loading="lazy"
-                          onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                          fetchPriority="low"
                         />
                       )}
                       
                       {landscape && (
                         <div className="stremio-row-landscape-overlay">
                           {item.logo ? (
-                            <img 
+                            <LazyImage 
                               src={item.logo} 
                               alt="" 
                               className="stremio-row-landscape-logo" 
-                              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                              rootMargin="600px"
                             />
                           ) : (
                             <span className="stremio-row-landscape-title-fallback">{item.name}</span>

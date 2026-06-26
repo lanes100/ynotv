@@ -182,6 +182,8 @@ export function NuvioHeroBanner({ onItemClick, onAddToLibrary, libraryIds }: Nuv
           alt=""
           className="stremio-hero-backdrop"
           loading="eager"
+          decoding="async"
+          fetchPriority="high"
         />
       )}
 
@@ -210,6 +212,7 @@ export function NuvioHeroBanner({ onItemClick, onAddToLibrary, libraryIds }: Nuv
             src={activeItem.logo}
             alt={activeItem.name}
             className="stremio-hero-logo"
+            decoding="async"
             onError={() => setLogoError(true)}
           />
         ) : (
