@@ -819,7 +819,7 @@ export function NuvioDetailView({
       <div className="stremio-detail-layout">
         {/* Left Side: Metadata & Description */}
         <div className="stremio-detail-left">
-          <button className="stremio-detail-back-btn" onClick={onBack}>
+          <button className="stremio-detail-back-btn btn-back" onClick={onBack}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16">
               <path d="M19 12H5" />
               <path d="M12 19l-7-7 7-7" />
@@ -912,7 +912,7 @@ export function NuvioDetailView({
           <div className="stremio-detail-actions">
             {effectiveTrailerUrl && (
               <button
-                className="stremio-detail-action-btn"
+                className="stremio-detail-action-btn btn-trailer"
                 onClick={() => {
                   window.dispatchEvent(new CustomEvent('ynotv:play-url', {
                     detail: {
@@ -933,7 +933,7 @@ export function NuvioDetailView({
             )}
 
             <button
-              className={`stremio-detail-action-btn ${inLibrary ? 'in-library' : ''}`}
+              className={`stremio-detail-action-btn btn-add-library ${inLibrary ? 'in-library' : ''}`}
               onClick={handleLibraryToggle}
             >
               {inLibrary ? (

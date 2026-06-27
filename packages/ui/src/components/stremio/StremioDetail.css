@@ -37,6 +37,7 @@
   position: relative;
   z-index: 1;
   display: flex;
+  gap: 8px;
   width: 100%;
   height: 100%;
 }
@@ -50,10 +51,12 @@
   justify-content: flex-start;
   padding: 40px;
   overflow-y: auto;
-  height: 100%;
+  height: calc(100% - 16px);
   box-sizing: border-box;
   scrollbar-width: thin;
   scrollbar-color: var(--surface-hover, rgba(255, 255, 255, 0.15)) transparent;
+  border-radius: 12px;
+  margin: 8px 0 8px 8px;
 }
 
 .stremio-detail-left:hover {
@@ -81,11 +84,13 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  background: var(--surface-color, rgba(255, 255, 255, 0.06));
-  border: 1px solid var(--surface-border, rgba(255, 255, 255, 0.1));
-  color: var(--text-secondary, rgba(255, 255, 255, 0.85));
-  padding: 8px 16px;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 8px;
+  padding: 6px 14px;
+  color: rgba(255, 255, 255, 0.85);
   cursor: pointer;
   font-size: 0.85rem;
   font-weight: 600;
@@ -95,9 +100,9 @@
 }
 
 .stremio-detail-back-btn:hover {
-  background: var(--surface-hover, rgba(255, 255, 255, 0.12));
-  border-color: var(--accent-primary, rgba(255, 255, 255, 0.2));
-  color: var(--text-primary, white);
+  background: rgba(0, 0, 0, 0.6);
+  border-color: rgba(255, 255, 255, 0.25);
+  color: #fff;
   transform: translateX(-2px);
 }
 
@@ -220,7 +225,7 @@
   background: var(--surface-color, rgba(255, 255, 255, 0.06));
   border: 1px solid var(--surface-border, rgba(255, 255, 255, 0.08));
   color: var(--text-primary, white);
-  padding: 10px 20px;
+  padding: 8px 20px;
   border-radius: 8px;
   font-size: 0.85rem;
   font-weight: 600;
@@ -233,6 +238,34 @@
   border-color: var(--accent-primary, rgba(255, 255, 255, 0.2));
   transform: translateY(-1px);
   box-shadow: 0 0 15px var(--accent-glow, rgba(0, 212, 255, 0.05));
+}
+
+.stremio-detail-action-btn.btn-trailer {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: white;
+  padding: 8px 20px;
+}
+
+.stremio-detail-action-btn.btn-trailer:hover {
+  background: rgba(255, 255, 255, 0.18);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.stremio-detail-action-btn.btn-add-library {
+  background: color-mix(in srgb, var(--accent-primary, #00d4ff) 20%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent-primary, #00d4ff) 40%, transparent);
+  border-radius: 8px;
+  color: white;
+  padding: 8px 20px;
+}
+
+.stremio-detail-action-btn.btn-add-library:hover {
+  background: color-mix(in srgb, var(--accent-primary, #00d4ff) 30%, transparent);
+  border-color: color-mix(in srgb, var(--accent-primary, #00d4ff) 60%, transparent);
 }
 
 .stremio-detail-action-btn svg {
@@ -254,13 +287,21 @@
 
 .stremio-detail-right {
   flex: 1;
-  background: var(--surface-color, rgba(12, 12, 18, 0.75));
-  backdrop-filter: blur(var(--glass-blur, 20px)) saturate(var(--glass-saturation, 150%));
-  -webkit-backdrop-filter: blur(var(--glass-blur, 20px)) saturate(var(--glass-saturation, 150%));
-  border-left: var(--glass-border, 1px solid rgba(255, 255, 255, 0.07));
+  background: rgba(8, 6, 15, 0.82) !important;
+  backdrop-filter: blur(32px) saturate(120%) !important;
+  -webkit-backdrop-filter: blur(32px) saturate(120%) !important;
+  isolation: isolate;
+  position: relative;
+  z-index: 10;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1),
+              0 8px 32px rgba(0, 0, 0, 0.4) !important;
+  border-radius: 12px;
+  margin: 8px 8px 8px 0;
+  height: calc(100% - 16px);
+  overflow: hidden;
   display: flex;
   flex-direction: column;
-  height: 100%;
   box-sizing: border-box;
 }
 
@@ -435,19 +476,25 @@
   background: var(--surface-color, rgba(255, 255, 255, 0.02));
   border: 1px solid var(--surface-border, rgba(255, 255, 255, 0.03));
   cursor: pointer;
-  transition: all 0.15s;
+  transition: all 0.15s ease;
 }
 
 .stremio-detail-video-card:hover {
-  background: var(--surface-hover, rgba(255, 255, 255, 0.06));
-  border-color: var(--accent-primary, rgba(255, 255, 255, 0.06));
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   transform: translateX(2px);
 }
 
+.stremio-detail-video-card.current {
+  background: color-mix(in srgb, var(--accent-primary, #00d4ff) 15%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent-primary, #00d4ff) 30%, transparent);
+  border-left: 3px solid var(--accent-primary, #00d4ff);
+}
+
 .stremio-detail-video-thumb-container {
-  width: 96px;
-  height: 54px;
-  border-radius: 4px;
+  width: 120px;
+  height: 68px;
+  border-radius: 6px;
   overflow: hidden;
   flex-shrink: 0;
   background: var(--surface-color, rgba(255, 255, 255, 0.03));
@@ -980,8 +1027,18 @@
 
 .stremio-detail-cast-row {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  gap: 12px;
+  padding-bottom: 8px;
+  max-width: 100%;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
+}
+
+.stremio-detail-cast-row::-webkit-scrollbar {
+  display: none; /* Chrome/Safari */
 }
 
 .stremio-detail-cast-member {
@@ -989,8 +1046,8 @@
   flex-direction: column;
   align-items: center;
   gap: 6px;
-  min-width: 100px;
-  max-width: 100px;
+  flex: 0 0 auto;
+  width: 80px;
   cursor: pointer;
   transition: all 0.15s;
   padding: 8px 4px;

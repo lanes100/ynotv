@@ -3455,13 +3455,19 @@ html.modern-ui-v3[data-theme="light"] .ufc-detail-fighter-img {
 }
 
 .modern-ui-v3 .stremio-detail-right {
-  background: rgba(255, 255, 255, 0.06) !important;
-  backdrop-filter: blur(24px) saturate(180%) !important;
-  -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
-  border-left: 1px solid rgba(255, 255, 255, 0.12) !important;
-  box-shadow: 
-    inset 0 1px 0 rgba(255, 255, 255, 0.2),
-    inset 0 -1px 0 rgba(255, 255, 255, 0.05) !important;
+  background: rgba(8, 6, 15, 0.82) !important;
+  backdrop-filter: blur(32px) saturate(120%) !important;
+  -webkit-backdrop-filter: blur(32px) saturate(120%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1),
+              0 8px 32px rgba(0, 0, 0, 0.4) !important;
+  border-radius: 12px !important;
+  margin: 8px 8px 8px 0 !important;
+  height: calc(100% - 16px) !important;
+  overflow: hidden !important;
+  isolation: isolate !important;
+  position: relative !important;
+  z-index: 10 !important;
 }
 
 /* Stremio & Nuvio Detail Views Elements (Liquid Glass Styles) */
@@ -3493,6 +3499,23 @@ html.modern-ui-v3[data-theme="light"] .ufc-detail-fighter-img {
   color: #fff !important;
   transform: translateX(-2px) !important;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+}
+
+.modern-ui-v3 .stremio-detail-back-btn.btn-back {
+  background: rgba(0, 0, 0, 0.4) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  border-radius: 8px !important;
+  padding: 6px 14px !important;
+  color: rgba(255, 255, 255, 0.85) !important;
+}
+
+.modern-ui-v3 .stremio-detail-back-btn.btn-back:hover {
+  background: rgba(0, 0, 0, 0.6) !important;
+  border-color: rgba(255, 255, 255, 0.25) !important;
+  color: #fff !important;
+  transform: translateX(-2px) !important;
 }
 
 .modern-ui-v3 .back-button-overlay__btn {
@@ -3567,6 +3590,38 @@ html.modern-ui-v3[data-theme="light"] .ufc-detail-fighter-img {
   color: #fff !important;
   transform: translateY(-1px) !important;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+}
+
+.modern-ui-v3 .stremio-detail-action-btn.btn-trailer {
+  background: rgba(255, 255, 255, 0.1) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  border-radius: 8px !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+  color: white !important;
+  padding: 8px 20px !important;
+}
+
+.modern-ui-v3 .stremio-detail-action-btn.btn-trailer:hover {
+  background: rgba(255, 255, 255, 0.18) !important;
+  border-color: rgba(255, 255, 255, 0.3) !important;
+  box-shadow: none !important;
+}
+
+.modern-ui-v3 .stremio-detail-action-btn.btn-add-library {
+  background: color-mix(in srgb, var(--accent-primary, #00d4ff) 20%, transparent) !important;
+  border: 1px solid color-mix(in srgb, var(--accent-primary, #00d4ff) 40%, transparent) !important;
+  border-radius: 8px !important;
+  color: white !important;
+  padding: 8px 20px !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.modern-ui-v3 .stremio-detail-action-btn.btn-add-library:hover {
+  background: color-mix(in srgb, var(--accent-primary, #00d4ff) 30%, transparent) !important;
+  border-color: color-mix(in srgb, var(--accent-primary, #00d4ff) 60%, transparent) !important;
+  box-shadow: none !important;
 }
 
 .modern-ui-v3 .stremio-detail-action-btn.in-library {
@@ -3737,20 +3792,24 @@ html.modern-ui-v3[data-theme="light"] .ufc-detail-fighter-img {
 
 /* Episode cards (Series detail view) */
 .modern-ui-v3 .stremio-detail-video-card {
-  background: rgba(255, 255, 255, 0.03) !important;
-  border: 1px solid rgba(255, 255, 255, 0.06) !important;
-  border-radius: 12px !important;
-  padding: 12px !important;
-  transition: all 0.28s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  background: rgba(255, 255, 255, 0.02) !important;
+  border: 1px solid rgba(255, 255, 255, 0.03) !important;
+  border-radius: 8px !important;
+  padding: 10px !important;
+  transition: all 0.15s ease !important;
 }
 
 .modern-ui-v3 .stremio-detail-video-card:hover {
-  background: rgba(255, 255, 255, 0.08) !important;
-  border-color: rgba(255, 255, 255, 0.15) !important;
-  box-shadow: 
-    0 8px 24px rgba(0, 0, 0, 0.25),
-    0 0 0 1px rgba(255, 255, 255, 0.03) inset !important;
-  transform: translateY(-1px) !important;
+  background: rgba(255, 255, 255, 0.07) !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  box-shadow: none !important;
+  transform: translateX(2px) !important;
+}
+
+.modern-ui-v3 .stremio-detail-video-card.current {
+  background: color-mix(in srgb, var(--accent-primary, #00d4ff) 15%, transparent) !important;
+  border: 1px solid color-mix(in srgb, var(--accent-primary, #00d4ff) 30%, transparent) !important;
+  border-left: 3px solid var(--accent-primary, #00d4ff) !important;
 }
 
 .modern-ui-v3 .stremio-detail-video-card.stremio-ep-watched {
@@ -3759,9 +3818,9 @@ html.modern-ui-v3[data-theme="light"] .ufc-detail-fighter-img {
 }
 
 .modern-ui-v3 .stremio-ep-thumb-wrap {
-  width: 140px !important;
-  height: 79px !important;
-  border-radius: 8px !important;
+  width: 120px !important;
+  height: 68px !important;
+  border-radius: 6px !important;
   border: 1px solid rgba(255, 255, 255, 0.08) !important;
   background: rgba(0, 0, 0, 0.2) !important;
   position: relative !important;
