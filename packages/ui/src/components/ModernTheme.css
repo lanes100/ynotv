@@ -4656,13 +4656,11 @@ html.modern-ui-v3[data-theme] .guide-channel-playlist-name {
 
 /* Title Bar V3 Glassmorphism Override - frosted glass with a bottom border separator */
 html.modern-ui-v3[data-theme] .title-bar {
-  background: rgba(255, 255, 255, 0.07) !important;
-  backdrop-filter: blur(30px) saturate(200%) !important;
-  -webkit-backdrop-filter: blur(30px) saturate(200%) !important;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
-  box-shadow: 
-    inset 0 1px 0 rgba(255, 255, 255, 0.15),
-    0 4px 16px rgba(0, 0, 0, 0.2) !important;
+  background: transparent !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border-bottom: none !important;
+  box-shadow: none !important;
 }
 
 /* Video Active: remove frosted glass when video is playing */
@@ -5108,13 +5106,11 @@ html.modern-ui-v3[data-theme="light"] .stremio-detail-right {
 }
 
 html.modern-ui-v3[data-theme="light"] .title-bar {
-  background: rgba(255, 255, 255, 0.45) !important;
-  backdrop-filter: blur(30px) saturate(190%) !important;
-  -webkit-backdrop-filter: blur(30px) saturate(190%) !important;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.08) !important;
-  box-shadow: 
-    inset 0 1px 0 rgba(255, 255, 255, 0.6),
-    0 4px 16px rgba(0, 0, 0, 0.08) !important;
+  background: transparent !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border-bottom: none !important;
+  box-shadow: none !important;
 }
 
 html.modern-ui-v3[data-theme="light"] .program-block {
@@ -7443,9 +7439,11 @@ html.modern-ui-v3 .now-playing-bar .npb-live-btn {
 
 /* Much darker backing — readable on any video */
 html.modern-ui-v3 .title-bar {
-  background: rgba(0, 0, 0, 0.82) !important;
-  backdrop-filter: blur(24px) saturate(120%) brightness(0.75) !important;
-  -webkit-backdrop-filter: blur(24px) saturate(120%) brightness(0.75) !important;
+  background: transparent !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border-bottom: none !important;
+  box-shadow: none !important;
 }
 
 
