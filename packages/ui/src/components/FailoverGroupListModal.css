@@ -193,12 +193,16 @@
     background: none;
     border: none;
     cursor: pointer;
+    color: inherit;
     font-size: 0.9rem;
     padding: 4px 6px;
     border-radius: 4px;
     transition: background 0.15s;
     line-height: 1;
     opacity: 0.5;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .fgl-item:hover .fgl-action-btn {

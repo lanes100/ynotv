@@ -411,6 +411,11 @@ export function ChannelPanel({
     return saved === 'true';
   });
 
+  const [showRecentPlaylistName, setShowRecentPlaylistName] = useState(() => {
+    const saved = localStorage.getItem('showRecentPlaylistName');
+    return saved === 'true';
+  });
+
   const [sourceNames, setSourceNames] = useState<Map<string, string>>(new Map());
 
   useEffect(() => {
@@ -2093,6 +2098,19 @@ export function ChannelPanel({
                     </button>
                   </>
                 )}
+                {categoryId === '__recent__' && (
+                  <button
+                    className={`guide-manage-channels-btn ${showRecentPlaylistName ? 'active-toggle' : ''}`}
+                    onClick={() => {
+                      const newVal = !showRecentPlaylistName;
+                      setShowRecentPlaylistName(newVal);
+                      localStorage.setItem('showRecentPlaylistName', String(newVal));
+                    }}
+                    title="Show playlist name for each channel"
+                  >
+                    {showRecentPlaylistName ? '📋' : '📄'} Toggle Playlist Name
+                  </button>
+                )}
                 {canManageChannels && (
                   <>
                     {!epgHiddenButtons.includes('manage-channels') && (
@@ -2549,7 +2567,7 @@ export function ChannelPanel({
                 onPlayInPopout,
                 onPlayInExternal,
                 currentChannel,
-                showPlaylistName: showFavPlaylistName,
+                showPlaylistName: categoryId === '__recent__' ? showRecentPlaylistName : showFavPlaylistName,
                 sourceNames,
               }}
               components={{

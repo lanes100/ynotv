@@ -5790,7 +5790,11 @@ html.modern-ui-v3:not([data-theme="light"]) .guide-channel-playlist-name {
 /* 1. Backdrop Overlays */
 .modern-ui-v3 .category-manager-overlay,
 .modern-ui-v3 .channel-manager-overlay,
-.modern-ui-v3 .source-form-overlay {
+.modern-ui-v3 .source-form-overlay,
+.modern-ui-v3 .failover-group-list-overlay,
+.modern-ui-v3 .custom-group-manager-overlay,
+.modern-ui-v3 .playlist-list-overlay,
+.modern-ui-v3 .playlist-editor-backdrop {
   background: rgba(8, 8, 12, 0.4) !important;
   backdrop-filter: blur(10px) !important;
   -webkit-backdrop-filter: blur(10px) !important;
@@ -5799,7 +5803,11 @@ html.modern-ui-v3:not([data-theme="light"]) .guide-channel-playlist-name {
 /* 2. Modal Card Containers */
 .modern-ui-v3 .category-manager-modal,
 .modern-ui-v3 .channel-manager-modal,
-.modern-ui-v3 .source-form {
+.modern-ui-v3 .source-form,
+.modern-ui-v3 .failover-group-list-modal,
+.modern-ui-v3 .custom-group-manager-modal,
+.modern-ui-v3 .playlist-list-modal,
+.modern-ui-v3 .playlist-editor-modal {
   background: rgba(16, 12, 26, 0.82) !important;
   backdrop-filter: blur(35px) saturate(180%) !important;
   -webkit-backdrop-filter: blur(35px) saturate(180%) !important;
@@ -5816,7 +5824,11 @@ html.modern-ui-v3:not([data-theme="light"]) .guide-channel-playlist-name {
 /* 3. Headers */
 .modern-ui-v3 .category-manager-header,
 .modern-ui-v3 .channel-manager-header,
-.modern-ui-v3 .source-form h3 {
+.modern-ui-v3 .source-form h3,
+.modern-ui-v3 .failover-group-list-header,
+.modern-ui-v3 .custom-group-manager-header,
+.modern-ui-v3 .playlist-list-header,
+.modern-ui-v3 .playlist-editor-header {
   border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
   background: transparent !important;
   padding: 20px 24px !important;
@@ -5830,7 +5842,11 @@ html.modern-ui-v3:not([data-theme="light"]) .guide-channel-playlist-name {
 }
 
 .modern-ui-v3 .category-manager-header h2,
-.modern-ui-v3 .channel-manager-header h2 {
+.modern-ui-v3 .channel-manager-header h2,
+.modern-ui-v3 .failover-group-list-header h2,
+.modern-ui-v3 .playlist-list-header h2,
+.modern-ui-v3 .playlist-editor-header h2,
+.modern-ui-v3 .custom-group-manager-header h2 {
   font-size: 1.15rem !important;
   font-weight: 600 !important;
   color: #fff !important;
@@ -5838,7 +5854,10 @@ html.modern-ui-v3:not([data-theme="light"]) .guide-channel-playlist-name {
 
 /* 4. Close Buttons & Stats */
 .modern-ui-v3 .category-manager-header .close-btn,
-.modern-ui-v3 .channel-manager-header .close-btn {
+.modern-ui-v3 .channel-manager-header .close-btn,
+.modern-ui-v3 .failover-group-list-header .close-btn,
+.modern-ui-v3 .custom-group-manager-header .close-btn,
+.modern-ui-v3 .playlist-list-header .close-btn {
   border-radius: 50% !important;
   width: 32px !important;
   height: 32px !important;
@@ -5852,7 +5871,10 @@ html.modern-ui-v3:not([data-theme="light"]) .guide-channel-playlist-name {
 }
 
 .modern-ui-v3 .category-manager-header .close-btn:hover,
-.modern-ui-v3 .channel-manager-header .close-btn:hover {
+.modern-ui-v3 .channel-manager-header .close-btn:hover,
+.modern-ui-v3 .failover-group-list-header .close-btn:hover,
+.modern-ui-v3 .custom-group-manager-header .close-btn:hover,
+.modern-ui-v3 .playlist-list-header .close-btn:hover {
   background: rgba(255, 255, 255, 0.12) !important;
   border-color: rgba(255, 255, 255, 0.2) !important;
   color: #fff !important;
@@ -6167,7 +6189,11 @@ html.modern-ui-v3:not([data-theme="light"]) .guide-channel-playlist-name {
 
 html.modern-ui-v3[data-theme="light"] .category-manager-modal,
 html.modern-ui-v3[data-theme="light"] .channel-manager-modal,
-html.modern-ui-v3[data-theme="light"] .source-form {
+html.modern-ui-v3[data-theme="light"] .source-form,
+html.modern-ui-v3[data-theme="light"] .failover-group-list-modal,
+html.modern-ui-v3[data-theme="light"] .custom-group-manager-modal,
+html.modern-ui-v3[data-theme="light"] .playlist-list-modal,
+html.modern-ui-v3[data-theme="light"] .playlist-editor-modal {
   background: rgba(255, 255, 255, 0.45) !important;
   backdrop-filter: blur(30px) saturate(190%) !important;
   -webkit-backdrop-filter: blur(30px) saturate(190%) !important;
@@ -6181,13 +6207,21 @@ html.modern-ui-v3[data-theme="light"] .source-form {
 
 html.modern-ui-v3[data-theme="light"] .category-manager-header,
 html.modern-ui-v3[data-theme="light"] .channel-manager-header,
-html.modern-ui-v3[data-theme="light"] .source-form h3 {
+html.modern-ui-v3[data-theme="light"] .source-form h3,
+html.modern-ui-v3[data-theme="light"] .failover-group-list-header,
+html.modern-ui-v3[data-theme="light"] .custom-group-manager-header,
+html.modern-ui-v3[data-theme="light"] .playlist-list-header,
+html.modern-ui-v3[data-theme="light"] .playlist-editor-header {
   border-bottom-color: rgba(0, 0, 0, 0.08) !important;
   color: #000 !important;
 }
 
 html.modern-ui-v3[data-theme="light"] .category-manager-header h2,
-html.modern-ui-v3[data-theme="light"] .channel-manager-header h2 {
+html.modern-ui-v3[data-theme="light"] .channel-manager-header h2,
+html.modern-ui-v3[data-theme="light"] .failover-group-list-header h2,
+html.modern-ui-v3[data-theme="light"] .playlist-list-header h2,
+html.modern-ui-v3[data-theme="light"] .playlist-editor-header h2,
+html.modern-ui-v3[data-theme="light"] .custom-group-manager-header h2 {
   color: #000 !important;
 }
 
@@ -6199,13 +6233,19 @@ html.modern-ui-v3[data-theme="light"] .channel-manager-stats {
 }
 
 html.modern-ui-v3[data-theme="light"] .category-manager-header .close-btn,
-html.modern-ui-v3[data-theme="light"] .channel-manager-header .close-btn {
+html.modern-ui-v3[data-theme="light"] .channel-manager-header .close-btn,
+html.modern-ui-v3[data-theme="light"] .failover-group-list-header .close-btn,
+html.modern-ui-v3[data-theme="light"] .custom-group-manager-header .close-btn,
+html.modern-ui-v3[data-theme="light"] .playlist-list-header .close-btn {
   background: rgba(0, 0, 0, 0.04) !important;
   border-color: rgba(0, 0, 0, 0.08) !important;
   color: rgba(0, 0, 0, 0.6) !important;
 }
 html.modern-ui-v3[data-theme="light"] .category-manager-header .close-btn:hover,
-html.modern-ui-v3[data-theme="light"] .channel-manager-header .close-btn:hover {
+html.modern-ui-v3[data-theme="light"] .channel-manager-header .close-btn:hover,
+html.modern-ui-v3[data-theme="light"] .failover-group-list-header .close-btn:hover,
+html.modern-ui-v3[data-theme="light"] .custom-group-manager-header .close-btn:hover,
+html.modern-ui-v3[data-theme="light"] .playlist-list-header .close-btn:hover {
   background: rgba(0, 0, 0, 0.08) !important;
   border-color: rgba(0, 0, 0, 0.15) !important;
   color: #000 !important;
@@ -6346,6 +6386,280 @@ html.modern-ui-v3[data-theme="light"] .cancel-btn:hover {
   color: #000 !important;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05) !important;
 }
+
+/* Failover Groups and Playlist Editor Inner Layout overrides */
+.modern-ui-v3 .group-channels-pane,
+.modern-ui-v3 .playlist-editor-left {
+  background: rgba(0, 0, 0, 0.15) !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+.modern-ui-v3 .source-selector-pane,
+.modern-ui-v3 .playlist-editor-right {
+  background: transparent !important;
+}
+
+.modern-ui-v3 .pane-header,
+.modern-ui-v3 .ple-panel-header {
+  background: rgba(255, 255, 255, 0.02) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
+}
+
+/* Playlist Editor specific buttons */
+.modern-ui-v3 .ple-close-btn {
+  background: rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  color: rgba(255, 255, 255, 0.8) !important;
+  border-radius: 10px !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  cursor: pointer !important;
+}
+
+.modern-ui-v3 .ple-close-btn:hover {
+  background: rgba(255, 255, 255, 0.12) !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+  color: #fff !important;
+}
+
+.modern-ui-v3 .ple-export-btn {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  color: #fff !important;
+  border-radius: 10px !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  cursor: pointer !important;
+}
+
+.modern-ui-v3 .ple-export-btn:hover {
+  background: var(--accent-primary, #00d4ff) !important;
+  border-color: var(--accent-primary, #00d4ff) !important;
+  color: #000 !important;
+}
+
+/* Custom & Failover Group Manager list items inside pane */
+.modern-ui-v3 .group-channel-item {
+  background: rgba(255, 255, 255, 0.02) !important;
+  border: 1px solid rgba(255, 255, 255, 0.04) !important;
+  border-radius: 10px !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.modern-ui-v3 .group-channel-item:hover {
+  background: rgba(255, 255, 255, 0.06) !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+/* Footer alignment */
+.modern-ui-v3 .failover-group-list-footer,
+.modern-ui-v3 .custom-group-manager-footer,
+.modern-ui-v3 .playlist-list-footer {
+  border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
+  background: transparent !important;
+}
+
+/* ────────── Light Theme overrides ────────── */
+html.modern-ui-v3[data-theme="light"] .group-channels-pane,
+html.modern-ui-v3[data-theme="light"] .playlist-editor-left {
+  background: rgba(0, 0, 0, 0.02) !important;
+  border-right-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .pane-header,
+html.modern-ui-v3[data-theme="light"] .ple-panel-header {
+  background: rgba(0, 0, 0, 0.01) !important;
+  border-bottom-color: rgba(0, 0, 0, 0.06) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .failover-group-list-footer,
+html.modern-ui-v3[data-theme="light"] .custom-group-manager-footer,
+html.modern-ui-v3[data-theme="light"] .playlist-list-footer {
+  border-top-color: rgba(0, 0, 0, 0.08) !important;
+  background: transparent !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .ple-close-btn {
+  background: rgba(0, 0, 0, 0.03) !important;
+  border-color: rgba(0, 0, 0, 0.08) !important;
+  color: rgba(0, 0, 0, 0.7) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .ple-close-btn:hover {
+  background: rgba(0, 0, 0, 0.06) !important;
+  border-color: rgba(0, 0, 0, 0.15) !important;
+  color: #000 !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .ple-export-btn {
+  background: rgba(0, 0, 0, 0.05) !important;
+  border-color: rgba(0, 0, 0, 0.1) !important;
+  color: #000 !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .ple-export-btn:hover {
+  background: var(--accent-primary, #00d4ff) !important;
+  border-color: var(--accent-primary, #00d4ff) !important;
+  color: #000 !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .group-channel-item {
+  background: rgba(0, 0, 0, 0.01) !important;
+  border-color: rgba(0, 0, 0, 0.04) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .group-channel-item:hover {
+  background: rgba(0, 0, 0, 0.04) !important;
+  border-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+/* Input Fields inside Failover/Playlist/Group managers */
+.modern-ui-v3 .pll-create-input,
+.modern-ui-v3 .pll-edit-input,
+.modern-ui-v3 .fgl-create-input,
+.modern-ui-v3 .fgl-edit-input,
+.modern-ui-v3 .cgm-rename-input,
+.modern-ui-v3 .ple-name-input,
+.modern-ui-v3 .ple-search-input,
+.modern-ui-v3 .search-bar input {
+  border-radius: 10px !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  background: rgba(255, 255, 255, 0.04) !important;
+  color: #fff !important;
+  padding: 8px 12px !important;
+  transition: all 0.2s ease !important;
+}
+
+.modern-ui-v3 .pll-create-input:focus,
+.modern-ui-v3 .pll-edit-input:focus,
+.modern-ui-v3 .fgl-create-input:focus,
+.modern-ui-v3 .fgl-edit-input:focus,
+.modern-ui-v3 .cgm-rename-input:focus,
+.modern-ui-v3 .ple-name-input:focus,
+.modern-ui-v3 .ple-search-input:focus,
+.modern-ui-v3 .search-bar input:focus {
+  border-color: rgba(255, 255, 255, 0.2) !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.05) !important;
+  outline: none !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .pll-create-input,
+html.modern-ui-v3[data-theme="light"] .pll-edit-input,
+html.modern-ui-v3[data-theme="light"] .fgl-create-input,
+html.modern-ui-v3[data-theme="light"] .fgl-edit-input,
+html.modern-ui-v3[data-theme="light"] .cgm-rename-input,
+html.modern-ui-v3[data-theme="light"] .ple-name-input,
+html.modern-ui-v3[data-theme="light"] .ple-search-input,
+html.modern-ui-v3[data-theme="light"] .search-bar input {
+  background: rgba(0, 0, 0, 0.02) !important;
+  border-color: rgba(0, 0, 0, 0.08) !important;
+  color: #000 !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .pll-create-input:focus,
+html.modern-ui-v3[data-theme="light"] .pll-edit-input:focus,
+html.modern-ui-v3[data-theme="light"] .fgl-create-input:focus,
+html.modern-ui-v3[data-theme="light"] .fgl-edit-input:focus,
+html.modern-ui-v3[data-theme="light"] .cgm-rename-input:focus,
+html.modern-ui-v3[data-theme="light"] .ple-name-input:focus,
+html.modern-ui-v3[data-theme="light"] .ple-search-input:focus,
+html.modern-ui-v3[data-theme="light"] .search-bar input:focus {
+  background: rgba(0, 0, 0, 0.05) !important;
+  border-color: rgba(0, 0, 0, 0.15) !important;
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.03) !important;
+}
+
+.modern-ui-v3 .pll-create-btn,
+.modern-ui-v3 .fgl-create-btn,
+.modern-ui-v3 .fgl-create-ok,
+.modern-ui-v3 .fgl-create-cancel,
+.modern-ui-v3 .pll-create-ok,
+.modern-ui-v3 .pll-create-cancel {
+  border-radius: 8px !important;
+  padding: 8px 14px !important;
+  font-size: 0.85rem !important;
+  transition: all 0.2s ease !important;
+}
+
+/* Glowing Scrollbar Overrides for Failover Groups and Managers */
+.modern-ui-v3 .failover-group-list-content,
+.modern-ui-v3 .channel-list-container,
+.modern-ui-v3 .selector-content {
+  scrollbar-width: thin !important;
+  scrollbar-color: rgba(255, 255, 255, 0.08) transparent !important;
+  transition: scrollbar-color 0.2s ease !important;
+}
+
+.modern-ui-v3 .failover-group-list-content:hover,
+.modern-ui-v3 .channel-list-container:hover,
+.modern-ui-v3 .selector-content:hover {
+  scrollbar-color: var(--accent-primary, rgba(0, 212, 255, 0.5)) transparent !important;
+}
+
+.modern-ui-v3 .failover-group-list-content::-webkit-scrollbar,
+.modern-ui-v3 .channel-list-container::-webkit-scrollbar,
+.modern-ui-v3 .selector-content::-webkit-scrollbar {
+  width: 6px !important;
+  height: 6px !important;
+}
+
+.modern-ui-v3 .failover-group-list-content::-webkit-scrollbar-track,
+.modern-ui-v3 .channel-list-container::-webkit-scrollbar-track,
+.modern-ui-v3 .selector-content::-webkit-scrollbar-track {
+  background: transparent !important;
+}
+
+.modern-ui-v3 .failover-group-list-content::-webkit-scrollbar-thumb,
+.modern-ui-v3 .channel-list-container::-webkit-scrollbar-thumb,
+.modern-ui-v3 .selector-content::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-radius: 4px !important;
+  transition: background 0.2s ease !important;
+}
+
+.modern-ui-v3 .failover-group-list-content:hover::-webkit-scrollbar-thumb,
+.modern-ui-v3 .channel-list-container:hover::-webkit-scrollbar-thumb,
+.modern-ui-v3 .selector-content:hover::-webkit-scrollbar-thumb {
+  background: var(--surface-hover, rgba(255, 255, 255, 0.25)) !important;
+}
+
+.modern-ui-v3 .failover-group-list-content::-webkit-scrollbar-thumb:hover,
+.modern-ui-v3 .channel-list-container::-webkit-scrollbar-thumb:hover,
+.modern-ui-v3 .selector-content::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-primary, #00d4ff) !important;
+}
+
+/* Light Theme Scrollbar Glow Overrides */
+html.modern-ui-v3[data-theme="light"] .failover-group-list-content,
+html.modern-ui-v3[data-theme="light"] .channel-list-container,
+html.modern-ui-v3[data-theme="light"] .selector-content {
+  scrollbar-color: rgba(0, 0, 0, 0.08) transparent !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .failover-group-list-content:hover,
+html.modern-ui-v3[data-theme="light"] .channel-list-container:hover,
+html.modern-ui-v3[data-theme="light"] .selector-content:hover {
+  scrollbar-color: var(--accent-primary, rgba(0, 212, 255, 0.5)) transparent !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .failover-group-list-content::-webkit-scrollbar-thumb,
+html.modern-ui-v3[data-theme="light"] .channel-list-container::-webkit-scrollbar-thumb,
+html.modern-ui-v3[data-theme="light"] .selector-content::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.08) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .failover-group-list-content:hover::-webkit-scrollbar-thumb,
+html.modern-ui-v3[data-theme="light"] .channel-list-container:hover::-webkit-scrollbar-thumb,
+html.modern-ui-v3[data-theme="light"] .selector-content:hover::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2) !important;
+}
+
+html.modern-ui-v3[data-theme="light"] .failover-group-list-content::-webkit-scrollbar-thumb:hover,
+html.modern-ui-v3[data-theme="light"] .channel-list-container::-webkit-scrollbar-thumb:hover,
+html.modern-ui-v3[data-theme="light"] .selector-content::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-primary, #00d4ff) !important;
+}
+
+
 
 /* ==========================================================================
    V3 LIQUID GLASS - AUDIO & SUBTITLE SELECTOR MODALS OVERRIDES

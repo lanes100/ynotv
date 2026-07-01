@@ -112,7 +112,7 @@ export const ChannelRow = memo(function ChannelRow({
     });
   }
 
-  const isPlaylistNameShown = showPlaylistName && categoryId === '__favorites__';
+  const isPlaylistNameShown = showPlaylistName && (categoryId === '__favorites__' || categoryId === '__recent__');
 
   return (
     <div className={`guide-channel-row ${isCurrentlyPlaying ? 'currently-playing' : ''} ${isPlaylistNameShown ? 'has-playlist-name' : ''}`}>
@@ -173,7 +173,7 @@ export const ChannelRow = memo(function ChannelRow({
               }}>18+</span>
             )}
           </span>
-          {showPlaylistName && categoryId === '__favorites__' && (
+          {showPlaylistName && (categoryId === '__favorites__' || categoryId === '__recent__') && (
             <span className="guide-channel-playlist-name" title={sourceNames?.get(channel.source_id) || channel.source_id}>
               {sourceNames?.get(channel.source_id) || channel.source_id}
             </span>
