@@ -102,6 +102,112 @@ function getDiscoverCatalogs(addons: InstalledAddon[]): DiscoverCatalogInfo[] {
   return results;
 }
 
+interface NuvioSearchRowProps {
+  addon: InstalledAddon;
+  catalog: StremioManifestCatalog;
+  items: StremioMetaPreview[];
+  onItemClick: (item: { content_id: string; content_type: string; name: string; poster: string | null }) => void;
+  onSeeAll: () => void;
+}
+
+function NuvioSearchRow({
+  addon,
+  catalog,
+  items,
+  onItemClick,
+  onSeeAll,
+}: NuvioSearchRowProps) {
+  const { onCardMouseEnter, onCardMouseLeave, onCardClick } = useStremioHover();
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  const updateScroll = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    setCanScrollLeft(el.scrollLeft > 0);
+    setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 1);
+  }, []);
+
+  useEffect(() => {
+    updateScroll();
+    window.addEventListener('resize', updateScroll);
+    return () => window.removeEventListener('resize', updateScroll);
+  }, [updateScroll, items.length]);
+
+  const scroll = (dir: 'left' | 'right') => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const amount = el.clientWidth * 0.75;
+    el.scrollTo({ left: el.scrollLeft + (dir === 'left' ? -amount : amount), behavior: 'smooth' });
+  };
+
+  return (
+    <div className="nuvio-search-result-section">
+      <div className="nuvio-row-header">
+        <h3 className="nuvio-row-title">
+          {addon.manifest?.name || addon.id} - {catalog.name} ({getTypeLabel(catalog.type)})
+        </h3>
+        <div className="stremio-row-nav">
+          <button className="stremio-row-see-all-btn" onClick={onSeeAll}>
+            See all
+          </button>
+          <button
+            className="stremio-row-nav-btn"
+            onClick={() => scroll('left')}
+            disabled={!canScrollLeft}
+            aria-label="Scroll left"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M15 18l-6-6 6-6" />
+            </svg>
+          </button>
+          <button
+            className="stremio-row-nav-btn"
+            onClick={() => scroll('right')}
+            disabled={!canScrollRight}
+            aria-label="Scroll right"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M9 18l6-6-6-6" />
+            </svg>
+          </button>
+        </div>
+      </div>
+      <div className="nuvio-scroll-rail-container">
+        {canScrollLeft && <div className="nuvio-row-fade nuvio-row-fade-left" />}
+        <div className="nuvio-scroll-rail" ref={scrollRef} onScroll={updateScroll}>
+          {items.map((item, idx) => (
+            <div
+              key={`${item.id}-${idx}`}
+              className="nuvio-card"
+              onMouseEnter={(e) => onCardMouseEnter(item, e.currentTarget, e)}
+              onMouseLeave={onCardMouseLeave}
+              onClick={() => {
+                onCardClick();
+                onItemClick({ content_id: item.id, content_type: item.type, name: item.name, poster: item.poster ?? null });
+              }}
+            >
+              {item.poster ? (
+                <img src={item.poster} alt={item.name} className="nuvio-card-img" />
+              ) : (
+                <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.02)', color: 'rgba(255,255,255,0.3)', padding: '12px', boxSizing: 'border-box', textAlign: 'center', fontSize: '0.75rem' }}>
+                  {item.name}
+                </div>
+              )}
+              <div className="nuvio-card-info">
+                <div className="nuvio-card-title">{item.name}</div>
+                {item.releaseInfo && <div className="nuvio-card-sub">{item.releaseInfo}</div>}
+              </div>
+            </div>
+          ))}
+        </div>
+        {canScrollRight && <div className="nuvio-row-fade nuvio-row-fade-right" />}
+      </div>
+    </div>
+  );
+}
+
 export function NuvioSearchPage({
   addons,
   onItemClick,
@@ -124,6 +230,90 @@ export function NuvioSearchPage({
   const discoverSkipRef = useRef(0);
   const hasMoreDiscoverRef = useRef(true);
   const discoverLoadingRef = useRef(false);
+
+  const [searchCatalogDetail, setSearchCatalogDetail] = useState<{ addon: InstalledAddon; catalog: StremioManifestCatalog } | null>(null);
+  const [searchDetailItems, setSearchDetailItems] = useState<StremioMetaPreview[]>([]);
+  const [searchDetailLoading, setSearchDetailLoading] = useState(false);
+  const searchDetailSkipRef = useRef(0);
+  const hasMoreSearchDetailRef = useRef(true);
+  const searchDetailLoadingRef = useRef(false);
+
+  const loadSearchDetail = useCallback(async (append = false) => {
+    if (!searchCatalogDetail || !query) return;
+    if (append && searchDetailLoadingRef.current) return;
+
+    searchDetailLoadingRef.current = true;
+    if (!append) {
+      searchDetailSkipRef.current = 0;
+      hasMoreSearchDetailRef.current = true;
+
+      // Scroll container to top
+      const el = document.querySelector('.nuvio-main');
+      if (el) el.scrollTop = 0;
+    }
+    setSearchDetailLoading(true);
+    try {
+      const extra: Record<string, string> = {
+        search: query,
+        skip: String(searchDetailSkipRef.current),
+        limit: '50',
+      };
+
+      const resp = await fetchCatalog(
+        searchCatalogDetail.addon.baseUrl,
+        searchCatalogDetail.catalog.type,
+        searchCatalogDetail.catalog.id,
+        extra
+      );
+      const metas = resp?.metas || [];
+      if (append) {
+        setSearchDetailItems(prev => [...prev, ...metas]);
+      } else {
+        setSearchDetailItems(metas);
+      }
+      if (metas.length === 0) {
+        hasMoreSearchDetailRef.current = false;
+      } else {
+        const nextSkip = resp?.nextSkip;
+        searchDetailSkipRef.current = nextSkip != null ? nextSkip : searchDetailSkipRef.current + metas.length;
+      }
+    } catch {
+      if (!append) setSearchDetailItems([]);
+    } finally {
+      setSearchDetailLoading(false);
+      searchDetailLoadingRef.current = false;
+    }
+  }, [searchCatalogDetail, query]);
+
+  useEffect(() => {
+    if (searchCatalogDetail) {
+      setSearchDetailItems([]);
+      searchDetailSkipRef.current = 0;
+      hasMoreSearchDetailRef.current = true;
+      loadSearchDetail(false);
+    } else {
+      setSearchDetailItems([]);
+    }
+  }, [searchCatalogDetail, loadSearchDetail]);
+
+  useEffect(() => {
+    setSearchCatalogDetail(null);
+  }, [query]);
+
+  const searchDetailSentinelRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const sentinel = searchDetailSentinelRef.current;
+    if (!sentinel || !searchCatalogDetail) return;
+    const container = sentinel.closest('.nuvio-main');
+    if (!container) return;
+    const observer = new IntersectionObserver((entries) => {
+      if (entries[0]?.isIntersecting && hasMoreSearchDetailRef.current && !searchDetailLoadingRef.current) {
+        loadSearchDetail(true);
+      }
+    }, { root: container, rootMargin: '600px' });
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [searchCatalogDetail, loadSearchDetail, searchDetailItems.length]);
 
   const discoverCatalogs = useMemo(() => getDiscoverCatalogs(addons), [addons]);
   const searchCatalogs = useMemo(() => getSearchCatalogs(addons), [addons]);
@@ -491,6 +681,92 @@ export function NuvioSearchPage({
             </div>
           )}
         </div>
+      ) : searchCatalogDetail ? (
+        /* SINGLE CATALOG EXPANDED SEARCH RESULTS SECTION */
+        <div className="nuvio-discover-section">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px' }}>
+            <button
+              onClick={() => setSearchCatalogDetail(null)}
+              style={{
+                background: 'rgba(255, 255, 255, 0.05)',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                borderRadius: '20px',
+                color: '#fff',
+                fontSize: '0.8rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+                padding: '6px 14px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                transition: 'all 0.2s',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.12)';
+                e.currentTarget.style.transform = 'translateX(-2px)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
+                e.currentTarget.style.transform = 'none';
+              }}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ width: '14px', height: '14px' }}>
+                <line x1="19" y1="12" x2="5" y2="12" />
+                <polyline points="12 19 5 12 12 5" />
+              </svg>
+              <span>Back</span>
+            </button>
+            <h2 className="nuvio-discover-title" style={{ margin: 0 }}>
+              Search Results: {searchCatalogDetail.addon.manifest?.name || searchCatalogDetail.addon.id} - {searchCatalogDetail.catalog.name}
+            </h2>
+          </div>
+
+          {searchDetailLoading && searchDetailItems.length === 0 ? (
+            <div className="nuvio-search-loading">
+              <div className="spinner" style={{ width: '28px', height: '28px', borderRadius: '50%', border: '3px solid rgba(0,212,255,0.1)', borderTopColor: '#00d4ff', animation: 'spin 1s linear infinite' }} />
+              <span>Searching...</span>
+            </div>
+          ) : searchDetailItems.length > 0 ? (
+            <>
+              <div className="nuvio-discover-grid">
+                {searchDetailItems.map((item, idx) => (
+                  <div
+                    key={`${item.id}-${idx}`}
+                    className="nuvio-discover-item"
+                    onMouseEnter={(e) => onCardMouseEnter(item, e.currentTarget, e)}
+                    onMouseLeave={onCardMouseLeave}
+                    onClick={() => {
+                      onCardClick();
+                      onItemClick({ content_id: item.id, content_type: item.type, name: item.name, poster: item.poster ?? null });
+                    }}
+                  >
+                    <div className="nuvio-discover-poster-wrap">
+                      {item.poster ? (
+                        <img src={item.poster} alt={item.name} className="nuvio-discover-poster" />
+                      ) : (
+                        <div className="nuvio-discover-poster-placeholder">{item.name}</div>
+                      )}
+                    </div>
+                    <div className="nuvio-discover-item-title">{item.name}</div>
+                    {item.releaseInfo && (
+                      <div className="nuvio-discover-item-year">{item.releaseInfo}</div>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <div ref={searchDetailSentinelRef} style={{ height: '1px' }} />
+              {searchDetailLoading && (
+                <div className="nuvio-search-loading" style={{ padding: '16px 0' }}>
+                  <div className="spinner" style={{ width: '20px', height: '20px', borderRadius: '50%', border: '2px solid rgba(0,212,255,0.1)', borderTopColor: '#00d4ff', animation: 'spin 1s linear infinite' }} />
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="nuvio-discover-empty">
+              No results found in this catalog.
+            </div>
+          )}
+        </div>
       ) : (
         /* SEARCH RESULTS SECTION */
         <div className="nuvio-search-results">
@@ -501,37 +777,14 @@ export function NuvioSearchPage({
             </div>
           ) : searchResults.length > 0 ? (
             searchResults.map(({ addon, catalog, items }) => (
-              <div key={`${addon.id}-${catalog.type}-${catalog.id}`} className="nuvio-search-result-section">
-                <div className="nuvio-row-header">
-                  <h3 className="nuvio-row-title">{addon.manifest?.name || addon.id} - {catalog.name} ({getTypeLabel(catalog.type)})</h3>
-                </div>
-                <div className="nuvio-scroll-rail">
-                  {items.map((item, idx) => (
-                    <div
-                      key={`${item.id}-${idx}`}
-                      className="nuvio-card"
-                      onMouseEnter={(e) => onCardMouseEnter(item, e.currentTarget, e)}
-                      onMouseLeave={onCardMouseLeave}
-                      onClick={() => {
-                        onCardClick();
-                        onItemClick({ content_id: item.id, content_type: item.type, name: item.name, poster: item.poster ?? null });
-                      }}
-                    >
-                      {item.poster ? (
-                        <img src={item.poster} alt={item.name} className="nuvio-card-img" />
-                      ) : (
-                        <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.02)', color: 'rgba(255,255,255,0.3)', padding: '12px', boxSizing: 'border-box', textAlign: 'center', fontSize: '0.75rem' }}>
-                          {item.name}
-                        </div>
-                      )}
-                      <div className="nuvio-card-info">
-                        <div className="nuvio-card-title">{item.name}</div>
-                        {item.releaseInfo && <div className="nuvio-card-sub">{item.releaseInfo}</div>}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
+              <NuvioSearchRow
+                key={`${addon.id}-${catalog.type}-${catalog.id}`}
+                addon={addon}
+                catalog={catalog}
+                items={items}
+                onItemClick={onItemClick}
+                onSeeAll={() => setSearchCatalogDetail({ addon, catalog })}
+              />
             ))
           ) : searchDone && searchResults.length === 0 ? (
             <div className="nuvio-discover-empty">

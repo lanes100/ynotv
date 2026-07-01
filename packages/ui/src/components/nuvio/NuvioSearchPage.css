@@ -262,3 +262,29 @@
 .nuvio-search-result-section {
   animation: nuvioSearchFadeIn 0.25s ease-out;
 }
+
+.nuvio-scroll-rail-container {
+  position: relative;
+}
+
+.nuvio-row-fade {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 40px;
+  pointer-events: none;
+  z-index: 10;
+  will-change: opacity;
+  transition: opacity 0.22s ease;
+}
+
+.nuvio-row-fade-left {
+  left: 0;
+  background: linear-gradient(to right, var(--bg-primary, #08080c), transparent);
+}
+
+.nuvio-row-fade-right {
+  right: 0;
+  background: linear-gradient(to left, var(--bg-primary, #08080c), transparent);
+}
+
