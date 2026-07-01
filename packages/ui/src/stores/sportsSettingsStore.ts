@@ -29,6 +29,8 @@ export const ALL_LEAGUES: LeagueConfig[] = [
   { id: 'soccer-ita.1', name: 'Serie A', sport: 'soccer', category: 'soccer' },
   { id: 'soccer-fra.1', name: 'Ligue 1', sport: 'soccer', category: 'soccer' },
   { id: 'soccer-usa.1', name: 'MLS', sport: 'soccer', category: 'soccer' },
+  { id: 'soccer-usa.nwsl', name: 'NWSL', sport: 'soccer', category: 'soccer' },
+  { id: 'soccer-usa.nwsl.cup', name: 'NWSL Challenge Cup', sport: 'soccer', category: 'soccer' },
   { id: 'soccer-uefa.champions', name: 'Champions League', sport: 'soccer', category: 'soccer' },
   { id: 'soccer-uefa.europa', name: 'Europa League', sport: 'soccer', category: 'soccer' },
   { id: 'soccer-mex.1', name: 'Liga MX', sport: 'soccer', category: 'soccer' },

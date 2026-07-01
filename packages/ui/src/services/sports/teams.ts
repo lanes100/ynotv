@@ -324,11 +324,12 @@ export async function getLeagueStandingsGrouped(leagueId: string): Promise<Stand
         
         const wins = getStat('wins');
         const losses = getStat('losses');
+        const ties = getStat('ties');
         const winPercent = getStat('winPercent');
         const gamesBehind = getStat('gamesBehind');
         const streak = getStat('streak');
         
-        const total = wins + losses;
+        const total = wins + losses + ties;
         const winPercentDisplay = winPercent > 0 
           ? (winPercent * 100).toFixed(1) 
           : total > 0 
@@ -342,7 +343,7 @@ export async function getLeagueStandingsGrouped(leagueId: string): Promise<Stand
           logo: team.logos?.[0]?.href,
           wins,
           losses,
-          ties: 0,
+          ties,
           winPercent: winPercentDisplay,
           winPercentValue: winPercent || (total > 0 ? wins / total : 0),
           gamesBehind: gamesBehind ? String(gamesBehind) : undefined,

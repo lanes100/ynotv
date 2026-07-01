@@ -153,7 +153,7 @@ export async function getLeaguesBySport(sport: string): Promise<SportsLeague[]> 
     'basketball': ['nba', 'mens-college-basketball', 'wnba'],
     'baseball': ['mlb'],
     'hockey': ['nhl'],
-    'soccer': ['soccer-eng.1', 'soccer-esp.1', 'soccer-ger.1', 'soccer-ita.1', 'soccer-usa.1'],
+    'soccer': ['soccer-eng.1', 'soccer-esp.1', 'soccer-ger.1', 'soccer-ita.1', 'soccer-usa.1', 'soccer-usa.nwsl', 'soccer-usa.nwsl.cup'],
     'american football': ['nfl', 'college-football'],
     'rugby union': ['rugby-180659', 'rugby-164205', 'rugby-267979', 'rugby-242041', 'rugby-270559'],
     'rugby league': ['rugby-league-3'],
