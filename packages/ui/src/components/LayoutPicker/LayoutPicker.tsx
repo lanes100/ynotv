@@ -62,8 +62,6 @@ export function LayoutPicker({ currentLayout, onSelect, engineMode, onEngineChan
         setOpen(false);
     };
 
-    const shouldShift = isHeroPage && engineMode === 'mpv' && (currentLayout === '2x2' || currentLayout === 'sbs');
-
     return (
         <div className="layout-picker" ref={ref}>
             <button
@@ -75,7 +73,7 @@ export function LayoutPicker({ currentLayout, onSelect, engineMode, onEngineChan
             </button>
 
             {open && (
-                <div className={`layout-picker-dropdown ${shouldShift ? 'shifted-left' : ''}`}>
+                <div className="layout-picker-dropdown">
                     <div className="layout-picker-header">View Layout</div>
 
                     {/* Viewer Engine toggle */}
