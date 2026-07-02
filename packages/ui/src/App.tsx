@@ -159,6 +159,7 @@ function TransitionView({ visible, children }: TransitionViewProps) {
 // ============================================================================
 
 function App() {
+  const [layoutPickerOpen, setLayoutPickerOpen] = useState(false);
   // ==========================================================================
   // Settings & Configuration (from useAppSettings)
   // ==========================================================================
@@ -1043,14 +1044,13 @@ function App() {
     }
   }, [activeView, showSettingsPopup, settingsTab, nuvioHasUnsavedHomeLayout, nuvioTabSaveFn, rawSetActiveView, showConfirm, enterTabMode, exitTabMode]);
 
-  // Wrapped switchLayout to toggle EPG visibility when entering HLS multiview
+  // Wrapped switchLayout to toggle EPG visibility when entering HLS or MPV multiview
   // to force the native MPV window geometry to correctly sync with EPG cell bounds.
   const switchLayout = useCallback(async (newLayout: LayoutMode) => {
-    const isCurrentlyHls = multiviewEngineMode === 'hls';
     const isEpgOpen = activeView === 'guide';
     const isTargetMultiview = newLayout === '2x2' || newLayout === 'bigbottom';
 
-    if (isCurrentlyHls && isEpgOpen && isTargetMultiview) {
+    if (isEpgOpen && isTargetMultiview) {
       setActiveView('none');
       await rawSwitchLayout(newLayout);
       setTimeout(() => {
@@ -1059,10 +1059,27 @@ function App() {
     } else {
       await rawSwitchLayout(newLayout);
     }
-  }, [multiviewEngineMode, activeView, rawSwitchLayout, setActiveView]);
+  }, [activeView, rawSwitchLayout, setActiveView]);
 
   const switchLayoutRef = useRef(switchLayout);
   useEffect(() => { switchLayoutRef.current = switchLayout; }, [switchLayout]);
+
+  // Reposition secondary slots on the Hero page when the layout picker is toggled
+  useEffect(() => {
+    if (multiviewEngineMode === 'mpv' && multiviewLayout !== 'main') {
+      if (layoutPickerOpen) {
+        // Push secondary slots off-screen so they don't cover the dropdown menu on the Hero page
+        const secondaryIds = [2, 3, 4];
+        secondaryIds.forEach(async (slotId) => {
+          const { invoke } = await import('@tauri-apps/api/core');
+          invoke('multiview_reposition_slot', { slotId, x: -10000, y: -10000, width: 1, height: 1 }).catch(() => {});
+        });
+      } else {
+        // Reposition them back to their layout slots
+        repositionSecondarySlots(multiviewLayout);
+      }
+    }
+  }, [layoutPickerOpen, multiviewEngineMode, multiviewLayout, repositionSecondarySlots]);
 
   const setShowSettingsPopup = useCallback((val: boolean | ((prev: boolean) => boolean)) => {
     const nextVal = typeof val === 'function' ? val(showSettingsPopup) : val;
@@ -3288,6 +3305,7 @@ function App() {
             engineMode={multiviewEngineMode}
             onEngineChange={setMultiviewEngineMode}
             isHeroPage={activeView === 'none'}
+            onOpenChange={setLayoutPickerOpen}
           />
         )}
 
@@ -3717,6 +3735,7 @@ function App() {
           onReposition={repositionSecondarySlots}
           onSwitchLayout={switchLayout}
           activeView={activeView}
+          syncMpvGeometry={syncMpvGeometry}
         />
       )}
 
@@ -3937,6 +3956,7 @@ function App() {
         onSwapWithMain={(slotId) => swapWithMain(slotId, multiviewSlots)}
         onStopSlot={stopSlot}
         onReloadSlot={reloadSlot}
+        showSettingsPopup={showSettingsPopup || layoutPickerOpen}
         includeSourceInSearch={includeSourceInSearch}
         searchResultsOrder={searchResultsOrder}
         currentChannel={currentChannel}

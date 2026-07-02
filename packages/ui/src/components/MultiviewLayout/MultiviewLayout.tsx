@@ -107,6 +107,7 @@ interface MultiviewLayoutProps {
     onSwitchLayout?: (layout: 'main' | 'pip' | '2x2' | 'bigbottom' | 'sbs') => void;
     hidden?: boolean;
     activeView: string;
+    syncMpvGeometry?: () => void;
 }
 
 export function MultiviewLayout({
@@ -130,6 +131,7 @@ export function MultiviewLayout({
     onSwitchLayout,
     hidden,
     activeView,
+    syncMpvGeometry,
 }: MultiviewLayoutProps) {
     const slot2 = slots.find(s => s.id === 2)!;
     const slot3 = slots.find(s => s.id === 3)!;
@@ -142,6 +144,34 @@ export function MultiviewLayout({
     useResizable(pipResizeRef, pipDragRef, () => {
         onReposition();
     }, 16 / 9, 36);
+
+    // Sync native MPV geometry when placeholder renders on the Hero page
+    useLayoutEffect(() => {
+        if (activeView !== 'none' || layout === 'main') return;
+
+        const placeholder = document.querySelector('.layout-mpv-placeholder');
+        if (!placeholder) return;
+
+        const updatePosition = () => {
+            syncMpvGeometry?.();
+        };
+
+        const observer = new ResizeObserver(() => {
+            requestAnimationFrame(updatePosition);
+        });
+        observer.observe(placeholder);
+
+        window.addEventListener('resize', updatePosition);
+        
+        // Frequent updates during layout changes/mounts
+        const intervalId = setInterval(updatePosition, 100);
+
+        return () => {
+            observer.disconnect();
+            window.removeEventListener('resize', updatePosition);
+            clearInterval(intervalId);
+        };
+    }, [layout, activeView, syncMpvGeometry]);
 
     const isHls = engineMode === 'hls';
 

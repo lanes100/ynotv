@@ -201,7 +201,7 @@ export function useMultiview() {
         }
 
         const m = mode ?? layoutRef.current;
-        const placeholder = document.querySelector('.layout-mpv-placeholder');
+        const placeholder = m !== 'main' ? document.querySelector('.layout-mpv-placeholder') : null;
         
         let r = { x: 0, y: 0, w: 0, h: 0 };
         let hasPlaceholder = false;
@@ -303,10 +303,14 @@ export function useMultiview() {
                 invoke('mpv_set_geometry', { x: 0, y: 0, width: 0, height: 0 }).catch(() => { });
                 // Keep secondary MPVs hidden off-screen (only if in MPV mode)
                 if (engineModeRef.current !== 'hls') {
-                    const hideOps = slotsRef.current.filter(s => s.active).map(s =>
-                        invoke('multiview_reposition_slot', { slotId: s.id, x: -10000, y: -10000, width: 1, height: 1 })
-                    );
-                    Promise.all(hideOps).catch(() => { });
+                    // Do not hide them if EPG multiview grid is active in the DOM (since ChannelPanel positions them)
+                    const hasEpgMultiviewGrid = !!document.querySelector('.guide-preview-line-1x4');
+                    if (!hasEpgMultiviewGrid) {
+                        const hideOps = slotsRef.current.filter(s => s.active).map(s =>
+                            invoke('multiview_reposition_slot', { slotId: s.id, x: -10000, y: -10000, width: 1, height: 1 })
+                        );
+                        Promise.all(hideOps).catch(() => { });
+                    }
                 }
                 return;
             }
@@ -430,7 +434,7 @@ export function useMultiview() {
 
     /** Load a stream URL into a secondary slot (MPV window or HLS <video> depending on engine mode) */
     const sendToSlot = useCallback(async (slotId: 2 | 3 | 4, channelName: string, channelUrl: string, sourceName: string | null = null, force: boolean = false) => {
-        if (isTabModeRef.current && savedStateRef.current && !force) {
+        if (isTabModeRef.current && savedStateRef.current && !force && layoutRef.current === 'main') {
             savedStateRef.current.slots = savedStateRef.current.slots.map(s =>
                 s.id === slotId ? { ...s, channelName, channelUrl, sourceName, active: true } : s
             );
@@ -438,6 +442,12 @@ export function useMultiview() {
                 s.id === slotId ? { ...s, channelName, channelUrl, sourceName, active: true } : s
             ));
             return;
+        }
+
+        if (savedStateRef.current) {
+            savedStateRef.current.slots = savedStateRef.current.slots.map(s =>
+                s.id === slotId ? { ...s, channelName, channelUrl, sourceName, active: true } : s
+            );
         }
 
         // In HLS mode, secondary slots are in-DOM <video> elements — just update state.
@@ -672,9 +682,11 @@ export function useMultiview() {
             activeUrlsRef.current = { 2: null, 3: null, 4: null };
             await syncMpvGeometry('main');
         } else {
-            // Restore primary MPV layout without touching React state (since it never changed if not main)
+            // Restore primary MPV layout
             await syncMpvGeometry(saved.layout);
-            setSlots(saved.slots.map(s => ({ ...s })));
+            
+            // Keep the current active slots that were playing inside EPG
+            const currentSlots = slotsRef.current;
 
             // Stretch secondary slots to fill the cell in grid layouts
             const setStretch = (id: 2 | 3 | 4) => {
@@ -683,35 +695,37 @@ export function useMultiview() {
                 }
             };
 
-            for (const slot of saved.slots) {
+            for (const slot of currentSlots) {
                 if (slot.active && slot.channelUrl) {
                     const r = secondaryRect(slot.id, saved.layout);
-                    // If the slot is already playing the exact same URL in the background, just bring it back on-screen
-                    if (activeUrlsRef.current[slot.id] === slot.channelUrl) {
-                        if (engineModeRef.current !== 'hls') {
-                            invoke('multiview_reposition_slot', {
-                                slotId: slot.id, x: r.x, y: r.y, width: r.w, height: r.h
-                            }).catch(() => { });
-                        }
-                        setStretch(slot.id);
-                    } else {
-                        // It was assigned a NEW stream while the tab was open, so load it
+                    // Ensure the slot is loaded and playing the correct URL
+                    if (activeUrlsRef.current[slot.id] !== slot.channelUrl) {
                         if (engineModeRef.current !== 'hls') {
                             invoke('multiview_load_slot', {
                                 slotId: slot.id, url: slot.channelUrl, x: r.x, y: r.y, width: r.w, height: r.h
                             }).catch(() => { });
                         }
-                        setStretch(slot.id);
                         activeUrlsRef.current[slot.id] = slot.channelUrl;
+                    } else {
+                        // Just reposition it back on-screen
+                        if (engineModeRef.current !== 'hls') {
+                            invoke('multiview_reposition_slot', {
+                                slotId: slot.id, x: r.x, y: r.y, width: r.w, height: r.h
+                            }).catch(() => { });
+                        }
                     }
-                } else if (!slot.active && activeUrlsRef.current[slot.id]) {
-                    // It was stopped while the tab was open
+                    setStretch(slot.id);
+                } else {
+                    // It is inactive, so make sure it is stopped and positioned off-screen
+                    if (activeUrlsRef.current[slot.id]) {
+                        if (engineModeRef.current !== 'hls') {
+                            invoke('multiview_stop_slot', { slotId: slot.id }).catch(() => { });
+                        }
+                        activeUrlsRef.current[slot.id] = null;
+                    }
                     if (engineModeRef.current !== 'hls') {
-                        invoke('multiview_stop_slot', { slotId: slot.id }).catch(() => { });
-                        // Ensure the stopped MPV window stays hidden off-screen
                         invoke('multiview_reposition_slot', { slotId: slot.id, x: -10000, y: -10000, width: 1, height: 1 }).catch(() => { });
                     }
-                    activeUrlsRef.current[slot.id] = null;
                 }
             }
         }

@@ -235,7 +235,7 @@ export function useLayoutPersistence(options: UseLayoutPersistenceOptions) {
           // Only restore slots that aren't already active
           for (const slot of slotsToRestore) {
             if (!currentlyActiveSlots.has(slot.id)) {
-              await baseSendToSlot(slot.id, slot.channelName || '', slot.channelUrl || '', slot.sourceName || null);
+              await baseSendToSlot(slot.id, slot.channelName || '', slot.channelUrl || '', slot.sourceName || null, true);
               await new Promise((r) => setTimeout(r, 200));
             }
           }

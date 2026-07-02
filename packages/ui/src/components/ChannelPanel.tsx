@@ -129,6 +129,7 @@ interface ChannelPanelProps {
   onSwapWithMain?: (slotId: 2 | 3 | 4) => void;
   onStopSlot?: (slotId: 2 | 3 | 4) => void;
   onReloadSlot?: (slotId: 2 | 3 | 4) => void;
+  showSettingsPopup?: boolean;
   // Search display props
   includeSourceInSearch?: boolean;
   searchResultsOrder?: 'default' | 'alphabetical';
@@ -220,6 +221,7 @@ export function ChannelPanel({
   onSwapWithMain,
   onStopSlot,
   onReloadSlot,
+  showSettingsPopup = false,
   includeSourceInSearch,
   searchResultsOrder,
   currentChannel,
@@ -1588,8 +1590,8 @@ export function ChannelPanel({
 
   const isMultiview = currentLayout && currentLayout !== 'main';
   const isHls = multiviewEngineMode === 'hls';
-  const showMultiviewGrid = isMultiview && isHls && (currentLayout === '2x2' || currentLayout === 'bigbottom');
-  const showMultiviewSplit = isMultiview && isHls && (currentLayout === 'pip' || currentLayout === 'sbs');
+  const showMultiviewGrid = isMultiview && (currentLayout === '2x2' || currentLayout === 'bigbottom');
+  const showMultiviewSplit = isMultiview && (currentLayout === 'pip' || currentLayout === 'sbs');
 
   // Handle Video Resizing for Preview Mode via ResizeObserver
   // This ensures we exactly match the CSS dimensions regardless of resolution or layout state
@@ -1714,6 +1716,48 @@ export function ChannelPanel({
           'video-align-y': alignY
         });
       }
+
+      // Reposition secondary MPV slots inside EPG preview container cells (only if engineMode is 'mpv')
+      if (multiviewEngineMode === 'mpv') {
+        const isEpgModalOpen = showEpgShiftModal || showFailoverGroupModal || showPlaylistListModal || !!managingCustomGroup || !!managingCategory || managingFavorites;
+        const shouldHideSecondaries = isEpgModalOpen || showSettingsPopup;
+
+        const secondaryIds: (2 | 3 | 4)[] = [2, 3, 4];
+        secondaryIds.forEach(async (slotId) => {
+          const slot = multiviewSlots.find((s) => s.id === slotId);
+          const active = slot?.active ?? false;
+          
+          const { invoke } = await import('@tauri-apps/api/core');
+
+          // If a slot is not active, or if we want to hide them (because a modal/settings is open):
+          if (!active || shouldHideSecondaries) {
+            invoke('multiview_reposition_slot', { slotId, x: -10000, y: -10000, width: 1, height: 1 }).catch(() => {});
+            return;
+          }
+
+          // Otherwise, find the placeholder container inside EPG
+          const id = `epg-slot-container-${slotId}`;
+          const el = document.getElementById(id);
+          if (!el) {
+            invoke('multiview_reposition_slot', { slotId, x: -10000, y: -10000, width: 1, height: 1 }).catch(() => {});
+            return;
+          }
+
+          const cellRect = el.getBoundingClientRect();
+          if (cellRect.width === 0 || cellRect.height === 0) {
+            invoke('multiview_reposition_slot', { slotId, x: -10000, y: -10000, width: 1, height: 1 }).catch(() => {});
+            return;
+          }
+
+          const d = window.devicePixelRatio || 1;
+          const sx = Math.round(cellRect.left * d);
+          const sy = Math.round(cellRect.top * d);
+          const sw = Math.round(cellRect.width * d);
+          const sh = Math.round(cellRect.height * d);
+
+          invoke('multiview_reposition_slot', { slotId, x: sx, y: sy, width: sw, height: sh }).catch(() => {});
+        });
+      }
     };
 
     const observer = new ResizeObserver(() => {
@@ -1751,6 +1795,14 @@ export function ChannelPanel({
       // video-zoom to 0, which races against the new effect's updateVideoPosition call
       // and leaves the MPV fullscreen instead of scaled into the preview cell.
       // The null is sent by the dedicated visibility-change effect below instead.
+
+      if (multiviewEngineMode === 'mpv') {
+        const secondaryIds: (2 | 3 | 4)[] = [2, 3, 4];
+        secondaryIds.forEach(async (slotId) => {
+          const { invoke } = await import('@tauri-apps/api/core');
+          invoke('multiview_reposition_slot', { slotId, x: -10000, y: -10000, width: 1, height: 1 }).catch(() => {});
+        });
+      }
     };
     // Re-run when layout changes (sidebar/category visibility) or when visibility/selection changes
     // Include selectedChannelId to trigger resize when returning to view with a selection
@@ -1766,7 +1818,15 @@ export function ChannelPanel({
     multiviewEngineMode,
     showMultiviewGrid,
     showMultiviewSplit,
-    currentChannel?.stream_id
+    currentChannel?.stream_id,
+    multiviewSlots,
+    showSettingsPopup,
+    showEpgShiftModal,
+    showFailoverGroupModal,
+    showPlaylistListModal,
+    managingCustomGroup,
+    managingCategory,
+    managingFavorites
   ]);
 
   // Dedicated effect: null out previewVideoRect only when the panel truly closes.

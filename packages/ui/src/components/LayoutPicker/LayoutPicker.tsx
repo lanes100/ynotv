@@ -8,6 +8,7 @@ interface LayoutPickerProps {
     engineMode: MultiviewEngineMode;
     onEngineChange: (mode: MultiviewEngineMode) => void;
     isHeroPage?: boolean;
+    onOpenChange?: (open: boolean) => void;
 }
 
 const LAYOUTS: { mode: LayoutMode; label: string; description: string }[] = [
@@ -38,9 +39,13 @@ const LAYOUTS: { mode: LayoutMode; label: string; description: string }[] = [
     },
 ];
 
-export function LayoutPicker({ currentLayout, onSelect, engineMode, onEngineChange, isHeroPage }: LayoutPickerProps) {
+export function LayoutPicker({ currentLayout, onSelect, engineMode, onEngineChange, isHeroPage, onOpenChange }: LayoutPickerProps) {
     const [open, setOpen] = useState(false);
     const ref = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        onOpenChange?.(open);
+    }, [open, onOpenChange]);
 
     useEffect(() => {
         const handler = (e: MouseEvent) => {

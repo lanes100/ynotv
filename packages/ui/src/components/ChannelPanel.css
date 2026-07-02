@@ -2001,19 +2001,16 @@ html[data-theme]:has(.guide-transparent-mode) .category-strip {
   width: 48px;
 }
 
-/* Multiview Slot Buttons under Channel Name */
+/* Multiview Slot Buttons in the Bottom Right Corner */
 .multiview-slots-container {
   position: absolute;
   bottom: 6px;
-  left: 0;
-  right: 0;
+  right: 8px;
   display: flex;
   gap: 4px;
-  padding: 0 8px;
   opacity: 0;
   transform: translateY(4px);
   transition: opacity 0.2s ease, transform 0.2s ease;
-  justify-content: center;
   pointer-events: none;
   align-items: center;
 }
@@ -2053,19 +2050,7 @@ html[data-theme]:has(.guide-transparent-mode) .category-strip {
   color: rgba(255, 255, 255, 0.3);
 }
 
-/* Adjust EPG Row Heights for Multiview buttons */
-.guide-channel-row.has-multiview-buttons {
-  min-height: 76px;
-}
-
-.guide-channel-row.has-playlist-name.has-multiview-buttons {
-  min-height: 96px;
-}
-
-.guide-channel-row.has-multiview-buttons .guide-channel-info {
-  padding-bottom: 26px !important; /* Shift content up to clear metabadge vertically */
-  overflow: hidden;
-}
+/* No EPG row height or padding adjustments needed since buttons align to bottom-right corner */
 
 /* Quality badges default state when multiview is active */
 .guide-channel-row.has-multiview-buttons .channel-row-metadata {
