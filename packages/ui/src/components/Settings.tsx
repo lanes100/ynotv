@@ -2224,6 +2224,7 @@ export function Settings({
             onSportsScaleChange={handleSportsScaleChange}
             sportsBgOpacity={sportsBgOpacity}
             onSportsBgOpacityChange={handleSportsBgOpacityChange}
+            modernUiEnabled={uiSettings.modernUiEnabled}
           />
         );
       case 'about':

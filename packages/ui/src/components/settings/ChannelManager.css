@@ -13,7 +13,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 1100;
+    z-index: 10200;
 }
 
 .channel-manager-modal {
@@ -440,12 +440,12 @@
 .failover-menu-backdrop {
     position: fixed;
     inset: 0;
-    z-index: 1200;
+    z-index: 10300;
 }
 
 .failover-menu-popover {
     position: fixed;
-    z-index: 1201;
+    z-index: 10301;
     width: 260px;
     box-sizing: border-box;
     background: var(--surface-color, #1f1f2e);

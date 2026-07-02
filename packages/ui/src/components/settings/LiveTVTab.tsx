@@ -74,6 +74,7 @@ interface LiveTVTabProps {
   onTransparentGuideOverlayOpacityChange: (opacity: number) => void;
   transparentGuideSidebarOpacity: number;
   onTransparentGuideSidebarOpacityChange: (opacity: number) => void;
+  modernUiEnabled?: boolean | string;
 }
 
 export function LiveTVTab({
@@ -138,6 +139,7 @@ export function LiveTVTab({
   onTransparentGuideOverlayOpacityChange,
   transparentGuideSidebarOpacity,
   onTransparentGuideSidebarOpacityChange,
+  modernUiEnabled,
 }: LiveTVTabProps) {
   const [activeSubTab, setActiveSubTab] = useState<'epg' | 'font-size' | 'sort-order' | 'search' | 'live-view' | 'widgets'>('epg');
 
@@ -264,8 +266,8 @@ export function LiveTVTab({
               </div>
             </div>
 
-            {/* Bold Typography Settings */}
-            <div className="settings-section">
+            {/* Bold Typography Settings - hidden for v3 design */}
+            {modernUiEnabled !== 'v3' && <div className="settings-section">
               <div className="section-header">
                 <h3>Bold Typography</h3>
               </div>
@@ -325,7 +327,7 @@ export function LiveTVTab({
                   </tbody>
                 </table>
               </div>
-            </div>
+            </div>}
 
             {/* EPG Font Size Settings */}
             <div className="settings-section">
