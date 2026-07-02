@@ -10,21 +10,27 @@ export function useDraggable(ref: React.RefObject<HTMLDivElement | null>, onDrag
 
         const onMouseDown = (e: MouseEvent) => {
             if ((e.target as HTMLElement).tagName === 'BUTTON') return;
+            const zoom = parseFloat(
+                getComputedStyle(document.documentElement).getPropertyValue('--app-zoom').trim()
+            ) || 1;
             startX = e.clientX;
             startY = e.clientY;
             const rect = el.getBoundingClientRect();
-            startLeft = rect.left;
-            startTop = rect.top;
+            startLeft = rect.left / zoom;
+            startTop = rect.top / zoom;
             document.addEventListener('mousemove', onMouseMove);
             document.addEventListener('mouseup', onMouseUp);
             e.preventDefault();
         };
 
         const onMouseMove = (e: MouseEvent) => {
+            const zoom = parseFloat(
+                getComputedStyle(document.documentElement).getPropertyValue('--app-zoom').trim()
+            ) || 1;
             const dx = e.clientX - startX;
             const dy = e.clientY - startY;
-            el.style.left = `${startLeft + dx}px`;
-            el.style.top = `${startTop + dy}px`;
+            el.style.left = `${startLeft + (dx / zoom)}px`;
+            el.style.top = `${startTop + (dy / zoom)}px`;
             el.style.right = 'auto';
             el.style.bottom = 'auto';
             if (onDrag) onDrag();

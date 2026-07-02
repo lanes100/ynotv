@@ -35,13 +35,16 @@ function HlsAbsoluteWrapper({ slotId, activeView, layout, hidden, active, childr
                 return;
             }
 
+            const zoom = parseFloat(
+                getComputedStyle(document.documentElement).getPropertyValue('--app-zoom').trim()
+            ) || 1;
             const rect = el.getBoundingClientRect();
             setStyle({
                 position: 'fixed',
-                left: `${rect.left}px`,
-                top: `${rect.top}px`,
-                width: `${rect.width}px`,
-                height: `${rect.height}px`,
+                left: `${rect.left / zoom}px`,
+                top: `${rect.top / zoom}px`,
+                width: `${rect.width / zoom}px`,
+                height: `${rect.height / zoom}px`,
                 zIndex: activeView === 'guide' ? 1000 : 10,
                 pointerEvents: 'auto',
                 borderRadius: window.getComputedStyle(el).borderRadius,

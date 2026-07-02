@@ -201,7 +201,32 @@ export function useMultiview() {
         }
 
         const m = mode ?? layoutRef.current;
-        const r = primaryRect(m, engineModeRef.current);
+        const placeholder = document.querySelector('.layout-mpv-placeholder');
+        
+        let r = { x: 0, y: 0, w: 0, h: 0 };
+        let hasPlaceholder = false;
+
+        if (placeholder) {
+            try {
+                const rect = placeholder.getBoundingClientRect();
+                const d = window.devicePixelRatio || 1;
+                r = {
+                    x: Math.round(rect.left * d),
+                    y: Math.round(rect.top * d),
+                    w: Math.round(rect.width * d),
+                    h: Math.round(rect.height * d),
+                };
+                hasPlaceholder = true;
+            } catch (e) {
+                // Fallback to primaryRect
+            }
+        }
+
+        if (!hasPlaceholder) {
+            const pr = primaryRect(m, engineModeRef.current);
+            r = { x: pr.x, y: pr.y, w: pr.w, h: pr.h };
+        }
+
         try {
             const { Bridge } = await import('../services/tauri-bridge');
 
@@ -225,7 +250,11 @@ export function useMultiview() {
                 }
             }
 
-            await invoke('mpv_set_geometry', { x: r.x, y: r.y, width: r.w, height: r.h });
+            if (r.w > 0 && r.h > 0) {
+                await invoke('mpv_set_geometry', { x: r.x, y: r.y, width: r.w, height: r.h });
+            } else {
+                await invoke('mpv_set_geometry', { x: 0, y: 0, width: 0, height: 0 });
+            }
         } catch (e) {
             // Ignore geometry sync errors
         }

@@ -19,21 +19,27 @@ export function useResizable(
 
         const onMouseDown = (e: MouseEvent) => {
             e.stopPropagation();
+            const zoom = parseFloat(
+                getComputedStyle(document.documentElement).getPropertyValue('--app-zoom').trim()
+            ) || 1;
             startX = e.clientX;
             startY = e.clientY;
             const rect = target.getBoundingClientRect();
-            startW = rect.width;
-            startH = rect.height;
-            startL = rect.left;
-            startT = rect.top;
+            startW = rect.width / zoom;
+            startH = rect.height / zoom;
+            startL = rect.left / zoom;
+            startT = rect.top / zoom;
             document.addEventListener('mousemove', onMouseMove);
             document.addEventListener('mouseup', onMouseUp);
             e.preventDefault();
         };
 
         const onMouseMove = (e: MouseEvent) => {
-            const dx = startX - e.clientX;
-            const dy = e.clientY - startY;
+            const zoom = parseFloat(
+                getComputedStyle(document.documentElement).getPropertyValue('--app-zoom').trim()
+            ) || 1;
+            const dx = (startX - e.clientX) / zoom;
+            const dy = (e.clientY - startY) / zoom;
 
             let newW = startW + dx;
             let newH = startH + dy;
