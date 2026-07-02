@@ -1,5 +1,29 @@
 # Changelog
 
+## v2.1.5
+
+### Added
+
+- **Multiview previews in Live TV** - While in any multiview mode, a preview of each active player is now displayed within the Live TV EPG view.
+- **Multiview channel buttons in EPG** - Buttons now appear in the channel panel when multiview is active, visible on hover. Selecting a numbered button sends that channel to the corresponding multiview player slot.
+- **Redesigned media bar for Live TV preview** - The media bar in the Live TV EPG preview panel has been updated with a refreshed look.
+- **PiP button in LiveTV preview** - The mediabar for LiveTV preview now has a PiP button for quicker access without the need to full screen first.
+- **EPG sub-title support** - EPG entries that include `<sub-title>` tags are now supported. Search results will also match against sub-title content.
+- **Neutral color themes** - Three new grey-toned themes have been added - `Dark Slate`, `Dark Warm Grey`, and `Dark Steel` - for users who prefer a color-neutral appearance.
+- **Lazy loading for Stremio and Nuvio posters** - Posters on the Stremio and Nuvio home pages now load progressively as you scroll, resulting in a smoother browsing experience.
+- **Updated source card design** - The visual style of source cards has been updated.
+- **Cleaner title bar** - The transparency layer behind the title bar has been removed for a cleaner appearance.
+- **NWSL added to Sports** - The National Women's Soccer League is now available in the Sports section.
+- **Playlist name toggle in Recent** - A toggle button has been added to the Recently Viewed list to show or hide the source playlist name for each channel.
+- **Per-playlist All Channels category** - An `All Channels` category can now be enabled for individual playlists via `Settings → Live TV → Sort Order`.
+
+### Fixed
+
+- **Nuvio sync broken after backend update** - Nuvio sync has been updated to be compatible with their latest backend changes.
+- **UI scaling layout bugs** - Various UI elements that were not resizing correctly when UI scaling was applied have been fixed.
+- **Nuvio search result navigation** - Previous and next page buttons (`<` `>`) have been added to Nuvio search results.
+- **Expanded settings displaying behind title bar** - The expanded settings panel will no longer render beneath the title bar.
+
 ## v2.1.4
 
 ### Added
