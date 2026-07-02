@@ -25,6 +25,7 @@ interface HlsMultiviewCellProps {
     onSwapWithMain: () => void;
     onStop: () => void;
     onReload: () => void;
+    hidden?: boolean;
 }
 
 export function HlsMultiviewCell({
@@ -36,6 +37,7 @@ export function HlsMultiviewCell({
     onSwapWithMain,
     onStop,
     onReload,
+    hidden,
 }: HlsMultiviewCellProps) {
     const videoRef = useRef<HTMLVideoElement>(null);
     const hlsRef = useRef<Hls | null>(null);
@@ -64,9 +66,19 @@ export function HlsMultiviewCell({
             hlsRef.current.destroy();
             hlsRef.current = null;
         }
+        if (videoRef.current) {
+            const video = videoRef.current;
+            video.pause();
+            video.src = '';
+            try {
+                video.load();
+            } catch (e) {
+                // Ignore load errors on unmounted video
+            }
+        }
     }, []);
 
-    // Load / reload whenever channelUrl changes
+    // Load / reload whenever channelUrl or hidden status changes
     useEffect(() => {
         const video = videoRef.current;
         if (!video) return;
@@ -74,8 +86,14 @@ export function HlsMultiviewCell({
         destroyHls();
         setHlsError(null);
 
-        if (!channelUrl || !active) {
+        if (!channelUrl || !active || hidden) {
+            video.pause();
             video.src = '';
+            try {
+                video.load();
+            } catch (e) {
+                // Ignore load errors
+            }
             return;
         }
 
@@ -118,7 +136,7 @@ export function HlsMultiviewCell({
                             break;
                         default:
                             // cannot recover
-                            setHlsError(`Stream error: ${data.type}`);
+                            setHlsError(`Fatal stream error: ${data.details}`);
                             destroyHls();
                             break;
                     }
@@ -145,7 +163,7 @@ export function HlsMultiviewCell({
             destroyHls();
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [channelUrl, active]);
+    }, [channelUrl, active, hidden]);
 
     // Reset volume & mute when new channel is loaded
     useEffect(() => {

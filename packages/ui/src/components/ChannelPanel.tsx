@@ -38,7 +38,7 @@ import { MetadataBadge } from './MetadataBadge';
 import { EpgShiftModal } from './EpgShiftModal';
 import { dbEvents } from '../db/sqlite-adapter';
 import { primaryRect } from '../hooks/useMultiview';
-import type { LayoutMode } from '../hooks/useMultiview';
+import type { LayoutMode, ViewerSlot } from '../hooks/useMultiview';
 import './ChannelPanel.css';
 
 
@@ -125,6 +125,10 @@ interface ChannelPanelProps {
   currentLayout?: string;
   multiviewEngineMode?: 'mpv' | 'hls';
   onSendToSlot?: (slotId: 2 | 3 | 4, channelName: string, channelUrl: string, sourceName?: string | null) => void;
+  multiviewSlots?: ViewerSlot[];
+  onSwapWithMain?: (slotId: 2 | 3 | 4) => void;
+  onStopSlot?: (slotId: 2 | 3 | 4) => void;
+  onReloadSlot?: (slotId: 2 | 3 | 4) => void;
   // Search display props
   includeSourceInSearch?: boolean;
   searchResultsOrder?: 'default' | 'alphabetical';
@@ -212,6 +216,10 @@ export function ChannelPanel({
   currentLayout,
   multiviewEngineMode = 'mpv',
   onSendToSlot,
+  multiviewSlots = [],
+  onSwapWithMain,
+  onStopSlot,
+  onReloadSlot,
   includeSourceInSearch,
   searchResultsOrder,
   currentChannel,
@@ -1578,6 +1586,11 @@ export function ChannelPanel({
     }
   }, [selectedChannel?.stream_id]);
 
+  const isMultiview = currentLayout && currentLayout !== 'main';
+  const isHls = multiviewEngineMode === 'hls';
+  const showMultiviewGrid = isMultiview && isHls && (currentLayout === '2x2' || currentLayout === 'bigbottom');
+  const showMultiviewSplit = isMultiview && isHls && (currentLayout === 'pip' || currentLayout === 'sbs');
+
   // Handle Video Resizing for Preview Mode via ResizeObserver
   // This ensures we exactly match the CSS dimensions regardless of resolution or layout state
   useEffect(() => {
@@ -1586,7 +1599,7 @@ export function ChannelPanel({
 
     const updateVideoPosition = () => {
       // Use last known channel ID if current selection is null but we have one cached
-      const effectiveChannelId = selectedChannel?.stream_id || lastChannelIdRef.current;
+      const effectiveChannelId = selectedChannel?.stream_id || lastChannelIdRef.current || currentChannel?.stream_id;
 
       if (!previewRef.current || !effectiveChannelId) {
         if (onPreviewVideoRectChange) {
@@ -1605,11 +1618,13 @@ export function ChannelPanel({
         height: clientRect.height,
       };
 
-      // Safety check for zero dimensions (e.g. hidden)
+      // Safety check for zero dimensions — can happen transiently during React layout
+      // transitions (e.g. switching multiview grid layouts) before the browser has painted.
+      // The effect returns early at the top when !visible, so reaching here means the panel
+      // is open. Skip this frame silently; the animation loop retries every rAF until paint
+      // settles and correct dimensions are available. Do NOT null the rect here — that would
+      // trigger App.tsx to reset video-zoom to 0, breaking the preview.
       if (rect.width === 0 || rect.height === 0) {
-        if (onPreviewVideoRectChange) {
-          onPreviewVideoRectChange(null);
-        }
         return;
       }
 
@@ -1642,7 +1657,7 @@ export function ChannelPanel({
         }
       }
 
-      if (epgView === 'alternate') {
+      if (epgView === 'alternate' && !showMultiviewGrid) {
         let videoNativeW = windowW;
         let videoNativeH = windowW * (9 / 16);
 
@@ -1730,14 +1745,295 @@ export function ChannelPanel({
       observer.disconnect();
       window.removeEventListener('resize', updateVideoPosition);
       cancelAnimationFrame(animationFrameId);
-      if (onPreviewVideoRectChange) {
-        onPreviewVideoRectChange(null);
-      }
+      // NOTE: Do NOT call onPreviewVideoRectChange(null) here.
+      // This cleanup runs on every dependency change (e.g. currentLayout/showMultiviewGrid),
+      // not just when the panel closes. Nulling the rect here triggers App.tsx to reset
+      // video-zoom to 0, which races against the new effect's updateVideoPosition call
+      // and leaves the MPV fullscreen instead of scaled into the preview cell.
+      // The null is sent by the dedicated visibility-change effect below instead.
     };
     // Re-run when layout changes (sidebar/category visibility) or when visibility/selection changes
     // Include selectedChannelId to trigger resize when returning to view with a selection
     // Include isWatchlistMode and categoryId to handle special view modes
-  }, [visible, categoryStripOpen, selectedChannel?.stream_id, isWatchlistMode, categoryId, epgView]);
+  }, [
+    visible,
+    categoryStripOpen,
+    selectedChannel?.stream_id,
+    isWatchlistMode,
+    categoryId,
+    epgView,
+    currentLayout,
+    multiviewEngineMode,
+    showMultiviewGrid,
+    showMultiviewSplit,
+    currentChannel?.stream_id
+  ]);
+
+  // Dedicated effect: null out previewVideoRect only when the panel truly closes.
+  // This is intentionally separate from the positioning effect so that layout transitions
+  // (which re-run the positioning effect while visible=true) do NOT trigger a rect reset
+  // that would cause App.tsx to reset video-zoom to 0 mid-transition.
+  useEffect(() => {
+    if (!visible && onPreviewVideoRectChange) {
+      onPreviewVideoRectChange(null);
+    }
+  }, [visible, onPreviewVideoRectChange]);
+
+
+
+  const renderPreviewPane = () => (
+    <div
+      className="guide-preview-pane"
+      ref={previewPaneRef}
+      style={
+        showMultiviewGrid
+          ? { width: '100%', height: '100%', flex: 'none', borderRight: 'none' }
+          : epgView === 'alternate'
+          ? { height: `${previewHeightPx}px` }
+          : { flex: `0 0 ${previewWidthPct}%` }
+      }
+      onMouseMove={handlePreviewMouseMove}
+      onMouseLeave={(e) => {
+        handlePreviewMouseLeave();
+        handlePreviewPaneMouseLeave();
+      }}
+      onMouseEnter={handlePreviewPaneMouseEnter}
+    >
+      {/* Resizer Handle */}
+      {!showMultiviewGrid && (
+        <div 
+          className={`guide-preview-resizer ${epgView === 'alternate' ? 'vertical' : 'horizontal'}`} 
+          onMouseDown={handleResizeMouseDown}
+          onContextMenu={handleResizeContextMenu}
+          title="Drag to resize preview | Right-click to reset"
+        >
+          <div className="resizer-dot"></div>
+        </div>
+      )}
+
+      {/* Video container - holds the MPV video and overlays */}
+      <div
+        className="guide-preview-video"
+        ref={previewRef}
+        onDoubleClick={() => {
+          // Double-click to close the guide panel (fullscreen video)
+          onClose();
+        }}
+      >
+        {/* Glass border overlay */}
+        <div className="video-glass-border" />
+        {/* The actual video is rendered by MPV "under" this transparent div */}
+        {/* Only show placeholder when truly no channel is selected (not in watchlist/favorites mode with a selection) */}
+        {!selectedChannel && !isWatchlistMode && categoryId !== '__favorites__' && categoryId !== '__recent__' && (
+          <div className="guide-preview-placeholder">Select a channel</div>
+        )}
+        {/* Show Error Overlay if there is an error */}
+        {error && (
+          <VideoErrorOverlay error={error} isSmall />
+        )}
+        {/* Show Stream Retry Overlay if a retry is in progress */}
+        {retryState?.isRetrying && (
+          <StreamRetryOverlay retryState={retryState} isSmall />
+        )}
+        {/* Show Failover Overlay if a failover is in progress */}
+        {failoverState?.isFailingOver && (
+          <FailoverOverlay state={failoverState} isSmall />
+        )}
+        {/* Show Channel Loading Overlay if loading and not retrying/failing over */}
+        {loadingState && loadingState !== 'idle' && !retryState?.isRetrying && !failoverState?.isFailingOver && (
+          <ChannelLoadingOverlay
+            channelName={currentChannel?.name || 'Channel'}
+            loadingState={loadingState}
+            isSmall
+          />
+        )}
+      </div>
+      {/* Mini Media Bar for EPG Preview - floating buttons overlay */}
+      {isMiniBarVisible && (
+        <div
+          className="guide-preview-minibar"
+          onDoubleClick={(e) => e.stopPropagation()}
+          onMouseEnter={() => setMiniBarHovered(true)}
+          onMouseLeave={() => setMiniBarHovered(false)}
+        >
+          {/* Seek bar row (timeshift) */}
+          {showSeek && (
+            <div className="guide-minibar-seek-row">
+              <span className="guide-minibar-seek-time">
+                {formatSeekTime(ts ? ts.timePos - ts.cacheStart : (isVod ? 0 : 0))}
+              </span>
+              <div
+                ref={seekBarRef}
+                className={`guide-minibar-seek-bar ${seekHover || seekDrag ? 'active' : ''} ${seekDrag ? 'dragging' : ''}`}
+                onClick={handleSeekClick}
+                onMouseEnter={() => setSeekHover(true)}
+                onMouseLeave={() => setSeekHover(false)}
+                onMouseDown={handleSeekDragStart}
+              >
+                <div className="guide-minibar-seek-fill" style={{ width: `${seekFillPct}%` }} />
+                {seekHover && !seekDrag && (
+                  <div className="guide-minibar-seek-tip" style={{ left: `${((hoverPos - (ts ? ts.cacheStart : 0)) / (ts ? ts.cachedDuration : 1)) * 100}%` }}>
+                    {formatSeekTime(hoverPos)}
+                  </div>
+                )}
+              </div>
+              <span className="guide-minibar-seek-time">
+                {ts ? `-${formatSeekTime(ts.behindLive)}` : ''}
+              </span>
+            </div>
+          )}
+          {/* Buttons row — three groups: left (ch up/down), center (play/stop), right (volume/PiP) */}
+          <div className="guide-minibar-buttons">
+            {/* Left group: channel up/down */}
+            <div className="guide-minibar-group guide-minibar-group-left">
+              {onChannelUp && (
+                <button
+                  className="guide-minibar-btn"
+                  onClick={onChannelUp}
+                  onDoubleClick={(e) => e.stopPropagation()}
+                  title="Previous Channel (Up)"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M18 15l-6-6-6 6" />
+                  </svg>
+                </button>
+              )}
+              {onChannelDown && (
+                <button
+                  className="guide-minibar-btn"
+                  onClick={onChannelDown}
+                  onDoubleClick={(e) => e.stopPropagation()}
+                  title="Next Channel (Down)"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M6 9l6 6 6-6" />
+                  </svg>
+                </button>
+              )}
+            </div>
+
+            {/* Center group: playback controls */}
+            <div className="guide-minibar-group guide-minibar-group-center">
+              <button
+                className="guide-minibar-btn guide-minibar-btn-primary"
+                onClick={onTogglePlay}
+                onDoubleClick={(e) => e.stopPropagation()}
+                title={isPlaying ? 'Pause' : 'Play'}
+              >
+                {isPlaying ? (
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                    <rect x="6" y="4" width="4" height="16" rx="1" />
+                    <rect x="14" y="4" width="4" height="16" rx="1" />
+                  </svg>
+                ) : (
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M8 5v14l11-7z" />
+                  </svg>
+                )}
+              </button>
+              {onStop && (
+                <button
+                  className="guide-minibar-btn"
+                  onClick={onStop}
+                  onDoubleClick={(e) => e.stopPropagation()}
+                  title="Stop"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                    <rect x="6" y="6" width="12" height="12" rx="1" />
+                  </svg>
+                </button>
+              )}
+            </div>
+
+            {/* Right group: volume, PiP */}
+            <div className="guide-minibar-group guide-minibar-group-right">
+              <div className="guide-minibar-volume" onDoubleClick={(e) => e.stopPropagation()}>
+                <button
+                  className="guide-minibar-btn"
+                  onClick={handlePreviewMuteToggle}
+                  onDoubleClick={(e) => e.stopPropagation()}
+                  title={previewMuted ? 'Unmute' : 'Mute'}
+                >
+                  {previewMuted || previewVolume === 0 ? (
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z" />
+                    </svg>
+                  ) : (
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z" />
+                    </svg>
+                  )}
+                </button>
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  value={previewMuted ? 0 : previewVolume}
+                  onChange={handlePreviewVolumeChange}
+                  onDoubleClick={(e) => e.stopPropagation()}
+                  className="guide-minibar-volume-slider"
+                  title="Volume"
+                />
+              </div>
+              {onTogglePip && (
+                <button
+                  className="guide-minibar-btn"
+                  onClick={onTogglePip}
+                  onDoubleClick={(e) => e.stopPropagation()}
+                  title={pipMode ? 'Exit Picture-in-Picture' : 'Picture-in-Picture'}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="2" y="3" width="20" height="18" rx="2" />
+                    <rect x="10" y="10" width="10" height="8" rx="1" fill={pipMode ? 'currentColor' : 'none'} />
+                  </svg>
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+      {/* NowPlayingBar Overlay for Alternate View */}
+      {epgView === 'alternate' && (
+        <NowPlayingBar
+          visible={alternateControlsVisible}
+          channel={selectedChannel}
+          playing={!!isPlaying}
+          muted={muted}
+          volume={volume}
+          mpvReady={mpvReady}
+          position={position}
+          duration={duration}
+          isVod={isVod}
+          vodInfo={vodInfo}
+          isCatchup={isCatchup}
+          catchupInfo={catchupInfo}
+          onTogglePlay={onTogglePlay || (() => {})}
+          onStop={onStop || (() => {})}
+          onToggleMute={onToggleMute || (() => {})}
+          onVolumeChange={onVolumeChange || (() => {})}
+          onSeek={onSeek}
+          onCycleSubtitle={onCycleSubtitle || (() => {})}
+          onCycleAudio={onCycleAudio || (() => {})}
+          onToggleStats={onToggleStats || (() => {})}
+          onToggleFullscreen={onToggleFullscreen || (() => {})}
+          onShowSubtitleModal={onShowSubtitleModal || (() => {})}
+          onShowAudioModal={onShowAudioModal || (() => {})}
+          onCatchupSeek={onCatchupSeek}
+          onGoToLive={() => {
+            if (selectedChannel) onPlayChannel(selectedChannel);
+          }}
+          timeshiftEnabled={timeshiftEnabled}
+          timeshiftState={timeshiftState}
+          onTimeshiftCatchUp={onTimeshiftCatchUp}
+          onChannelUp={onChannelUp}
+          onChannelDown={onChannelDown}
+          onReplayStream={selectedChannel ? () => onPlayChannel(selectedChannel) : undefined}
+          pipMode={pipMode}
+          onTogglePip={onTogglePip}
+        />
+      )}
+    </div>
+  );
 
   return (
     <div
@@ -1747,285 +2043,61 @@ export function ChannelPanel({
       {/* Top Section: Preview & Info — hidden in transparent guide mode */}
       {!guideTransparent && (
       <div 
-        className={`guide-top-section ${epgView === 'alternate' ? 'alternate-view' : ''}`}
-        style={epgView !== 'alternate' ? { '--preview-width': `${previewWidthPct}%` } as React.CSSProperties : undefined}
+        className={`guide-top-section ${epgView === 'alternate' ? 'alternate-view' : ''} ${showMultiviewGrid ? 'multiview-grid-active' : ''}`}
+        style={epgView !== 'alternate' && !showMultiviewGrid ? { '--preview-width': `${previewWidthPct}%` } as React.CSSProperties : undefined}
       >
-        <div
-          className="guide-preview-pane"
-          ref={previewPaneRef}
-          style={epgView === 'alternate' ? { height: `${previewHeightPx}px` } : { flex: `0 0 ${previewWidthPct}%` }}
-          onMouseMove={handlePreviewMouseMove}
-          onMouseLeave={(e) => {
-            handlePreviewMouseLeave();
-            handlePreviewPaneMouseLeave();
-          }}
-          onMouseEnter={handlePreviewPaneMouseEnter}
-        >
-          {/* Resizer Handle */}
-          <div 
-            className={`guide-preview-resizer ${epgView === 'alternate' ? 'vertical' : 'horizontal'}`} 
-            onMouseDown={handleResizeMouseDown}
-            onContextMenu={handleResizeContextMenu}
-            title="Drag to resize preview | Right-click to reset"
-          >
-            <div className="resizer-dot"></div>
+        {showMultiviewGrid ? (
+          <div className="guide-preview-line-1x4">
+            {/* Cell 1: Main MPV player */}
+            <div id="epg-slot-container-1" className="guide-preview-grid-cell">
+              {renderPreviewPane()}
+            </div>
+            {/* Cell 2: Viewer 2 */}
+            <div id="epg-slot-container-2" className="guide-preview-grid-cell" />
+            {/* Cell 3: Viewer 3 */}
+            <div id="epg-slot-container-3" className="guide-preview-grid-cell" />
+            {/* Cell 4: Viewer 4 */}
+            <div id="epg-slot-container-4" className="guide-preview-grid-cell" />
           </div>
-
-          {/* Video container - holds the MPV video and overlays */}
-          <div
-            className="guide-preview-video"
-            ref={previewRef}
-            onDoubleClick={() => {
-              // Double-click to close the guide panel (fullscreen video)
-              onClose();
-            }}
-          >
-            {/* Glass border overlay */}
-            <div className="video-glass-border" />
-            {/* The actual video is rendered by MPV "under" this transparent div */}
-            {/* Only show placeholder when truly no channel is selected (not in watchlist/favorites mode with a selection) */}
-            {!selectedChannel && !isWatchlistMode && categoryId !== '__favorites__' && categoryId !== '__recent__' && (
-              <div className="guide-preview-placeholder">Select a channel</div>
-            )}
-            {/* Show Error Overlay if there is an error */}
-            {error && (
-              <VideoErrorOverlay error={error} isSmall />
-            )}
-            {/* Show Stream Retry Overlay if a retry is in progress */}
-            {retryState?.isRetrying && (
-              <StreamRetryOverlay retryState={retryState} isSmall />
-            )}
-            {/* Show Failover Overlay if a failover is in progress */}
-            {failoverState?.isFailingOver && (
-              <FailoverOverlay state={failoverState} isSmall />
-            )}
-            {/* Show Channel Loading Overlay if loading and not retrying/failing over */}
-            {loadingState && loadingState !== 'idle' && !retryState?.isRetrying && !failoverState?.isFailingOver && (
-              <ChannelLoadingOverlay
-                channelName={currentChannel?.name || 'Channel'}
-                loadingState={loadingState}
-                isSmall
-              />
-            )}
-          </div>
-          {/* Mini Media Bar for EPG Preview - floating buttons overlay */}
-          {isMiniBarVisible && (
-            <div
-              className="guide-preview-minibar"
-              onDoubleClick={(e) => e.stopPropagation()}
-              onMouseEnter={() => setMiniBarHovered(true)}
-              onMouseLeave={() => setMiniBarHovered(false)}
-            >
-              {/* Seek bar row (timeshift) */}
-              {showSeek && (
-                <div className="guide-minibar-seek-row">
-                  <span className="guide-minibar-seek-time">
-                    {formatSeekTime(ts ? ts.timePos - ts.cacheStart : (isVod ? 0 : 0))}
-                  </span>
-                  <div
-                    ref={seekBarRef}
-                    className={`guide-minibar-seek-bar ${seekHover || seekDrag ? 'active' : ''} ${seekDrag ? 'dragging' : ''}`}
-                    onClick={handleSeekClick}
-                    onMouseEnter={() => setSeekHover(true)}
-                    onMouseLeave={() => setSeekHover(false)}
-                    onMouseDown={handleSeekDragStart}
-                  >
-                    <div className="guide-minibar-seek-fill" style={{ width: `${seekFillPct}%` }} />
-                    {seekHover && !seekDrag && (
-                      <div className="guide-minibar-seek-tip" style={{ left: `${((hoverPos - (ts ? ts.cacheStart : 0)) / (ts ? ts.cachedDuration : 1)) * 100}%` }}>
-                        {formatSeekTime(hoverPos)}
+        ) : (
+          <>
+            {renderPreviewPane()}
+            {epgView !== 'alternate' && (
+              <div className={`guide-info-pane ${showMultiviewSplit ? 'multiview-split-active' : ''}`}>
+                {showMultiviewSplit ? (
+                  <div id="epg-slot-container-2" className="guide-preview-split-cell" />
+                ) : selectedChannel ? (
+                  <>
+                    <div className="guide-program-title">
+                      {selectedProgram ? selectedProgram.title : (selectedChannel.name || 'No Program Name')}
+                    </div>
+                    {selectedProgram?.subtitle && (
+                      <div className="guide-program-subtitle">{selectedProgram.subtitle}</div>
+                    )}
+                    <div className="guide-program-meta">
+                      <span>{selectedProgram ? `${formatTime(new Date(selectedProgram.start))} - ${formatTime(new Date(selectedProgram.end))}` : ''}</span>
+                      {selectedProgram && (
+                        <div className="guide-program-progress-bar">
+                          <div className="guide-program-progress-fill" style={{ width: `${progressPercent}%` }} />
+                        </div>
+                      )}
+                      <span>{categoryName}</span>
+                    </div>
+                    <div className="guide-program-description">
+                      {selectedProgram?.description || 'No description available.'}
+                    </div>
+                    {selectedChannel && (
+                      <div style={{ marginTop: '8px' }}>
+                        <MetadataBadge streamId={selectedChannel.stream_id} variant="detailed" />
                       </div>
                     )}
-                  </div>
-                  <span className="guide-minibar-seek-time">
-                    {ts ? `-${formatSeekTime(ts.behindLive)}` : ''}
-                  </span>
-                </div>
-              )}
-              {/* Buttons row — three groups: left (ch up/down), center (play/stop), right (volume/PiP) */}
-              <div className="guide-minibar-buttons">
-                {/* Left group: channel up/down */}
-                <div className="guide-minibar-group guide-minibar-group-left">
-                  {onChannelUp && (
-                    <button
-                      className="guide-minibar-btn"
-                      onClick={onChannelUp}
-                      onDoubleClick={(e) => e.stopPropagation()}
-                      title="Previous Channel (Up)"
-                    >
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M18 15l-6-6-6 6" />
-                      </svg>
-                    </button>
-                  )}
-                  {onChannelDown && (
-                    <button
-                      className="guide-minibar-btn"
-                      onClick={onChannelDown}
-                      onDoubleClick={(e) => e.stopPropagation()}
-                      title="Next Channel (Down)"
-                    >
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M6 9l6 6 6-6" />
-                      </svg>
-                    </button>
-                  )}
-                </div>
-
-                {/* Center group: playback controls */}
-                <div className="guide-minibar-group guide-minibar-group-center">
-                  <button
-                    className="guide-minibar-btn guide-minibar-btn-primary"
-                    onClick={onTogglePlay}
-                    onDoubleClick={(e) => e.stopPropagation()}
-                    title={isPlaying ? 'Pause' : 'Play'}
-                  >
-                    {isPlaying ? (
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                        <rect x="6" y="4" width="4" height="16" rx="1" />
-                        <rect x="14" y="4" width="4" height="16" rx="1" />
-                      </svg>
-                    ) : (
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M8 5v14l11-7z" />
-                      </svg>
-                    )}
-                  </button>
-                  {onStop && (
-                    <button
-                      className="guide-minibar-btn"
-                      onClick={onStop}
-                      onDoubleClick={(e) => e.stopPropagation()}
-                      title="Stop"
-                    >
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                        <rect x="6" y="6" width="12" height="12" rx="1" />
-                      </svg>
-                    </button>
-                  )}
-                </div>
-
-                {/* Right group: volume, PiP */}
-                <div className="guide-minibar-group guide-minibar-group-right">
-                  <div className="guide-minibar-volume" onDoubleClick={(e) => e.stopPropagation()}>
-                    <button
-                      className="guide-minibar-btn"
-                      onClick={handlePreviewMuteToggle}
-                      onDoubleClick={(e) => e.stopPropagation()}
-                      title={previewMuted ? 'Unmute' : 'Mute'}
-                    >
-                      {previewMuted || previewVolume === 0 ? (
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                          <path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z" />
-                        </svg>
-                      ) : (
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                          <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z" />
-                        </svg>
-                      )}
-                    </button>
-                    <input
-                      type="range"
-                      min="0"
-                      max="100"
-                      value={previewMuted ? 0 : previewVolume}
-                      onChange={handlePreviewVolumeChange}
-                      onDoubleClick={(e) => e.stopPropagation()}
-                      className="guide-minibar-volume-slider"
-                      title="Volume"
-                    />
-                  </div>
-                  {onTogglePip && (
-                    <button
-                      className="guide-minibar-btn"
-                      onClick={onTogglePip}
-                      onDoubleClick={(e) => e.stopPropagation()}
-                      title={pipMode ? 'Exit Picture-in-Picture' : 'Picture-in-Picture'}
-                    >
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <rect x="2" y="3" width="20" height="18" rx="2" />
-                        <rect x="10" y="10" width="10" height="8" rx="1" fill={pipMode ? 'currentColor' : 'none'} />
-                      </svg>
-                    </button>
-                  )}
-                </div>
+                  </>
+                ) : (
+                  <div className="guide-program-title">Select a channel</div>
+                )}
               </div>
-            </div>
-          )}
-          {/* NowPlayingBar Overlay for Alternate View */}
-          {epgView === 'alternate' && (
-            <NowPlayingBar
-              visible={alternateControlsVisible}
-              channel={selectedChannel}
-              playing={!!isPlaying}
-              muted={muted}
-              volume={volume}
-              mpvReady={mpvReady}
-              position={position}
-              duration={duration}
-              isVod={isVod}
-              vodInfo={vodInfo}
-              isCatchup={isCatchup}
-              catchupInfo={catchupInfo}
-              onTogglePlay={onTogglePlay || (() => {})}
-              onStop={onStop || (() => {})}
-              onToggleMute={onToggleMute || (() => {})}
-              onVolumeChange={onVolumeChange || (() => {})}
-              onSeek={onSeek}
-              onCycleSubtitle={onCycleSubtitle || (() => {})}
-              onCycleAudio={onCycleAudio || (() => {})}
-              onToggleStats={onToggleStats || (() => {})}
-              onToggleFullscreen={onToggleFullscreen || (() => {})}
-              onShowSubtitleModal={onShowSubtitleModal || (() => {})}
-              onShowAudioModal={onShowAudioModal || (() => {})}
-              onCatchupSeek={onCatchupSeek}
-              onGoToLive={() => {
-                if (selectedChannel) onPlayChannel(selectedChannel);
-              }}
-              timeshiftEnabled={timeshiftEnabled}
-              timeshiftState={timeshiftState}
-              onTimeshiftCatchUp={onTimeshiftCatchUp}
-              onChannelUp={onChannelUp}
-              onChannelDown={onChannelDown}
-              onReplayStream={selectedChannel ? () => onPlayChannel(selectedChannel) : undefined}
-              pipMode={pipMode}
-              onTogglePip={onTogglePip}
-            />
-          )}
-
-        </div>
-        {epgView !== 'alternate' && (
-          <div className="guide-info-pane">
-            {selectedChannel ? (
-              <>
-                <div className="guide-program-title">
-                  {selectedProgram ? selectedProgram.title : (selectedChannel.name || 'No Program Name')}
-                </div>
-                {selectedProgram?.subtitle && (
-                  <div className="guide-program-subtitle">{selectedProgram.subtitle}</div>
-                )}
-                <div className="guide-program-meta">
-                  <span>{selectedProgram ? `${formatTime(new Date(selectedProgram.start))} - ${formatTime(new Date(selectedProgram.end))}` : ''}</span>
-                  {selectedProgram && (
-                    <div className="guide-program-progress-bar">
-                      <div className="guide-program-progress-fill" style={{ width: `${progressPercent}%` }} />
-                    </div>
-                  )}
-                  <span>{categoryName}</span>
-                </div>
-                <div className="guide-program-description">
-                  {selectedProgram?.description || 'No description available.'}
-                </div>
-                {selectedChannel && (
-                  <div style={{ marginTop: '8px' }}>
-                    <MetadataBadge streamId={selectedChannel.stream_id} variant="detailed" />
-                  </div>
-                )}
-              </>
-            ) : (
-              <div className="guide-program-title">Select a channel</div>
             )}
-          </div>
+          </>
         )}
       </div>
       )}

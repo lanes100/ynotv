@@ -28,6 +28,13 @@
     animation: lpDropIn 0.12s ease-out;
 }
 
+.layout-picker-dropdown.shifted-left {
+    position: fixed;
+    top: 48px;
+    left: 16px;
+    right: auto;
+}
+
 @keyframes lpDropIn {
     from {
         opacity: 0;

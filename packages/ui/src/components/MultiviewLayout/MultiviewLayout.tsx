@@ -1,10 +1,87 @@
-import { useRef } from 'react';
+import { useRef, useState, useLayoutEffect } from 'react';
 import { MultiviewCell } from '../MultiviewCell/MultiviewCell';
 import { HlsMultiviewCell } from '../MultiviewCell/HlsMultiviewCell';
 import { ViewerSlot, type MultiviewEngineMode } from '../../hooks/useMultiview';
 import { useDraggable } from '../../hooks/useDraggable';
 import { useResizable } from '../../hooks/useResizable';
 import './MultiviewLayout.css';
+
+interface HlsAbsoluteWrapperProps {
+    slotId: 2 | 3 | 4;
+    activeView: string;
+    layout: string;
+    hidden?: boolean;
+    active: boolean;
+    children: React.ReactNode;
+}
+
+function HlsAbsoluteWrapper({ slotId, activeView, layout, hidden, active, children }: HlsAbsoluteWrapperProps) {
+    const [style, setStyle] = useState<React.CSSProperties>({ display: 'none' });
+
+    useLayoutEffect(() => {
+        const updatePosition = () => {
+            if (!active) {
+                setStyle({ display: 'none' });
+                return;
+            }
+
+            const id = activeView === 'guide' 
+                ? `epg-slot-container-${slotId}` 
+                : `multiview-slot-container-${slotId}`;
+
+            const el = document.getElementById(id);
+            if (!el) {
+                setStyle({ display: 'none' });
+                return;
+            }
+
+            const rect = el.getBoundingClientRect();
+            setStyle({
+                position: 'fixed',
+                left: `${rect.left}px`,
+                top: `${rect.top}px`,
+                width: `${rect.width}px`,
+                height: `${rect.height}px`,
+                zIndex: activeView === 'guide' ? 1000 : 10,
+                pointerEvents: 'auto',
+                borderRadius: window.getComputedStyle(el).borderRadius,
+                overflow: 'hidden',
+            });
+        };
+
+        updatePosition();
+
+        let observer: ResizeObserver | null = null;
+        const targetId = activeView === 'guide' 
+            ? `epg-slot-container-${slotId}` 
+            : `multiview-slot-container-${slotId}`;
+        
+        const targetEl = document.getElementById(targetId);
+        if (targetEl) {
+            observer = new ResizeObserver(() => {
+                requestAnimationFrame(updatePosition);
+            });
+            observer.observe(targetEl);
+        }
+
+        window.addEventListener('resize', updatePosition);
+        
+        // Sync position frequently to follow React layout transitions and state updates smoothly
+        const intervalId = setInterval(updatePosition, 50);
+
+        return () => {
+            if (observer) observer.disconnect();
+            window.removeEventListener('resize', updatePosition);
+            clearInterval(intervalId);
+        };
+    }, [slotId, activeView, layout, hidden, active]);
+
+    return (
+        <div className="hls-absolute-wrapper" style={{ ...style, transition: 'none' }}>
+            {children}
+        </div>
+    );
+}
 
 interface MultiviewLayoutProps {
     layout: 'main' | 'pip' | '2x2' | 'bigbottom' | 'sbs';
@@ -26,6 +103,7 @@ interface MultiviewLayoutProps {
     onReposition: () => void;
     onSwitchLayout?: (layout: 'main' | 'pip' | '2x2' | 'bigbottom' | 'sbs') => void;
     hidden?: boolean;
+    activeView: string;
 }
 
 export function MultiviewLayout({
@@ -48,6 +126,7 @@ export function MultiviewLayout({
     onReposition,
     onSwitchLayout,
     hidden,
+    activeView,
 }: MultiviewLayoutProps) {
     const slot2 = slots.find(s => s.id === 2)!;
     const slot3 = slots.find(s => s.id === 3)!;
@@ -63,19 +142,14 @@ export function MultiviewLayout({
 
     const isHls = engineMode === 'hls';
 
-    // Render either a native-MPV overlay cell or an in-DOM HLS <video> cell
+    // Render placeholder slots inside the layouts when using HLS engine
     const cell = (slot: ViewerSlot) =>
         isHls ? (
-            <HlsMultiviewCell
+            <div 
                 key={slot.id}
-                slotId={slot.id}
-                channelName={slot.channelName}
-                channelUrl={slot.channelUrl}
-                sourceName={slot.sourceName}
-                active={slot.active}
-                onSwapWithMain={() => onSwapWithMain(slot.id)}
-                onStop={() => onStop(slot.id)}
-                onReload={() => onReload(slot.id)}
+                id={`multiview-slot-container-${slot.id}`} 
+                className="multiview-cell-container hls-cell-container"
+                style={{ width: '100%', height: '100%', background: 'transparent' }}
             />
         ) : (
             <MultiviewCell
@@ -97,29 +171,6 @@ export function MultiviewLayout({
         return null;
     }
 
-    if (layout === 'pip') {
-        return (
-            <div className="layout-pip-container" style={{ display: hidden ? 'none' : undefined }}>
-                <div className="layout-pip-overlay" ref={pipDragRef}>
-                    <button
-                        className="layout-pip-close"
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            onSwitchLayout?.('main');
-                        }}
-                        title="Close and return to Main View"
-                    >
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                            <line x1="18" y1="6" x2="6" y2="18" />
-                            <line x1="6" y1="6" x2="18" y2="18" />
-                        </svg>
-                    </button>
-                    {cell(slot2)}
-                    <div className="layout-pip-resize" ref={pipResizeRef} title="Drag to resize" />
-                </div>
-            </div>
-        );
-    }
     const mainControls = (
         <div className="multiview-cell-controls primary-mpv-controls" onClick={(e) => e.stopPropagation()}>
             <span className="multiview-cell-controls-name">{mainChannelName || 'Main Player'}</span>
@@ -158,62 +209,115 @@ export function MultiviewLayout({
         </div>
     );
 
-    if (layout === '2x2') {
-        return (
-            <div className="layout-2x2-cells" data-engine={engineMode} style={{ display: hidden ? 'none' : undefined }}>
-                {/* Top-left grid cell: occupied by primary MPV (renders behind this div).
-                    Must always be rendered so slots 2/3/4 land in the correct grid positions.
-                    CSS removes the box-shadow curtain in HLS mode. */}
-                <div className="layout-mpv-placeholder layout-2x2-mpv">
-                    {mainControls}
+    const layoutContent = (() => {
+        if (layout === 'pip') {
+            return (
+                <div className="layout-pip-container" style={{ display: hidden ? 'none' : undefined }}>
+                    <div className="layout-pip-overlay" ref={pipDragRef}>
+                        <button
+                            className="layout-pip-close"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onSwitchLayout?.('main');
+                            }}
+                            title="Close and return to Main View"
+                        >
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                                <line x1="18" y1="6" x2="6" y2="18" />
+                                <line x1="6" y1="6" x2="18" y2="18" />
+                            </svg>
+                        </button>
+                        {cell(slot2)}
+                        <div className="layout-pip-resize" ref={pipResizeRef} title="Drag to resize" />
+                    </div>
                 </div>
-                {cell(slot2)}
-                {cell(slot3)}
-                {cell(slot4)}
-            </div>
-        );
-    }
+            );
+        }
 
-    if (layout === 'sbs') {
-        return (
-            <div className="layout-sbs-cells" data-engine={engineMode} style={{ display: hidden ? 'none' : undefined }}>
-                <div className="layout-mpv-placeholder layout-sbs-mpv">
-                    {mainControls}
-                </div>
-                {cell(slot2)}
-            </div>
-        );
-    }
-
-    if (layout === 'bigbottom') {
-        // Calculate exact 16:9 height for the bottom row cells to prevent letterboxing
-        const gap = 2; // matches CSS gap
-        const cellW = Math.floor((window.innerWidth - (2 * gap)) / 3);
-        const cellH = Math.floor(cellW * 9 / 16);
-
-        return (
-            <div 
-                className="layout-bigbottom-cells" 
-                data-engine={engineMode} 
-                style={{ 
-                    display: hidden ? 'none' : undefined,
-                    gridTemplateRows: `1fr ${cellH}px`
-                }}
-            >
-                {/* Top grid row: primary MPV renders behind this placeholder.
-                    Must always be rendered so layout-bottom-bar stays in grid row 2.
-                    CSS removes the box-shadow curtain in HLS mode. */}
-                <div className="layout-mpv-placeholder layout-bigbottom-mpv">
-                    {mainControls}
-                </div>
-                <div className="layout-bottom-bar">
+        if (layout === '2x2') {
+            return (
+                <div className="layout-2x2-cells" data-engine={engineMode} style={{ display: hidden ? 'none' : undefined }}>
+                    {/* Top-left grid cell: occupied by primary MPV (renders behind this div).
+                        Must always be rendered so slots 2/3/4 land in the correct grid positions.
+                        CSS removes the box-shadow curtain in HLS mode. */}
+                    <div className="layout-mpv-placeholder layout-2x2-mpv">
+                        {mainControls}
+                    </div>
                     {cell(slot2)}
                     {cell(slot3)}
                     {cell(slot4)}
                 </div>
-            </div>
-        );
-    }
+            );
+        }
 
-    return null;
+        if (layout === 'sbs') {
+            return (
+                <div className="layout-sbs-cells" data-engine={engineMode} style={{ display: hidden ? 'none' : undefined }}>
+                    <div className="layout-mpv-placeholder layout-sbs-mpv">
+                        {mainControls}
+                    </div>
+                    {cell(slot2)}
+                </div>
+            );
+        }
+
+        if (layout === 'bigbottom') {
+            // Calculate exact 16:9 height for the bottom row cells to prevent letterboxing
+            const gap = 2; // matches CSS gap
+            const cellW = Math.floor((window.innerWidth - (2 * gap)) / 3);
+            const cellH = Math.floor(cellW * 9 / 16);
+
+            return (
+                <div 
+                    className="layout-bigbottom-cells" 
+                    data-engine={engineMode} 
+                    style={{ 
+                        display: hidden ? 'none' : undefined,
+                        gridTemplateRows: `1fr ${cellH}px`
+                    }}
+                >
+                    {/* Top grid row: primary MPV renders behind this placeholder.
+                        Must always be rendered so layout-bottom-bar stays in grid row 2.
+                        CSS removes the box-shadow curtain in HLS mode. */}
+                    <div className="layout-mpv-placeholder layout-bigbottom-mpv">
+                        {mainControls}
+                    </div>
+                    <div className="layout-bottom-bar">
+                        {cell(slot2)}
+                        {cell(slot3)}
+                        {cell(slot4)}
+                    </div>
+                </div>
+            );
+        }
+
+        return null;
+    })();
+
+    return (
+        <>
+            {isHls && slots.map(slot => (
+                <HlsAbsoluteWrapper 
+                    key={slot.id} 
+                    slotId={slot.id as 2 | 3 | 4} 
+                    activeView={activeView}
+                    layout={layout}
+                    hidden={hidden}
+                    active={slot.active}
+                >
+                    <HlsMultiviewCell
+                        slotId={slot.id as 2 | 3 | 4}
+                        channelName={slot.channelName}
+                        channelUrl={slot.channelUrl}
+                        sourceName={slot.sourceName}
+                        active={slot.active}
+                        onSwapWithMain={() => onSwapWithMain(slot.id)}
+                        onStop={() => onStop(slot.id)}
+                        onReload={() => onReload(slot.id)}
+                    />
+                </HlsAbsoluteWrapper>
+            ))}
+            {layoutContent}
+        </>
+    );
 }

@@ -135,7 +135,6 @@
     z-index: 10;
 }
 
-.app:not(.controls-hidden) .hls-cell-container .multiview-cell-controls,
 .hls-cell-container:hover .multiview-cell-controls {
     opacity: 1;
 }

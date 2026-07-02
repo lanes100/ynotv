@@ -601,7 +601,7 @@ function App() {
   const {
     layout: multiviewLayout,
     slots: multiviewSlots,
-    switchLayout,
+    switchLayout: rawSwitchLayout,
     sendToSlot,
     swapWithMain,
     stopSlot,
@@ -619,11 +619,9 @@ function App() {
 
   // Refs for multiview (used by keyboard shortcuts)
   const multiviewLayoutRef = useRef<LayoutMode>('main');
-  const switchLayoutRef = useRef(switchLayout);
   const handlePlayChannelRef = useRef<((channel: StoredChannel, autoSwitched?: boolean) => void) | null>(null);
   const lastPlayedChannelRef = useRef<StoredChannel | null>(null);
   useEffect(() => { multiviewLayoutRef.current = multiviewLayout; }, [multiviewLayout]);
-  useEffect(() => { switchLayoutRef.current = switchLayout; }, [switchLayout]);
 
   // ==========================================================================
   // Playback (needs callbacks from useLayoutPersistence)
@@ -964,6 +962,8 @@ function App() {
     handleMouseMove,
   } = nav;
 
+
+
   // ==========================================================================
   // PiP (Picture-in-Picture) Mode
   // ==========================================================================
@@ -1004,6 +1004,17 @@ function App() {
   const setActiveView = useCallback((newView: any) => {
     const nextView = typeof newView === 'function' ? newView(activeView) : newView;
     const isCurrentlyNuvioSettings = (activeView === 'nuvio' && useUIStore.getState().nuvioView === 'settings') || (showSettingsPopup && settingsTab === 'nuvio');
+    
+    const updateTabMode = (view: any) => {
+      if (view === 'guide' || view === 'sports' || view === 'dvr' ||
+          view === 'settings' || view === 'movies' || view === 'series' ||
+          view === 'calendar' || view === 'stremio' || view === 'nuvio') {
+        enterTabMode(view);
+      } else {
+        exitTabMode();
+      }
+    };
+
     if (isCurrentlyNuvioSettings && nuvioHasUnsavedHomeLayout) {
       showConfirm(
         'Unsaved Changes',
@@ -1012,6 +1023,7 @@ function App() {
           try {
             await nuvioTabSaveFn?.();
             useUIStore.setState({ nuvioHasUnsavedHomeLayout: false });
+            updateTabMode(nextView);
             rawSetActiveView(nextView);
           } catch (err) {
             // Error was already alerted inside child component
@@ -1019,15 +1031,38 @@ function App() {
         },
         () => {
           useUIStore.setState({ nuvioHasUnsavedHomeLayout: false });
+          updateTabMode(nextView);
           rawSetActiveView(nextView);
         },
         'Save',
         'Discard Changes'
       );
     } else {
+      updateTabMode(nextView);
       rawSetActiveView(nextView);
     }
-  }, [activeView, showSettingsPopup, settingsTab, nuvioHasUnsavedHomeLayout, nuvioTabSaveFn, rawSetActiveView, showConfirm]);
+  }, [activeView, showSettingsPopup, settingsTab, nuvioHasUnsavedHomeLayout, nuvioTabSaveFn, rawSetActiveView, showConfirm, enterTabMode, exitTabMode]);
+
+  // Wrapped switchLayout to toggle EPG visibility when entering HLS multiview
+  // to force the native MPV window geometry to correctly sync with EPG cell bounds.
+  const switchLayout = useCallback(async (newLayout: LayoutMode) => {
+    const isCurrentlyHls = multiviewEngineMode === 'hls';
+    const isEpgOpen = activeView === 'guide';
+    const isTargetMultiview = newLayout === '2x2' || newLayout === 'bigbottom';
+
+    if (isCurrentlyHls && isEpgOpen && isTargetMultiview) {
+      setActiveView('none');
+      await rawSwitchLayout(newLayout);
+      setTimeout(() => {
+        setActiveView('guide');
+      }, 100);
+    } else {
+      await rawSwitchLayout(newLayout);
+    }
+  }, [multiviewEngineMode, activeView, rawSwitchLayout, setActiveView]);
+
+  const switchLayoutRef = useRef(switchLayout);
+  useEffect(() => { switchLayoutRef.current = switchLayout; }, [switchLayout]);
 
   const setShowSettingsPopup = useCallback((val: boolean | ((prev: boolean) => boolean)) => {
     const nextVal = typeof val === 'function' ? val(showSettingsPopup) : val;
@@ -1720,21 +1755,6 @@ function App() {
     controlsHoveredRef.current = false;
     setShowAudioModal(true);
   }, [controlsHoveredRef]);
-
-
-
-  // ==========================================================================
-  // Tab Mode: enter when EPG, Sports, DVR, Settings, Movies, or Series opens
-  // ==========================================================================
-  useEffect(() => {
-    if (activeView === 'guide' || activeView === 'sports' || activeView === 'dvr' ||
-        activeView === 'settings' || activeView === 'movies' || activeView === 'series' ||
-        activeView === 'calendar' || activeView === 'stremio' || activeView === 'nuvio') {
-      enterTabMode(activeView);
-    } else {
-      exitTabMode();
-    }
-  }, [activeView, enterTabMode, exitTabMode]);
 
   // ==========================================================================
   // Popout-aware channel/VOD play wrappers
@@ -3267,6 +3287,7 @@ function App() {
             onSelect={switchLayout}
             engineMode={multiviewEngineMode}
             onEngineChange={setMultiviewEngineMode}
+            isHeroPage={activeView === 'none'}
           />
         )}
 
@@ -3400,7 +3421,7 @@ function App() {
       )}
 
       {/* Live Sports Overlay Widget */}
-      {sportsOverlayWidget && !pipMode && !(currentChannel?.stream_id === 'vod' || currentChannel?.stream_id?.startsWith('recording_')) && (
+      {sportsOverlayWidget && !pipMode && !(currentChannel?.stream_id === 'vod' || currentChannel?.stream_id?.startsWith('recording_')) && multiviewLayout !== 'sbs' && multiviewLayout !== 'bigbottom' && multiviewLayout !== '2x2' && (
         <LiveSportsOverlay
           mode={sportsOverlayWidget}
           showControls={showControls}
@@ -3413,7 +3434,10 @@ function App() {
            Adding more widgets here is trivial — they automatically line up. */}
       {(recentOverlayWidget || favoritesOverlayWidget || whatsNextOverlayWidget || customGroupWidgetIds.length > 0) &&
         !pipMode &&
-        !(currentChannel?.stream_id === 'vod' || currentChannel?.stream_id?.startsWith('recording_')) && (
+        !(currentChannel?.stream_id === 'vod' || currentChannel?.stream_id?.startsWith('recording_')) &&
+        multiviewLayout !== 'sbs' &&
+        multiviewLayout !== 'bigbottom' &&
+        multiviewLayout !== '2x2' && (
         <WidgetBar cioEnabled={channelInfoOverlayEnabled}>
           {(() => {
             const activeWidgets: string[] = [];
@@ -3523,7 +3547,7 @@ function App() {
       )}
 
       {/* Hero Screen Widgets Sidebar Panel */}
-      {activeView === 'none' && !currentChannel && !error && !isRestoring && (
+      {activeView === 'none' && !currentChannel && !error && !isRestoring && multiviewLayout !== 'sbs' && multiviewLayout !== 'bigbottom' && multiviewLayout !== '2x2' && (
         <HeroWidgetsPanel
           sportsWidget={sportsOverlayWidget}
           recentWidget={recentOverlayWidget}
@@ -3692,6 +3716,7 @@ function App() {
           onSetProperty={setSlotProperty}
           onReposition={repositionSecondarySlots}
           onSwitchLayout={switchLayout}
+          activeView={activeView}
         />
       )}
 
@@ -3908,6 +3933,10 @@ function App() {
         currentLayout={multiviewLayout}
         multiviewEngineMode={multiviewEngineMode}
         onSendToSlot={sendToSlot}
+        multiviewSlots={multiviewSlots}
+        onSwapWithMain={(slotId) => swapWithMain(slotId, multiviewSlots)}
+        onStopSlot={stopSlot}
+        onReloadSlot={reloadSlot}
         includeSourceInSearch={includeSourceInSearch}
         searchResultsOrder={searchResultsOrder}
         currentChannel={currentChannel}
@@ -4370,6 +4399,7 @@ function App() {
         version={appVersion}
       />
       <ModalComponent />
+      <div id="hls-fallback-container" style={{ display: 'none' }} />
     </div>
   );
 }

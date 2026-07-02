@@ -56,7 +56,7 @@ export function useLayoutPersistence(options: UseLayoutPersistenceOptions) {
     swapWithMain: baseSwapWithMain,
     stopSlot: baseStopSlot,
     notifyMainLoaded: baseNotifyMainLoaded,
-    setEngineMode,
+    setEngineMode: baseSetEngineMode,
     engineMode,
   } = multiview;
 
@@ -321,6 +321,41 @@ export function useLayoutPersistence(options: UseLayoutPersistenceOptions) {
   );
 
   /**
+   * Set engine mode, persist to storage, and reload active slots in the new engine
+   */
+  const setEngineMode = useCallback(
+    async (mode: MultiviewEngineMode) => {
+      const prev = engineMode;
+      await baseSetEngineMode(mode);
+
+      if (prev !== mode) {
+        // Save new engine mode to persisted state immediately
+        if (enabled && masterStateRef.current) {
+          masterStateRef.current.engineMode = mode;
+          await persistToStorage(masterStateRef.current);
+        }
+
+        // Wait for engine state to update and HLS/MPV views to unmount/mount
+        setTimeout(async () => {
+          const activeSlots = slotsRef.current.filter((s) => s.active && s.channelUrl);
+          const slotDelay = mode === 'hls' ? 50 : 300;
+          for (const slot of activeSlots) {
+            await baseSendToSlot(
+              slot.id,
+              slot.channelName || '',
+              slot.channelUrl || '',
+              slot.sourceName || null,
+              true // force - bypass tab check
+            );
+            await new Promise((resolve) => setTimeout(resolve, slotDelay));
+          }
+        }, 300);
+      }
+    },
+    [baseSetEngineMode, engineMode, enabled, baseSendToSlot, persistToStorage]
+  );
+
+  /**
    * Restore layout state on initial mount (for startup)
    * This runs ONCE when the app starts and restores the saved layout and channels.
    */
@@ -456,5 +491,6 @@ export function useLayoutPersistence(options: UseLayoutPersistenceOptions) {
     restoreLayoutState,
     mainChannel: mainSlotRef.current,
     isRestoring,
+    setEngineMode,
   };
 }

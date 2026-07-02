@@ -195,7 +195,10 @@ export function useMultiview() {
         // Do not enforce multiview quadrant geometry if we are currently inside a full-screen Tab!
         // The EPG preview pane relies on the Main MPV being strictly unrestricted
         // so its software `video-zoom` scaler can project the video into the preview pane.
-        if (isTabModeRef.current) return;
+        if (isTabModeRef.current) {
+            await invoke('mpv_set_geometry', { x: 0, y: 0, width: 0, height: 0 }).catch(() => { });
+            return;
+        }
 
         const m = mode ?? layoutRef.current;
         const r = primaryRect(m, engineModeRef.current);
@@ -342,6 +345,13 @@ export function useMultiview() {
             }
             // Update the pending layout to be restored later
             savedStateRef.current.layout = newLayout;
+
+            // Sync keepaspect property for primary MPV (2x2 grid stretches; SBS/PiP/Main keep aspect)
+            try {
+                const { Bridge } = await import('../services/tauri-bridge');
+                await Bridge.setProperty('keepaspect', newLayout !== '2x2');
+            } catch (e) {}
+
             setLayout(newLayout);
             return;
         }

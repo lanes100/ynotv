@@ -7,6 +7,7 @@ interface LayoutPickerProps {
     onSelect: (layout: LayoutMode) => void;
     engineMode: MultiviewEngineMode;
     onEngineChange: (mode: MultiviewEngineMode) => void;
+    isHeroPage?: boolean;
 }
 
 const LAYOUTS: { mode: LayoutMode; label: string; description: string }[] = [
@@ -37,7 +38,7 @@ const LAYOUTS: { mode: LayoutMode; label: string; description: string }[] = [
     },
 ];
 
-export function LayoutPicker({ currentLayout, onSelect, engineMode, onEngineChange }: LayoutPickerProps) {
+export function LayoutPicker({ currentLayout, onSelect, engineMode, onEngineChange, isHeroPage }: LayoutPickerProps) {
     const [open, setOpen] = useState(false);
     const ref = useRef<HTMLDivElement>(null);
 
@@ -56,6 +57,8 @@ export function LayoutPicker({ currentLayout, onSelect, engineMode, onEngineChan
         setOpen(false);
     };
 
+    const shouldShift = isHeroPage && engineMode === 'mpv' && (currentLayout === '2x2' || currentLayout === 'sbs');
+
     return (
         <div className="layout-picker" ref={ref}>
             <button
@@ -67,7 +70,7 @@ export function LayoutPicker({ currentLayout, onSelect, engineMode, onEngineChan
             </button>
 
             {open && (
-                <div className="layout-picker-dropdown">
+                <div className={`layout-picker-dropdown ${shouldShift ? 'shifted-left' : ''}`}>
                     <div className="layout-picker-header">View Layout</div>
 
                     {/* Viewer Engine toggle */}
