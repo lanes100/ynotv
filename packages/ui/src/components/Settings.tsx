@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import type { Source } from '@ynotv/core';
-import { useEpgView, useSetEpgView, useSetEpgVisibleHours, useUIStore } from '../stores/uiStore';
+import { useEpgView, useSetEpgView, useSetEpgVisibleHours, useUIStore, useIncludeAllChannelsToPlaylist, useSetIncludeAllChannelsToPlaylist } from '../stores/uiStore';
 import { SettingsSidebar, type SettingsTabId } from './settings/SettingsSidebar';
 import { searchSettings, type SettingsSearchResult } from './settings/SettingsSearchIndex';
 import { SourcesTab } from './settings/SourcesTab';
@@ -473,6 +473,8 @@ export function Settings({
   const [transparentGuideHideHeader, setTransparentGuideHideHeader] = useState(false);
   const [transparentGuideOverlayOpacity, setTransparentGuideOverlayOpacity] = useState(55);
   const [transparentGuideSidebarOpacity, setTransparentGuideSidebarOpacity] = useState(55);
+  const [includeAllChannelsToPlaylist, setIncludeAllChannelsToPlaylistState] = useState(false);
+  const setIncludeAllChannelsToPlaylist = useSetIncludeAllChannelsToPlaylist();
 
   // Live View settings state
   const [channelInfoOverlayEnabled, setChannelInfoOverlayEnabled] = useState(channelInfoOverlayEnabledProp ?? false);
@@ -964,6 +966,10 @@ export function Settings({
       setTransparentGuideSidebarOpacity(loadedSidebarOpacity);
       document.documentElement.style.setProperty('--transparent-guide-sidebar-opacity', String(loadedSidebarOpacity / 100));
 
+      // Load include all channels to playlist setting
+      const loadedIncludeAllChannels = settings.includeAllChannelsToPlaylist ?? false;
+      setIncludeAllChannelsToPlaylistState(loadedIncludeAllChannels);
+      setIncludeAllChannelsToPlaylist(loadedIncludeAllChannels);
 
       // Load EPG font size settings
       const loadedEpgTitleFontSize = settings.epgTitleFontSize ?? 32;
@@ -1540,6 +1546,14 @@ export function Settings({
     document.documentElement.style.setProperty('--epg-body-font-size', `${size}px`);
     if (window.storage) {
       window.storage.debouncedUpdateSettings({ epgBodyFontSize: size });
+    }
+  };
+
+  const handleIncludeAllChannelsToPlaylistChange = async (enabled: boolean) => {
+    setIncludeAllChannelsToPlaylistState(enabled);
+    setIncludeAllChannelsToPlaylist(enabled);
+    if (window.storage) {
+      await window.storage.updateSettings({ includeAllChannelsToPlaylist: enabled });
     }
   };
 
@@ -2198,6 +2212,8 @@ export function Settings({
             onChannelSortOrderChange={setChannelSortOrder}
             categorySortOrder={categorySortOrder}
             onCategorySortOrderChange={handleCategorySortOrderChange}
+            includeAllChannelsToPlaylist={includeAllChannelsToPlaylist}
+            onIncludeAllChannelsToPlaylistChange={handleIncludeAllChannelsToPlaylistChange}
             includeSourceInSearch={includeSourceInSearch}
             onIncludeSourceInSearchChange={handleIncludeSourceInSearchChange}
             maxSearchResults={maxSearchResults}

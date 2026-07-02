@@ -1,4 +1,4 @@
-import { useSetChannelSortOrder, useSetCategorySortOrder } from '../../stores/uiStore';
+import { useSetChannelSortOrder, useSetCategorySortOrder, useSetIncludeAllChannelsToPlaylist } from '../../stores/uiStore';
 import './PlaybackTab.css'; // Reuse existing tab styles for toggle
 
 interface ChannelsTabProps {
@@ -12,6 +12,8 @@ interface ChannelsTabProps {
   onMaxSearchResultsChange: (limit: number) => void;
   searchResultsOrder: 'default' | 'alphabetical';
   onSearchResultsOrderChange: (order: 'default' | 'alphabetical') => void;
+  includeAllChannelsToPlaylist: boolean;
+  onIncludeAllChannelsToPlaylistChange: (enabled: boolean) => void;
   showMode?: 'sort-order' | 'search' | 'all';
 }
 
@@ -30,6 +32,11 @@ async function saveSearchResultsOrder(order: 'default' | 'alphabetical') {
   await window.storage.updateSettings({ searchResultsOrder: order });
 }
 
+async function saveIncludeAllChannelsToPlaylist(enabled: boolean) {
+  if (!window.storage) return;
+  await window.storage.updateSettings({ includeAllChannelsToPlaylist: enabled });
+}
+
 export function ChannelsTab({
   channelSortOrder,
   onChannelSortOrderChange,
@@ -41,10 +48,13 @@ export function ChannelsTab({
   onMaxSearchResultsChange,
   searchResultsOrder,
   onSearchResultsOrderChange,
+  includeAllChannelsToPlaylist,
+  onIncludeAllChannelsToPlaylistChange,
   showMode = 'all',
 }: ChannelsTabProps) {
   const setChannelSortOrder = useSetChannelSortOrder();
   const setCategorySortOrder = useSetCategorySortOrder();
+  const setIncludeAllChannelsToPlaylist = useSetIncludeAllChannelsToPlaylist();
 
   async function handleSortOrderChange(order: 'alphabetical' | 'number' | 'provider') {
     onChannelSortOrderChange(order);
@@ -126,6 +136,31 @@ export function ChannelsTab({
               "Default" uses the order from your provider or any custom order set in Manage Categories.
               "Alphabetical" sorts all categories alphabetically (A-Z).
             </p>
+
+            <div className="timeshift-settings" style={{ marginTop: '20px' }}>
+              <div className="timeshift-toggle-row">
+                <div className="timeshift-toggle-info">
+                  <span className="timeshift-toggle-label">Include All Channels to Playlist</span>
+                  <span className="timeshift-toggle-sub">
+                    When enabled, each playlist/source will show an "All Channels" category at the top that displays
+                    all enabled channels from that source in the EPG.
+                  </span>
+                </div>
+                <label className="toggle-switch">
+                  <input
+                    type="checkbox"
+                    checked={includeAllChannelsToPlaylist}
+                    onChange={(e) => {
+                      const enabled = e.target.checked;
+                      onIncludeAllChannelsToPlaylistChange(enabled);
+                      setIncludeAllChannelsToPlaylist(enabled);
+                      saveIncludeAllChannelsToPlaylist(enabled);
+                    }}
+                  />
+                  <span className="toggle-slider" />
+                </label>
+              </div>
+            </div>
           </div>
         </>
       )}

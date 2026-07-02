@@ -41,6 +41,8 @@ interface LiveTVTabProps {
   onMaxSearchResultsChange: (limit: number) => void;
   searchResultsOrder: 'default' | 'alphabetical';
   onSearchResultsOrderChange: (order: 'default' | 'alphabetical') => void;
+  includeAllChannelsToPlaylist: boolean;
+  onIncludeAllChannelsToPlaylistChange: (enabled: boolean) => void;
   // Channel Overlay props
   channelInfoOverlayEnabled: boolean;
   onChannelInfoOverlayChange: (enabled: boolean) => void;
@@ -109,6 +111,8 @@ export function LiveTVTab({
   onMaxSearchResultsChange,
   searchResultsOrder,
   onSearchResultsOrderChange,
+  includeAllChannelsToPlaylist,
+  onIncludeAllChannelsToPlaylistChange,
   channelInfoOverlayEnabled,
   onChannelInfoOverlayChange,
   channelInfoOverlayFontSize,
@@ -662,6 +666,8 @@ export function LiveTVTab({
             onMaxSearchResultsChange={onMaxSearchResultsChange}
             searchResultsOrder={searchResultsOrder}
             onSearchResultsOrderChange={onSearchResultsOrderChange}
+            includeAllChannelsToPlaylist={includeAllChannelsToPlaylist}
+            onIncludeAllChannelsToPlaylistChange={onIncludeAllChannelsToPlaylistChange}
             showMode={activeSubTab === 'sort-order' ? 'sort-order' : 'search'}
           />
         )}

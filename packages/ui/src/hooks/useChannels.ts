@@ -358,6 +358,53 @@ export function useChannels(categoryId: string | null, sortOrder: 'alphabetical'
             .filter((ch): ch is StoredChannel => ch !== undefined);
         }
         orderingIsFixed = true;
+      } else if (categoryId && categoryId.startsWith('__allsrc_pl_')) {
+        // All Channels for a custom playlist
+        const playlistId = categoryId.replace('__allsrc_pl_', '');
+        const links = await db.playlistCategoryLinks.where('playlist_id').equals(playlistId).toArray();
+        if (links.length === 0) {
+          results = [];
+        } else {
+          // Collect all source_id + category_id pairs
+          const allResults: StoredChannel[] = [];
+          const seenStreamIds = new Set<string>();
+          for (const link of links) {
+            const linkChannels = await db.channels.whereRaw(
+              `source_id = ? AND EXISTS (SELECT 1 FROM json_each(category_ids) WHERE value = ?) AND (enabled IS NULL OR enabled NOT IN (0, '0', 'false'))`,
+              [link.source_id, link.category_id]
+            ).toArray();
+            for (const ch of linkChannels) {
+              if (!seenStreamIds.has(ch.stream_id)) {
+                seenStreamIds.add(ch.stream_id);
+                allResults.push(ch);
+              }
+            }
+          }
+          // Also include individual channels for this playlist
+          const individualMappings = await db.playlistIndividualChannels
+            .where('playlist_id').equals(playlistId)
+            .sortBy('display_order');
+          if (individualMappings.length > 0) {
+            const streamIds = individualMappings.map(m => m.stream_id);
+            const indivChannels = await db.channels.where('stream_id').anyOf(streamIds).toArray();
+            const indivMap = new Map(indivChannels.map(ch => [ch.stream_id, ch]));
+            for (const m of individualMappings) {
+              const ch = indivMap.get(m.stream_id);
+              if (ch && !seenStreamIds.has(ch.stream_id)) {
+                seenStreamIds.add(ch.stream_id);
+                allResults.push(ch);
+              }
+            }
+          }
+          results = allResults;
+        }
+      } else if (categoryId && categoryId.startsWith('__allsrc_')) {
+        // All Channels for a single source
+        const sourceId = categoryId.replace('__allsrc_', '');
+        results = await db.channels.whereRaw(
+          `source_id = ? AND (enabled IS NULL OR enabled NOT IN (0, '0', 'false'))`,
+          [sourceId]
+        ).toArray();
       } else if (!categoryId) {
         // All Channels view
         if (enabledSourceIds) {

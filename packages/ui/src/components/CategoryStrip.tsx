@@ -20,7 +20,7 @@ import { RecentChannelsContextMenu } from './RecentChannelsContextMenu';
 import { PlaylistContextMenu } from './PlaylistContextMenu';
 import { EpgEditorModal } from './EpgEditorModal';
 import { clearRecentChannels } from '../utils/recentChannels';
-import { useCategorySortOrder } from '../stores/uiStore';
+import { useCategorySortOrder, useIncludeAllChannelsToPlaylist } from '../stores/uiStore';
 import { isCategorySortCustomized } from '../utils/categorySortOverrides';
 import './CategoryStrip.css';
 
@@ -294,6 +294,7 @@ function PlaylistCategoryLinkItem({
 export function CategoryStrip({ selectedCategoryId, onSelectCategory, visible, onEditSource, onClose, onShow, isLiveTV }: CategoryStripProps) {
   const groupedCategories = useCategoriesBySource();
   const categorySortOrder = useCategorySortOrder();
+  const includeAllChannelsToPlaylist = useIncludeAllChannelsToPlaylist();
   const [sortOverridesVersion, setSortOverridesVersion] = useState(0);
 
   useEffect(() => {
@@ -1145,8 +1146,18 @@ export function CategoryStrip({ selectedCategoryId, onSelectCategory, visible, o
                       
                       const individualCount = flatPlaylistIndividualCounts?.get(group.sourceId) || 0;
                       
-                      return (
+                       return (
                         <>
+                          {includeAllChannelsToPlaylist && (
+                            <button
+                              key={`__allsrc_${group.sourceId}`}
+                              className={`category-item nested ${selectedCategoryId === `__allsrc_${group.sourceId}` ? 'selected' : ''}`}
+                              onClick={() => onSelectCategory(`__allsrc_${group.sourceId}`)}
+                            >
+                              <ScrollingText className="category-name">All Channels</ScrollingText>
+                              <span className="category-count">{item.count}</span>
+                            </button>
+                          )}
                           {list.map(catItem => {
                             if (catItem.type === 'native' && catItem.nativeCat) {
                               const category = catItem.nativeCat;
@@ -1239,6 +1250,16 @@ export function CategoryStrip({ selectedCategoryId, onSelectCategory, visible, o
 
                 {isExpanded && (
                   <div className="category-source-content">
+                    {includeAllChannelsToPlaylist && (
+                      <button
+                        key={`__allsrc_pl_${playlist.playlist_id}`}
+                        className={`category-item nested ${selectedCategoryId === `__allsrc_pl_${playlist.playlist_id}` ? 'selected' : ''}`}
+                        onClick={() => onSelectCategory(`__allsrc_pl_${playlist.playlist_id}`)}
+                      >
+                        <ScrollingText className="category-name">All Channels</ScrollingText>
+                        <span className="category-count">{item.count}</span>
+                      </button>
+                    )}
                     {playlistLinks.map(link => {
                       const nativeCount = categoryChannelCounts.get(link.category_id) || 0;
                       const manualCount = manualCategoryChannelCounts?.get(`${playlist.playlist_id}:link:${link.id}`) || 0;
