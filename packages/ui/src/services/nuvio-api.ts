@@ -1,5 +1,5 @@
-export const NUVIO_SUPABASE_URL = 'https://dpyhjjcoabcglfmgecug.supabase.co';
-export const NUVIO_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRweWhqamNvYWJjZ2xmbWdlY3VnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA3ODYyNDcsImV4cCI6MjA4NjM2MjI0N30.U-3QSNDdpsnvRk_7ZL419AFTOtggHJJcmkodxeXjbkg';
+export const NUVIO_SUPABASE_URL = 'https://api.nuvio.tv';
+export const NUVIO_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzgxNTIxMzQ2LCJleHAiOjE5MzkyMDEzNDZ9.tmQaj682pwzehpqlgCDMnySOqiUvpgRbrE43T4VJpDI';
 
 export function getEffectiveNuvioUrl(): string {
   if (typeof window !== 'undefined') {
@@ -192,7 +192,7 @@ async function executeNuvioRequest<T>(
     'apikey': getEffectiveNuvioKey(),
     'Content-Type': 'application/json',
     'Accept': 'application/json',
-    'User-Agent': 'NuvioDesktop/0.1.8-alpha',
+    'User-Agent': 'NuvioDesktop/0.1.10-alpha',
   };
 
   if (token) {
