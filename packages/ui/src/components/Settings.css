@@ -556,6 +556,7 @@
   overflow-y: auto;
   scrollbar-width: thin;
   scrollbar-color: var(--surface-hover, rgba(255, 255, 255, 0.15)) transparent;
+  scrollbar-gutter: stable;
 }
 
 /* Scrollbar Styling matching the Sources/Categories list */
@@ -572,8 +573,8 @@
   border-radius: 3px;
 }
 
-.source-form:hover {
-  scrollbar-color: var(--accent-primary, rgba(0, 212, 255, 0.5)) transparent;
+.source-form:hover::-webkit-scrollbar-thumb {
+  background: var(--accent-primary, rgba(0, 212, 255, 0.5));
 }
 
 .source-form::-webkit-scrollbar-thumb:hover {
@@ -621,7 +622,7 @@
   color: var(--text-primary, white);
   font-size: 0.9rem;
   box-sizing: border-box;
-  transition: all 0.15s ease;
+  transition: border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .form-group input:focus {

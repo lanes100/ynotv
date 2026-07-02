@@ -9,7 +9,7 @@
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6), 
               0 0 20px rgba(123, 97, 255, 0.08); /* subtle violet aura */
   padding: 16px;
-  box-sizing: border-size;
+  box-sizing: border-box;
   pointer-events: auto; /* enable interactions like scrolling */
   user-select: none;
   overflow: hidden;

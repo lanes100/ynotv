@@ -104,6 +104,9 @@ export function secondaryRect(slotId: 2 | 3 | 4, mode: LayoutMode): { x: number;
     const availableH = H - titleBarH - mediaBarH;
 
     if (mode === 'pip') {
+        if (slotId !== 2) {
+            return { x: -10000, y: -10000, w: 1, h: 1 };
+        }
         const pw = Math.floor(W / 4);
         const ph = Math.floor(availableH / 4);
         const cbh = Math.round(CONTROL_BAR_HEIGHT * d);
@@ -134,6 +137,9 @@ export function secondaryRect(slotId: 2 | 3 | 4, mode: LayoutMode): { x: number;
     }
 
     if (mode === 'sbs') {
+        if (slotId !== 2) {
+            return { x: -10000, y: -10000, w: 1, h: 1 };
+        }
         const maxW = Math.floor((W - gap) / 2);
         const maxH = availableH;
         let cellW = maxW;
@@ -375,6 +381,21 @@ export function useMultiview() {
             if (newLayout === 'main') {
                 savedStateRef.current.slots = EMPTY_SLOTS.map(s => ({ ...s }));
                 setSlots(EMPTY_SLOTS.map(s => ({ ...s })));
+            } else if (newLayout === 'pip' || newLayout === 'sbs') {
+                // Clear Slots 3 & 4 so they don't leak or stack behind Slot 2
+                const ops = [];
+                for (const id of [3, 4]) {
+                    if (slotsRef.current.find(s => s.id === id)?.active) {
+                        ops.push(invoke('multiview_kill_slot', { slotId: id }).catch(() => { }));
+                    }
+                }
+                if (ops.length > 0) await Promise.all(ops);
+                savedStateRef.current.slots = savedStateRef.current.slots.map(s =>
+                    (s.id === 3 || s.id === 4) ? { ...s, channelName: null, channelUrl: null, sourceName: null, active: false } : s
+                );
+                setSlots(prev => prev.map(s => (s.id === 3 || s.id === 4) ? { ...s, channelName: null, channelUrl: null, sourceName: null, active: false } : s));
+                activeUrlsRef.current[3] = null;
+                activeUrlsRef.current[4] = null;
             }
             // Update the pending layout to be restored later
             savedStateRef.current.layout = newLayout;

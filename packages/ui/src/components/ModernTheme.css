@@ -5914,7 +5914,7 @@ html.modern-ui-v3:not([data-theme="light"]) .guide-channel-playlist-name {
   background: rgba(255, 255, 255, 0.04) !important;
   color: #fff !important;
   padding: 10px 14px !important;
-  transition: all 0.2s ease !important;
+  transition: border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease !important;
 }
 
 .modern-ui-v3 .category-search input:focus,

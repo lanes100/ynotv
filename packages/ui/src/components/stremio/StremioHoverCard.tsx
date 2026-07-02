@@ -20,9 +20,28 @@ export function StremioHoverCard() {
   const style = useMemo<React.CSSProperties | null>(() => {
     if (!isVisible || !anchorRect) return null;
 
+    const zoom = parseFloat(
+      getComputedStyle(document.documentElement).getPropertyValue('--app-zoom').trim()
+    ) || 1;
+
     const rect = anchorRect;
-    const isTopHalf = rect.top + rect.height / 2 < window.innerHeight / 2;
-    const isLeftHalf = rect.left + rect.width / 2 < window.innerWidth / 2;
+
+    // Convert physical viewport coordinates to local zoomed coordinates
+    const localRect = {
+      left: rect.left / zoom,
+      right: rect.right / zoom,
+      top: rect.top / zoom,
+      bottom: rect.bottom / zoom,
+      width: rect.width / zoom,
+      height: rect.height / zoom,
+    };
+
+    const localMouseY = mouseY !== null ? (mouseY / zoom) : null;
+    const localWindowWidth = window.innerWidth / zoom;
+    const localWindowHeight = window.innerHeight / zoom;
+
+    const isTopHalf = localRect.top + localRect.height / 2 < localWindowHeight / 2;
+    const isLeftHalf = localRect.left + localRect.width / 2 < localWindowWidth / 2;
     const cardWidth = 320;
     const gap = 12;
 
@@ -34,29 +53,29 @@ export function StremioHoverCard() {
 
     // Horizontal Position: Left half -> appear on the right side of the poster; Right half -> appear on the left side
     if (isLeftHalf) {
-      const calculatedLeft = rect.right + gap;
+      const calculatedLeft = localRect.right + gap;
       // Safety check: if it would overflow the right edge of viewport, flip to left side
-      if (calculatedLeft + cardWidth > window.innerWidth - 16) {
-        styleObj.right = `${window.innerWidth - rect.left + gap}px`;
+      if (calculatedLeft + cardWidth > localWindowWidth - 16) {
+        styleObj.right = `${localWindowWidth - localRect.left + gap}px`;
         styleObj.left = 'auto';
       } else {
         styleObj.left = `${calculatedLeft}px`;
         styleObj.right = 'auto';
       }
     } else {
-      const calculatedLeft = rect.left - gap - cardWidth;
+      const calculatedLeft = localRect.left - gap - cardWidth;
       // Safety check: if it would overflow the left edge of viewport, flip to right side
       if (calculatedLeft < 16) {
-        styleObj.left = `${rect.right + gap}px`;
+        styleObj.left = `${localRect.right + gap}px`;
         styleObj.right = 'auto';
       } else {
-        styleObj.right = `${window.innerWidth - rect.left + gap}px`;
+        styleObj.right = `${localWindowWidth - localRect.left + gap}px`;
         styleObj.left = 'auto';
       }
     }
 
     // Vertical Position relative to where the mouse is
-    const targetY = mouseY !== null ? mouseY : (isTopHalf ? rect.top : rect.bottom);
+    const targetY = localMouseY !== null ? localMouseY : (isTopHalf ? localRect.top : localRect.bottom);
 
     if (isTopHalf) {
       // Top half: display going down from where the mouse is
@@ -68,17 +87,17 @@ export function StremioHoverCard() {
 
       styleObj.top = `${topPos}px`;
       styleObj.bottom = 'auto';
-      styleObj.maxHeight = `calc(100vh - ${topPos}px - 24px)`;
+      styleObj.maxHeight = `${localWindowHeight - topPos - 24}px`;
     } else {
       // Bottom half: display going up from where the mouse is
       // We add a small buffer (e.g., 20px) so the cursor is within the card's vertical bounds.
       const buffer = 20;
-      let bottomPos = (window.innerHeight - targetY) - buffer;
+      let bottomPos = (localWindowHeight - targetY) - buffer;
       if (bottomPos < 12) bottomPos = 12;
 
       styleObj.bottom = `${bottomPos}px`;
       styleObj.top = 'auto';
-      styleObj.maxHeight = `calc(100vh - ${bottomPos}px - 24px)`;
+      styleObj.maxHeight = `${localWindowHeight - bottomPos - 24}px`;
     }
 
     return styleObj;
