@@ -732,6 +732,7 @@ export function Settings({
         nuvioAutoPlayRegex?: string;
         nuvioCacheFetchResults?: boolean;
         nuvioCacheFetchTimeout?: number;
+        includeAllChannelsToPlaylist?: boolean;
       };
 
       setShowAllChannels(settings.showAllChannels ?? true);
@@ -2087,7 +2088,7 @@ export function Settings({
       case 'theme':
         return (
           <ThemeTab
-            theme={theme || 'glass-neon'}
+            theme={theme || 'solid-monochrome'}
             onThemeChange={onThemeChange || (() => { })}
           />
         );

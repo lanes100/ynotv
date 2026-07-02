@@ -166,7 +166,7 @@ export function useAppSettings(): AppSettings {
   const [externalPlayerReuse, setExternalPlayerReuseState] = useState(false);
 
   // Theme state
-  const [theme, setThemeState] = useState<ThemeId>('glass-neon');
+  const [theme, setThemeState] = useState<ThemeId>('solid-monochrome');
 
   // Shortcuts state
   const [shortcuts, setShortcutsState] = useState<ShortcutsMap>({});
@@ -318,7 +318,7 @@ export function useAppSettings(): AppSettings {
           console.log('[useAppSettings] Loaded saved layout state:', layoutState);
 
           // Load theme
-          const savedTheme = result.data.theme || localStorageTheme || 'glass-neon';
+          const savedTheme = result.data.theme || localStorageTheme || 'solid-monochrome';
           setThemeState(savedTheme as ThemeId);
 
           // One-time migration: check if timeshiftMigrationCheck is not set
