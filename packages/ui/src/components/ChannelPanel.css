@@ -2000,3 +2000,88 @@ html[data-theme]:has(.guide-transparent-mode) .category-strip {
   box-shadow: 0 0 10px var(--accent-primary, #00d4ff);
   width: 48px;
 }
+
+/* Multiview Slot Buttons under Channel Name */
+.multiview-slots-container {
+  position: absolute;
+  bottom: 6px;
+  left: 0;
+  right: 0;
+  display: flex;
+  gap: 4px;
+  padding: 0 8px;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  justify-content: center;
+  pointer-events: none;
+  align-items: center;
+}
+
+.multiview-slot-btn {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.7rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  padding: 0;
+}
+
+.multiview-slot-btn:hover:not(:disabled) {
+  background: rgba(0, 212, 255, 0.3);
+  border-color: rgba(0, 212, 255, 0.5);
+  color: white;
+}
+
+.multiview-slot-btn:active:not(:disabled) {
+  transform: scale(0.9);
+}
+
+.multiview-slot-btn:disabled {
+  opacity: 0.25;
+  cursor: not-allowed;
+  background: rgba(255, 255, 255, 0.02);
+  border-color: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.3);
+}
+
+/* Adjust EPG Row Heights for Multiview buttons */
+.guide-channel-row.has-multiview-buttons {
+  min-height: 76px;
+}
+
+.guide-channel-row.has-playlist-name.has-multiview-buttons {
+  min-height: 96px;
+}
+
+.guide-channel-row.has-multiview-buttons .guide-channel-info {
+  padding-bottom: 26px !important; /* Shift content up to clear metabadge vertically */
+  overflow: hidden;
+}
+
+/* Quality badges default state when multiview is active */
+.guide-channel-row.has-multiview-buttons .channel-row-metadata {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  opacity: 1;
+}
+
+/* On hover — hide badges, reveal multiview buttons */
+.guide-channel-row.has-multiview-buttons:hover .channel-row-metadata {
+  opacity: 0 !important;
+  transform: translateY(-4px);
+  pointer-events: none;
+}
+
+.guide-channel-row.has-multiview-buttons:hover .multiview-slots-container {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}

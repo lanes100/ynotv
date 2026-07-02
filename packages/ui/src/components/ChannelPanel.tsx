@@ -2473,6 +2473,8 @@ export function ChannelPanel({
                                   onPlay={() => handleSearchChannelClick(channel)}
                                   onFavoriteToggle={refreshSearchResults}
                                   activeRecordings={activeRecordings}
+                                  currentLayout={currentLayout}
+                                  onSendToSlot={onSendToSlot}
                                   onPlayInPopout={onPlayInPopout}
                                   onPlayInExternal={onPlayInExternal}
                                   includeSourceInSearch={includeSourceInSearch}
@@ -2500,6 +2502,8 @@ export function ChannelPanel({
                                   onPlay={() => handleSearchChannelClick(channel)}
                                   onFavoriteToggle={refreshSearchResults}
                                   activeRecordings={activeRecordings}
+                                  currentLayout={currentLayout}
+                                  onSendToSlot={onSendToSlot}
                                   onPlayInPopout={onPlayInPopout}
                                   onPlayInExternal={onPlayInExternal}
                                   includeSourceInSearch={includeSourceInSearch}

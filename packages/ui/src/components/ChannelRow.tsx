@@ -5,6 +5,7 @@ import { ChannelContextMenu } from './ChannelContextMenu';
 import { FavoriteButton } from './FavoriteButton';
 import { MetadataBadge } from './MetadataBadge';
 import { RecordingIndicator } from './RecordingIndicator';
+import { addToRecentChannels } from '../utils/recentChannels';
 import type { StoredChannel, StoredProgram } from '../db';
 import { normalizeBoolean } from '../utils/db-helpers';
 import type { RecordingInfo } from '../hooks/useActiveRecordings';
@@ -113,12 +114,56 @@ export const ChannelRow = memo(function ChannelRow({
   }
 
   const isPlaylistNameShown = showPlaylistName && (categoryId === '__favorites__' || categoryId === '__recent__');
+  const showMultiviewButtons = Boolean(onSendToSlot && currentLayout && currentLayout !== 'main');
+
+  const isSlotActive = useCallback((slotId: 1 | 2 | 3 | 4) => {
+    if (slotId === 1) return true;
+    if (!currentLayout) return false;
+    if (currentLayout === 'pip' || currentLayout === 'sbs') {
+      return slotId === 2;
+    }
+    return slotId === 2 || slotId === 3 || slotId === 4;
+  }, [currentLayout]);
+
+  const handlePlayMain = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    onPlay();
+  }, [onPlay]);
+
+  const handleSendToSlot = useCallback(async (slotId: 2 | 3 | 4, e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    if (!onSendToSlot) return;
+
+    let url = channel.direct_url ?? '';
+
+    if (channel.source_id) {
+      try {
+        const { resolvePlayUrl } = await import('../services/stream-resolver');
+        const resolved = await resolvePlayUrl(channel.source_id, url);
+        url = resolved.url;
+      } catch (err) {
+        console.error('[ChannelRow] Failed to resolve multiview URL:', err);
+      }
+    }
+
+    let sourceName: string | null = null;
+    if (channel.source_id && window.storage) {
+      const result = await window.storage.getSource(channel.source_id);
+      if (result.data) {
+        sourceName = result.data.name;
+      }
+    }
+    onSendToSlot(slotId, channel.name, url, sourceName);
+    addToRecentChannels(channel);
+  }, [channel, onSendToSlot]);
 
   return (
-    <div className={`guide-channel-row ${isCurrentlyPlaying ? 'currently-playing' : ''} ${isPlaylistNameShown ? 'has-playlist-name' : ''}`}>
+    <div className={`guide-channel-row ${isCurrentlyPlaying ? 'currently-playing' : ''} ${isPlaylistNameShown ? 'has-playlist-name' : ''} ${showMultiviewButtons ? 'has-multiview-buttons' : ''}`}>
       {/* Channel info column */}
       <div
-        className={`guide-channel-info ${isRecording ? 'is-recording' : ''} ${isPlaylistNameShown ? 'has-playlist-name' : ''}`}
+        className={`guide-channel-info ${isRecording ? 'is-recording' : ''} ${isPlaylistNameShown ? 'has-playlist-name' : ''} ${showMultiviewButtons ? 'has-multiview-buttons' : ''}`}
         style={{
           width: 'var(--epg-channel-column-width, 264px)',
           minWidth: 'var(--epg-channel-column-width, 264px)',
@@ -173,12 +218,30 @@ export const ChannelRow = memo(function ChannelRow({
               }}>18+</span>
             )}
           </span>
-          {showPlaylistName && (categoryId === '__favorites__' || categoryId === '__recent__') && (
+          {isPlaylistNameShown && (
             <span className="guide-channel-playlist-name" title={sourceNames?.get(channel.source_id) || channel.source_id}>
               {sourceNames?.get(channel.source_id) || channel.source_id}
             </span>
           )}
         </div>
+        {showMultiviewButtons && (
+          <div className="multiview-slots-container">
+            {[1, 2, 3, 4].map((slotId) => {
+              const active = isSlotActive(slotId as 1 | 2 | 3 | 4);
+              return (
+                <button
+                  key={slotId}
+                  className={`multiview-slot-btn ${active ? 'active' : 'disabled'}`}
+                  disabled={!active}
+                  onClick={(slotId === 1) ? handlePlayMain : (e) => handleSendToSlot(slotId as 2 | 3 | 4, e)}
+                  title={active ? `Send to Viewer ${slotId}${slotId === 1 ? ' (Main)' : ''}` : `Viewer ${slotId} not available in this layout`}
+                >
+                  {slotId}
+                </button>
+              );
+            })}
+          </div>
+        )}
         <div className="channel-row-metadata">
           <MetadataBadge streamId={channel.stream_id} variant="detailed" />
         </div>
