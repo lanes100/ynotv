@@ -171,8 +171,40 @@ export async function getEditorProgramsForStream(
  */
 export async function getPreviewProgramsForEpgId(
   epgChannelId: string,
-  windowDays = 3
+  windowDays = 3,
+  sourceId?: string
 ): Promise<EditorProgram[]> {
+  if (sourceId && sourceId.startsWith('global_epg_')) {
+    const epgLinkId = sourceId.replace('global_epg_', '');
+    try {
+      const cacheDbName = `epg_cache_${epgLinkId}`;
+      const Database = (await import('@tauri-apps/plugin-sql')).default;
+      const cacheDb = await Database.load(`sqlite:${cacheDbName}.db`);
+      
+      const progs = await cacheDb.select(
+        'SELECT * FROM programs WHERE stream_id = $1 ORDER BY start ASC',
+        [epgChannelId]
+      ) as any[];
+      
+      return progs.map(p => ({
+        id: p.id,
+        stream_id: epgChannelId,
+        title: p.title,
+        subtitle: p.subtitle,
+        description: p.description,
+        start: p.start,
+        end: p.end,
+        source_id: `global_epg_${epgLinkId}`,
+        has_override: false,
+        is_deleted: false,
+        is_custom: false,
+      }));
+    } catch (e) {
+      console.warn(`[EPG Preview] Failed to load programs from cache DB ${epgLinkId}:`, e);
+      return [];
+    }
+  }
+
   const dbInstance = await (db as any).dbPromise;
 
   // Find a stream_id that already has programs for this epg_channel_id
@@ -197,9 +229,59 @@ export async function getPreviewProgramsForEpgId(
  */
 export async function copyProgramsFromEpgChannel(
   targetStreamId: string,
-  epgChannelId: string
+  epgChannelId: string,
+  sourceId?: string
 ): Promise<number> {
   const dbInstance = await (db as any).dbPromise;
+
+  // 1. Delete all existing *raw/synced* programs for the target stream so they don't merge
+  await dbInstance.execute(
+    `DELETE FROM programs WHERE stream_id = $1`,
+    [targetStreamId]
+  );
+
+  if (sourceId && sourceId.startsWith('global_epg_')) {
+    const epgLinkId = sourceId.replace('global_epg_', '');
+    try {
+      const cacheDbName = `epg_cache_${epgLinkId}`;
+      const Database = (await import('@tauri-apps/plugin-sql')).default;
+      const cacheDb = await Database.load(`sqlite:${cacheDbName}.db`);
+      
+      const progs = await cacheDb.select(
+        'SELECT * FROM programs WHERE stream_id = $1',
+        [epgChannelId]
+      ) as any[];
+
+      if (progs.length > 0) {
+        // Query the channel's source_id to associate with programs
+        const channelRow = await dbInstance.select(
+          'SELECT source_id FROM channels WHERE stream_id = $1 LIMIT 1',
+          [targetStreamId]
+        ) as { source_id: string }[];
+        const targetSourceId = channelRow[0]?.source_id || 'unknown';
+
+        const programsToInsert = progs.map(p => ({
+          id: `${targetStreamId}_${p.start}`,
+          stream_id: targetStreamId,
+          title: p.title,
+          subtitle: p.subtitle,
+          description: p.description,
+          start: new Date(p.start),
+          end: new Date(p.end),
+          source_id: targetSourceId
+        }));
+
+        await db.programs.bulkPut(programsToInsert);
+        const { dbEvents } = await import('../db/sqlite-adapter');
+        dbEvents.notify('programs', 'clear');
+        dbEvents.notify('programs', 'add');
+        return programsToInsert.length;
+      }
+    } catch (e) {
+      console.warn(`[EPG Override] Failed to copy programs from cache DB ${epgLinkId}:`, e);
+    }
+    return 0;
+  }
 
   // Find a source stream that has programs for this epg_channel_id (not the target itself)
   const rows = await dbInstance.select(
@@ -212,12 +294,6 @@ export async function copyProgramsFromEpgChannel(
   if (rows.length === 0) return 0;
 
   const sourceStreamId = rows[0].stream_id;
-
-  // 1. Delete all existing *raw/synced* programs for the target stream so they don't merge
-  await dbInstance.execute(
-    `DELETE FROM programs WHERE stream_id = $1`,
-    [targetStreamId]
-  );
 
   // 2. Copy future/current programs to the target stream with new IDs matching the sync format.
   // INSERT OR REPLACE ensures the next sync can overwrite with official data seamlessly.
@@ -439,13 +515,57 @@ export async function searchEpgChannels(
     rows = await dbInstance.select(sql, sourceId ? [likePattern, sourceId] : [likePattern]);
   }
 
-  const scored: ScoredEpgChannel[] = rows.map(r => ({
+  // Load additional results from local cache databases if searchMode === 'epg'
+  const extraResults: ScoredEpgChannel[] = [];
+  if (searchMode === 'epg' && window.storage) {
+    try {
+      const settingsResult = await window.storage.getSettings();
+      const globalEpgLinks = settingsResult.data?.globalEpgLinks || [];
+      const cacheLinks = globalEpgLinks.filter(link => link.saveEntireEpg);
+      
+      const Database = (await import('@tauri-apps/plugin-sql')).default;
+      for (const link of cacheLinks) {
+        // If a specific sourceId filter is provided, only search this global EPG if it is linked to that source
+        if (sourceId && !link.sourceIds.includes(sourceId)) {
+          continue;
+        }
+        
+        try {
+          const cacheDbName = `epg_cache_${link.id}`;
+          const cacheDb = await Database.load(`sqlite:${cacheDbName}.db`);
+          
+          const sql = `
+            SELECT id, display_name, icon_url
+            FROM epg_channels
+            WHERE (LOWER(display_name) LIKE LOWER($1) ESCAPE '\\' OR LOWER(id) LIKE LOWER($1) ESCAPE '\\')
+            LIMIT 100
+          `;
+          const cacheRows = await cacheDb.select(sql, [likePattern]) as any[];
+          for (const r of cacheRows) {
+            extraResults.push({
+              id: r.id,
+              display_name: r.display_name,
+              icon_url: r.icon_url || undefined,
+              source_id: `global_epg_${link.id}`, // Virtual source id
+              score: scoreChannelMatch(query, r.display_name),
+            });
+          }
+        } catch (dbErr) {
+          // Cache DB not initialized yet
+        }
+      }
+    } catch (settingsErr) {
+      console.warn('[EPG Search] Failed to read settings:', settingsErr);
+    }
+  }
+
+  const scored: ScoredEpgChannel[] = (rows.map(r => ({
     id: r.id,
     display_name: r.display_name,
     icon_url: r.icon_url ?? undefined,
     source_id: r.source_id,
     score: scoreChannelMatch(query, r.display_name),
-  }));
+  })) as ScoredEpgChannel[]).concat(extraResults);
 
   scored.sort((a, b) => b.score - a.score || a.display_name.localeCompare(b.display_name));
   return scored.slice(0, limit);
@@ -492,14 +612,52 @@ export async function autoMatchChannelName(
     rows = await dbInstance.select(sql, sourceId ? [sourceId] : []);
   }
 
-  const scored: ScoredEpgChannel[] = rows
+  const extraResults: ScoredEpgChannel[] = [];
+  if (searchMode === 'epg' && window.storage) {
+    try {
+      const settingsResult = await window.storage.getSettings();
+      const globalEpgLinks = settingsResult.data?.globalEpgLinks || [];
+      const cacheLinks = globalEpgLinks.filter(link => link.saveEntireEpg);
+      
+      const Database = (await import('@tauri-apps/plugin-sql')).default;
+      for (const link of cacheLinks) {
+        if (sourceId && !link.sourceIds.includes(sourceId)) {
+          continue;
+        }
+        
+        try {
+          const cacheDbName = `epg_cache_${link.id}`;
+          const cacheDb = await Database.load(`sqlite:${cacheDbName}.db`);
+          
+          const sql = `SELECT id, display_name, icon_url FROM epg_channels`;
+          const cacheRows = await cacheDb.select(sql) as any[];
+          for (const r of cacheRows) {
+            extraResults.push({
+              id: r.id,
+              display_name: r.display_name,
+              icon_url: r.icon_url || undefined,
+              source_id: `global_epg_${link.id}`,
+              score: scoreChannelMatch(channelName, r.display_name),
+            });
+          }
+        } catch (dbErr) {
+          // Ignore
+        }
+      }
+    } catch (e) {
+      // Ignore
+    }
+  }
+
+  const scored: ScoredEpgChannel[] = (rows
     .map(r => ({
       id: r.id,
       display_name: r.display_name,
       icon_url: r.icon_url ?? undefined,
       source_id: r.source_id,
       score: scoreChannelMatch(channelName, r.display_name),
-    }))
+    })) as ScoredEpgChannel[])
+    .concat(extraResults)
     .filter(r => r.score >= SCORE_THRESHOLD);
 
   scored.sort((a, b) => b.score - a.score);

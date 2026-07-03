@@ -1,8 +1,8 @@
 import { useState, useRef, useMemo, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import type { Source, Channel } from '@ynotv/core';
-import { syncAllSources, syncAllVod, syncSource, syncVodForSource, markSourceDeleted, syncGlobalEpgLinkStandalone, applyGlobalEpgToSource, type SyncResult, type VodSyncResult } from '../../db/sync';
-import { clearSourceData, clearVodData, db } from '../../db';
+import { syncAllSources, syncAllVod, syncSource, syncVodForSource, markSourceDeleted, syncGlobalEpgLinkStandalone, applyGlobalEpgToSource, cleanupGlobalEpgCache, type SyncResult, type VodSyncResult } from '../../db/sync';
+import { clearSourceData, clearVodData, db, type StoredChannel, type StoredProgram } from '../../db';
 import { dbEvents } from '../../db/sqlite-adapter';
 import { useSyncStatus } from '../../hooks/useChannels';
 import {
@@ -21,6 +21,7 @@ import './SourcesTab.css';
 import { useAppSettings } from '../../hooks/useAppSettings';
 import { useSourceVersion } from '../../contexts/SourceVersionContext';
 import type { GlobalEpgLink } from '../../types/app';
+import { decompressEpgDescription } from '../../utils/compression';
 
 export type SourcesSubTabId = 'source' | 'epg' | 'refresh' | 'global_ua';
 
@@ -291,9 +292,10 @@ export function SourcesTab({
   const [globalEpgLinks, setGlobalEpgLinks] = useState<GlobalEpgLink[]>([]);
   const [showAddEpgForm, setShowAddEpgForm] = useState(false);
   const [editingEpgId, setEditingEpgId] = useState<string | null>(null);
-  const [epgFormData, setEpgFormData] = useState({ name: '', url: '', sourceIds: [] as string[] });
+  const [epgFormData, setEpgFormData] = useState({ name: '', url: '', sourceIds: [] as string[], saveEntireEpg: false });
   const [epgFormError, setEpgFormError] = useState<string | null>(null);
   const [deleteEpgConfirm, setDeleteEpgConfirm] = useState<GlobalEpgLink | null>(null);
+  const [viewMatchesEpg, setViewMatchesEpg] = useState<GlobalEpgLink | null>(null);
   const [syncingEpgId, setSyncingEpgId] = useState<string | null>(null);
   const [syncingAllEpg, setSyncingAllEpg] = useState(false);
 
@@ -1022,14 +1024,19 @@ export function SourcesTab({
 
   // --- Global EPG Handlers ---
   function handleAddEpg() {
-    setEpgFormData({ name: '', url: '', sourceIds: [] });
+    setEpgFormData({ name: '', url: '', sourceIds: [], saveEntireEpg: false });
     setEditingEpgId(null);
     setShowAddEpgForm(true);
     setEpgFormError(null);
   }
 
   function handleEditEpg(epg: GlobalEpgLink) {
-    setEpgFormData({ name: epg.name, url: epg.url, sourceIds: [...epg.sourceIds] });
+    setEpgFormData({
+      name: epg.name,
+      url: epg.url,
+      sourceIds: [...epg.sourceIds],
+      saveEntireEpg: !!epg.saveEntireEpg
+    });
     setEditingEpgId(epg.id);
     setShowAddEpgForm(true);
     setEpgFormError(null);
@@ -1043,13 +1050,19 @@ export function SourcesTab({
     if (!deleteEpgConfirm || !window.storage) return;
     const newLinks = globalEpgLinks.filter(e => e.id !== deleteEpgConfirm.id);
     setGlobalEpgLinks(newLinks);
+    const linkId = deleteEpgConfirm.id;
     setDeleteEpgConfirm(null);
     await window.storage.updateSettings({ globalEpgLinks: newLinks });
+    try {
+      await cleanupGlobalEpgCache(linkId);
+    } catch (e) {
+      console.warn('[Global EPG] Failed to cleanup cache database on delete:', e);
+    }
   }
 
   function handleCancelEpg() {
     setShowAddEpgForm(false);
-    setEpgFormData({ name: '', url: '', sourceIds: [] });
+    setEpgFormData({ name: '', url: '', sourceIds: [], saveEntireEpg: false });
     setEditingEpgId(null);
     setEpgFormError(null);
   }
@@ -1072,11 +1085,17 @@ export function SourcesTab({
     }
 
     const linkId = editingEpgId || crypto.randomUUID();
+    const existingLink = editingEpgId ? globalEpgLinks.find(e => e.id === editingEpgId) : null;
+    
     const newLink: GlobalEpgLink = {
       id: linkId,
       name: epgFormData.name.trim(),
       url: epgFormData.url.trim(),
       sourceIds: epgFormData.sourceIds,
+      saveEntireEpg: epgFormData.saveEntireEpg,
+      lastSynced: existingLink?.lastSynced,
+      lastSyncResult: existingLink?.lastSyncResult,
+      display_order: existingLink?.display_order,
     };
 
     const newLinks = editingEpgId
@@ -1085,7 +1104,7 @@ export function SourcesTab({
 
     setGlobalEpgLinks(newLinks);
     setShowAddEpgForm(false);
-    setEpgFormData({ name: '', url: '', sourceIds: [] });
+    setEpgFormData({ name: '', url: '', sourceIds: [], saveEntireEpg: false });
     setEditingEpgId(null);
     setEpgFormError(null);
     await window.storage.updateSettings({ globalEpgLinks: newLinks });
@@ -2368,6 +2387,20 @@ export function SourcesTab({
                       </button>
                       <button
                         className="epg-icon-btn"
+                        onClick={() => setViewMatchesEpg(epg)}
+                        title="View EPG Channels & Matches"
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <line x1="8" y1="6" x2="21" y2="6"></line>
+                          <line x1="8" y1="12" x2="21" y2="12"></line>
+                          <line x1="8" y1="18" x2="21" y2="18"></line>
+                          <line x1="3" y1="6" x2="3.01" y2="6"></line>
+                          <line x1="3" y1="12" x2="3.01" y2="12"></line>
+                          <line x1="3" y1="18" x2="3.01" y2="18"></line>
+                        </svg>
+                      </button>
+                      <button
+                        className="epg-icon-btn"
                         onClick={() => handleEditEpg(epg)}
                         title="Edit"
                       >
@@ -2469,6 +2502,19 @@ export function SourcesTab({
               <span className="hint">XMLTV format EPG URL</span>
             </div>
 
+            <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '10px', marginBottom: '15px' }}>
+              <input
+                type="checkbox"
+                id="saveEntireEpg"
+                checked={epgFormData.saveEntireEpg}
+                onChange={(e) => setEpgFormData({ ...epgFormData, saveEntireEpg: e.target.checked })}
+                style={{ cursor: 'pointer', width: '16px', height: '16px' }}
+              />
+              <label htmlFor="saveEntireEpg" style={{ cursor: 'pointer', marginBottom: 0, fontWeight: 'normal', fontSize: '0.85rem', color: 'rgba(255,255,255,0.9)' }}>
+                Cache entire Epg locally (enables manual search/matching in Epg editor)
+              </label>
+            </div>
+
             <div className="form-group">
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
                 <label style={{ marginBottom: 0 }}>Linked Sources</label>
@@ -2567,6 +2613,581 @@ export function SourcesTab({
         </div>,
         document.body
       )}
+
+      {/* Global EPG Matches Modal */}
+      {viewMatchesEpg && (
+        <GlobalEpgMatchesModal
+          epgLink={viewMatchesEpg}
+          sources={sources}
+          onClose={() => setViewMatchesEpg(null)}
+        />
+      )}
     </div>
+  );
+}
+
+interface GlobalEpgMatchesModalProps {
+  epgLink: GlobalEpgLink;
+  sources: Source[];
+  onClose: () => void;
+}
+
+function GlobalEpgMatchesModal({ epgLink, sources, onClose }: GlobalEpgMatchesModalProps) {
+  const [channels, setChannels] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedChannel, setSelectedChannel] = useState<any | null>(null);
+  const [programs, setPrograms] = useState<any[]>([]);
+  const [programsLoading, setProgramsLoading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  
+  const [activeTab, setActiveTab] = useState<'matched' | 'all'>('matched');
+  const [cacheChannels, setCacheChannels] = useState<any[]>([]);
+  const [cacheLoading, setCacheLoading] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(100);
+
+  // Reset visibleCount on search/tab change
+  useEffect(() => {
+    setVisibleCount(100);
+  }, [searchQuery, activeTab]);
+
+  // 1. Fetch matched channels on mount/link change
+  useEffect(() => {
+    setLoading(true);
+    setChannels([]);
+    setSelectedChannel(null);
+    setPrograms([]);
+
+    const matchedStreamIds = epgLink.lastSyncResult?.matchedStreamIds || [];
+    if (matchedStreamIds.length === 0) {
+      setLoading(false);
+      return;
+    }
+
+    db.channels.where('stream_id').anyOf(matchedStreamIds).toArray()
+      .then((chans) => {
+        // Sort alphabetically by name
+        const sorted = chans.sort((a, b) => (a.name || '').localeCompare(b.name || '')) as any[];
+        setChannels(sorted);
+        if (activeTab === 'matched' && sorted.length > 0) {
+          setSelectedChannel(sorted[0]);
+        }
+      })
+      .catch((err: any) => {
+        console.error('[GlobalEpgMatchesModal] Failed to load matched channels:', err);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  }, [epgLink]);
+
+  // 1b. Fetch all EPG channels from cache DB on activeTab change
+  useEffect(() => {
+    if (activeTab !== 'all' || cacheChannels.length > 0 || !epgLink.saveEntireEpg) return;
+    
+    setCacheLoading(true);
+    const fetchCacheChannels = async () => {
+      try {
+        const cacheDbName = `epg_cache_${epgLink.id}`;
+        const Database = (await import('@tauri-apps/plugin-sql')).default;
+        const cacheDb = await Database.load(`sqlite:${cacheDbName}.db`);
+        
+        const rows = await cacheDb.select(
+          'SELECT id, display_name, icon_url FROM epg_channels'
+        ) as any[];
+        
+        const mapped = rows.map(r => ({
+          stream_id: r.id, // EPG channel ID
+          name: r.display_name,
+          stream_icon: r.icon_url || '',
+          epg_channel_id: r.id,
+          source_id: `global_epg_${epgLink.id}`,
+          is_cache: true
+        }));
+        
+        const sorted = mapped.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+        setCacheChannels(sorted);
+        if (activeTab === 'all' && sorted.length > 0) {
+          setSelectedChannel(sorted[0]);
+        }
+      } catch (err) {
+        console.error('[GlobalEpgMatchesModal] Failed to load cache channels:', err);
+      } finally {
+        setCacheLoading(false);
+      }
+    };
+    fetchCacheChannels();
+  }, [activeTab, epgLink]);
+
+  // 1c. Set active channel when tab changes
+  useEffect(() => {
+    if (activeTab === 'matched') {
+      if (channels.length > 0) {
+        setSelectedChannel(channels[0]);
+      } else {
+        setSelectedChannel(null);
+      }
+    } else {
+      if (cacheChannels.length > 0) {
+        setSelectedChannel(cacheChannels[0]);
+      } else {
+        setSelectedChannel(null);
+      }
+    }
+  }, [activeTab]);
+
+  // 2. Fetch programs when selectedChannel changes
+  useEffect(() => {
+    if (!selectedChannel) {
+      setPrograms([]);
+      return;
+    }
+
+    setProgramsLoading(true);
+    const fetchPrograms = async () => {
+      try {
+        if (selectedChannel.is_cache) {
+          const cacheDbName = `epg_cache_${epgLink.id}`;
+          const Database = (await import('@tauri-apps/plugin-sql')).default;
+          const cacheDb = await Database.load(`sqlite:${cacheDbName}.db`);
+          
+          const progs = await cacheDb.select(
+            'SELECT * FROM programs WHERE stream_id = $1 ORDER BY start ASC',
+            [selectedChannel.stream_id]
+          ) as any[];
+          
+          setPrograms(progs);
+        } else {
+          const dbInstance = await (db as any).dbPromise;
+          const progs = await dbInstance.select(
+            'SELECT * FROM programs WHERE stream_id = ? ORDER BY start ASC',
+            [selectedChannel.stream_id]
+          );
+          const processed = progs.map((p: any) => ({
+            ...p,
+            description: decompressEpgDescription(p.description) ?? p.description,
+          }));
+          setPrograms(processed);
+        }
+      } catch (err: any) {
+        console.error('[GlobalEpgMatchesModal] Failed to load programs:', err);
+        setPrograms([]);
+      } finally {
+        setProgramsLoading(false);
+      }
+    };
+    fetchPrograms();
+  }, [selectedChannel]);
+
+  // Filter channels based on search query
+  const activeChannels = activeTab === 'matched' ? channels : cacheChannels;
+  const filteredChannels = activeChannels.filter((ch) =>
+    (ch.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (ch.epg_channel_id || '').toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  // Get source name helper
+  const getSourceName = (sourceId: string) => {
+    return sources.find((s) => s.id === sourceId)?.name || sourceId;
+  };
+
+  // Format program times
+  const formatTime = (timeStr: string | Date) => {
+    try {
+      const d = new Date(timeStr);
+      return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } catch {
+      return String(timeStr);
+    }
+  };
+
+  const formatDate = (timeStr: string | Date) => {
+    try {
+      const d = new Date(timeStr);
+      return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+    } catch {
+      return '';
+    }
+  };
+
+  return createPortal(
+    <div
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        zIndex: 20000,
+        background: 'rgba(0, 0, 0, 0.75)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backdropFilter: 'blur(8px)',
+      }}
+      onClick={onClose}
+    >
+      <div
+        style={{
+          width: '950px',
+          height: '700px',
+          background: '#18181c',
+          border: '1px solid rgba(255, 255, 255, 0.1)',
+          borderRadius: '12px',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+          boxShadow: '0 24px 48px rgba(0, 0, 0, 0.6)',
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div
+          style={{
+            padding: '16px 24px',
+            borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            background: '#1f1f23',
+          }}
+        >
+          <div>
+            <h3 style={{ margin: 0, fontSize: '1.2rem', color: '#fff', fontWeight: 600 }}>
+              {epgLink.name}
+            </h3>
+            <span style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.4)' }}>
+              Matched Channels &amp; Programs
+            </span>
+          </div>
+          <button
+            onClick={onClose}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              color: 'rgba(255, 255, 255, 0.5)',
+              cursor: 'pointer',
+              padding: '4px',
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              outline: 'none',
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.color = '#fff')}
+            onMouseLeave={(e) => (e.currentTarget.style.color = 'rgba(255, 255, 255, 0.5)')}
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+
+        {/* Body Split Container */}
+        <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
+          {/* Left Column - Channel List */}
+          <div
+            style={{
+              width: '320px',
+              borderRight: '1px solid rgba(255, 255, 255, 0.08)',
+              display: 'flex',
+              flexDirection: 'column',
+              padding: '16px',
+              gap: '12px',
+              background: '#151518',
+            }}
+          >
+            {epgLink.saveEntireEpg && (
+              <div style={{ display: 'flex', background: 'rgba(255,255,255,0.03)', padding: '3px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.06)' }}>
+                <button
+                  onClick={() => setActiveTab('matched')}
+                  style={{
+                    flex: 1,
+                    padding: '6px 12px',
+                    borderRadius: '6px',
+                    border: 'none',
+                    fontSize: '0.8rem',
+                    fontWeight: 500,
+                    cursor: 'pointer',
+                    background: activeTab === 'matched' ? 'rgba(0, 212, 255, 0.15)' : 'transparent',
+                    color: activeTab === 'matched' ? '#00d4ff' : 'rgba(255,255,255,0.6)',
+                    outline: 'none',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  Matched ({channels.length})
+                </button>
+                <button
+                  onClick={() => setActiveTab('all')}
+                  style={{
+                    flex: 1,
+                    padding: '6px 12px',
+                    borderRadius: '6px',
+                    border: 'none',
+                    fontSize: '0.8rem',
+                    fontWeight: 500,
+                    cursor: 'pointer',
+                    background: activeTab === 'all' ? 'rgba(0, 212, 255, 0.15)' : 'transparent',
+                    color: activeTab === 'all' ? '#00d4ff' : 'rgba(255,255,255,0.6)',
+                    outline: 'none',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  All EPG Channels
+                </button>
+              </div>
+            )}
+
+            <input
+              type="text"
+              placeholder={activeTab === 'matched' ? "Search matched channels..." : "Search all EPG channels..."}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              style={{
+                width: '100%',
+                boxSizing: 'border-box',
+                padding: '8px 12px',
+                borderRadius: '6px',
+                border: '1px solid rgba(255, 255, 255, 0.12)',
+                background: 'rgba(0, 0, 0, 0.2)',
+                color: '#fff',
+                fontSize: '0.85rem',
+                outline: 'none',
+              }}
+            />
+
+            <div
+              onScroll={(e) => {
+                const target = e.currentTarget;
+                if (target.scrollHeight - target.scrollTop <= target.clientHeight + 100) {
+                  setVisibleCount(prev => Math.min(prev + 100, filteredChannels.length));
+                }
+              }}
+              style={{
+                flex: 1,
+                overflowY: 'auto',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '4px',
+              }}
+              className="sources-list"
+            >
+              {loading || (activeTab === 'all' && cacheLoading) ? (
+                <div style={{ padding: '24px', textAlign: 'center', color: 'rgba(255,255,255,0.4)', fontSize: '0.9rem' }}>
+                  Loading channels...
+                </div>
+              ) : filteredChannels.length === 0 ? (
+                <div style={{ padding: '24px', textAlign: 'center', color: 'rgba(255,255,255,0.4)', fontSize: '0.9rem' }}>
+                  {activeTab === 'matched' 
+                    ? (channels.length === 0 ? 'No channels matched yet' : 'No matching channels found')
+                    : (cacheChannels.length === 0 ? 'No channels in EPG cache' : 'No matching EPG channels found')}
+                </div>
+              ) : (
+                filteredChannels.slice(0, visibleCount).map((ch) => {
+                  const isSelected = selectedChannel?.stream_id === ch.stream_id;
+                  return (
+                    <div
+                      key={ch.stream_id}
+                      onClick={() => setSelectedChannel(ch)}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '12px',
+                        padding: '8px 12px',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        background: isSelected ? 'rgba(0, 212, 255, 0.12)' : 'transparent',
+                        border: isSelected ? '1px solid rgba(0, 212, 255, 0.3)' : '1px solid transparent',
+                        transition: 'all 0.15s ease',
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!isSelected) {
+                          e.currentTarget.style.background = 'rgba(255, 255, 255, 0.04)';
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!isSelected) {
+                          e.currentTarget.style.background = 'transparent';
+                        }
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: '28px',
+                          height: '28px',
+                          borderRadius: '4px',
+                          background: 'rgba(255,255,255,0.03)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          flexShrink: 0,
+                          overflow: 'hidden',
+                        }}
+                      >
+                        {ch.stream_icon ? (
+                          <img
+                            src={ch.stream_icon}
+                            alt=""
+                            style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).style.display = 'none';
+                            }}
+                          />
+                        ) : (
+                          <span style={{ fontSize: '0.8rem' }}>📺</span>
+                        )}
+                      </div>
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <div
+                          style={{
+                            color: '#fff',
+                            fontSize: '0.85rem',
+                            fontWeight: 500,
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          {ch.name}
+                        </div>
+                        <div
+                          style={{
+                            color: 'rgba(255, 255, 255, 0.35)',
+                            fontSize: '0.75rem',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                            marginTop: '2px',
+                          }}
+                        >
+                          {ch.is_cache ? ch.epg_channel_id : getSourceName(ch.source_id)}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+
+          {/* Right Column - Program List */}
+          <div
+            style={{
+              flex: 1,
+              display: 'flex',
+              flexDirection: 'column',
+              padding: '24px',
+              background: '#18181c',
+              overflowY: 'auto',
+            }}
+            className="sources-list"
+          >
+            {selectedChannel ? (
+              <>
+                {/* Channel Summary Info */}
+                <div style={{ display: 'flex', gap: '16px', alignItems: 'center', marginBottom: '24px', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '16px' }}>
+                  <div
+                    style={{
+                      width: '48px',
+                      height: '48px',
+                      borderRadius: '6px',
+                      background: 'rgba(255,255,255,0.03)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      overflow: 'hidden',
+                      border: '1px solid rgba(255,255,255,0.06)',
+                    }}
+                  >
+                    {selectedChannel.stream_icon ? (
+                      <img
+                        src={selectedChannel.stream_icon}
+                        alt=""
+                        style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                      />
+                    ) : (
+                      <span style={{ fontSize: '1.2rem' }}>📺</span>
+                    )}
+                  </div>
+                  <div>
+                    <h4 style={{ margin: 0, fontSize: '1.1rem', color: '#fff', fontWeight: 600 }}>
+                      {selectedChannel.name}
+                    </h4>
+                    <div style={{ display: 'flex', gap: '12px', fontSize: '0.8rem', color: 'rgba(255,255,255,0.4)', marginTop: '4px' }}>
+                      {selectedChannel.is_cache ? (
+                        <span>EPG ID (tvg-id): <strong style={{ color: '#fff' }}>{selectedChannel.epg_channel_id}</strong></span>
+                      ) : (
+                        <>
+                          <span>Source: <strong>{getSourceName(selectedChannel.source_id)}</strong></span>
+                          <span>•</span>
+                          <span>EPG ID: <strong>{selectedChannel.epg_channel_id || 'None'}</strong></span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Programs List */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {programsLoading ? (
+                    <div style={{ padding: '40px', textAlign: 'center', color: 'rgba(255,255,255,0.4)' }}>
+                      Loading programs...
+                    </div>
+                  ) : programs.length === 0 ? (
+                    <div style={{ padding: '40px', textAlign: 'center', color: 'rgba(255,255,255,0.4)' }}>
+                      No programs found in database for this channel.
+                    </div>
+                  ) : (
+                    programs.map((prog) => {
+                      const startTime = formatTime(prog.start);
+                      const endTime = formatTime(prog.end);
+                      const dateLabel = formatDate(prog.start);
+                      return (
+                        <div
+                          key={prog.id}
+                          style={{
+                            background: 'rgba(255, 255, 255, 0.03)',
+                            border: '1px solid rgba(255, 255, 255, 0.05)',
+                            borderRadius: '8px',
+                            padding: '12px 16px',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '6px',
+                          }}
+                        >
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                            <span style={{ color: '#fff', fontSize: '0.9rem', fontWeight: 600 }}>
+                              {prog.title}
+                            </span>
+                            <span style={{ color: 'var(--accent-primary, #00d4ff)', fontSize: '0.75rem', fontWeight: 500, background: 'rgba(0, 212, 255, 0.1)', padding: '2px 6px', borderRadius: '4px' }}>
+                              {dateLabel} {startTime} - {endTime}
+                            </span>
+                          </div>
+                          {prog.subtitle && (
+                            <span style={{ color: 'rgba(255, 255, 255, 0.5)', fontSize: '0.8rem', fontStyle: 'italic' }}>
+                              {prog.subtitle}
+                            </span>
+                          )}
+                          {prog.description && (
+                            <p style={{ margin: '4px 0 0 0', color: 'rgba(255, 255, 255, 0.6)', fontSize: '0.8rem', lineHeight: '1.4' }}>
+                              {prog.description}
+                            </p>
+                          )}
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </>
+            ) : (
+              <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.3)', fontSize: '0.95rem' }}>
+                Select a channel from the left sidebar to view its EPG program timeline.
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>,
+    document.body
   );
 }

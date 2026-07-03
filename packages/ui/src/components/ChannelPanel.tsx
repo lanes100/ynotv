@@ -28,7 +28,7 @@ function formatSeekTime(seconds: number): string {
   if (h > 0) return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
-import { syncSource, type SyncResult } from '../db/sync';
+import { syncSource, applyGlobalEpgToSource, type SyncResult } from '../db/sync';
 import { VideoErrorOverlay } from './VideoErrorOverlay';
 import { StreamRetryOverlay, type RetryState } from './StreamRetryOverlay';
 import { FailoverOverlay } from './FailoverOverlay';
@@ -933,6 +933,13 @@ export function ChannelPanel({
       const syncResult = await syncSource(source, setSyncStatusMsg);
       if (syncResult.success) {
         console.log(`[ChannelPanel] Source ${source.name} synced: ${syncResult.channelCount} channels`);
+        try {
+          setSyncStatusMsg('Updating global EPG...');
+          const channels = await db.channels.where('source_id').equals(sourceId).toArray() as any[];
+          await applyGlobalEpgToSource(source, channels, setSyncStatusMsg);
+        } catch (epgErr) {
+          console.error(`[ChannelPanel] Source ${source.name} global EPG apply failed:`, epgErr);
+        }
         // Force refresh by incrementing favorites version
         setFavoritesVersion(v => v + 1);
       } else {

@@ -468,6 +468,7 @@ export function Settings({
   const [epgBoldChannelNames, setEpgBoldChannelNames] = useState(false);
   const [epgBoldTopCategories, setEpgBoldTopCategories] = useState(false);
   const [epgBoldSourceCategories, setEpgBoldSourceCategories] = useState(false);
+  const [epgPreferEpgLogos, setEpgPreferEpgLogos] = useState(false);
   const [epgTitleFontSize, setEpgTitleFontSize] = useState(32);
   const [epgBodyFontSize, setEpgBodyFontSize] = useState(16);
   const epgView = useEpgView();
@@ -670,6 +671,7 @@ export function Settings({
         epgBoldChannelNames?: boolean;
         epgBoldTopCategories?: boolean;
         epgBoldSourceCategories?: boolean;
+        epgPreferEpgLogos?: boolean;
         epgView?: 'traditional' | 'alternate';
         collapseSourceCategoriesOnStartup?: boolean;
         modernUiEnabled?: boolean | string;
@@ -948,6 +950,7 @@ export function Settings({
       if (boldSourceCategories) {
         document.documentElement.classList.add('epg-bold-source-categories');
       }
+      setEpgPreferEpgLogos(settings.epgPreferEpgLogos ?? false);
 
       // Load EPG view layout setting
       setEpgView(settings.epgView ?? 'traditional');
@@ -1485,6 +1488,13 @@ export function Settings({
     }
     if (window.storage) {
       await window.storage.updateSettings({ epgDarkenCurrent: enabled });
+    }
+  };
+
+  const handleEpgPreferEpgLogosChange = async (enabled: boolean) => {
+    setEpgPreferEpgLogos(enabled);
+    if (window.storage) {
+      await window.storage.updateSettings({ epgPreferEpgLogos: enabled });
     }
   };
 
@@ -2198,6 +2208,8 @@ export function Settings({
             onEpgBoldTopCategoriesChange={handleEpgBoldTopCategoriesChange}
             epgBoldSourceCategories={epgBoldSourceCategories}
             onEpgBoldSourceCategoriesChange={handleEpgBoldSourceCategoriesChange}
+            epgPreferEpgLogos={epgPreferEpgLogos}
+            onEpgPreferEpgLogosChange={handleEpgPreferEpgLogosChange}
             epgView={epgView}
             onEpgViewChange={handleEpgViewChange}
             epgTitleFontSize={epgTitleFontSize}

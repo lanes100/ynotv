@@ -1773,6 +1773,19 @@ async fn stream_parse_epg_multi(
         .map_err(|e| format!("Stream parse EPG multi failed: {}", e))
 }
 
+/// Sync and save all EPG channels and programs to a separate database cache file
+#[tauri::command]
+async fn cache_entire_epg_db(
+    app: AppHandle,
+    epg_url: String,
+    epg_link_id: String,
+    user_agent: Option<String>,
+) -> Result<(), String> {
+    epg_streaming::cache_entire_epg_db(app, epg_url, epg_link_id, user_agent)
+        .await
+        .map_err(|e| format!("Cache entire EPG failed: {}", e))
+}
+
 // =============================================================================
 // TMDB Cache State (managed, lives for the app lifetime)
 // =============================================================================
@@ -3172,6 +3185,7 @@ pub fn run() {
             stream_parse_epg,
             stream_parse_epg_multi,
             parse_epg_file,
+            cache_entire_epg_db,
             // DVR commands
             init_dvr,
             schedule_recording,

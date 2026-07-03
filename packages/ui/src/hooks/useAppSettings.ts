@@ -85,6 +85,7 @@ export interface AppSettings {
   disableEpgTransitions: boolean;
   epgReduceGpuLayers: boolean;
   epgDisableChannelFade: boolean;
+  epgPreferEpgLogos: boolean;
 
   // Startup view
   startupView: 'none' | 'guide' | 'movies' | 'series' | 'dvr' | 'sports' | 'calendar' | 'stremio' | 'nuvio';
@@ -137,6 +138,7 @@ export interface AppSettings {
     setDisableEpgTransitions: (disabled: boolean) => void;
     setEpgReduceGpuLayers: (enabled: boolean) => void;
     setEpgDisableChannelFade: (enabled: boolean) => void;
+    setEpgPreferEpgLogos: (enabled: boolean) => void;
     globalLiveTvUserAgent: string;
     setGlobalLiveTvUserAgent: (ua: string) => void;
 }
@@ -264,6 +266,7 @@ export function useAppSettings(): AppSettings {
   const [disableEpgTransitions, setDisableEpgTransitionsState] = useState(false);
   const [epgReduceGpuLayers, setEpgReduceGpuLayersState] = useState(false);
   const [epgDisableChannelFade, setEpgDisableChannelFadeState] = useState(false);
+  const [epgPreferEpgLogos, setEpgPreferEpgLogosState] = useState(false);
   const [globalLiveTvUserAgent, setGlobalLiveTvUserAgentState] = useState('');
 
   // Global Font selection states
@@ -497,6 +500,7 @@ export function useAppSettings(): AppSettings {
           setDisableEpgTransitionsState(result.data.disableEpgTransitions ?? false);
           setEpgReduceGpuLayersState(result.data.epgReduceGpuLayers ?? false);
           setEpgDisableChannelFadeState(result.data.epgDisableChannelFade ?? false);
+          setEpgPreferEpgLogosState(result.data.epgPreferEpgLogos ?? false);
           setGlobalLiveTvUserAgentState(result.data.globalLiveTvUserAgent ?? '');
 
           // Apply EPG darken current setting on load
@@ -1067,6 +1071,17 @@ export function useAppSettings(): AppSettings {
     }
   }, []);
 
+  const setEpgPreferEpgLogos = useCallback(async (enabled: boolean) => {
+    setEpgPreferEpgLogosState(enabled);
+    if (window.storage) {
+      try {
+        await window.storage.updateSettings({ epgPreferEpgLogos: enabled });
+      } catch (e) {
+        console.error('[useAppSettings] Failed to save epgPreferEpgLogos:', e);
+      }
+    }
+  }, []);
+
   const setGlobalLiveTvUserAgent = useCallback(async (ua: string) => {
     setGlobalLiveTvUserAgentState(ua);
     if (window.storage) {
@@ -1193,6 +1208,8 @@ export function useAppSettings(): AppSettings {
     setEpgReduceGpuLayers,
     epgDisableChannelFade,
     setEpgDisableChannelFade,
+    epgPreferEpgLogos,
+    setEpgPreferEpgLogos,
     globalLiveTvUserAgent,
     setGlobalLiveTvUserAgent,
   };

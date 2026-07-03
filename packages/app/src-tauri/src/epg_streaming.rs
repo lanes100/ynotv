@@ -1893,3 +1893,213 @@ pub async fn parse_epg_file<R: tauri::Runtime>(
         bytes_processed: total_bytes,
     })
 }
+
+/// Sync and save all EPG channels and programs to a separate database cache file
+pub async fn cache_entire_epg_db<R: tauri::Runtime>(
+    app_handle: tauri::AppHandle<R>,
+    epg_url: String,
+    epg_link_id: String,
+    user_agent: Option<String>,
+) -> Result<(), String> {
+    use tauri::Manager;
+    let app_dir = app_handle.path().app_data_dir().map_err(|e| e.to_string())?;
+    let db_path = app_dir.join(format!("epg_cache_{}.db", epg_link_id));
+    
+    info!("[EPG Cache] Downloading and caching entire EPG from {} to {:?}", epg_url, db_path);
+
+    // 1. Download EPG XML data
+    let ua = match user_agent {
+        Some(ref u) if !u.trim().is_empty() => u.clone(),
+        _ => "ynoTVPlayer".to_string(),
+    };
+
+    let client = reqwest::Client::builder()
+        .connect_timeout(std::time::Duration::from_secs(30))
+        .timeout(std::time::Duration::from_secs(300))
+        .pool_max_idle_per_host(10)
+        .danger_accept_invalid_certs(true)
+        .danger_accept_invalid_hostnames(true)
+        .user_agent(ua)
+        .build()
+        .map_err(|e| e.to_string())?;
+
+    let response = client.get(&epg_url).send().await.map_err(|e| e.to_string())?;
+    let is_response_gzipped = response.headers()
+        .get("content-encoding")
+        .and_then(|v| v.to_str().ok())
+        .map(|v| v.to_lowercase().contains("gzip"))
+        .unwrap_or(false);
+    let should_decompress = epg_url.ends_with(".gz") || is_response_gzipped;
+
+    let bytes = response.bytes().await.map_err(|e| e.to_string())?;
+    let data = bytes.to_vec();
+
+    let has_gzip_magic = data.len() >= 2 && data[0] == 0x1f && data[1] == 0x8b;
+    let should_decompress = should_decompress || has_gzip_magic;
+
+    let xml_data = if should_decompress {
+        use flate2::read::GzDecoder;
+        use std::io::Read;
+        let mut decoder = GzDecoder::new(&data[..]);
+        let mut decompressed = Vec::new();
+        decoder.read_to_end(&mut decompressed)
+            .map_err(|e| format!("Failed to decompress gzipped EPG: {}", e))?;
+        decompressed
+    } else {
+        data
+    };
+
+    // 2. Open separate SQLite database connection
+    let mut conn = rusqlite::Connection::open(&db_path).map_err(|e| e.to_string())?;
+    let tx = conn.transaction().map_err(|e| e.to_string())?;
+
+    // Drop and recreate tables
+    tx.execute("DROP TABLE IF EXISTS epg_channels", []).map_err(|e| e.to_string())?;
+    tx.execute("DROP TABLE IF EXISTS programs", []).map_err(|e| e.to_string())?;
+    
+    tx.execute(
+        "CREATE TABLE epg_channels (
+            id TEXT PRIMARY KEY,
+            display_name TEXT,
+            icon_url TEXT
+        )",
+        [],
+    ).map_err(|e| e.to_string())?;
+
+    tx.execute(
+        "CREATE TABLE programs (
+            id TEXT PRIMARY KEY,
+            stream_id TEXT,
+            title TEXT,
+            subtitle TEXT,
+            description TEXT,
+            start TEXT,
+            end TEXT
+        )",
+        [],
+    ).map_err(|e| e.to_string())?;
+
+    // Extract and insert EPG channels
+    let epg_channels = extract_epg_channels(&xml_data);
+    let mut chan_stmt = tx.prepare(
+        "INSERT OR REPLACE INTO epg_channels (id, display_name, icon_url)
+         VALUES (?1, ?2, ?3)",
+    ).map_err(|e| e.to_string())?;
+
+    for ch in &epg_channels {
+        let icon = ch.icon_url.as_deref().unwrap_or("");
+        if let Err(e) = chan_stmt.execute(rusqlite::params![ch.id, ch.display_name, icon]) {
+            warn!("Failed to insert EPG channel in cache {}: {}", ch.id, e);
+        }
+    }
+    chan_stmt.finalize().map_err(|e| e.to_string())?;
+
+    // Extract and insert programs
+    let mut prog_stmt = tx.prepare(
+        "INSERT OR REPLACE INTO programs (
+            id, stream_id, title, subtitle, description, start, end
+        ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+    ).map_err(|e| e.to_string())?;
+
+    let mut reader = Reader::from_reader(&xml_data[..]);
+    reader.config_mut().trim_text(true);
+
+    let mut buf = Vec::with_capacity(4096);
+    let mut current_program: Option<EpgProgram> = None;
+    let mut current_element: Option<String> = None;
+    let mut current_text = String::new();
+
+    loop {
+        match reader.read_event_into(&mut buf) {
+            Ok(Event::Start(ref e)) => {
+                let name = String::from_utf8_lossy(e.name().as_ref()).to_string();
+                if name == "programme" {
+                    let mut program = EpgProgram {
+                        channel_id: String::new(),
+                        title: String::new(),
+                        sub_title: None,
+                        description: None,
+                        start: String::new(),
+                        stop: String::new(),
+                    };
+                    for attr in e.attributes() {
+                        if let Ok(a) = attr {
+                            let key = String::from_utf8_lossy(a.key.as_ref()).to_string();
+                            let value = a.decode_and_unescape_value(reader.decoder()).unwrap_or_default().to_string();
+                            match key.as_str() {
+                                "channel" => program.channel_id = value,
+                                "start" => program.start = parse_xmltv_date(&value),
+                                "stop" => program.stop = parse_xmltv_date(&value),
+                                _ => {}
+                            }
+                        }
+                    }
+                    current_program = Some(program);
+                } else if current_program.is_some() {
+                    current_element = Some(name);
+                    current_text.clear();
+                }
+            }
+            Ok(Event::Text(e)) => {
+                if current_element.is_some() {
+                    if let Ok(t) = e.unescape() {
+                        current_text.push_str(&t);
+                    }
+                }
+            }
+            Ok(Event::End(ref e)) => {
+                let name = String::from_utf8_lossy(e.name().as_ref()).to_string();
+                if name == "programme" {
+                    if let Some(program) = current_program.take() {
+                        let id = format!("{}_{}", program.channel_id, program.start);
+                        let title = &program.title;
+                        let sub = program.sub_title.as_deref().unwrap_or("");
+                        let desc = program.description.as_deref().unwrap_or("");
+                        
+                        if let Err(e) = prog_stmt.execute(rusqlite::params![
+                            id,
+                            program.channel_id,
+                            title,
+                            sub,
+                            desc,
+                            program.start,
+                            program.stop,
+                        ]) {
+                            if !e.to_string().contains("UNIQUE constraint failed") {
+                                warn!("Failed to insert EPG program in cache: {}", e);
+                            }
+                        }
+                    }
+                } else if current_program.is_some() {
+                    if let Some(ref elem) = current_element {
+                        if let Some(ref mut program) = current_program {
+                            match elem.as_str() {
+                                "title" => program.title = current_text.trim().to_string(),
+                                "sub-title" => program.sub_title = Some(current_text.trim().to_string()),
+                                "desc" => program.description = Some(current_text.trim().to_string()),
+                                _ => {}
+                            }
+                        }
+                    }
+                    current_element = None;
+                }
+            }
+            Ok(Event::Eof) => break,
+            Err(e) => {
+                warn!("XML parse error: {}", e);
+                break;
+            }
+            _ => {}
+        }
+        buf.clear();
+    }
+
+    prog_stmt.finalize().map_err(|e| e.to_string())?;
+    tx.commit().map_err(|e| e.to_string())?;
+
+    // Compact database file size
+    conn.execute("VACUUM", []).map_err(|e| e.to_string())?;
+
+    info!("[EPG Cache] Entire EPG cached successfully for link {}", epg_link_id);
+    Ok(())
+}

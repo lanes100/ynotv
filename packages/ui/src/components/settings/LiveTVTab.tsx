@@ -19,6 +19,8 @@ interface LiveTVTabProps {
   onEpgBoldTopCategoriesChange: (enabled: boolean) => void;
   epgBoldSourceCategories: boolean;
   onEpgBoldSourceCategoriesChange: (enabled: boolean) => void;
+  epgPreferEpgLogos: boolean;
+  onEpgPreferEpgLogosChange: (enabled: boolean) => void;
   epgView: 'traditional' | 'alternate';
   onEpgViewChange: (view: 'traditional' | 'alternate') => void;
   epgTitleFontSize: number;
@@ -91,6 +93,8 @@ export function LiveTVTab({
   onEpgBoldTopCategoriesChange,
   epgBoldSourceCategories,
   onEpgBoldSourceCategoriesChange,
+  epgPreferEpgLogos,
+  onEpgPreferEpgLogosChange,
   epgView,
   onEpgViewChange,
   epgTitleFontSize,
@@ -232,6 +236,22 @@ export function LiveTVTab({
                       type="checkbox"
                       checked={epgDarkenCurrent}
                       onChange={(e) => onEpgDarkenCurrentChange(e.target.checked)}
+                    />
+                    <span className="toggle-slider" />
+                  </label>
+                </div>
+
+                {/* Prefer EPG channel logos globally */}
+                <div className="timeshift-toggle-row">
+                  <div className="timeshift-toggle-info">
+                    <span className="timeshift-toggle-label">Prefer EPG logos globally</span>
+                    <span className="timeshift-toggle-sub">When enabled, channels with EPG data will display the matched EPG channel's logo instead of the playlist's logo.</span>
+                  </div>
+                  <label className="toggle-switch">
+                    <input
+                      type="checkbox"
+                      checked={epgPreferEpgLogos}
+                      onChange={(e) => onEpgPreferEpgLogosChange(e.target.checked)}
                     />
                     <span className="toggle-slider" />
                   </label>

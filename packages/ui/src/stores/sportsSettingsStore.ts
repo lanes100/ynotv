@@ -22,6 +22,7 @@ export const ALL_LEAGUES: LeagueConfig[] = [
   { id: 'nhl', name: 'NHL', sport: 'hockey', category: 'hockey' },
   
   { id: 'soccer-fifa.world', name: 'FIFA World Cup', sport: 'soccer', category: 'soccer' },
+  { id: 'soccer-fifa.wwc', name: "FIFA Women's World Cup", sport: 'soccer', category: 'soccer' },
   { id: 'soccer-eng.1', name: 'Premier League', sport: 'soccer', category: 'soccer' },
   { id: 'soccer-eng.2', name: 'Championship', sport: 'soccer', category: 'soccer' },
   { id: 'soccer-esp.1', name: 'La Liga', sport: 'soccer', category: 'soccer' },
@@ -64,6 +65,7 @@ export const DEFAULT_ENABLED_LEAGUES = [
   'mlb',
   'nhl',
   'soccer-fifa.world',
+  'soccer-fifa.wwc',
   'ufc',
 ];
 

@@ -206,6 +206,7 @@ export function EpgEditorModal({ channel: initialChannel, sourceId, sourceName, 
   // ── Channel tab state ──
   const [tvgId, setTvgId] = useState('');
   const [logoUrl, setLogoUrl] = useState('');
+  const [epgLogoUrl, setEpgLogoUrl] = useState('');
   const [timeshiftHours, setTimeshiftHours] = useState('0');
   const [channelSaving, setChannelSaving] = useState(false);
   const [channelSaved, setChannelSaved] = useState(false);
@@ -238,7 +239,7 @@ export function EpgEditorModal({ channel: initialChannel, sourceId, sourceName, 
   useEffect(() => {
     if (!previewResult) { setPreviewPrograms([]); return; }
     setPreviewLoading(true);
-    getPreviewProgramsForEpgId(previewResult.id)
+    getPreviewProgramsForEpgId(previewResult.id, 3, previewResult.source_id)
       .then(p => setPreviewPrograms(p.filter(prog => !prog.is_deleted)))
       .catch(() => setPreviewPrograms([]))
       .finally(() => setPreviewLoading(false));
@@ -252,12 +253,19 @@ export function EpgEditorModal({ channel: initialChannel, sourceId, sourceName, 
 
   useEffect(() => {
     if (!window.storage) return;
-    window.storage.getSources().then((result: any) => {
-      if (result.data) {
-        const map = new Map<string, string>();
-        for (const s of result.data) map.set(s.id, s.name);
-        setSourceNameMap(map);
+    Promise.all([
+      window.storage.getSources(),
+      window.storage.getSettings()
+    ]).then(([sourcesResult, settingsResult]) => {
+      const map = new Map<string, string>();
+      if (sourcesResult.data) {
+        for (const s of sourcesResult.data) map.set(s.id, s.name);
       }
+      const globalEpgLinks = settingsResult.data?.globalEpgLinks || [];
+      for (const link of globalEpgLinks) {
+        map.set(`global_epg_${link.id}`, `${link.name} (Cache)`);
+      }
+      setSourceNameMap(map);
     }).catch(() => {});
   }, []);
 
@@ -290,6 +298,54 @@ export function EpgEditorModal({ channel: initialChannel, sourceId, sourceName, 
       setTimeshiftHours(ov?.timeshift_hours != null ? String(ov.timeshift_hours) : '0');
     });
   }, [channel]);
+
+  // ── Load matched EPG channel logo when tvgId changes ──
+  useEffect(() => {
+    if (!tvgId.trim()) {
+      setEpgLogoUrl('');
+      return;
+    }
+    db.epgChannels.get(tvgId).then(async epgChan => {
+      if (epgChan?.icon_url) {
+        setEpgLogoUrl(epgChan.icon_url);
+        return;
+      }
+
+      // Check cache databases
+      if (window.storage) {
+        try {
+          const settings = await window.storage.getSettings();
+          const globalEpgLinks = settings.data?.globalEpgLinks || [];
+          const cacheLinks = globalEpgLinks.filter(link => link.saveEntireEpg);
+          const Database = (await import('@tauri-apps/plugin-sql')).default;
+          
+          for (const link of cacheLinks) {
+            try {
+              const cacheDbName = `epg_cache_${link.id}`;
+              const cacheDb = await Database.load(`sqlite:${cacheDbName}.db`);
+              const rows = await cacheDb.select(
+                'SELECT icon_url FROM epg_channels WHERE id = $1 LIMIT 1',
+                [tvgId]
+              ) as { icon_url: string }[];
+              if (rows.length > 0 && rows[0].icon_url) {
+                setEpgLogoUrl(rows[0].icon_url);
+                return;
+              }
+            } catch {
+              // Ignore
+            }
+          }
+        } catch {
+          // Ignore
+        }
+      }
+
+      setEpgLogoUrl('');
+    }).catch(err => {
+      console.warn('[EPG Editor] Failed to load matched EPG channel details:', err);
+      setEpgLogoUrl('');
+    });
+  }, [tvgId]);
 
   // ── Load programs when switching to Programs tab ──
   useEffect(() => {
@@ -507,7 +563,7 @@ export function EpgEditorModal({ channel: initialChannel, sourceId, sourceName, 
       // Immediately copy programs from the matched EPG channel so the
       // user sees programs right away without waiting for a full sync.
       try {
-        await copyProgramsFromEpgChannel(channel.stream_id, epgChan.id);
+        await copyProgramsFromEpgChannel(channel.stream_id, epgChan.id, epgChan.source_id);
       } catch (e) {
         console.warn('[EPG Editor] Could not copy programs immediately:', e);
       }
@@ -745,6 +801,58 @@ export function EpgEditorModal({ channel: initialChannel, sourceId, sourceName, 
                   )}
                 </div>
               </div>
+
+              {(channel.stream_icon || epgLogoUrl) && (
+                <div className="epg-editor-field" style={{ marginTop: -8, marginBottom: 16 }}>
+                  <label className="epg-editor-label" style={{ fontSize: '0.75rem', opacity: 0.6 }}>Quick Select Logo:</label>
+                  <div style={{ display: 'flex', gap: 16, alignItems: 'center', marginTop: 4 }}>
+                    {channel.stream_icon && (
+                      <button
+                        type="button"
+                        onClick={() => setLogoUrl(channel.stream_icon || '')}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 6,
+                          background: logoUrl === channel.stream_icon ? 'rgba(0,212,255,0.15)' : 'rgba(255,255,255,0.03)',
+                          border: logoUrl === channel.stream_icon ? '1px solid rgba(0,212,255,0.5)' : '1px solid rgba(255,255,255,0.1)',
+                          borderRadius: 6,
+                          padding: '4px 8px',
+                          cursor: 'pointer',
+                          color: '#fff',
+                          fontSize: '0.75rem',
+                          outline: 'none',
+                        }}
+                      >
+                        <img src={channel.stream_icon} alt="" style={{ width: 20, height: 20, objectFit: 'contain' }} />
+                        <span>Playlist Logo</span>
+                      </button>
+                    )}
+                    {epgLogoUrl && (
+                      <button
+                        type="button"
+                        onClick={() => setLogoUrl(epgLogoUrl)}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 6,
+                          background: logoUrl === epgLogoUrl ? 'rgba(0,212,255,0.15)' : 'rgba(255,255,255,0.03)',
+                          border: logoUrl === epgLogoUrl ? '1px solid rgba(0,212,255,0.5)' : '1px solid rgba(255,255,255,0.1)',
+                          borderRadius: 6,
+                          padding: '4px 8px',
+                          cursor: 'pointer',
+                          color: '#fff',
+                          fontSize: '0.75rem',
+                          outline: 'none',
+                        }}
+                      >
+                        <img src={epgLogoUrl} alt="" style={{ width: 20, height: 20, objectFit: 'contain' }} />
+                        <span>EPG Logo</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
 
               <div className="epg-editor-field">
                 <label className="epg-editor-label">EPG Time Offset (hours)</label>

@@ -95,6 +95,7 @@ export interface GlobalEpgLink {
     name: string;
     url: string;
     sourceIds: string[];
+    saveEntireEpg?: boolean;
     lastSynced?: number; // Unix timestamp ms
     display_order?: number; // Lower = higher priority in waterfall
     lastSyncResult?: {
@@ -103,6 +104,7 @@ export interface GlobalEpgLink {
         perSource: Record<string, number>; // sourceId -> count
         channelsMatched?: number;
         perSourceChannels?: Record<string, number>; // sourceId -> count
+        matchedStreamIds?: string[];
     };
 }
 
@@ -128,6 +130,7 @@ export interface AppSettings {
     epgBoldChannelNames?: boolean;
     epgBoldTopCategories?: boolean;
     epgBoldSourceCategories?: boolean;
+    epgPreferEpgLogos?: boolean;
     disableThemeBlobs?: boolean;
     disableThemeBackdropBlur?: boolean;
     epgLazyLoadingEnabled?: boolean;

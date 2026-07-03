@@ -7,6 +7,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useSourceVersion } from '../contexts/SourceVersionContext';
 import { applyFilterWords } from './useFilterWords';
 import { useCategorySortOrder } from '../stores/uiStore';
+import { useAppSettings } from './useAppSettings';
 import type { Source } from '@ynotv/core';
 
 // Hook to get enabled source IDs (for filtering data from disabled sources)
@@ -249,6 +250,7 @@ export function useCategoriesForSource(sourceId: string | null) {
 // Filters out channels from disabled sources
 export function useChannels(categoryId: string | null, sortOrder: 'alphabetical' | 'number' | 'provider' = 'alphabetical', options?: { skip?: boolean }) {
   const enabledSourceIds = useEnabledSources();
+  const { epgPreferEpgLogos } = useAppSettings();
   const enabledSourceKey = useMemo(
     () => (enabledSourceIds ? Array.from(enabledSourceIds).sort().join(',') : 'loading'),
     [enabledSourceIds]
@@ -500,19 +502,83 @@ export function useChannels(categoryId: string | null, sortOrder: 'alphabetical'
       // the user-set channel icon without needing a full sync.
       try {
         const overrides = await db.epgChannelOverrides.toArray();
-        if (overrides.length > 0) {
-          const logoMap = new Map<string, string>();
-          for (const o of overrides) {
-            if (o.stream_icon) logoMap.set(o.stream_id, o.stream_icon);
+        const logoMap = new Map<string, string>();
+        const epgIdMap = new Map<string, string>();
+        
+        for (const o of overrides) {
+          if (o.stream_icon) logoMap.set(o.stream_id, o.stream_icon);
+          if (o.epg_channel_id) epgIdMap.set(o.stream_id, o.epg_channel_id);
+        }
+
+        let epgIconMap = new Map<string, string>();
+        if (epgPreferEpgLogos) {
+          try {
+            const epgChannels = await db.epgChannels.toArray();
+            for (const ec of epgChannels) {
+              if (ec.icon_url) epgIconMap.set(ec.id, ec.icon_url);
+            }
+          } catch { /* ignore */ }
+
+          // Query cached global EPG logos
+          const epgIdsToQuery = new Set<string>();
+          for (const ch of results) {
+            const epgId = epgIdMap.get(ch.stream_id) || ch.epg_channel_id;
+            if (epgId) epgIdsToQuery.add(epgId);
           }
-          if (logoMap.size > 0) {
-            results = results.map(ch =>
-              logoMap.has(ch.stream_id)
-                ? { ...ch, stream_icon: logoMap.get(ch.stream_id) }
-                : ch
-            );
+
+          if (window.storage && epgIdsToQuery.size > 0) {
+            try {
+              const settings = await window.storage.getSettings();
+              const globalEpgLinks = settings.data?.globalEpgLinks || [];
+              const cacheLinks = globalEpgLinks.filter(link => link.saveEntireEpg);
+              
+              if (cacheLinks.length > 0) {
+                const Database = (await import('@tauri-apps/plugin-sql')).default;
+                const idsArray = Array.from(epgIdsToQuery);
+                
+                for (const link of cacheLinks) {
+                  try {
+                    const cacheDbName = `epg_cache_${link.id}`;
+                    const cacheDb = await Database.load(`sqlite:${cacheDbName}.db`);
+                    
+                    const CHUNK_SIZE = 500;
+                    for (let idx = 0; idx < idsArray.length; idx += CHUNK_SIZE) {
+                      const chunk = idsArray.slice(idx, idx + CHUNK_SIZE);
+                      const placeholders = chunk.map((_, i) => `$${i + 1}`).join(',');
+                      
+                      const rows = await cacheDb.select(
+                        `SELECT id, icon_url FROM epg_channels WHERE id IN (${placeholders})`,
+                        chunk
+                      ) as { id: string; icon_url: string | null }[];
+                      
+                      for (const r of rows) {
+                        if (r.icon_url) epgIconMap.set(r.id, r.icon_url);
+                      }
+                    }
+                  } catch { /* ignore */ }
+                }
+              }
+            } catch { /* ignore */ }
           }
         }
+
+        results = results.map(ch => {
+          // 1. Manual override
+          if (logoMap.has(ch.stream_id)) {
+            return { ...ch, stream_icon: logoMap.get(ch.stream_id) };
+          }
+          // 2. EPG Logo preference
+          if (epgPreferEpgLogos) {
+            const epgId = epgIdMap.get(ch.stream_id) || ch.epg_channel_id;
+            if (epgId && epgIconMap.has(epgId)) {
+              const epgIcon = epgIconMap.get(epgId);
+              if (epgIcon) {
+                return { ...ch, stream_icon: epgIcon };
+              }
+            }
+          }
+          return ch;
+        });
       } catch { /* ignore if overrides table not yet created */ }
 
       // Virtual categories and custom groups self-order; skip the sort below for them.
@@ -576,7 +642,7 @@ export function useChannels(categoryId: string | null, sortOrder: 'alphabetical'
 
       return results;
     },
-    [categoryId, sortOrder, enabledSourceKey, options?.skip],
+    [categoryId, sortOrder, enabledSourceKey, options?.skip, epgPreferEpgLogos],
     undefined, // defaultResult  
     15000, // staleTime: 15 seconds - instant switching between recently viewed categories
     // Watch all tables to capture updates to links, manual additions, and ordering when viewing a category
@@ -656,6 +722,7 @@ export function useChannelSearch(
   filterCategoryIds?: string[]
 ) {
   const enabledSourceIds = useEnabledSources();
+  const { epgPreferEpgLogos } = useAppSettings();
   const sourceNameMap = useSourceNameMap();
   const categoryNameMap = useCategoryNameMap();
 
@@ -795,11 +862,93 @@ export function useChannelSearch(
         });
       }
 
+      // Apply logo overrides from epg_channel_overrides and epgPreferEpgLogos setting
+      try {
+        const overrides = await db.epgChannelOverrides.toArray();
+        const logoMap = new Map<string, string>();
+        const epgIdMap = new Map<string, string>();
+        
+        for (const o of overrides) {
+          if (o.stream_icon) logoMap.set(o.stream_id, o.stream_icon);
+          if (o.epg_channel_id) epgIdMap.set(o.stream_id, o.epg_channel_id);
+        }
+
+        let epgIconMap = new Map<string, string>();
+        if (epgPreferEpgLogos) {
+          try {
+            const epgChannels = await db.epgChannels.toArray();
+            for (const ec of epgChannels) {
+              if (ec.icon_url) epgIconMap.set(ec.id, ec.icon_url);
+            }
+          } catch { /* ignore */ }
+
+          // Query cached global EPG logos
+          const epgIdsToQuery = new Set<string>();
+          for (const ch of filteredChannels) {
+            const epgId = epgIdMap.get(ch.stream_id) || ch.epg_channel_id;
+            if (epgId) epgIdsToQuery.add(epgId);
+          }
+
+          if (window.storage && epgIdsToQuery.size > 0) {
+            try {
+              const settings = await window.storage.getSettings();
+              const globalEpgLinks = settings.data?.globalEpgLinks || [];
+              const cacheLinks = globalEpgLinks.filter(link => link.saveEntireEpg);
+              
+              if (cacheLinks.length > 0) {
+                const Database = (await import('@tauri-apps/plugin-sql')).default;
+                const idsArray = Array.from(epgIdsToQuery);
+                
+                for (const link of cacheLinks) {
+                  try {
+                    const cacheDbName = `epg_cache_${link.id}`;
+                    const cacheDb = await Database.load(`sqlite:${cacheDbName}.db`);
+                    
+                    const CHUNK_SIZE = 500;
+                    for (let idx = 0; idx < idsArray.length; idx += CHUNK_SIZE) {
+                      const chunk = idsArray.slice(idx, idx + CHUNK_SIZE);
+                      const placeholders = chunk.map((_, i) => `$${i + 1}`).join(',');
+                      
+                      const rows = await cacheDb.select(
+                        `SELECT id, icon_url FROM epg_channels WHERE id IN (${placeholders})`,
+                        chunk
+                      ) as { id: string; icon_url: string | null }[];
+                      
+                      for (const r of rows) {
+                        if (r.icon_url) epgIconMap.set(r.id, r.icon_url);
+                      }
+                    }
+                  } catch { /* ignore */ }
+                }
+              }
+            } catch { /* ignore */ }
+          }
+        }
+
+        filteredChannels = filteredChannels.map(ch => {
+          // 1. Manual override
+          if (logoMap.has(ch.stream_id)) {
+            return { ...ch, stream_icon: logoMap.get(ch.stream_id) };
+          }
+          // 2. EPG Logo preference
+          if (epgPreferEpgLogos) {
+            const epgId = epgIdMap.get(ch.stream_id) || ch.epg_channel_id;
+            if (epgId && epgIconMap.has(epgId)) {
+              const epgIcon = epgIconMap.get(epgId);
+              if (epgIcon) {
+                return { ...ch, stream_icon: epgIcon };
+              }
+            }
+          }
+          return ch;
+        });
+      } catch { /* ignore */ }
+
       console.log('[useChannelSearch] Returning', filteredChannels.length, 'channels, first few:', filteredChannels.slice(0, 3).map((c: any) => c.name));
 
       return filteredChannels as StoredChannel[];
     },
-    [query, limit, includeSourceInSearch, order, sourceNameMap, categoryNameMap, enabledSourceKey, filterKey]
+    [query, limit, includeSourceInSearch, order, sourceNameMap, categoryNameMap, enabledSourceKey, filterKey, epgPreferEpgLogos]
   );
   return channels ?? [];
 }
