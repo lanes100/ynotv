@@ -1948,7 +1948,7 @@ export function Settings({
       case 'sources':
         return (
           <SourcesTab
-            initialSubTab={pendingSubTab as 'source' | 'epg' | 'refresh' | undefined}
+            initialSubTab={pendingSubTab as 'source' | 'epg' | 'refresh' | 'global_ua' | undefined}
             sources={sources}
             isEncryptionAvailable={isEncryptionAvailable}
             onSourcesChange={loadSources}

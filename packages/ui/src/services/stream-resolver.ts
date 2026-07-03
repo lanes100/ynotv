@@ -94,6 +94,17 @@ export async function resolvePlayUrl(
         }
 
         let userAgent: string | undefined = sourceData.user_agent || undefined;
+        if (!userAgent) {
+            try {
+                const settingsRes = await window.storage.getSettings();
+                const globalUa = settingsRes.data?.globalLiveTvUserAgent;
+                if (globalUa && globalUa.trim()) {
+                    userAgent = globalUa.trim();
+                }
+            } catch (e) {
+                console.error('[stream-resolver] Failed to load global user agent settings:', e);
+            }
+        }
         if (!userAgent && (sourceData.type === 'xtream' || sourceData.type === 'm3u')) {
             userAgent = 'ynoTVPlayer';
         }

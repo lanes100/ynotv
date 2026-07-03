@@ -175,6 +175,7 @@ export interface AppSettings {
     simklAccessToken?: string | null;
     simklScrobbleEnabled?: boolean;
     simklSyncEnabled?: boolean;
+    globalLiveTvUserAgent?: string;
     [key: string]: any;
 }
 

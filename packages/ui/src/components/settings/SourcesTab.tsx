@@ -18,10 +18,11 @@ import { parseM3U, XtreamClient, StalkerClient } from '@ynotv/local-adapter';
 import { CategoryManager } from './CategoryManager';
 import { DataRefreshTab } from './DataRefreshTab';
 import './SourcesTab.css';
+import { useAppSettings } from '../../hooks/useAppSettings';
 import { useSourceVersion } from '../../contexts/SourceVersionContext';
 import type { GlobalEpgLink } from '../../types/app';
 
-export type SourcesSubTabId = 'source' | 'epg' | 'refresh';
+export type SourcesSubTabId = 'source' | 'epg' | 'refresh' | 'global_ua';
 
 interface SourcesTabProps {
   initialSubTab?: SourcesSubTabId;
@@ -224,6 +225,7 @@ export function SourcesTab({
   onEpgSyncConcurrencyChange,
 }: SourcesTabProps) {
   const { incrementVersion } = useSourceVersion(); // Get version incrementer
+  const { globalLiveTvUserAgent, setGlobalLiveTvUserAgent } = useAppSettings();
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState<SourceFormData>(emptyForm);
@@ -276,8 +278,8 @@ export function SourcesTab({
   // Backup delete confirmation modal state
   const [deleteBackupConfirm, setDeleteBackupConfirm] = useState<{ type: 'stalker' | 'xtream'; index: number } | null>(null);
 
-  // Sub-tab state: 'source' | 'epg' | 'refresh'
-  const [activeSubTab, setActiveSubTab] = useState<'source' | 'epg' | 'refresh'>('source');
+  // Sub-tab state: 'source' | 'epg' | 'refresh' | 'global_ua'
+  const [activeSubTab, setActiveSubTab] = useState<SourcesSubTabId>('source');
 
   useEffect(() => {
     if (initialSubTab) {
@@ -1304,6 +1306,23 @@ export function SourcesTab({
           }}
         >
           Data Refresh
+        </button>
+        <button
+          className={`sub-tab-btn ${activeSubTab === 'global_ua' ? 'active' : ''}`}
+          onClick={() => setActiveSubTab('global_ua')}
+          style={{
+            padding: '10px 20px',
+            background: activeSubTab === 'global_ua' ? 'rgba(255,255,255,0.08)' : 'transparent',
+            border: 'none',
+            borderBottom: activeSubTab === 'global_ua' ? '2px solid var(--accent-primary, #00d4ff)' : '2px solid transparent',
+            color: activeSubTab === 'global_ua' ? 'white' : 'rgba(255,255,255,0.6)',
+            cursor: 'pointer',
+            fontSize: '0.9rem',
+            fontWeight: 500,
+            transition: 'all 0.2s ease',
+          }}
+        >
+          Global UserAgent
         </button>
       </div>
 
@@ -2379,6 +2398,44 @@ export function SourcesTab({
           onEpgRefreshChange={onEpgRefreshChange || (() => {})}
           onEpgSyncConcurrencyChange={onEpgSyncConcurrencyChange || (() => {})}
         />
+      )}
+
+      {activeSubTab === 'global_ua' && (
+        <div className="settings-section" style={{ paddingTop: '8px' }}>
+          <div className="section-header">
+            <h3>Global UserAgent</h3>
+          </div>
+
+          <p className="section-description" style={{ opacity: 0.8, fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '1.5rem', lineHeight: '1.4' }}>
+            Set a default global User-Agent string to be used for all LiveTV sources when syncing and playing.
+            If a specific User-Agent is defined within a playlist's source settings, it will override this global setting.
+          </p>
+
+          <div className="settings-form" style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem', maxWidth: '550px' }}>
+            <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+              <label style={{ fontSize: '0.9rem', fontWeight: 600, color: 'white' }}>User-Agent String</label>
+              <input
+                type="text"
+                value={globalLiveTvUserAgent || ''}
+                onChange={(e) => setGlobalLiveTvUserAgent(e.target.value)}
+                placeholder="e.g. Mozilla/5.0..."
+                style={{
+                  padding: '10px 12px',
+                  borderRadius: '6px',
+                  background: 'rgba(255,255,255,0.05)',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  color: 'white',
+                  fontSize: '0.95rem',
+                  outline: 'none',
+                  transition: 'border-color 0.2s ease',
+                }}
+              />
+              <p className="form-hint" style={{ marginTop: '0.2rem', opacity: 0.7, fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: '1.4' }}>
+                Leave empty to fallback to the current default client user agent (<code>ynoTVPlayer</code>).
+              </p>
+            </div>
+          </div>
+        </div>
       )}
 
 

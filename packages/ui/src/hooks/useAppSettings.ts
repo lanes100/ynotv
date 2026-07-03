@@ -137,6 +137,8 @@ export interface AppSettings {
     setDisableEpgTransitions: (disabled: boolean) => void;
     setEpgReduceGpuLayers: (enabled: boolean) => void;
     setEpgDisableChannelFade: (enabled: boolean) => void;
+    globalLiveTvUserAgent: string;
+    setGlobalLiveTvUserAgent: (ua: string) => void;
 }
 
 /**
@@ -262,6 +264,7 @@ export function useAppSettings(): AppSettings {
   const [disableEpgTransitions, setDisableEpgTransitionsState] = useState(false);
   const [epgReduceGpuLayers, setEpgReduceGpuLayersState] = useState(false);
   const [epgDisableChannelFade, setEpgDisableChannelFadeState] = useState(false);
+  const [globalLiveTvUserAgent, setGlobalLiveTvUserAgentState] = useState('');
 
   // Global Font selection states
   const [appFontFamily, setAppFontFamilyState] = useState<string>('inter');
@@ -494,6 +497,7 @@ export function useAppSettings(): AppSettings {
           setDisableEpgTransitionsState(result.data.disableEpgTransitions ?? false);
           setEpgReduceGpuLayersState(result.data.epgReduceGpuLayers ?? false);
           setEpgDisableChannelFadeState(result.data.epgDisableChannelFade ?? false);
+          setGlobalLiveTvUserAgentState(result.data.globalLiveTvUserAgent ?? '');
 
           // Apply EPG darken current setting on load
           if (result.data.epgDarkenCurrent) {
@@ -1063,6 +1067,17 @@ export function useAppSettings(): AppSettings {
     }
   }, []);
 
+  const setGlobalLiveTvUserAgent = useCallback(async (ua: string) => {
+    setGlobalLiveTvUserAgentState(ua);
+    if (window.storage) {
+      try {
+        await window.storage.updateSettings({ globalLiveTvUserAgent: ua });
+      } catch (e) {
+        console.error('[useAppSettings] Failed to save globalLiveTvUserAgent:', e);
+      }
+    }
+  }, []);
+
   const setSavedCustomThemes = useCallback(async (themes: CustomThemeConfig[]) => {
     setSavedCustomThemesState(themes);
     if (window.storage) {
@@ -1178,5 +1193,7 @@ export function useAppSettings(): AppSettings {
     setEpgReduceGpuLayers,
     epgDisableChannelFade,
     setEpgDisableChannelFade,
+    globalLiveTvUserAgent,
+    setGlobalLiveTvUserAgent,
   };
 }

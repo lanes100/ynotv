@@ -52,6 +52,29 @@ function fixDuplicatedUrl(url: string | undefined): string | undefined {
   return url;
 }
 
+async function resolveSourceUserAgent(source: any): Promise<any> {
+  if (!source) return source;
+  if (source.user_agent && source.user_agent.trim()) {
+    return source; // source user agent overrides global
+  }
+  if (!window.storage) {
+    return source;
+  }
+  try {
+    const settingsResult = await window.storage.getSettings();
+    const globalUa = settingsResult.data?.globalLiveTvUserAgent;
+    if (globalUa && globalUa.trim()) {
+      return {
+        ...source,
+        user_agent: globalUa.trim(),
+      };
+    }
+  } catch (e) {
+    console.error('[sync] Failed to load global user agent for source:', source.id, e);
+  }
+  return source;
+}
+
 export interface SyncResult {
   success: boolean;
   channelCount: number;
@@ -619,6 +642,7 @@ export async function syncStalkerShortEpg(
   onProgress?: (completed: number, total: number) => void,
   force: boolean = false
 ): Promise<number> {
+  source = await resolveSourceUserAgent(source);
   if (!source || !source.mac || channels.length === 0) return 0;
 
   await ensureCacheInitialized();
@@ -1347,6 +1371,18 @@ async function syncGlobalEpgLinkStandaloneImpl(
     }
   }
 
+  if (!userAgent && window.storage) {
+    try {
+      const settingsResult = await window.storage.getSettings();
+      const globalUa = settingsResult.data?.globalLiveTvUserAgent;
+      if (globalUa && globalUa.trim()) {
+        userAgent = globalUa.trim();
+      }
+    } catch (e) {
+      console.error('[Global EPG] Failed to load global user agent settings:', e);
+    }
+  }
+
   if (sourceConfigs.length === 0) {
     console.log(`[Global EPG] No sources need EPG from ${epgLink.name}`);
     // Mark as synced so we don't retry every 10 min, but only for 30 min freshness window
@@ -1591,6 +1627,7 @@ export async function enrichM3uWithXtreamCatchup(
 }
 
 export async function syncSource(source: Source, onProgress?: (msg: string) => void): Promise<SyncResult> {
+  source = await resolveSourceUserAgent(source);
   // Try primary URL first
   const result = await _doSyncSourceImpl(source, onProgress);
   if (result.success) return result;
@@ -2328,7 +2365,11 @@ export async function syncStalkerCategory(
   }
 
   const result = await window.storage.getSource(sourceId);
-  const source = result.data;
+  let source = result.data;
+
+  if (source) {
+    source = await resolveSourceUserAgent(source);
+  }
 
   if (!source || source.type !== 'stalker' || !source.mac) {
     throw new Error('Invalid Stalker source');
@@ -2516,6 +2557,7 @@ export async function syncVodMovies(
   source: Source,
   sharedClient?: XtreamClient | StalkerClient
 ): Promise<{ count: number; categoryCount: number; skipped?: boolean }> {
+  source = await resolveSourceUserAgent(source);
   if (!['xtream', 'stalker'].includes(source.type)) {
     return { count: 0, categoryCount: 0 };
   }
@@ -2741,6 +2783,7 @@ export async function syncVodSeries(
   source: Source,
   sharedClient?: XtreamClient | StalkerClient
 ): Promise<{ count: number; categoryCount: number; skipped?: boolean }> {
+  source = await resolveSourceUserAgent(source);
   if (!['xtream', 'stalker'].includes(source.type)) {
     return { count: 0, categoryCount: 0 };
   }
@@ -2972,6 +3015,7 @@ export async function syncVodSeries(
 
 // Sync episodes for a specific series (on-demand when user views series details)
 export async function syncSeriesEpisodes(source: Source, seriesId: string): Promise<number> {
+  source = await resolveSourceUserAgent(source);
   // Support both Xtream and Stalker
   if (!['xtream', 'stalker'].includes(source.type)) {
     return 0;
@@ -3029,6 +3073,7 @@ export async function syncSeriesEpisodes(source: Source, seriesId: string): Prom
 
 // Exported VOD sync wrapper with backup URL failover support
 export async function syncVodForSource(source: Source): Promise<VodSyncResult> {
+  source = await resolveSourceUserAgent(source);
   if (source.live_tv_only) {
     return {
       success: true,
