@@ -7904,7 +7904,7 @@ html.disable-theme-blobs .livetv-liquid-glass-bg::after {
 /* 2. Disable Glass Backdrop Blur */
 html.disable-theme-backdrop-blur * {
   backdrop-filter: none !important;
-    0 4px 14px rgba(0, 0, 0, 0.3) !important;
+  -webkit-backdrop-filter: none !important;
 }
 
 html.modern-ui-v3 .now-playing-bar .npb-btn:active:not(:disabled) {
@@ -7960,8 +7960,7 @@ html.disable-epg-transitions .guide-channel-info:hover .guide-channel-name {
   display: block !important;
 }
 
-/* 4. Reduce EPG GPU Layer Usage
-   Removes persistent will-change layers from every channel row and the scroll container.
+/* 4. Reduce EPG Scroll Rendering Work
    Adds CSS contain to isolate repaints per row and per program grid.
    content-visibility: auto lets the browser skip off-screen program block painting.
    No visual change — purely rendering hints. */

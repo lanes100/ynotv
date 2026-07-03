@@ -960,7 +960,6 @@
   align-items: stretch;
   min-height: 56px;
   border-bottom: 1px solid var(--surface-border, rgba(255, 255, 255, 0.04));
-  will-change: transform;
 }
 
 .guide-channel-row.has-playlist-name {
@@ -1156,6 +1155,28 @@
   min-height: 48px;
   flex: 1;
   overflow: hidden;
+}
+
+/* EPG optimization toggles live with the base EPG styles so they win regardless
+   of theme CSS ordering. */
+html.epg-reduce-gpu-layers .guide-channel-row {
+  will-change: auto !important;
+  contain: layout style !important;
+}
+
+html.epg-reduce-gpu-layers .guide-program-grid {
+  contain: layout style !important;
+  content-visibility: auto;
+  contain-intrinsic-size: 0 56px;
+}
+
+html.epg-disable-channel-fade .guide-channel-name-container {
+  mask-image: none !important;
+  -webkit-mask-image: none !important;
+}
+
+html.epg-disable-channel-fade .guide-channels {
+  scroll-behavior: auto !important;
 }
 
 /* Empty State */

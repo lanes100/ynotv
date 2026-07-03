@@ -469,6 +469,7 @@ export function ChannelPanel({
   });
 
   const [sourceNames, setSourceNames] = useState<Map<string, string>>(new Map());
+  const [shortEpgSourceIds, setShortEpgSourceIds] = useState<Set<string>>(() => new Set());
 
   useEffect(() => {
     async function loadSourceNames() {
@@ -477,10 +478,15 @@ export function ChannelPanel({
         const result = await window.storage.getSources();
         if (result.data) {
           const map = new Map<string, string>();
+          const shortEpgIds = new Set<string>();
           for (const source of result.data) {
             map.set(source.id, source.name);
+            if (source.type === 'stalker' && source.mac && !source.disable_short_epg) {
+              shortEpgIds.add(source.id);
+            }
           }
           setSourceNames(map);
+          setShortEpgSourceIds(shortEpgIds);
         }
       } catch (e) {
         console.error('Failed to load source names', e);
@@ -1033,6 +1039,13 @@ export function ChannelPanel({
   const [visibleIndices, setVisibleIndices] = useState({ startIndex: 0, endIndex: 35 });
   const [epgSyncStatus, setEpgSyncStatus] = useState<{ completed: number; total: number } | null>(null);
 
+  const shouldFetchShortEpgForVisibleRange = useMemo(() => {
+    if (isSearchMode || isWatchlistMode || shortEpgSourceIds.size === 0) return false;
+    return channels.some((channel) => shortEpgSourceIds.has(channel.source_id));
+  }, [channels, shortEpgSourceIds, isSearchMode, isWatchlistMode]);
+
+  const shouldTrackVisibleRange = epgLazyLoadingEnabled || shouldFetchShortEpgForVisibleRange;
+
   // Get stream IDs for programs lookup
   // Include selectedChannel (from currentChannel prop) in case it's from a different category/source
   const streamIds = useMemo(() => {
@@ -1058,7 +1071,7 @@ export function ChannelPanel({
 
   // Trigger on-demand short EPG fetch for visible Stalker channels
   useEffect(() => {
-    if (!visible || !channels || channels.length === 0 || !window.storage) {
+    if (!visible || !shouldFetchShortEpgForVisibleRange || !channels || channels.length === 0 || !window.storage) {
       setEpgSyncStatus(null);
       return;
     }
@@ -1122,7 +1135,7 @@ export function ChannelPanel({
       clearTimeout(timer);
       setEpgSyncStatus(null);
     };
-  }, [channels, visible, visibleIndices, categoryId]);
+  }, [channels, visible, visibleIndices, categoryId, shouldFetchShortEpgForVisibleRange]);
 
   // Sync selectedChannel with currentChannel when it changes externally
   // (watchlist notification, autoswitch, calendar, multiview swap)
@@ -2729,7 +2742,12 @@ export function ChannelPanel({
               className="guide-channels"
               rangeChanged={(range) => {
                 visibleRangeRef.current = range;
-                setVisibleIndices(range);
+                if (!shouldTrackVisibleRange) return;
+                setVisibleIndices((prev) =>
+                  prev.startIndex === range.startIndex && prev.endIndex === range.endIndex
+                    ? prev
+                    : range
+                );
               }}
               itemContent={(index, channel, context) => (
                 <ChannelRowVirtuoso

@@ -237,13 +237,35 @@ export class XtreamClient {
 
       return {
         expiry_date: formattedExpiry,
-        active_cons: authResponse.user_info.active_cons,
-        max_connections: authResponse.user_info.max_connections,
+        active_cons: authResponse.user_info.active_cons !== undefined && authResponse.user_info.active_cons !== null ? String(authResponse.user_info.active_cons) : undefined,
+        max_connections: authResponse.user_info.max_connections !== undefined && authResponse.user_info.max_connections !== null ? String(authResponse.user_info.max_connections) : undefined,
       };
     } catch (error) {
       console.error('[Xtream] Failed to fetch user info:', error);
       return {};
     }
+  }
+
+  private ensureArray<T>(data: any): T[] {
+    if (!data) return [];
+    if (Array.isArray(data)) return data as T[];
+
+    if (typeof data === 'object') {
+      if (data.user_info && data.user_info.auth === 0) {
+        throw new Error('Xtream Codes authentication failed');
+      }
+      if (data.error) {
+        throw new Error(data.error);
+      }
+      if (data.message) {
+        throw new Error(data.message);
+      }
+      if (Object.keys(data).length === 0) {
+        return [];
+      }
+    }
+
+    return [data] as T[];
   }
 
   // ===========================================================================
@@ -252,7 +274,8 @@ export class XtreamClient {
 
   async getLiveCategories(): Promise<Category[]> {
     const url = this.buildApiUrl('get_live_categories');
-    const data = await this.fetchJson<XtreamCategory[]>(url);
+    const rawData = await this.fetchJson<any>(url);
+    const data = this.ensureArray<XtreamCategory>(rawData);
 
     return data.map((cat, index) => ({
       category_id: `${this.sourceId}_${cat.category_id}`,
@@ -270,7 +293,8 @@ export class XtreamClient {
       url += `&category_id=${rawCatId}`;
     }
 
-    const data = await this.fetchJson<XtreamStream[]>(url);
+    const rawData = await this.fetchJson<any>(url);
+    const data = this.ensureArray<XtreamStream>(rawData);
 
     return data.map((stream, index) => ({
       stream_id: `${this.sourceId}_${stream.stream_id}`,
@@ -292,7 +316,8 @@ export class XtreamClient {
 
   async getVodCategories(): Promise<Category[]> {
     const url = this.buildApiUrl('get_vod_categories');
-    const data = await this.fetchJson<XtreamCategory[]>(url);
+    const rawData = await this.fetchJson<any>(url);
+    const data = this.ensureArray<XtreamCategory>(rawData);
 
     return data.map((cat, index) => ({
       category_id: `${this.sourceId}_vod_${cat.category_id}`,
@@ -309,7 +334,8 @@ export class XtreamClient {
       url += `&category_id=${rawCatId}`;
     }
 
-    const data = await this.fetchJson<XtreamVodStream[]>(url);
+    const rawData = await this.fetchJson<any>(url);
+    const data = this.ensureArray<XtreamVodStream>(rawData);
 
     return data.map(vod => ({
       stream_id: `${this.sourceId}_${vod.stream_id}`,
@@ -335,7 +361,8 @@ export class XtreamClient {
 
   async getSeriesCategories(): Promise<Category[]> {
     const url = this.buildApiUrl('get_series_categories');
-    const data = await this.fetchJson<XtreamCategory[]>(url);
+    const rawData = await this.fetchJson<any>(url);
+    const data = this.ensureArray<XtreamCategory>(rawData);
 
     return data.map((cat, index) => ({
       category_id: `${this.sourceId}_series_${cat.category_id}`,
@@ -352,7 +379,8 @@ export class XtreamClient {
       url += `&category_id=${rawCatId}`;
     }
 
-    const data = await this.fetchJson<XtreamSeries[]>(url);
+    const rawData = await this.fetchJson<any>(url);
+    const data = this.ensureArray<XtreamSeries>(rawData);
 
     return data.map(series => ({
       series_id: `${this.sourceId}_${series.series_id}`,
@@ -375,13 +403,21 @@ export class XtreamClient {
     const url = this.buildApiUrl('get_series_info') + `&series_id=${rawSeriesId}`;
     const data = await this.fetchJson<XtreamSeriesInfo>(url);
 
-    if (!data.episodes) return [];
+    if (!data || typeof data !== 'object') return [];
+    const rawData = data as any;
+    if (rawData.user_info && rawData.user_info.auth === 0) {
+      throw new Error('Xtream Codes authentication failed');
+    }
+    if ((data as any).error) {
+      throw new Error((data as any).error);
+    }
+    if (!data.episodes || typeof data.episodes !== 'object') return [];
 
     // Episodes are grouped by season number
     const seasons: Season[] = [];
 
     for (const [seasonNum, episodes] of Object.entries(data.episodes)) {
-      const seasonEpisodes = (episodes as XtreamEpisode[]).map(ep => ({
+      const seasonEpisodes = this.ensureArray<XtreamEpisode>(episodes).map(ep => ({
         id: `${this.sourceId}_${ep.id}`,
         title: ep.title,
         episode_num: ep.episode_num,
@@ -414,7 +450,7 @@ export class XtreamClient {
     const rawStreamId = streamId.replace(`${this.sourceId}_`, '');
     const url = this.buildApiUrl('get_short_epg') + `&stream_id=${rawStreamId}&limit=${limit}`;
     const data = await this.fetchJson<{ epg_listings: XtreamEpgEntry[] }>(url);
-    return data.epg_listings || [];
+    return (data && data.epg_listings) ? this.ensureArray<XtreamEpgEntry>(data.epg_listings) : [];
   }
 
   // Fetch full XMLTV EPG data

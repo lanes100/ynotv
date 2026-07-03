@@ -411,7 +411,18 @@ export async function deleteCategories(categoryIds: string[]): Promise<number> {
  * Uses COALESCE on the Rust side to preserve existing values when fields are null
  */
 export async function updateSourceMeta(meta: SourceMetaUpdate): Promise<void> {
-  await invoke('update_source_meta', { meta });
+  const sanitizedMeta = {
+    ...meta,
+    source_id: meta.source_id !== undefined && meta.source_id !== null ? String(meta.source_id) : meta.source_id,
+    epg_url: meta.epg_url !== undefined && meta.epg_url !== null ? String(meta.epg_url) : undefined,
+    last_synced: meta.last_synced !== undefined && meta.last_synced !== null ? String(meta.last_synced) : undefined,
+    vod_last_synced: meta.vod_last_synced !== undefined && meta.vod_last_synced !== null ? String(meta.vod_last_synced) : undefined,
+    expiry_date: meta.expiry_date !== undefined && meta.expiry_date !== null ? String(meta.expiry_date) : undefined,
+    active_cons: meta.active_cons !== undefined && meta.active_cons !== null ? String(meta.active_cons) : undefined,
+    max_connections: meta.max_connections !== undefined && meta.max_connections !== null ? String(meta.max_connections) : undefined,
+    error: meta.error !== undefined && meta.error !== null ? String(meta.error) : undefined,
+  };
+  await invoke('update_source_meta', { meta: sanitizedMeta });
   dbEvents.notify('sourcesMeta', 'update');
 }
 

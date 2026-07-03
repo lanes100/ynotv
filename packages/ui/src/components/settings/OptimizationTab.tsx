@@ -105,10 +105,10 @@ export function OptimizationTab() {
                 checked={epgReduceGpuLayers}
                 onChange={(e) => setEpgReduceGpuLayers(e.target.checked)}
               />
-              <span className="genre-name" style={{ fontWeight: 600, fontSize: '0.95rem' }}>Reduce EPG GPU Layer Usage</span>
+              <span className="genre-name" style={{ fontWeight: 600, fontSize: '0.95rem' }}>Reduce EPG Scroll Rendering Work</span>
             </label>
             <p className="form-hint" style={{ marginTop: '0.4rem', marginLeft: '26px', opacity: 0.8, fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: '1.4' }}>
-              Removes persistent GPU compositing layers from channel rows and the scroll container. Adds layout containment so repaints are isolated per row.
+              Adds paint and layout containment to guide rows and program grids so scrolling repaints less of the EPG at once. Recommended if the guide feels heavy while scrolling.
             </p>
           </div>
 

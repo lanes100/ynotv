@@ -153,6 +153,7 @@ const SETTINGS_SEARCH_INDEX: SettingsSearchResult[] = [
   { id: 'opt-theme-blur', label: 'Disable Glass Backdrop Blur', description: 'Remove backdrop blur from UI components to reduce GPU usage.', tabId: 'optimization', tabLabel: 'Optimization', section: 'Theme Optimization' },
   { id: 'opt-epg-lazy-load', label: 'Enable EPG Lazy Loading', description: 'Only load EPG programs for the visible time window to reduce lag.', tabId: 'optimization', tabLabel: 'Optimization', section: 'EPG Optimization' },
   { id: 'opt-epg-transitions', label: 'Disable EPG Card Shadows & Transitions', description: 'Disable transition animations and drop shadows on guide cards to reduce GPU usage.', tabId: 'optimization', tabLabel: 'Optimization', section: 'EPG Optimization' },
+  { id: 'opt-epg-rendering-work', label: 'Reduce EPG Scroll Rendering Work', description: 'Use paint and layout containment so scrolling repaints less of the EPG at once.', tabId: 'optimization', tabLabel: 'Optimization', section: 'EPG Optimization' },
 
   // --- UI ---
   { id: 'ui-tab', label: 'UI', tabId: 'ui', tabLabel: 'UI', section: 'UI' },
