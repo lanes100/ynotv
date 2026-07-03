@@ -1605,6 +1605,7 @@ export function ChannelPanel({
   const previewPaneRef = useRef<HTMLDivElement>(null);
   // Track last channel ID to maintain resize when channel data is loading
   const lastChannelIdRef = useRef<string | null>(null);
+  const [videoAspect, setVideoAspect] = useState<number>(16 / 9);
 
   // Virtuoso scrolling refs
   const virtuosoRef = useRef<VirtuosoHandle>(null);
@@ -1653,12 +1654,36 @@ export function ChannelPanel({
     }
   }, [selectedChannel?.stream_id, channels.length, isSearchMode, isWatchlistMode, visible]);
 
-  // Update last channel ID when selected channel changes
+  // Update last channel ID and reset aspect ratio when selected channel changes
   useEffect(() => {
     if (selectedChannel?.stream_id) {
       lastChannelIdRef.current = selectedChannel.stream_id;
+      setVideoAspect(16 / 9);
     }
   }, [selectedChannel?.stream_id]);
+
+  // Periodically query video aspect ratio from MPV while preview is visible to ensure correct scaling when video loads
+  useEffect(() => {
+    if (!visible) return;
+
+    const queryAspect = () => {
+      Bridge.getProperty('video-params')
+        .then((params) => {
+          if (params && typeof params === 'object' && params.aspect) {
+            const asp = parseFloat(params.aspect);
+            if (asp > 0) {
+              setVideoAspect(asp);
+            }
+          }
+        })
+        .catch(() => {});
+    };
+
+    queryAspect();
+
+    const interval = setInterval(queryAspect, 1000);
+    return () => clearInterval(interval);
+  }, [visible, selectedChannel?.stream_id]);
 
   const isMultiview = currentLayout && currentLayout !== 'main';
   const isHls = multiviewEngineMode === 'hls';
@@ -1731,63 +1756,46 @@ export function ChannelPanel({
         }
       }
 
-      if (epgView === 'alternate' && !showMultiviewGrid) {
-        let videoNativeW = windowW;
-        let videoNativeH = windowW * (9 / 16);
+      const screenAspect = windowW / windowH;
+      let videoNativeW = windowW;
+      let videoNativeH = windowH;
 
-        if (videoNativeH > windowH) {
-          videoNativeH = windowH;
-          videoNativeW = windowH * (16 / 9);
-        }
-
-        const scaleX = rect.width / videoNativeW;
-        const scaleY = rect.height / videoNativeH;
-        const scale = Math.min(scaleX, scaleY);
-        
-        const zoom = Math.log2(scale);
-
-        const actualVideoW = videoNativeW * scale;
-        const actualVideoH = videoNativeH * scale;
-
-        const targetCenterX = rect.left + (rect.width / 2);
-        const targetCenterY = rect.top + (rect.height / 2);
-
-        const shiftX = targetCenterX - (windowW / 2);
-        const shiftY = targetCenterY - (windowH / 2);
-
-        const availSpaceX = windowW - actualVideoW;
-        const alignX = Math.abs(availSpaceX) < 1 ? 0 : (2 * shiftX) / availSpaceX;
-
-        const availSpaceY = windowH - actualVideoH;
-        const alignY = Math.abs(availSpaceY) < 1 ? 0 : (2 * shiftY) / availSpaceY;
-
-        Bridge.setProperties({
-          'video-zoom': zoom,
-          'video-align-x': alignX,
-          'video-align-y': alignY
-        });
+      if (videoAspect > screenAspect) {
+        // Video is wider than screen -> letterboxed (fills width)
+        videoNativeW = windowW;
+        videoNativeH = windowW / videoAspect;
       } else {
-        // Calculate Scale Factor
-        const scale = rect.width / windowW;
-        const zoom = Math.log2(scale);
-
-        // Calculate Alignment X
-        const targetCenterX = rect.left + (rect.width / 2);
-        const shiftX = targetCenterX - (windowW / 2);
-        const availSpaceX = windowW - rect.width;
-        const alignX = Math.abs(availSpaceX) < 1 ? 0 : (2 * shiftX) / availSpaceX;
-
-        // Calculate Alignment Y
-        const topOffset = rect.top;
-        const availSpaceY = windowH - rect.height;
-        const alignY = Math.abs(availSpaceY) < 1 ? 0 : (2 * topOffset) / availSpaceY - 1;
-
-        Bridge.setProperties({
-          'video-zoom': zoom,
-          'video-align-x': alignX,
-          'video-align-y': alignY
-        });
+        // Video is taller than screen -> pillarboxed (fills height)
+        videoNativeH = windowH;
+        videoNativeW = windowH * videoAspect;
       }
+
+      const scaleX = rect.width / videoNativeW;
+      const scaleY = rect.height / videoNativeH;
+      const scale = Math.min(scaleX, scaleY);
+      
+      const zoom = Math.log2(scale);
+
+      const actualVideoW = videoNativeW * scale;
+      const actualVideoH = videoNativeH * scale;
+
+      const targetCenterX = rect.left + (rect.width / 2);
+      const targetCenterY = rect.top + (rect.height / 2);
+
+      const shiftX = targetCenterX - (windowW / 2);
+      const shiftY = targetCenterY - (windowH / 2);
+
+      const availSpaceX = windowW - actualVideoW;
+      const alignX = Math.abs(availSpaceX) < 1 ? 0 : (2 * shiftX) / availSpaceX;
+
+      const availSpaceY = windowH - actualVideoH;
+      const alignY = Math.abs(availSpaceY) < 1 ? 0 : (2 * shiftY) / availSpaceY;
+
+      Bridge.setProperties({
+        'video-zoom': zoom,
+        'video-align-x': alignX,
+        'video-align-y': alignY
+      });
 
       // Reposition secondary MPV slots inside EPG preview container cells (only if engineMode is 'mpv')
       if (multiviewEngineMode === 'mpv') {
@@ -1897,8 +1905,8 @@ export function ChannelPanel({
     showFailoverGroupModal,
     showPlaylistListModal,
     managingCustomGroup,
-    managingCategory,
-    managingFavorites
+    managingFavorites,
+    videoAspect
   ]);
 
   // Dedicated effect: null out previewVideoRect only when the panel truly closes.

@@ -78,6 +78,7 @@ export function SportsHub({
   const fillerRightRef = useRef<HTMLDivElement>(null);
   const fillerTopRef = useRef<HTMLDivElement>(null);
   const fillerBottomRef = useRef<HTMLDivElement>(null);
+  const [videoAspect, setVideoAspect] = useState<number>(16 / 9);
   const activeTab = useSportsSelectedTab();
   const setActiveTab = useSetSportsSelectedTab();
   const [selectedSport, setSelectedSport] = useState<string | null>(null);
@@ -163,10 +164,37 @@ export function SportsHub({
     }
   }, [selectedSport]);
 
+  // Periodically query video aspect ratio from MPV while preview is visible to ensure correct scaling when video loads
+  useEffect(() => {
+    if (!visible) return;
+
+    const queryAspect = () => {
+      Bridge.getProperty('video-params')
+        .then((params) => {
+          if (params && typeof params === 'object' && params.aspect) {
+            const asp = parseFloat(params.aspect);
+            if (asp > 0) {
+              setVideoAspect(asp);
+            }
+          }
+        })
+        .catch(() => {});
+    };
+
+    queryAspect();
+
+    const interval = setInterval(queryAspect, 1000);
+    return () => clearInterval(interval);
+  }, [visible]);
+
   // Handle Video Resizing for Preview Mode via ResizeObserver explicitly when component mounts
   useEffect(() => {
     let isSyncing = false;
     const isReady = visible === undefined ? true : (visible && transitionCompleted);
+
+    if (isReady) {
+      setVideoAspect(16 / 9);
+    }
 
     const updateVideoPosition = async () => {
       if (!previewRef.current || !previewEnabled || !isReady) {
@@ -222,7 +250,7 @@ export function SportsHub({
         case 'fill':
         case 'fit':
         default:
-          targetAspect = 16 / 9; // assume native 16:9
+          targetAspect = videoAspect;
           aspectOverride = -1;
           break;
       }
@@ -316,7 +344,7 @@ export function SportsHub({
       cancelAnimationFrame(animationFrameId);
       onPreviewVideoRectChange?.(null);
     };
-  }, [previewEnabled, aspectRatio, visible, transitionCompleted]);
+  }, [previewEnabled, aspectRatio, visible, transitionCompleted, videoAspect]);
 
   const handleSearchChannels = useCallback((channelName: string) => {
     if (onSearchChannels) {
