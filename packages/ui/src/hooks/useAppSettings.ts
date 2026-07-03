@@ -193,7 +193,7 @@ export function useAppSettings(): AppSettings {
   const [externalPlayerReuse, setExternalPlayerReuseState] = useState(false);
 
   // Theme state
-  const [theme, setThemeState] = useState<ThemeId>('solid-monochrome');
+  const [theme, setThemeState] = useState<ThemeId>('dark-cyan');
 
   // Custom theme state
   const [customThemeConfig, setCustomThemeConfigState] = useState<CustomThemeConfig>({
@@ -525,7 +525,7 @@ export function useAppSettings(): AppSettings {
           console.log('[useAppSettings] Loaded saved layout state:', layoutState);
 
           // Load theme
-          const savedTheme = result.data.theme || localStorageTheme || 'solid-monochrome';
+          const savedTheme = result.data.theme || localStorageTheme || 'dark-cyan';
           setThemeState(savedTheme as ThemeId);
 
           // Load global font settings

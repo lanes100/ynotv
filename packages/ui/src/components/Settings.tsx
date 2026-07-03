@@ -2095,7 +2095,7 @@ export function Settings({
       case 'theme':
         return (
           <ThemeTab
-            theme={theme || 'solid-monochrome'}
+            theme={theme || 'dark-cyan'}
             onThemeChange={onThemeChange || (() => { })}
             customThemeConfig={customThemeConfig}
             onCustomThemeConfigChange={onCustomThemeConfigChange || (() => { })}
