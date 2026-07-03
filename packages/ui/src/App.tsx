@@ -421,6 +421,26 @@ function App() {
     }
   }, []);
 
+  // Global listener to add/remove 'is-resizing' class to body during window resizing to optimize painting/backdrop filters
+  useEffect(() => {
+    let resizeTimeout: ReturnType<typeof setTimeout> | null = null;
+
+    const handleResize = () => {
+      document.body.classList.add('is-resizing');
+
+      if (resizeTimeout) clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(() => {
+        document.body.classList.remove('is-resizing');
+      }, 150);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      if (resizeTimeout) clearTimeout(resizeTimeout);
+    };
+  }, []);
+
   // Load stremioStreamPickerMode from storage
   useEffect(() => {
     if (!layoutSettingsLoaded) return;
@@ -1372,6 +1392,7 @@ function App() {
         'video-aspect-override': -1,
         'keepaspect': true,
       }).catch(() => { });
+      invoke('mpv_set_geometry', { x: 0, y: 0, width: 0, height: 0 }).catch(() => { });
     }
   }, [previewVideoRect]);
 

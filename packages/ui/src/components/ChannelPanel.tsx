@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef, useCallback, memo } from 'react';
+import { invoke } from '@tauri-apps/api/core';
 import { useSourceVersion } from '../contexts/SourceVersionContext';
 import { Virtuoso, type VirtuosoHandle } from 'react-virtuoso';
 import { useChannels, useCategories, useAllPrograms, useProgramsInRange, parseCategoryIds } from '../hooks/useChannels';
@@ -1605,7 +1606,6 @@ export function ChannelPanel({
   const previewPaneRef = useRef<HTMLDivElement>(null);
   // Track last channel ID to maintain resize when channel data is loading
   const lastChannelIdRef = useRef<string | null>(null);
-  const [videoAspect, setVideoAspect] = useState<number>(16 / 9);
 
   // Virtuoso scrolling refs
   const virtuosoRef = useRef<VirtuosoHandle>(null);
@@ -1654,36 +1654,12 @@ export function ChannelPanel({
     }
   }, [selectedChannel?.stream_id, channels.length, isSearchMode, isWatchlistMode, visible]);
 
-  // Update last channel ID and reset aspect ratio when selected channel changes
+  // Update last channel ID when selected channel changes
   useEffect(() => {
     if (selectedChannel?.stream_id) {
       lastChannelIdRef.current = selectedChannel.stream_id;
-      setVideoAspect(16 / 9);
     }
   }, [selectedChannel?.stream_id]);
-
-  // Periodically query video aspect ratio from MPV while preview is visible to ensure correct scaling when video loads
-  useEffect(() => {
-    if (!visible) return;
-
-    const queryAspect = () => {
-      Bridge.getProperty('video-params')
-        .then((params) => {
-          if (params && typeof params === 'object' && params.aspect) {
-            const asp = parseFloat(params.aspect);
-            if (asp > 0) {
-              setVideoAspect(asp);
-            }
-          }
-        })
-        .catch(() => {});
-    };
-
-    queryAspect();
-
-    const interval = setInterval(queryAspect, 1000);
-    return () => clearInterval(interval);
-  }, [visible, selectedChannel?.stream_id]);
 
   const isMultiview = currentLayout && currentLayout !== 'main';
   const isHls = multiviewEngineMode === 'hls';
@@ -1736,66 +1712,14 @@ export function ChannelPanel({
         });
       }
 
-      // When the LiveTV guide is open in multiview, the primary MPV is temporarily
-      // resized to fullscreen so the EPG preview scaling works exactly like normal
-      // view. Use full window dimensions in that case.
-      let windowW = window.innerWidth;
-      let windowH = window.innerHeight;
+      // Physically resize the main MPV window to match the preview container's screen coordinates
+      const d = window.devicePixelRatio || 1;
+      const sx = Math.round(rect.left * d);
+      const sy = Math.round(rect.top * d);
+      const sw = Math.round(rect.width * d);
+      const sh = Math.round(rect.height * d);
 
-      const isMultiviewGrid = (currentLayout === '2x2' || currentLayout === 'bigbottom');
-
-      // Only use the smaller primary-rect dimensions when the guide is closed
-      // (this branch is effectively unused today because the function returns
-      // early above when !visible, but kept for explicitness/clarity).
-      if (isMultiviewGrid && !visible) {
-        const d = window.devicePixelRatio || 1;
-        const pr = primaryRect(currentLayout as LayoutMode, multiviewEngineMode);
-        if (pr.w > 0 && pr.h > 0) {
-          windowW = pr.w / d;
-          windowH = pr.h / d;
-        }
-      }
-
-      const screenAspect = windowW / windowH;
-      let videoNativeW = windowW;
-      let videoNativeH = windowH;
-
-      if (videoAspect > screenAspect) {
-        // Video is wider than screen -> letterboxed (fills width)
-        videoNativeW = windowW;
-        videoNativeH = windowW / videoAspect;
-      } else {
-        // Video is taller than screen -> pillarboxed (fills height)
-        videoNativeH = windowH;
-        videoNativeW = windowH * videoAspect;
-      }
-
-      const scaleX = rect.width / videoNativeW;
-      const scaleY = rect.height / videoNativeH;
-      const scale = Math.min(scaleX, scaleY);
-      
-      const zoom = Math.log2(scale);
-
-      const actualVideoW = videoNativeW * scale;
-      const actualVideoH = videoNativeH * scale;
-
-      const targetCenterX = rect.left + (rect.width / 2);
-      const targetCenterY = rect.top + (rect.height / 2);
-
-      const shiftX = targetCenterX - (windowW / 2);
-      const shiftY = targetCenterY - (windowH / 2);
-
-      const availSpaceX = windowW - actualVideoW;
-      const alignX = Math.abs(availSpaceX) < 1 ? 0 : (2 * shiftX) / availSpaceX;
-
-      const availSpaceY = windowH - actualVideoH;
-      const alignY = Math.abs(availSpaceY) < 1 ? 0 : (2 * shiftY) / availSpaceY;
-
-      Bridge.setProperties({
-        'video-zoom': zoom,
-        'video-align-x': alignX,
-        'video-align-y': alignY
-      });
+      invoke('mpv_set_geometry', { x: sx, y: sy, width: sw, height: sh }).catch(() => {});
 
       // Reposition secondary MPV slots inside EPG preview container cells (only if engineMode is 'mpv')
       if (multiviewEngineMode === 'mpv') {
@@ -1849,7 +1773,19 @@ export function ChannelPanel({
       updateVideoPosition();
     }
 
-    window.addEventListener('resize', updateVideoPosition);
+    // Listen for window move events to keep the MPV window aligned during dragging
+    let unlistenMove: (() => void) | null = null;
+    let disposed = false;
+
+    import('@tauri-apps/api/window').then(({ getCurrentWindow }) => {
+      const appWindow = getCurrentWindow();
+      appWindow.onMoved(() => {
+        updateVideoPosition();
+      }).then((unlisten) => {
+        if (disposed) unlisten();
+        else unlistenMove = unlisten;
+      }).catch(() => {});
+    }).catch(() => {});
 
     // Animation loop for CSS transitions (sidebar/category strip opening/closing)
     let animationFrameId: number;
@@ -1866,8 +1802,9 @@ export function ChannelPanel({
     animate();
 
     return () => {
+      disposed = true;
       observer.disconnect();
-      window.removeEventListener('resize', updateVideoPosition);
+      if (unlistenMove) unlistenMove();
       cancelAnimationFrame(animationFrameId);
       // NOTE: Do NOT call onPreviewVideoRectChange(null) here.
       // This cleanup runs on every dependency change (e.g. currentLayout/showMultiviewGrid),
@@ -1905,8 +1842,7 @@ export function ChannelPanel({
     showFailoverGroupModal,
     showPlaylistListModal,
     managingCustomGroup,
-    managingFavorites,
-    videoAspect
+    managingFavorites
   ]);
 
   // Dedicated effect: null out previewVideoRect only when the panel truly closes.
@@ -1916,6 +1852,13 @@ export function ChannelPanel({
   useEffect(() => {
     if (!visible && onPreviewVideoRectChange) {
       onPreviewVideoRectChange(null);
+    } else if (visible) {
+      Bridge.setProperties({
+        'video-zoom': 0,
+        'video-align-x': 0,
+        'video-align-y': 0,
+        'keepaspect': true,
+      }).catch(() => { });
     }
   }, [visible, onPreviewVideoRectChange]);
 

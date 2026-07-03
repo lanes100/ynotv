@@ -202,7 +202,6 @@ export function useMultiview() {
         // The EPG preview pane relies on the Main MPV being strictly unrestricted
         // so its software `video-zoom` scaler can project the video into the preview pane.
         if (isTabModeRef.current) {
-            await invoke('mpv_set_geometry', { x: 0, y: 0, width: 0, height: 0 }).catch(() => { });
             return;
         }
 
@@ -305,8 +304,6 @@ export function useMultiview() {
         const handleSync = () => {
             // When in tab mode, keep secondaries hidden off-screen
             if (isTabModeRef.current) {
-                // Primary MPV should be fullscreen for software scaling preview
-                invoke('mpv_set_geometry', { x: 0, y: 0, width: 0, height: 0 }).catch(() => { });
                 // Keep secondary MPVs hidden off-screen (only if in MPV mode)
                 if (engineModeRef.current !== 'hls') {
                     // Do not hide them if EPG multiview grid is active in the DOM (since ChannelPanel positions them)

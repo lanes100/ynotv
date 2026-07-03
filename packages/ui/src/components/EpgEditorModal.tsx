@@ -204,6 +204,7 @@ export function EpgEditorModal({ channel: initialChannel, sourceId, sourceName, 
   const resolvedSourceId = channel?.source_id ?? sourceId;
 
   // ── Channel tab state ──
+  const [rawChannel, setRawChannel] = useState<StoredChannel | null>(null);
   const [tvgId, setTvgId] = useState('');
   const [logoUrl, setLogoUrl] = useState('');
   const [epgLogoUrl, setEpgLogoUrl] = useState('');
@@ -289,14 +290,33 @@ export function EpgEditorModal({ channel: initialChannel, sourceId, sourceName, 
   const [automatchResults, setAutomatchResults] = useState<{ matched: number; skipped: number; errors: number; details: string[] } | null>(null);
   const [sourceCategories, setSourceCategories] = useState<StoredCategory[]>([]);
 
-  // ── Load channel override when channel changes ──
+  // ── Load channel override and raw channel when channel changes ──
   useEffect(() => {
-    if (!channel) return;
-    getChannelOverride(channel.stream_id).then(ov => {
+    if (!channel) {
+      setRawChannel(null);
+      return;
+    }
+
+    let active = true;
+    Promise.all([
+      db.channels.get(channel.stream_id),
+      getChannelOverride(channel.stream_id)
+    ]).then(([rc, ov]) => {
+      if (!active) return;
+      
+      const rawChan = rc || null;
+      setRawChannel(rawChan);
       setTvgId(ov?.epg_channel_id ?? channel.epg_channel_id ?? '');
-      setLogoUrl(ov?.stream_icon ?? channel.stream_icon ?? '');
+      
+      const playlistIcon = rawChan?.stream_icon ?? channel.stream_icon ?? '';
+      setLogoUrl(ov?.stream_icon ?? playlistIcon);
+      
       setTimeshiftHours(ov?.timeshift_hours != null ? String(ov.timeshift_hours) : '0');
+    }).catch(err => {
+      console.error('[EPG Editor] Failed to load channel details:', err);
     });
+
+    return () => { active = false; };
   }, [channel]);
 
   // ── Load matched EPG channel logo when tvgId changes ──
@@ -802,57 +822,61 @@ export function EpgEditorModal({ channel: initialChannel, sourceId, sourceName, 
                 </div>
               </div>
 
-              {(channel.stream_icon || epgLogoUrl) && (
-                <div className="epg-editor-field" style={{ marginTop: -8, marginBottom: 16 }}>
-                  <label className="epg-editor-label" style={{ fontSize: '0.75rem', opacity: 0.6 }}>Quick Select Logo:</label>
-                  <div style={{ display: 'flex', gap: 16, alignItems: 'center', marginTop: 4 }}>
-                    {channel.stream_icon && (
-                      <button
-                        type="button"
-                        onClick={() => setLogoUrl(channel.stream_icon || '')}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 6,
-                          background: logoUrl === channel.stream_icon ? 'rgba(0,212,255,0.15)' : 'rgba(255,255,255,0.03)',
-                          border: logoUrl === channel.stream_icon ? '1px solid rgba(0,212,255,0.5)' : '1px solid rgba(255,255,255,0.1)',
-                          borderRadius: 6,
-                          padding: '4px 8px',
-                          cursor: 'pointer',
-                          color: '#fff',
-                          fontSize: '0.75rem',
-                          outline: 'none',
-                        }}
-                      >
-                        <img src={channel.stream_icon} alt="" style={{ width: 20, height: 20, objectFit: 'contain' }} />
-                        <span>Playlist Logo</span>
-                      </button>
-                    )}
-                    {epgLogoUrl && (
-                      <button
-                        type="button"
-                        onClick={() => setLogoUrl(epgLogoUrl)}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 6,
-                          background: logoUrl === epgLogoUrl ? 'rgba(0,212,255,0.15)' : 'rgba(255,255,255,0.03)',
-                          border: logoUrl === epgLogoUrl ? '1px solid rgba(0,212,255,0.5)' : '1px solid rgba(255,255,255,0.1)',
-                          borderRadius: 6,
-                          padding: '4px 8px',
-                          cursor: 'pointer',
-                          color: '#fff',
-                          fontSize: '0.75rem',
-                          outline: 'none',
-                        }}
-                      >
-                        <img src={epgLogoUrl} alt="" style={{ width: 20, height: 20, objectFit: 'contain' }} />
-                        <span>EPG Logo</span>
-                      </button>
-                    )}
+              {(() => {
+                const playlistIcon = rawChannel?.stream_icon || channel.stream_icon;
+                if (!playlistIcon && !epgLogoUrl) return null;
+                return (
+                  <div className="epg-editor-field" style={{ marginTop: -8, marginBottom: 16 }}>
+                    <label className="epg-editor-label" style={{ fontSize: '0.75rem', opacity: 0.6 }}>Quick Select Logo:</label>
+                    <div style={{ display: 'flex', gap: 16, alignItems: 'center', marginTop: 4 }}>
+                      {playlistIcon && (
+                        <button
+                          type="button"
+                          onClick={() => setLogoUrl(playlistIcon)}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 6,
+                            background: logoUrl === playlistIcon ? 'rgba(0,212,255,0.15)' : 'rgba(255,255,255,0.03)',
+                            border: logoUrl === playlistIcon ? '1px solid rgba(0,212,255,0.5)' : '1px solid rgba(255,255,255,0.1)',
+                            borderRadius: 6,
+                            padding: '4px 8px',
+                            cursor: 'pointer',
+                            color: '#fff',
+                            fontSize: '0.75rem',
+                            outline: 'none',
+                          }}
+                        >
+                          <img src={playlistIcon} alt="" style={{ width: 20, height: 20, objectFit: 'contain' }} />
+                          <span>Playlist Logo</span>
+                        </button>
+                      )}
+                      {epgLogoUrl && (
+                        <button
+                          type="button"
+                          onClick={() => setLogoUrl(epgLogoUrl)}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 6,
+                            background: logoUrl === epgLogoUrl ? 'rgba(0,212,255,0.15)' : 'rgba(255,255,255,0.03)',
+                            border: logoUrl === epgLogoUrl ? '1px solid rgba(0,212,255,0.5)' : '1px solid rgba(255,255,255,0.1)',
+                            borderRadius: 6,
+                            padding: '4px 8px',
+                            cursor: 'pointer',
+                            color: '#fff',
+                            fontSize: '0.75rem',
+                            outline: 'none',
+                          }}
+                        >
+                          <img src={epgLogoUrl} alt="" style={{ width: 20, height: 20, objectFit: 'contain' }} />
+                          <span>EPG Logo</span>
+                        </button>
+                      )}
+                    </div>
                   </div>
-                </div>
-              )}
+                );
+              })()}
 
               <div className="epg-editor-field">
                 <label className="epg-editor-label">EPG Time Offset (hours)</label>

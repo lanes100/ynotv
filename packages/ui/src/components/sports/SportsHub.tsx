@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { invoke } from '@tauri-apps/api/core';
 import type { SportsEvent, SportsTeam, SportsLeague, SportsTabId } from '@ynotv/core';
 import { Bridge, type AspectRatioMode, getAspectRatioLabel } from '../../services/tauri-bridge';
 import {
@@ -78,9 +79,22 @@ export function SportsHub({
   const fillerRightRef = useRef<HTMLDivElement>(null);
   const fillerTopRef = useRef<HTMLDivElement>(null);
   const fillerBottomRef = useRef<HTMLDivElement>(null);
-  const [videoAspect, setVideoAspect] = useState<number>(16 / 9);
   const activeTab = useSportsSelectedTab();
   const setActiveTab = useSetSportsSelectedTab();
+
+  // Set scaling properties once when visible or aspectRatio changes
+  useEffect(() => {
+    if (visible) {
+      Bridge.setProperties({
+        'video-zoom': 0,
+        'video-align-x': 0,
+        'video-align-y': 0,
+        'video-aspect-override': aspectRatio === '4:3' ? '4:3' : (aspectRatio === '16:9' ? '16:9' : -1),
+        'keepaspect': aspectRatio !== 'stretch',
+        'panscan': aspectRatio === 'fill' ? 1 : 0,
+      }).catch(() => { });
+    }
+  }, [visible, aspectRatio]);
   const [selectedSport, setSelectedSport] = useState<string | null>(null);
   const [selectedLeague, setSelectedLeague] = useState<SportsLeague | null>(null);
   const [selectedTeam, setSelectedTeam] = useState<SportsTeam | null>(null);
@@ -164,37 +178,10 @@ export function SportsHub({
     }
   }, [selectedSport]);
 
-  // Periodically query video aspect ratio from MPV while preview is visible to ensure correct scaling when video loads
-  useEffect(() => {
-    if (!visible) return;
-
-    const queryAspect = () => {
-      Bridge.getProperty('video-params')
-        .then((params) => {
-          if (params && typeof params === 'object' && params.aspect) {
-            const asp = parseFloat(params.aspect);
-            if (asp > 0) {
-              setVideoAspect(asp);
-            }
-          }
-        })
-        .catch(() => {});
-    };
-
-    queryAspect();
-
-    const interval = setInterval(queryAspect, 1000);
-    return () => clearInterval(interval);
-  }, [visible]);
-
   // Handle Video Resizing for Preview Mode via ResizeObserver explicitly when component mounts
   useEffect(() => {
     let isSyncing = false;
     const isReady = visible === undefined ? true : (visible && transitionCompleted);
-
-    if (isReady) {
-      setVideoAspect(16 / 9);
-    }
 
     const updateVideoPosition = async () => {
       if (!previewRef.current || !previewEnabled || !isReady) {
@@ -228,88 +215,26 @@ export function SportsHub({
         height: rect.height,
       });
 
-      const windowW = window.innerWidth;
-      const windowH = window.innerHeight;
+      // Reset empty space filler overlays (handled natively by MPV window bounding box now)
+      if (fillerLeftRef.current) fillerLeftRef.current.style.width = '0px';
+      if (fillerRightRef.current) fillerRightRef.current.style.width = '0px';
+      if (fillerTopRef.current) fillerTopRef.current.style.height = '0px';
+      if (fillerBottomRef.current) fillerBottomRef.current.style.height = '0px';
 
-      // Determine target aspect ratio based on mode
-      let targetAspect: number;
-      let aspectOverride: number | string;
-      switch (aspectRatio) {
-        case 'stretch':
-          targetAspect = rect.width / rect.height;
-          aspectOverride = targetAspect;
-          break;
-        case '4:3':
-          targetAspect = 4 / 3;
-          aspectOverride = '4:3';
-          break;
-        case '16:9':
-          targetAspect = 16 / 9;
-          aspectOverride = '16:9';
-          break;
-        case 'fill':
-        case 'fit':
-        default:
-          targetAspect = videoAspect;
-          aspectOverride = -1;
-          break;
-      }
+      // Physically resize the main MPV window to match the preview container's screen coordinates
+      const d = window.devicePixelRatio || 1;
+      const sx = Math.round(rect.left * d);
+      const sy = Math.round(rect.top * d);
+      const sw = Math.round(rect.width * d);
+      const sh = Math.round(rect.height * d);
 
-      // MPV natively fits the video at targetAspect inside the window.
-      let videoNativeW = windowW;
-      let videoNativeH = windowW / targetAspect;
-
-      if (videoNativeH > windowH) {
-        videoNativeH = windowH;
-        videoNativeW = windowH * targetAspect;
-      }
-
-      const scaleX = rect.width / videoNativeW;
-      const scaleY = rect.height / videoNativeH;
-
-      // Fit / Stretch: ensure whole video is visible (letterbox or exact fill)
-      // Fill: crop to fill rect
-      const scale = aspectRatio === 'fill' ? Math.max(scaleX, scaleY) : Math.min(scaleX, scaleY);
-
-      const zoom = Math.log2(scale);
-
-      const actualVideoW = videoNativeW * scale;
-      const actualVideoH = videoNativeH * scale;
-
-      // Calculate empty space around the video and update filler overlays
-      const hPad = Math.max(0, (rect.width - actualVideoW) / 2);
-      const vPad = Math.max(0, (rect.height - actualVideoH) / 2);
-
-      if (fillerLeftRef.current) fillerLeftRef.current.style.width = `${Math.round(hPad)}px`;
-      if (fillerRightRef.current) fillerRightRef.current.style.width = `${Math.round(hPad)}px`;
-      if (fillerTopRef.current) fillerTopRef.current.style.height = `${Math.round(vPad)}px`;
-      if (fillerBottomRef.current) fillerBottomRef.current.style.height = `${Math.round(vPad)}px`;
-
-      const targetCenterX = rect.left + (rect.width / 2);
-      const targetCenterY = rect.top + (rect.height / 2);
-
-      const shiftX = targetCenterX - (windowW / 2);
-      const shiftY = targetCenterY - (windowH / 2);
-
-      const availSpaceX = windowW - actualVideoW;
-      const alignX = Math.abs(availSpaceX) < 1 ? 0 : (2 * shiftX) / availSpaceX;
-
-      const availSpaceY = windowH - actualVideoH;
-      const alignY = Math.abs(availSpaceY) < 1 ? 0 : (2 * shiftY) / availSpaceY;
-
-      try {
-        await Bridge.setProperties({
-          'video-aspect-override': aspectOverride,
-          'keepaspect': true,
-          'video-zoom': zoom,
-          'video-align-x': alignX,
-          'video-align-y': alignY,
+      invoke('mpv_set_geometry', { x: sx, y: sy, width: sw, height: sh })
+        .catch((e) => {
+          console.warn('[SportsPreview] Geometry Sync Failed', e);
+        })
+        .finally(() => {
+          isSyncing = false;
         });
-      } catch (e) {
-        console.warn('[SportsPreview] Geometry Sync Failed', e);
-      } finally {
-        isSyncing = false;
-      }
     };
 
     const observer = new ResizeObserver(() => {
@@ -321,7 +246,19 @@ export function SportsHub({
       updateVideoPosition();
     }
 
-    window.addEventListener('resize', updateVideoPosition);
+    // Listen for window move events to keep the MPV window aligned during dragging
+    let unlistenMove: (() => void) | null = null;
+    let disposed = false;
+
+    import('@tauri-apps/api/window').then(({ getCurrentWindow }) => {
+      const appWindow = getCurrentWindow();
+      appWindow.onMoved(() => {
+        updateVideoPosition();
+      }).then((unlisten) => {
+        if (disposed) unlisten();
+        else unlistenMove = unlisten;
+      }).catch(() => {});
+    }).catch(() => {});
 
     let animationFrameId: number;
     const startTime = performance.now();
@@ -339,12 +276,13 @@ export function SportsHub({
     }
 
     return () => {
+      disposed = true;
       observer.disconnect();
-      window.removeEventListener('resize', updateVideoPosition);
+      if (unlistenMove) unlistenMove();
       cancelAnimationFrame(animationFrameId);
       onPreviewVideoRectChange?.(null);
     };
-  }, [previewEnabled, aspectRatio, visible, transitionCompleted, videoAspect]);
+  }, [previewEnabled, aspectRatio, visible, transitionCompleted]);
 
   const handleSearchChannels = useCallback((channelName: string) => {
     if (onSearchChannels) {
