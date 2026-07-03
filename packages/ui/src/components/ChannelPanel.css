@@ -960,6 +960,7 @@
   align-items: stretch;
   min-height: 56px;
   border-bottom: 1px solid var(--surface-border, rgba(255, 255, 255, 0.04));
+  will-change: transform;
 }
 
 .guide-channel-row.has-playlist-name {
@@ -1088,7 +1089,7 @@
   color: var(--text-muted, rgba(255, 255, 255, 0.3));
 }
 
-/* Marquee effect on hover */
+/* Marquee effect on hover — gradient fade on right edge of channel name */
 .guide-channel-name-container {
   flex: 1;
   min-width: 0;

@@ -22,16 +22,12 @@ export function MetadataBadge({ streamId, variant = 'compact' }: MetadataBadgePr
         getChannelMetadata(streamId).then(setMetadata);
     }, [streamId, refreshKey]);
 
-    // Listen to database updates for channelMetadata table
+    // Listen to database updates for channelMetadata table only
+    // Scoped subscription prevents re-renders on unrelated DB writes (e.g. EPG sync, favorites)
     useEffect(() => {
-        const handleDbUpdate = (event: { tableName: string; type: string }) => {
-            if (event.tableName === 'channelMetadata') {
-                // Trigger a refresh by incrementing the key
-                setRefreshKey(prev => prev + 1);
-            }
-        };
-
-        const unsubscribe = dbEvents.subscribe(handleDbUpdate);
+        const unsubscribe = dbEvents.subscribe('channelMetadata', () => {
+            setRefreshKey(prev => prev + 1);
+        });
         return unsubscribe;
     }, []);
 

@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo, useRef, useCallback, memo } from 'react';
 import { useSourceVersion } from '../contexts/SourceVersionContext';
 import { Virtuoso, type VirtuosoHandle } from 'react-virtuoso';
-import { useChannels, useCategories, useAllPrograms, parseCategoryIds } from '../hooks/useChannels';
+import { useChannels, useCategories, useAllPrograms, useProgramsInRange, parseCategoryIds } from '../hooks/useChannels';
+import { useAppSettings } from '../hooks/useAppSettings';
 import { useLiveQuery } from '../hooks/useSqliteLiveQuery';
 import { useTimeGrid } from '../hooks/useTimeGrid';
 import { useActiveRecordings } from '../hooks/useActiveRecordings';
@@ -78,6 +79,9 @@ const ChannelRowVirtuoso = memo(function ChannelRowVirtuoso({
   data: ChannelRowData;
 }) {
   const isCurrentlyPlaying = data.currentChannel?.stream_id === channel.stream_id;
+  const handlePlay = useCallback(() => {
+    data.handleChannelClick(channel);
+  }, [channel, data.handleChannelClick]);
 
   return (
     <ChannelRow
@@ -89,7 +93,7 @@ const ChannelRowVirtuoso = memo(function ChannelRowVirtuoso({
       windowEnd={data.windowEnd}
       pixelsPerHour={data.pixelsPerHour}
       visibleHours={data.visibleHours}
-      onPlay={() => data.handleChannelClick(channel)}
+      onPlay={handlePlay}
       onPlayCatchup={data.onPlayCatchup}
       onFavoriteToggle={data.handleFavoriteToggle}
       categoryId={data.categoryId}
@@ -103,6 +107,43 @@ const ChannelRowVirtuoso = memo(function ChannelRowVirtuoso({
       sourceNames={data.sourceNames}
     />
   );
+}, (prevProps, nextProps) => {
+  const prevData = prevProps.data;
+  const nextData = nextProps.data;
+
+  // Reference comparison for programs map query result array
+  const prevProgs = prevData.programs.get(prevProps.channel.stream_id);
+  const nextProgs = nextData.programs.get(nextProps.channel.stream_id);
+  const programsChanged = prevProgs !== nextProgs;
+
+  // Check if recording state changed for this channel
+  const prevRecs = prevData.activeRecordings ?? [];
+  const nextRecs = nextData.activeRecordings ?? [];
+  const prevChannelRec = prevRecs.some(r => r.channelId === prevProps.channel.stream_id);
+  const nextChannelRec = nextRecs.some(r => r.channelId === nextProps.channel.stream_id);
+  const recordingsChanged = prevChannelRec !== nextChannelRec;
+
+  return prevProps.index === nextProps.index &&
+         prevProps.channel.stream_id === nextProps.channel.stream_id &&
+         prevProps.channel.is_favorite === nextProps.channel.is_favorite &&
+         prevProps.channel.name === nextProps.channel.name &&
+         prevProps.channel.stream_icon === nextProps.channel.stream_icon &&
+         prevProps.channel.channel_num === nextProps.channel.channel_num &&
+         prevProps.channel.alias === nextProps.channel.alias &&
+         prevProps.channel.tv_archive === nextProps.channel.tv_archive &&
+         prevProps.channel.is_adult === nextProps.channel.is_adult &&
+         prevProps.channel.source_id === nextProps.channel.source_id &&
+         prevData.channelSortOrder === nextData.channelSortOrder &&
+         prevData.currentChannel?.stream_id === nextData.currentChannel?.stream_id &&
+         prevData.windowStart.getTime() === nextData.windowStart.getTime() &&
+         prevData.windowEnd.getTime() === nextData.windowEnd.getTime() &&
+         prevData.pixelsPerHour === nextData.pixelsPerHour &&
+         prevData.visibleHours === nextData.visibleHours &&
+         prevData.categoryId === nextData.categoryId &&
+         prevData.currentLayout === nextData.currentLayout &&
+         prevData.showPlaylistName === nextData.showPlaylistName &&
+         !recordingsChanged &&
+         !programsChanged;
 });
 
 interface ChannelPanelProps {
@@ -269,6 +310,7 @@ export function ChannelPanel({
 }: ChannelPanelProps) {
   const epgView = useEpgView();
   const epgVisibleHours = useEpgVisibleHours();
+  const { epgLazyLoadingEnabled, layoutSettingsLoaded } = useAppSettings();
 
   useEffect(() => {
     if (error) console.log('[ChannelPanel] Received error prop:', error);
@@ -994,15 +1036,25 @@ export function ChannelPanel({
   // Get stream IDs for programs lookup
   // Include selectedChannel (from currentChannel prop) in case it's from a different category/source
   const streamIds = useMemo(() => {
-    const ids = channels.map((ch) => ch.stream_id);
+    let activeChannels = channels;
+    if (epgLazyLoadingEnabled && !isSearchMode && !isWatchlistMode) {
+      const buffer = 15; // 15 channels buffer above/below for smooth scrolling
+      const start = Math.max(0, visibleIndices.startIndex - buffer);
+      const end = Math.min(channels.length, visibleIndices.endIndex + buffer);
+      activeChannels = channels.slice(start, end);
+    }
+
+    const ids = activeChannels.map((ch) => ch.stream_id);
     if (selectedChannel?.stream_id && !ids.includes(selectedChannel.stream_id)) {
       ids.push(selectedChannel.stream_id);
     }
     return ids;
-  }, [channels, selectedChannel?.stream_id]);
+  }, [channels, selectedChannel?.stream_id, visibleIndices, epgLazyLoadingEnabled, isSearchMode, isWatchlistMode]);
 
-  // Fetch ALL programs at once (no lazy loading by time window)
-  const programs = useAllPrograms(streamIds);
+  // Fetch programs (either ALL at once or lazy-loaded by time window)
+  const rangePrograms = useProgramsInRange(streamIds, loadStart, loadEnd, { skip: !layoutSettingsLoaded || !epgLazyLoadingEnabled });
+  const allPrograms = useAllPrograms(streamIds, { skip: !layoutSettingsLoaded || epgLazyLoadingEnabled });
+  const programs = epgLazyLoadingEnabled ? rangePrograms : allPrograms;
 
   // Trigger on-demand short EPG fetch for visible Stalker channels
   useEffect(() => {

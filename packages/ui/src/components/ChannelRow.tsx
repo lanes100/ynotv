@@ -188,6 +188,8 @@ export const ChannelRow = memo(function ChannelRow({
               key={channel.stream_icon}
               src={channel.stream_icon}
               alt=""
+              loading="lazy"
+              decoding="async"
               onError={(e) => {
                 (e.target as HTMLImageElement).style.display = 'none';
               }}

@@ -7904,8 +7904,88 @@ html.disable-theme-blobs .livetv-liquid-glass-bg::after {
 /* 2. Disable Glass Backdrop Blur */
 html.disable-theme-backdrop-blur * {
   backdrop-filter: none !important;
+    0 4px 14px rgba(0, 0, 0, 0.3) !important;
+}
+
+html.modern-ui-v3 .now-playing-bar .npb-btn:active:not(:disabled) {
+  transform: scale(0.94) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 1px 4px rgba(0, 0, 0, 0.2) !important;
+}
+
+html.modern-ui-v3 .now-playing-bar .npb-btn:disabled {
+  opacity: 0.25 !important;
+}
+
+/* ==========================================================================
+   THEME OPTIMIZATION OVERRIDES
+   ========================================================================== */
+
+/* 1. Disable Theme Background animations (Blobs) */
+html.disable-theme-blobs .livetv-liquid-glass-bg .glass-blob,
+html.disable-theme-blobs .livetv-liquid-glass-bg::before,
+html.disable-theme-blobs .livetv-liquid-glass-bg::after {
+  display: none !important;
+  animation: none !important;
+}
+
+/* 2. Disable Glass Backdrop Blur */
+html.disable-theme-backdrop-blur * {
+  backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
 }
 
+/* 3. Disable EPG Card Shadows & Transitions */
+html.disable-epg-transitions .program-block {
+  transition: none !important;
+  box-shadow: none !important;
+}
+html.disable-epg-transitions .program-block:hover {
+  transition: none !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+/* Also suppress channel info column and row background transitions */
+html.disable-epg-transitions .guide-channel-info {
+  transition: none !important;
+}
+html.disable-epg-transitions .guide-channel-row {
+  transition: none !important;
+}
+/* Stop the marquee scroll animation on hover when transitions are disabled */
+html.disable-epg-transitions .guide-channel-info:hover .guide-channel-name {
+  animation: none !important;
+  overflow: hidden !important;
+  display: block !important;
+}
 
+/* 4. Reduce EPG GPU Layer Usage
+   Removes persistent will-change layers from every channel row and the scroll container.
+   Adds CSS contain to isolate repaints per row and per program grid.
+   content-visibility: auto lets the browser skip off-screen program block painting.
+   No visual change — purely rendering hints. */
+html.epg-reduce-gpu-layers .guide-channels {
+  will-change: auto !important;
+}
+html.epg-reduce-gpu-layers .guide-channel-row {
+  will-change: auto !important;
+  contain: layout style !important;
+}
+html.epg-reduce-gpu-layers .guide-program-grid {
+  contain: layout style !important;
+  content-visibility: auto;
+  contain-intrinsic-size: 0 56px;
+}
 
+/* 5. Disable EPG Channel Name Gradient Fade
+   Removes the mask-image gradient on channel name containers (each creates a GPU compositing layer)
+   and switches programmatic scrolls to instant instead of smooth.
+   Visual trade-off: long channel names show ellipsis (…) instead of soft gradient fade. */
+html.epg-disable-channel-fade .guide-channel-name-container {
+  mask-image: none !important;
+  -webkit-mask-image: none !important;
+}
+html.epg-disable-channel-fade .guide-channels {
+  scroll-behavior: auto !important;
+}

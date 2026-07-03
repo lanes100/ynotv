@@ -81,6 +81,10 @@ export interface AppSettings {
   // Theme Optimization
   disableThemeBlobs: boolean;
   disableThemeBackdropBlur: boolean;
+  epgLazyLoadingEnabled: boolean;
+  disableEpgTransitions: boolean;
+  epgReduceGpuLayers: boolean;
+  epgDisableChannelFade: boolean;
 
   // Startup view
   startupView: 'none' | 'guide' | 'movies' | 'series' | 'dvr' | 'sports' | 'calendar' | 'stremio' | 'nuvio';
@@ -129,6 +133,10 @@ export interface AppSettings {
     setSavedCustomThemes: (themes: CustomThemeConfig[]) => void;
     setDisableThemeBlobs: (disabled: boolean) => void;
     setDisableThemeBackdropBlur: (disabled: boolean) => void;
+    setEpgLazyLoadingEnabled: (enabled: boolean) => void;
+    setDisableEpgTransitions: (disabled: boolean) => void;
+    setEpgReduceGpuLayers: (enabled: boolean) => void;
+    setEpgDisableChannelFade: (enabled: boolean) => void;
 }
 
 /**
@@ -250,6 +258,10 @@ export function useAppSettings(): AppSettings {
   // Theme Optimization settings
   const [disableThemeBlobs, setDisableThemeBlobsState] = useState(false);
   const [disableThemeBackdropBlur, setDisableThemeBackdropBlurState] = useState(false);
+  const [epgLazyLoadingEnabled, setEpgLazyLoadingEnabledState] = useState(false);
+  const [disableEpgTransitions, setDisableEpgTransitionsState] = useState(false);
+  const [epgReduceGpuLayers, setEpgReduceGpuLayersState] = useState(false);
+  const [epgDisableChannelFade, setEpgDisableChannelFadeState] = useState(false);
 
   // Global Font selection states
   const [appFontFamily, setAppFontFamilyState] = useState<string>('inter');
@@ -361,6 +373,30 @@ export function useAppSettings(): AppSettings {
     }
   }, [disableThemeBackdropBlur]);
 
+  useEffect(() => {
+    if (disableEpgTransitions) {
+      document.documentElement.classList.add('disable-epg-transitions');
+    } else {
+      document.documentElement.classList.remove('disable-epg-transitions');
+    }
+  }, [disableEpgTransitions]);
+
+  useEffect(() => {
+    if (epgReduceGpuLayers) {
+      document.documentElement.classList.add('epg-reduce-gpu-layers');
+    } else {
+      document.documentElement.classList.remove('epg-reduce-gpu-layers');
+    }
+  }, [epgReduceGpuLayers]);
+
+  useEffect(() => {
+    if (epgDisableChannelFade) {
+      document.documentElement.classList.add('epg-disable-channel-fade');
+    } else {
+      document.documentElement.classList.remove('epg-disable-channel-fade');
+    }
+  }, [epgDisableChannelFade]);
+
   // Load layout persistence settings on mount
   useEffect(() => {
     const loadLayoutSettings = async () => {
@@ -454,6 +490,10 @@ export function useAppSettings(): AppSettings {
           // Load Optimization settings
           setDisableThemeBlobsState(result.data.disableThemeBlobs ?? false);
           setDisableThemeBackdropBlurState(result.data.disableThemeBackdropBlur ?? false);
+          setEpgLazyLoadingEnabledState(result.data.epgLazyLoadingEnabled ?? false);
+          setDisableEpgTransitionsState(result.data.disableEpgTransitions ?? false);
+          setEpgReduceGpuLayersState(result.data.epgReduceGpuLayers ?? false);
+          setEpgDisableChannelFadeState(result.data.epgDisableChannelFade ?? false);
 
           // Apply EPG darken current setting on load
           if (result.data.epgDarkenCurrent) {
@@ -979,6 +1019,50 @@ export function useAppSettings(): AppSettings {
     }
   }, []);
 
+  const setEpgLazyLoadingEnabled = useCallback(async (enabled: boolean) => {
+    setEpgLazyLoadingEnabledState(enabled);
+    if (window.storage) {
+      try {
+        await window.storage.updateSettings({ epgLazyLoadingEnabled: enabled });
+      } catch (e) {
+        console.error('[useAppSettings] Failed to save epgLazyLoadingEnabled:', e);
+      }
+    }
+  }, []);
+
+  const setDisableEpgTransitions = useCallback(async (disabled: boolean) => {
+    setDisableEpgTransitionsState(disabled);
+    if (window.storage) {
+      try {
+        await window.storage.updateSettings({ disableEpgTransitions: disabled });
+      } catch (e) {
+        console.error('[useAppSettings] Failed to save disableEpgTransitions:', e);
+      }
+    }
+  }, []);
+
+  const setEpgReduceGpuLayers = useCallback(async (enabled: boolean) => {
+    setEpgReduceGpuLayersState(enabled);
+    if (window.storage) {
+      try {
+        await window.storage.updateSettings({ epgReduceGpuLayers: enabled });
+      } catch (e) {
+        console.error('[useAppSettings] Failed to save epgReduceGpuLayers:', e);
+      }
+    }
+  }, []);
+
+  const setEpgDisableChannelFade = useCallback(async (enabled: boolean) => {
+    setEpgDisableChannelFadeState(enabled);
+    if (window.storage) {
+      try {
+        await window.storage.updateSettings({ epgDisableChannelFade: enabled });
+      } catch (e) {
+        console.error('[useAppSettings] Failed to save epgDisableChannelFade:', e);
+      }
+    }
+  }, []);
+
   const setSavedCustomThemes = useCallback(async (themes: CustomThemeConfig[]) => {
     setSavedCustomThemesState(themes);
     if (window.storage) {
@@ -1086,5 +1170,13 @@ export function useAppSettings(): AppSettings {
     setDisableThemeBlobs,
     disableThemeBackdropBlur,
     setDisableThemeBackdropBlur,
+    epgLazyLoadingEnabled,
+    setEpgLazyLoadingEnabled,
+    disableEpgTransitions,
+    setDisableEpgTransitions,
+    epgReduceGpuLayers,
+    setEpgReduceGpuLayers,
+    epgDisableChannelFade,
+    setEpgDisableChannelFade,
   };
 }

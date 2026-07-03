@@ -130,6 +130,10 @@ export interface AppSettings {
     epgBoldSourceCategories?: boolean;
     disableThemeBlobs?: boolean;
     disableThemeBackdropBlur?: boolean;
+    epgLazyLoadingEnabled?: boolean;
+    disableEpgTransitions?: boolean;
+    epgReduceGpuLayers?: boolean;
+    epgDisableChannelFade?: boolean;
     shortcuts?: ShortcutsMap;
     startupWidth?: number;
     startupHeight?: number;

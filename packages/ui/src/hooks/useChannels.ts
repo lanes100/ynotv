@@ -1240,11 +1240,13 @@ const SQL_CHUNK_SIZE = 500;
 export function useProgramsInRange(
   streamIds: string[],
   windowStart: Date,
-  windowEnd: Date
+  windowEnd: Date,
+  options?: { skip?: boolean }
 ): Map<string, StoredProgram[]> {
+  const skip = options?.skip ?? false;
   const programs = useLiveQuery(
     async () => {
-      if (streamIds.length === 0) return new Map<string, StoredProgram[]>();
+      if (skip || streamIds.length === 0) return new Map<string, StoredProgram[]>();
 
       const result = new Map<string, StoredProgram[]>();
       for (const id of streamIds) result.set(id, []);
@@ -1287,7 +1289,7 @@ export function useProgramsInRange(
 
       return result;
     },
-    [streamIds.join(','), windowStart.getTime(), windowEnd.getTime()]
+    [streamIds.join(','), windowStart.getTime(), windowEnd.getTime(), skip]
   );
 
   return programs ?? new Map();
@@ -1335,10 +1337,14 @@ export function usePrograms(streamIds: string[]): Map<string, StoredProgram | nu
 
 // Hook to get ALL programs for channels (loads everything at once, no lazy loading by time window)
 // Use this instead of useProgramsInRange when you want to load all EPG data upfront
-export function useAllPrograms(streamIds: string[]): Map<string, StoredProgram[]> {
+export function useAllPrograms(
+  streamIds: string[],
+  options?: { skip?: boolean }
+): Map<string, StoredProgram[]> {
+  const skip = options?.skip ?? false;
   const programs = useLiveQuery(
     async () => {
-      if (streamIds.length === 0) return new Map<string, StoredProgram[]>();
+      if (skip || streamIds.length === 0) return new Map<string, StoredProgram[]>();
 
       const result = new Map<string, StoredProgram[]>();
       for (const id of streamIds) result.set(id, []);
@@ -1377,7 +1383,7 @@ export function useAllPrograms(streamIds: string[]): Map<string, StoredProgram[]
 
       return result;
     },
-    [streamIds.join(',')],
+    [streamIds.join(','), skip],
     undefined, // defaultResult
     0, // staleTime: 0 - streamIds changes need fresh data
     'programs' // tableName: only re-run when programs table changes
