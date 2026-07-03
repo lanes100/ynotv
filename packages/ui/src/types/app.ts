@@ -128,6 +128,8 @@ export interface AppSettings {
     epgBoldChannelNames?: boolean;
     epgBoldTopCategories?: boolean;
     epgBoldSourceCategories?: boolean;
+    disableThemeBlobs?: boolean;
+    disableThemeBackdropBlur?: boolean;
     shortcuts?: ShortcutsMap;
     startupWidth?: number;
     startupHeight?: number;

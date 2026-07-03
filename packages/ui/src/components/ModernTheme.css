@@ -7889,4 +7889,23 @@ html.modern-ui-v3[data-theme="custom"] .livetv-liquid-glass-bg .blob-4 {
   background: radial-gradient(circle, var(--custom-blob-4, rgba(118, 255, 3, 0.3)) 0%, transparent 70%) !important;
 }
 
+/* ==========================================================================
+   THEME OPTIMIZATION OVERRIDES
+   ========================================================================== */
+
+/* 1. Disable Theme Background animations (Blobs) */
+html.disable-theme-blobs .livetv-liquid-glass-bg .glass-blob,
+html.disable-theme-blobs .livetv-liquid-glass-bg::before,
+html.disable-theme-blobs .livetv-liquid-glass-bg::after {
+  display: none !important;
+  animation: none !important;
+}
+
+/* 2. Disable Glass Backdrop Blur */
+html.disable-theme-backdrop-blur * {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+
 

@@ -22,6 +22,7 @@ const TAB_LABELS: Record<SettingsTabId, string> = {
   nuvio: 'Nuvio',
   theme: 'Theme',
   ui: 'UI',
+  optimization: 'Optimization',
   navigation: 'Navigation',
   startup: 'Startup',
   scrobbling: 'Trakt',
@@ -145,6 +146,11 @@ const SETTINGS_SEARCH_INDEX: SettingsSearchResult[] = [
 
   // --- Theme ---
   { id: 'theme-tab', label: 'Theme', tabId: 'theme', tabLabel: 'Theme', section: 'Theme' },
+
+  // --- Optimization ---
+  { id: 'optimization-tab', label: 'Optimization', tabId: 'optimization', tabLabel: 'Optimization', section: 'Optimization' },
+  { id: 'opt-theme-blobs', label: 'Disable Background Animations (Glass Blobs)', description: 'Hide floating background glass blobs to reduce idle GPU usage.', tabId: 'optimization', tabLabel: 'Optimization', section: 'Theme Optimization' },
+  { id: 'opt-theme-blur', label: 'Disable Glass Backdrop Blur', description: 'Remove backdrop blur from UI components to reduce GPU usage.', tabId: 'optimization', tabLabel: 'Optimization', section: 'Theme Optimization' },
 
   // --- UI ---
   { id: 'ui-tab', label: 'UI', tabId: 'ui', tabLabel: 'UI', section: 'UI' },

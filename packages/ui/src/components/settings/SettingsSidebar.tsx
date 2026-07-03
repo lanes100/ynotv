@@ -12,6 +12,7 @@ export type SettingsTabId =
   | 'shortcuts'
   | 'export-import'
   | 'ui'
+  | 'optimization'
   | 'navigation'
   | 'theme'
   | 'startup'
@@ -38,6 +39,7 @@ const SETTINGS_TABS: SettingsTab[] = [
   { id: 'nuvio', label: 'Nuvio' },
   { id: 'theme', label: 'Theme' },
   { id: 'ui', label: 'UI' },
+  { id: 'optimization', label: 'Optimization' },
   { id: 'navigation', label: 'Navigation' },
   { id: 'startup', label: 'Startup' },
   { id: 'scrobbling', label: 'Trakt' },

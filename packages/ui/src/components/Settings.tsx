@@ -10,6 +10,7 @@ import { ShortcutsTab } from './settings/ShortcutsTab';
 import { ImportExportTab } from './settings/ImportExportTab';
 import { UITab } from './settings/UITab';
 import { ThemeTab } from './settings/ThemeTab';
+import { OptimizationTab } from './settings/OptimizationTab';
 import { StartupTab, type SavedLayoutState } from './settings/StartupTab';
 import { NavigationTab } from './settings/NavigationTab';
 import { PlaybackTab } from './settings/PlaybackTab';
@@ -2072,6 +2073,8 @@ export function Settings({
             onSettingsChange={handleUiSettingsChange}
           />
         );
+      case 'optimization':
+        return <OptimizationTab />;
       case 'navigation':
         return (
           <NavigationTab

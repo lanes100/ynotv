@@ -78,6 +78,10 @@ export interface AppSettings {
   sportsScale: number;
   sportsBgOpacity: number; // 0–1
 
+  // Theme Optimization
+  disableThemeBlobs: boolean;
+  disableThemeBackdropBlur: boolean;
+
   // Startup view
   startupView: 'none' | 'guide' | 'movies' | 'series' | 'dvr' | 'sports' | 'calendar' | 'stremio' | 'nuvio';
 
@@ -123,6 +127,8 @@ export interface AppSettings {
     setExternalPlayerReuse: (reuse: boolean) => void;
     updateAppFont: (family: string, base64?: string, format?: string, name?: string) => Promise<void> | void;
     setSavedCustomThemes: (themes: CustomThemeConfig[]) => void;
+    setDisableThemeBlobs: (disabled: boolean) => void;
+    setDisableThemeBackdropBlur: (disabled: boolean) => void;
 }
 
 /**
@@ -241,6 +247,10 @@ export function useAppSettings(): AppSettings {
   const [castEnabled, setCastEnabledState] = useState(false);
   const [castRewriteTs, setCastRewriteTsState] = useState(true);
 
+  // Theme Optimization settings
+  const [disableThemeBlobs, setDisableThemeBlobsState] = useState(false);
+  const [disableThemeBackdropBlur, setDisableThemeBackdropBlurState] = useState(false);
+
   // Global Font selection states
   const [appFontFamily, setAppFontFamilyState] = useState<string>('inter');
   const [appCustomFontBase64, setAppCustomFontBase64State] = useState<string>('');
@@ -334,6 +344,23 @@ export function useAppSettings(): AppSettings {
     }
   }, [theme, customThemeConfig]);
 
+  // Apply optimization settings
+  useEffect(() => {
+    if (disableThemeBlobs) {
+      document.documentElement.classList.add('disable-theme-blobs');
+    } else {
+      document.documentElement.classList.remove('disable-theme-blobs');
+    }
+  }, [disableThemeBlobs]);
+
+  useEffect(() => {
+    if (disableThemeBackdropBlur) {
+      document.documentElement.classList.add('disable-theme-backdrop-blur');
+    } else {
+      document.documentElement.classList.remove('disable-theme-backdrop-blur');
+    }
+  }, [disableThemeBackdropBlur]);
+
   // Load layout persistence settings on mount
   useEffect(() => {
     const loadLayoutSettings = async () => {
@@ -423,6 +450,10 @@ export function useAppSettings(): AppSettings {
           // Load Google Cast setting
           setCastEnabledState(result.data.castEnabled ?? false);
           setCastRewriteTsState(result.data.castRewriteTs ?? true);
+
+          // Load Optimization settings
+          setDisableThemeBlobsState(result.data.disableThemeBlobs ?? false);
+          setDisableThemeBackdropBlurState(result.data.disableThemeBackdropBlur ?? false);
 
           // Apply EPG darken current setting on load
           if (result.data.epgDarkenCurrent) {
@@ -926,6 +957,28 @@ export function useAppSettings(): AppSettings {
     }
   }, []);
 
+  const setDisableThemeBlobs = useCallback(async (disabled: boolean) => {
+    setDisableThemeBlobsState(disabled);
+    if (window.storage) {
+      try {
+        await window.storage.updateSettings({ disableThemeBlobs: disabled });
+      } catch (e) {
+        console.error('[useAppSettings] Failed to save disableThemeBlobs:', e);
+      }
+    }
+  }, []);
+
+  const setDisableThemeBackdropBlur = useCallback(async (disabled: boolean) => {
+    setDisableThemeBackdropBlurState(disabled);
+    if (window.storage) {
+      try {
+        await window.storage.updateSettings({ disableThemeBackdropBlur: disabled });
+      } catch (e) {
+        console.error('[useAppSettings] Failed to save disableThemeBackdropBlur:', e);
+      }
+    }
+  }, []);
+
   const setSavedCustomThemes = useCallback(async (themes: CustomThemeConfig[]) => {
     setSavedCustomThemesState(themes);
     if (window.storage) {
@@ -1029,5 +1082,9 @@ export function useAppSettings(): AppSettings {
     setExternalPlayerArgs,
     externalPlayerReuse,
     setExternalPlayerReuse,
+    disableThemeBlobs,
+    setDisableThemeBlobs,
+    disableThemeBackdropBlur,
+    setDisableThemeBackdropBlur,
   };
 }
