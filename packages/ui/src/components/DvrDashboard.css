@@ -873,6 +873,28 @@
     color: var(--text-muted, rgba(255, 255, 255, 0.5));
 }
 
+.dvr-form-input {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.05);
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 6px;
+    padding: 10px 12px;
+    font-size: 0.95rem;
+    outline: none;
+    box-sizing: border-box;
+}
+
+.dvr-form-input:focus {
+    border-color: var(--accent-primary, #00d4ff);
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.dvr-form-input option {
+    background-color: var(--surface-color, #1e1e1e);
+    color: var(--text-primary, #fff);
+}
+
 .dvr-modal-footer {
     display: flex;
     justify-content: flex-end;

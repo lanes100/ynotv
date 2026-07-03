@@ -672,12 +672,22 @@ pub async fn get_track_list<R: Runtime>(app: &AppHandle<R>) -> Result<Value, Str
 
 pub async fn set_audio_track<R: Runtime>(app: &AppHandle<R>, id: i64) -> Result<(), String> {
     let state = app.state::<MpvState>();
-    send_command_internal(&state, "set_property", vec![json!("aid"), json!(id)]).await.map(|_| ())
+    let value = if id == 0 {
+        json!("no")
+    } else {
+        json!(id)
+    };
+    send_command_internal(&state, "set_property", vec![json!("aid"), value]).await.map(|_| ())
 }
 
 pub async fn set_subtitle_track<R: Runtime>(app: &AppHandle<R>, id: i64) -> Result<(), String> {
     let state = app.state::<MpvState>();
-    send_command_internal(&state, "set_property", vec![json!("sid"), json!(id)]).await.map(|_| ())
+    let value = if id == 0 {
+        json!("no")
+    } else {
+        json!(id)
+    };
+    send_command_internal(&state, "set_property", vec![json!("sid"), value]).await.map(|_| ())
 }
 
 pub async fn add_subtitle_file<R: Runtime>(app: &AppHandle<R>, file_path: String, flag: Option<String>) -> Result<(), String> {

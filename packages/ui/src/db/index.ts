@@ -161,7 +161,7 @@ export interface DvrSchedule {
   status: 'scheduled' | 'recording' | 'completed' | 'failed' | 'canceled';
 
   series_match_title?: string;    // For future series recording
-  recurrence?: 'once' | 'daily' | 'weekly';
+  recurrence?: string;
 
   created_at: number;
   started_at?: number;
@@ -2173,20 +2173,22 @@ export async function getRecordingThumbnail(recordingId: number): Promise<Uint8A
   }
 }
 
-/** Update schedule padding times */
-export async function updateSchedulePaddings(
+/** Update schedule settings (paddings and recurrence) */
+export async function updateScheduleSettings(
   scheduleId: number,
   startPaddingSec: number,
-  endPaddingSec: number
+  endPaddingSec: number,
+  recurrence?: string
 ): Promise<void> {
-  console.log('[DVR] Updating schedule padding:', scheduleId, { startPaddingSec, endPaddingSec });
+  console.log('[DVR] Updating schedule settings:', scheduleId, { startPaddingSec, endPaddingSec, recurrence });
 
   // Call backend to update
   try {
-    await invoke('update_schedule_paddings', {
+    await invoke('update_schedule_settings', {
       id: scheduleId,
       startPaddingSec: startPaddingSec,
       endPaddingSec: endPaddingSec,
+      recurrence: recurrence || null,
     });
   } catch (error) {
     console.error('[DVR] Backend update failed:', error);
@@ -2197,10 +2199,11 @@ export async function updateSchedulePaddings(
   await db.dvrSchedules.update(scheduleId, {
     start_padding_sec: startPaddingSec,
     end_padding_sec: endPaddingSec,
+    recurrence: recurrence || undefined,
   });
 
   dbEvents.notify('dvr_schedules', 'update');
-  console.log('[DVR] Schedule padding updated:', scheduleId);
+  console.log('[DVR] Schedule settings updated:', scheduleId);
 }
 
 /** Detect conflicts for a new schedule - uses backend for comprehensive checking */

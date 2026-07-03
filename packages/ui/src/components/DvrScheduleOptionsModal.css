@@ -1,0 +1,211 @@
+.dvr-options-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.dvr-options-modal {
+  background: var(--surface-color, #1e1e1e);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  width: 90%;
+  max-width: 440px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  animation: scaleIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.dvr-options-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.dvr-options-modal-header h3 {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--text-primary, #fff);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dvr-options-modal-close {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+  padding: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: all 0.15s ease;
+}
+
+.dvr-options-modal-close:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.dvr-options-modal-body {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.dvr-options-program-info {
+  background: rgba(255, 255, 255, 0.04);
+  border-left: 3px solid var(--primary-color, #00d4ff);
+  border-radius: 0 8px 8px 0;
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.dvr-options-program-title {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--text-primary, #fff);
+}
+
+.dvr-options-program-channel {
+  font-size: 0.9rem;
+  color: var(--primary-color, #00d4ff);
+  font-weight: 500;
+}
+
+.dvr-options-program-time {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.dvr-options-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.dvr-options-label {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.dvr-options-select,
+.dvr-options-number-input {
+  width: 100%;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  color: #fff;
+  font-size: 0.95rem;
+  transition: all 0.15s ease;
+}
+
+.dvr-options-select option {
+  background-color: var(--surface-color, #1e1e1e);
+  color: var(--text-primary, #fff);
+}
+
+.dvr-options-select:focus,
+.dvr-options-number-input:focus {
+  outline: none;
+  border-color: var(--primary-color, #00d4ff);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.dvr-options-padding-control {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.dvr-options-padding-control input[type="range"] {
+  flex: 1;
+  height: 6px;
+  border-radius: 3px;
+  outline: none;
+  accent-color: var(--primary-color, #00d4ff);
+  cursor: pointer;
+}
+
+.dvr-options-padding-value {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--primary-color, #00d4ff);
+  min-width: 45px;
+  text-align: right;
+}
+
+.dvr-options-hint {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.dvr-options-modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 16px 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.dvr-options-btn {
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.dvr-options-btn-secondary {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.dvr-options-btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+.dvr-options-btn-primary {
+  background: var(--primary-color, #00d4ff);
+  border: 1px solid transparent;
+  color: #000;
+  font-weight: 600;
+}
+
+.dvr-options-btn-primary:hover {
+  filter: brightness(1.15);
+  box-shadow: 0 0 12px rgba(0, 212, 255, 0.4);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes scaleIn {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}

@@ -643,6 +643,28 @@ impl DvrDatabase {
         Ok(())
     }
 
+    /// Update schedule settings including paddings and recurrence
+    pub fn update_schedule_settings(
+        &self,
+        id: i64,
+        start_padding_sec: i64,
+        end_padding_sec: i64,
+        recurrence: Option<String>,
+    ) -> Result<()> {
+        let conn = self.get_conn()?;
+
+        conn.execute(
+            "UPDATE dvr_schedules SET start_padding_sec = ?1, end_padding_sec = ?2, recurrence = ?3 WHERE id = ?4",
+            params![start_padding_sec, end_padding_sec, recurrence, id],
+        )?;
+
+        info!(
+            "Updated settings for schedule {}: start={}, end={}, recurrence={:?}",
+            id, start_padding_sec, end_padding_sec, recurrence
+        );
+        Ok(())
+    }
+
     /// Get schedule by ID
     pub fn get_schedule(&self, id: i64) -> Result<Option<Schedule>> {
         let conn = self.get_conn()?;

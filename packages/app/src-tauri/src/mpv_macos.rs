@@ -365,12 +365,22 @@ pub async fn get_track_list<R: Runtime>(app: &AppHandle<R>) -> Result<Value, Str
 }
 
 pub async fn set_audio_track<R: Runtime>(app: &AppHandle<R>, id: i64) -> Result<(), String> {
-    send_command(app, json!({ "command": ["set_property", "aid", id] })).await?;
+    let value = if id == 0 {
+        json!("no")
+    } else {
+        json!(id)
+    };
+    send_command(app, json!({ "command": ["set_property", "aid", value] })).await?;
     Ok(())
 }
 
 pub async fn set_subtitle_track<R: Runtime>(app: &AppHandle<R>, id: i64) -> Result<(), String> {
-    send_command(app, json!({ "command": ["set_property", "sid", id] })).await?;
+    let value = if id == 0 {
+        json!("no")
+    } else {
+        json!(id)
+    };
+    send_command(app, json!({ "command": ["set_property", "sid", value] })).await?;
     Ok(())
 }
 

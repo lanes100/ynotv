@@ -191,18 +191,107 @@ pub async fn start_recording(
 
     tokio::spawn(async move {
         println!("[DVR Scheduler] Recording task spawned for ID {}: {}", schedule.id, schedule.program_title);
-        if let Err(e) = recorder.record(schedule.clone()).await {
-            error!("Recording failed for {}: {}", schedule.program_title, e);
-            println!("[DVR Scheduler] ERROR: Recording failed for {}: {}", schedule.program_title, e);
+        let record_res = recorder.record(schedule.clone()).await;
 
-            // Update status to failed
+        let final_status = match record_res {
+            Ok(()) => {
+                println!("[DVR Scheduler] Recording completed successfully for ID {}", schedule.id);
+                ScheduleStatus::Completed
+            }
+            Err(e) => {
+                error!("Recording failed for {}: {}", schedule.program_title, e);
+                println!("[DVR Scheduler] ERROR: Recording failed for {}: {}", schedule.program_title, e);
+                ScheduleStatus::Failed
+            }
+        };
+
+        // Note: record() internally updates schedule status to Completed on success.
+        // If it failed, update schedule status to Failed.
+        if final_status == ScheduleStatus::Failed {
             if let Err(e) = db.update_schedule_status(schedule.id, ScheduleStatus::Failed) {
                 error!("Failed to update schedule status: {}", e);
             }
-        } else {
-            println!("[DVR Scheduler] Recording completed successfully for ID {}", schedule.id);
+        }
+
+        // Check if schedule is not Canceled, and reschedule if recurring
+        if let Ok(Some(current_schedule)) = db.get_schedule(schedule.id) {
+            if current_schedule.status != ScheduleStatus::Canceled {
+                if let Some(ref rec_str) = current_schedule.recurrence {
+                    if rec_str != "once" && !rec_str.is_empty() {
+                        if let Err(e) = handle_reschedule(&db, &current_schedule, rec_str) {
+                            error!("Failed to reschedule recurring recording: {}", e);
+                        }
+                    }
+                }
+            }
         }
     });
+
+    Ok(())
+}
+
+/// Helper to handle rescheduling of recurring recordings
+pub fn handle_reschedule(
+    db: &Arc<DvrDatabase>,
+    schedule: &Schedule,
+    recurrence: &str,
+) -> anyhow::Result<()> {
+    // Parse recurrence and compute next start/end times
+    let interval_days = match recurrence {
+        "daily" => 1,
+        "weekly" => 7,
+        _ if recurrence.starts_with("every:") => {
+            let parts: Vec<&str> = recurrence.split(':').collect();
+            if parts.len() == 2 {
+                parts[1].parse::<i64>().unwrap_or(0)
+            } else {
+                0
+            }
+        }
+        _ => 0,
+    };
+
+    if interval_days <= 0 {
+        return Ok(());
+    }
+
+    let interval_seconds = interval_days * 24 * 3600;
+    let now = chrono::Utc::now().timestamp();
+
+    let mut next_start = schedule.scheduled_start + interval_seconds;
+    let mut next_end = schedule.scheduled_end + interval_seconds;
+
+    // Ensure scheduled_start is in the future
+    while next_start <= now {
+        next_start += interval_seconds;
+        next_end += interval_seconds;
+    }
+
+    // Prepare new schedule request
+    let request = crate::dvr::models::ScheduleRequest {
+        source_id: schedule.source_id.clone(),
+        channel_id: schedule.channel_id.clone(),
+        channel_name: schedule.channel_name.clone(),
+        program_title: schedule.program_title.clone(),
+        scheduled_start: next_start,
+        scheduled_end: next_end,
+        start_padding_sec: schedule.start_padding_sec,
+        end_padding_sec: schedule.end_padding_sec,
+        series_match_title: schedule.series_match_title.clone(),
+        recurrence: Some(recurrence.to_string()),
+        stream_url: None, // Resolve stream URL at recording time
+    };
+
+    info!(
+        "Rescheduling recurring recording '{}' to start at {} (recurrence: {})",
+        request.program_title,
+        chrono::DateTime::from_timestamp(next_start, 0)
+            .map(|dt| dt.to_rfc2822())
+            .unwrap_or_default(),
+        recurrence
+    );
+
+    db.add_schedule(&request)?;
 
     Ok(())
 }

@@ -178,6 +178,11 @@
     border-color: var(--accent-primary, #00d4ff);
 }
 
+select.datetime-input option {
+    background-color: var(--bg-tertiary, #333);
+    color: var(--text-primary, #fff);
+}
+
 /* Webkit date/time picker styling */
 .datetime-input::-webkit-calendar-picker-indicator {
     filter: invert(0.7);

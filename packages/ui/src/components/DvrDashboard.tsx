@@ -7,7 +7,7 @@ import {
     getActiveRecordings,
     cancelRecording,
     deleteRecording,
-    updateSchedulePaddings,
+    updateScheduleSettings,
     type DvrSchedule,
     type DvrRecording,
     type RecordingProgress,
@@ -36,6 +36,8 @@ export function DvrDashboard({ onPlay, onClose }: DvrDashboardProps) {
     const [editingSchedule, setEditingSchedule] = useState<DvrSchedule | null>(null);
     const [editStartPadding, setEditStartPadding] = useState(60);
     const [editEndPadding, setEditEndPadding] = useState(300);
+    const [editRecurrence, setEditRecurrence] = useState('once');
+    const [editRecurrenceDays, setEditRecurrenceDays] = useState(3);
     const [savingEdit, setSavingEdit] = useState(false);
 
     // Modal hook
@@ -158,12 +160,23 @@ export function DvrDashboard({ onPlay, onClose }: DvrDashboardProps) {
         setEditingSchedule(item);
         setEditStartPadding(item.start_padding_sec || 60);
         setEditEndPadding(item.end_padding_sec || 300);
+        
+        const rec = item.recurrence || 'once';
+        if (rec.startsWith("every:")) {
+            setEditRecurrence('every');
+            setEditRecurrenceDays(parseInt(rec.split(':')[1]) || 3);
+        } else {
+            setEditRecurrence(rec);
+            setEditRecurrenceDays(3);
+        }
     }
 
     function handleEditCancel() {
         setEditingSchedule(null);
         setEditStartPadding(60);
         setEditEndPadding(300);
+        setEditRecurrence('once');
+        setEditRecurrenceDays(3);
     }
 
     async function handleSaveEdit() {
@@ -171,16 +184,18 @@ export function DvrDashboard({ onPlay, onClose }: DvrDashboardProps) {
 
         setSavingEdit(true);
         try {
-            await updateSchedulePaddings(
+            const finalRecurrence = editRecurrence === 'every' ? `every:${editRecurrenceDays}` : editRecurrence;
+            await updateScheduleSettings(
                 editingSchedule.id,
                 editStartPadding,
-                editEndPadding
+                editEndPadding,
+                finalRecurrence !== 'once' ? finalRecurrence : undefined
             );
             await loadData(false);
             setEditingSchedule(null);
         } catch (error) {
             console.error('Failed to update schedule:', error);
-            showError('Error', 'Failed to update schedule padding');
+            showError('Error', 'Failed to update schedule settings');
         } finally {
             setSavingEdit(false);
         }
@@ -372,6 +387,10 @@ export function DvrDashboard({ onPlay, onClose }: DvrDashboardProps) {
                     schedule={editingSchedule}
                     startPadding={editStartPadding}
                     endPadding={editEndPadding}
+                    recurrence={editRecurrence}
+                    onRecurrenceChange={setEditRecurrence}
+                    recurrenceDays={editRecurrenceDays}
+                    onRecurrenceDaysChange={setEditRecurrenceDays}
                     onStartPaddingChange={setEditStartPadding}
                     onEndPaddingChange={setEditEndPadding}
                     onSave={handleSaveEdit}
@@ -889,6 +908,10 @@ interface EditModalProps {
     schedule: DvrSchedule;
     startPadding: number;
     endPadding: number;
+    recurrence: string;
+    onRecurrenceChange: (value: string) => void;
+    recurrenceDays: number;
+    onRecurrenceDaysChange: (value: number) => void;
     onStartPaddingChange: (value: number) => void;
     onEndPaddingChange: (value: number) => void;
     onSave: () => void;
@@ -901,6 +924,10 @@ function EditModal({
     schedule,
     startPadding,
     endPadding,
+    recurrence,
+    onRecurrenceChange,
+    recurrenceDays,
+    onRecurrenceDaysChange,
     onStartPaddingChange,
     onEndPaddingChange,
     onSave,
@@ -959,6 +986,33 @@ function EditModal({
                         </div>
                         <span className="dvr-form-hint">Record this many seconds after end time</span>
                     </div>
+
+                    <div className="dvr-form-group">
+                        <label>Recurrence</label>
+                        <select
+                            value={recurrence}
+                            onChange={(e) => onRecurrenceChange(e.target.value)}
+                            className="dvr-form-input"
+                        >
+                            <option value="once">Once</option>
+                            <option value="daily">Daily</option>
+                            <option value="weekly">Weekly</option>
+                            <option value="every">Every X Days</option>
+                        </select>
+                    </div>
+
+                    {recurrence === 'every' && (
+                        <div className="dvr-form-group">
+                            <label>Days</label>
+                            <input
+                                type="number"
+                                min="1"
+                                value={recurrenceDays}
+                                onChange={(e) => onRecurrenceDaysChange(Math.max(1, parseInt(e.target.value) || 1))}
+                                className="dvr-form-input"
+                            />
+                        </div>
+                    )}
                 </div>
 
                 <div className="dvr-modal-footer">

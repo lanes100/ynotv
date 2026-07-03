@@ -70,6 +70,8 @@ export function ChannelContextMenu({
     const [startTime, setStartTime] = useState(formatTimeForInput(now));
     const [endDate, setEndDate] = useState(formatDateForInput(defaultEnd));
     const [endTime, setEndTime] = useState(formatTimeForInput(defaultEnd));
+    const [recurrence, setRecurrence] = useState('once');
+    const [recurrenceDays, setRecurrenceDays] = useState(3);
 
     // Load custom groups when the user opens the group submenu
     useEffect(() => {
@@ -206,7 +208,7 @@ export function ChannelContextMenu({
         }
     }
 
-    async function createRecording(startTimestamp: number, endTimestamp: number, title: string) {
+    async function createRecording(startTimestamp: number, endTimestamp: number, title: string, recurrence?: string) {
         let resolvedUrl: string | undefined;
 
         if (channel.direct_url?.startsWith('stalker_')) {
@@ -232,7 +234,7 @@ export function ChannelContextMenu({
             start_padding_sec: 0,
             end_padding_sec: 0,
             series_match_title: undefined,
-            recurrence: undefined,
+            recurrence: recurrence,
             stream_url: resolvedUrl,
         };
 
@@ -359,7 +361,13 @@ export function ChannelContextMenu({
 
             const startTimestamp = Math.floor(startDateTime.getTime() / 1000);
             const endTimestamp = Math.floor(endDateTime.getTime() / 1000);
-            await createRecording(startTimestamp, endTimestamp, `${channel.name} - Scheduled`);
+            const finalRecurrence = recurrence === 'every' ? `every:${recurrenceDays}` : recurrence;
+            await createRecording(
+                startTimestamp,
+                endTimestamp,
+                `${channel.name} - Scheduled`,
+                finalRecurrence !== 'once' ? finalRecurrence : undefined
+            );
         } catch (error: any) {
             console.error('Failed to schedule recording:', error);
             setMenuHidden(true);
@@ -752,6 +760,35 @@ export function ChannelContextMenu({
                         <input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} className="datetime-input" />
                     </div>
                 </div>
+
+                <div className="datetime-section">
+                    <label className="datetime-label">Recurrence</label>
+                    <select
+                        value={recurrence}
+                        onChange={(e) => setRecurrence(e.target.value)}
+                        className="datetime-input"
+                        style={{ width: '100%', background: 'var(--bg-secondary)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', borderRadius: '4px', padding: '4px' }}
+                    >
+                        <option value="once">Once</option>
+                        <option value="daily">Daily</option>
+                        <option value="weekly">Weekly</option>
+                        <option value="every">Every X Days</option>
+                    </select>
+                </div>
+
+                {recurrence === 'every' && (
+                    <div className="datetime-section">
+                        <label className="datetime-label">Days</label>
+                        <input
+                            type="number"
+                            min="1"
+                            value={recurrenceDays}
+                            onChange={(e) => setRecurrenceDays(Math.max(1, parseInt(e.target.value) || 1))}
+                            className="datetime-input"
+                            style={{ width: '100%' }}
+                        />
+                    </div>
+                )}
 
                 <div className="context-menu-separator" />
                 <div className="context-menu-actions">

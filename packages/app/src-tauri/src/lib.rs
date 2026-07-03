@@ -1401,6 +1401,24 @@ async fn update_schedule_paddings(
     Ok(())
 }
 
+/// Update schedule settings including paddings and recurrence
+#[tauri::command]
+async fn update_schedule_settings(
+    state: tauri::State<'_, DvrState>,
+    id: i64,
+    #[allow(non_snake_case)] startPaddingSec: i64,
+    #[allow(non_snake_case)] endPaddingSec: i64,
+    recurrence: Option<String>,
+) -> Result<(), String> {
+    debug!("[DVR Command] Updating settings for schedule {}: start={}, end={}, recurrence={:?}", id, startPaddingSec, endPaddingSec, recurrence);
+
+    state.db.update_schedule_settings(id, startPaddingSec, endPaddingSec, recurrence)
+        .map_err(|e| format!("Failed to update schedule settings: {}", e))?;
+
+    debug!("[DVR Command] Schedule {} settings updated successfully", id);
+    Ok(())
+}
+
 /// Check for schedule conflicts including connection limits
 #[tauri::command]
 async fn check_schedule_conflicts(
@@ -3164,6 +3182,7 @@ pub fn run() {
             get_active_recordings,
             get_recording_thumbnail,
             update_schedule_paddings,
+            update_schedule_settings,
             check_schedule_conflicts,
             update_playing_stream,
             update_dvr_stream_url,

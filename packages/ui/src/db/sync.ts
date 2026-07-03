@@ -816,8 +816,7 @@ function normalizeChannelName(name: string): string {
     .replace(/^prime:\s*|^il:\s*|^f:\s*|^ss:\s*|^##+\s*/g, '')
     .replace(/[\[\](){}]/g, '')
     .replace(/[\u{1d3f}\u{1d2c}\u{1d42}\u{1d34}\u{1d35}\u{2076}\u{2070}\u{1da0}\u{1d56}\u{02e2}]/gu, '')
-    .replace(/\s+/g, ' ')
-    .trim();
+    .replace(/[^a-z0-9+]/g, '');
 }
 
 // ─── Additional EPG waterfall helper ─────────────────────────────────────────

@@ -230,8 +230,11 @@ fn normalize_channel_name(name: &str) -> String {
         result = result.replace(*ch, "");
     }
 
-    // Remove extra whitespace and convert to lowercase
-    result = result.split_whitespace().collect::<Vec<_>>().join(" ").to_lowercase();
+    // Keep only alphanumeric characters and '+'
+    result = result.chars()
+        .filter(|c| c.is_alphanumeric() || *c == '+')
+        .collect::<String>()
+        .to_lowercase();
 
     result
 }

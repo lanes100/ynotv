@@ -6,6 +6,7 @@ import { StalkerClient } from '@ynotv/local-adapter';
 import { useModal } from './Modal';
 import { WatchlistOptionsModal } from './WatchlistOptionsModal';
 import { TVMazeSearchModal } from './TVMazeSearchModal';
+import { DvrScheduleOptionsModal } from './DvrScheduleOptionsModal';
 import './ProgramContextMenu.css';
 
 interface ProgramContextMenuProps {
@@ -28,6 +29,8 @@ export function ProgramContextMenu({
     const menuRef = useRef<HTMLDivElement>(null);
     const [scheduling, setScheduling] = useState(false);
     const [addingToWatchlist, setAddingToWatchlist] = useState(false);
+    const [showOptionsModal, setShowOptionsModal] = useState(false);
+    const [resolvedUrl, setResolvedUrl] = useState<string | undefined>(undefined);
     const [showWatchlistModal, setShowWatchlistModal] = useState(false);
     const [showTVMazeModal, setShowTVMazeModal] = useState(false);
     const [channelForWatchlist, setChannelForWatchlist] = useState<import('../db').StoredChannel | null>(null);
@@ -75,6 +78,7 @@ export function ProgramContextMenu({
         function handleClickOutside(e: MouseEvent) {
             if (showWatchlistModal) return; // Don't close if watchlist modal is open
             if (showTVMazeModal) return; // Don't close if TVMaze modal is open
+            if (showOptionsModal) return; // Don't close if options modal is open
             if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
                 onClose();
             }
@@ -82,13 +86,14 @@ export function ProgramContextMenu({
 
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, [onClose, showWatchlistModal, showTVMazeModal]);
+    }, [onClose, showWatchlistModal, showTVMazeModal, showOptionsModal]);
 
     // Close on escape (but not when modal is open)
     useEffect(() => {
         function handleEscape(e: KeyboardEvent) {
             if (showWatchlistModal) return; // Don't close if watchlist modal is open
             if (showTVMazeModal) return; // Don't close if TVMaze modal is open
+            if (showOptionsModal) return; // Don't close if options modal is open
             if (e.key === 'Escape') {
                 onClose();
             }
@@ -96,7 +101,7 @@ export function ProgramContextMenu({
 
         document.addEventListener('keydown', handleEscape);
         return () => document.removeEventListener('keydown', handleEscape);
-    }, [onClose, showWatchlistModal, showTVMazeModal]);
+    }, [onClose, showWatchlistModal, showTVMazeModal, showOptionsModal]);
 
     async function handleAddToWatchlistClick() {
         const channel = await db.channels.get(channelId);
@@ -172,15 +177,13 @@ export function ProgramContextMenu({
     }
 
     async function handleScheduleRecording() {
+        if (scheduling) return;
         setScheduling(true);
 
         try {
-            const startTime = program.start instanceof Date ? program.start : new Date(program.start);
-            const endTime = program.end instanceof Date ? program.end : new Date(program.end);
-
             // Get channel info to check if we need URL resolution
             const channel = await db.channels.get(channelId);
-            let resolvedUrl: string | undefined;
+            let resolved: string | undefined;
 
             // For Stalker sources, resolve the URL before scheduling
             if (channel?.direct_url?.startsWith('stalker_')) {
@@ -196,10 +199,39 @@ export function ProgramContextMenu({
                         userAgent: sourceRes.data.user_agent
                     }, sourceId);
 
-                    resolvedUrl = await client.resolveStreamUrl(channel.direct_url);
-                    console.log('[ProgramContextMenu] Resolved Stalker URL:', resolvedUrl);
+                    resolved = await client.resolveStreamUrl(channel.direct_url);
+                    console.log('[ProgramContextMenu] Resolved Stalker URL:', resolved);
                 }
             }
+
+            setResolvedUrl(resolved);
+            setShowOptionsModal(true);
+            setMenuHidden(true); // Hide the context menu since modal is opening
+        } catch (error: any) {
+            console.error('Failed to resolve stream URL:', error);
+            showModal({
+                title: 'Scheduling Failed',
+                message: error?.message || 'Failed to resolve stream URL',
+                type: 'error',
+                confirmText: 'OK',
+                onConfirm: () => onClose(),
+                onCancel: () => onClose(),
+            });
+        } finally {
+            setScheduling(false);
+        }
+    }
+
+    async function handleConfirmSchedule(options: {
+        startPadding: number;
+        endPadding: number;
+        recurrence: string;
+    }) {
+        setShowOptionsModal(false);
+        setScheduling(true);
+        try {
+            const startTime = program.start instanceof Date ? program.start : new Date(program.start);
+            const endTime = program.end instanceof Date ? program.end : new Date(program.end);
 
             const schedule: Omit<DvrSchedule, 'id' | 'created_at' | 'status'> = {
                 source_id: sourceId,
@@ -208,10 +240,10 @@ export function ProgramContextMenu({
                 program_title: program.title,
                 scheduled_start: Math.floor(startTime.getTime() / 1000),
                 scheduled_end: Math.floor(endTime.getTime() / 1000),
-                start_padding_sec: 60,
-                end_padding_sec: 300,
+                start_padding_sec: options.startPadding,
+                end_padding_sec: options.endPadding,
                 series_match_title: undefined,
-                recurrence: undefined,
+                recurrence: options.recurrence !== 'once' ? options.recurrence : undefined,
                 stream_url: resolvedUrl,
             };
 
@@ -221,7 +253,6 @@ export function ProgramContextMenu({
                 const sourceMeta = await db.sourcesMeta.get(sourceId);
                 const maxConnections = parseInt(sourceMeta?.max_connections || '1');
 
-                setMenuHidden(true);
                 if (maxConnections === 1) {
                     showConfirm(
                         '1 Connection Limit',
@@ -270,7 +301,6 @@ export function ProgramContextMenu({
 
             // Schedule the recording
             await scheduleRecording(schedule);
-            setMenuHidden(true);
             showModal({
                 title: 'Recording Scheduled',
                 message: `${program.title} has been scheduled`,
@@ -281,7 +311,6 @@ export function ProgramContextMenu({
             });
         } catch (error: any) {
             console.error('Failed to schedule recording:', error);
-            setMenuHidden(true);
             showModal({
                 title: 'Scheduling Failed',
                 message: error?.message || 'Failed to schedule recording',
@@ -340,6 +369,19 @@ export function ProgramContextMenu({
                     onClose={() => setShowTVMazeModal(false)}
                 />
             )}
+            <DvrScheduleOptionsModal
+                isOpen={showOptionsModal}
+                programTitle={program.title}
+                channelName={channelName}
+                timeString={`${new Date(program.start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - ${new Date(program.end).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`}
+                defaultStartPadding={60}
+                defaultEndPadding={300}
+                onConfirm={handleConfirmSchedule}
+                onCancel={() => {
+                    setShowOptionsModal(false);
+                    onClose();
+                }}
+            />
         </>,
         document.body
     );
