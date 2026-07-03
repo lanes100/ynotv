@@ -69,7 +69,7 @@ export function ImportExportTab() {
                 </div>
                 <p className="section-description">
                     Export your configuration to a JSON file to transfer between devices or create backups.
-                    Includes Sources, Settings (including TMDB, RPDB, and SubSource API keys), Favorites, Category/Channel customizations, Watchlist, DVR schedules, Failover groups, VOD history, EPG overrides, Stremio addons, and Stremio watch history.
+                    Includes Sources, Settings (including TMDB, RPDB, SubSource API keys, Saved Custom Themes, and Font configurations), Favorites, Category/Channel customizations, Watchlist, DVR schedules, Failover groups, VOD history, EPG overrides, Stremio addons, and Stremio watch history.
                 </p>
 
                 {status && (

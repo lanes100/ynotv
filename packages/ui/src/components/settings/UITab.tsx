@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getCurrentWindow } from '@tauri-apps/api/window';
+import { useAppSettings } from '../../hooks/useAppSettings';
 import './SourcesTab.css'; // Import shared tooltip styles
 
 interface UITabProps {
@@ -133,6 +134,14 @@ function WindowSizeSettings({ width, height, onChange }: { width: number; height
 }
 
 export function UITab({ settings, onSettingsChange }: UITabProps) {
+  const {
+    appFontFamily,
+    appCustomFontBase64,
+    appCustomFontFormat,
+    appCustomFontName,
+    updateAppFont
+  } = useAppSettings();
+
   const [localScale, setLocalScale] = useState(settings.uiScale ?? 100);
   const [scaleStatus, setScaleStatus] = useState<'' | 'applied'>('');
 
@@ -330,6 +339,118 @@ export function UITab({ settings, onSettingsChange }: UITabProps) {
               style={{ cursor: 'pointer', marginLeft: '1rem' }}
             />
           </div>
+        </div>
+      </div>
+
+      {/* Typography & Fonts Section */}
+      <div className="settings-section" style={{ paddingTop: '8px', borderTop: '1px solid rgba(255,255,255,0.08)', marginTop: '20px' }}>
+        <div className="section-header">
+          <h3>Typography & Fonts</h3>
+        </div>
+
+        <p className="section-description" style={{ marginBottom: '16px' }}>
+          Customize the global typography and select the font family used across the application.
+        </p>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.05)', borderRadius: '8px', padding: '16px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <label style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.85)', fontWeight: 500 }}>
+              App Font Family
+            </label>
+            <select
+              value={appFontFamily}
+              onChange={(e) => updateAppFont(e.target.value, appCustomFontBase64, appCustomFontFormat, appCustomFontName)}
+              style={{
+                background: 'rgba(255, 255, 255, 0.05)',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                borderRadius: '6px',
+                padding: '8px 12px',
+                color: 'white',
+                fontSize: '0.85rem',
+                outline: 'none',
+                cursor: 'pointer',
+                width: '100%',
+                height: '36px'
+              }}
+            >
+              <option value="inter" style={{ background: '#1c1c1e', color: 'white' }}>Inter (Default)</option>
+              <option value="switzer" style={{ background: '#1c1c1e', color: 'white' }}>Switzer (Sans-Serif)</option>
+              <option value="cabinet-grotesk" style={{ background: '#1c1c1e', color: 'white' }}>Cabinet Grotesk (Display Sans)</option>
+              <option value="fraunces" style={{ background: '#1c1c1e', color: 'white' }}>Fraunces (Serif)</option>
+              <option value="sentient" style={{ background: '#1c1c1e', color: 'white' }}>Sentient (Serif)</option>
+              <option value="custom" style={{ background: '#1c1c1e', color: 'white' }}>Custom Uploaded Font...</option>
+            </select>
+          </div>
+
+          {/* Custom Font Upload UI */}
+          {appFontFamily === 'custom' && (
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '12px',
+              background: 'rgba(255,255,255,0.01)',
+              border: '1px dashed rgba(255,255,255,0.12)',
+              borderRadius: '6px',
+              padding: '12px'
+            }}>
+              <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.6)', lineHeight: '1.4' }}>
+                Upload a TTF, OTF, WOFF, or WOFF2 font file. It will be loaded and persisted locally in your app settings.
+              </div>
+              
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <button
+                  onClick={() => document.getElementById('ui-font-uploader')?.click()}
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.08)',
+                    border: '1px solid rgba(255, 255, 255, 0.15)',
+                    borderRadius: '6px',
+                    padding: '6px 12px',
+                    color: 'white',
+                    fontSize: '0.8rem',
+                    fontWeight: 500,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    transition: 'all 0.2s ease',
+                    height: '32px'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.15)'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
+                >
+                  Choose Font File
+                </button>
+                <input
+                  id="ui-font-uploader"
+                  type="file"
+                  accept=".ttf,.otf,.woff,.woff2"
+                  style={{ display: 'none' }}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      const reader = new FileReader();
+                      reader.onload = (event) => {
+                        const base64 = event.target?.result as string;
+                        let format = 'woff2';
+                        if (file.name.endsWith('.ttf')) format = 'truetype';
+                        else if (file.name.endsWith('.otf')) format = 'opentype';
+                        else if (file.name.endsWith('.woff')) format = 'woff';
+                        
+                        updateAppFont('custom', base64, format, file.name);
+                      };
+                      reader.readAsDataURL(file);
+                    }
+                  }}
+                />
+                
+                {appCustomFontName && (
+                  <span style={{ fontSize: '0.75rem', color: 'var(--accent-primary, #00d4ff)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '240px' }} title={appCustomFontName}>
+                    {appCustomFontName}
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

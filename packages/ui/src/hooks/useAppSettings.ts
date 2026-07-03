@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { SavedLayoutState } from './useLayoutPersistence';
-import type { ShortcutsMap } from '../types/app';
-import type { ThemeId } from '../types/app';
+import type { ThemeId, CustomThemeConfig, ShortcutsMap } from '../types/app';
+import { applyCustomTheme } from '../utils/themeHelper';
 
 export interface AppSettings {
   // Layout persistence
@@ -47,6 +47,14 @@ export interface AppSettings {
 
   // Theme
   theme: ThemeId;
+  customThemeConfig: CustomThemeConfig;
+  savedCustomThemes: CustomThemeConfig[];
+
+  // Global Fonts
+  appFontFamily: string;
+  appCustomFontBase64: string;
+  appCustomFontFormat: string;
+  appCustomFontName: string;
 
   // Shortcuts
   shortcuts: ShortcutsMap;
@@ -77,6 +85,7 @@ export interface AppSettings {
   setNavHiddenTabs: (tabs: string[]) => void;
   setEpgHiddenButtons: (buttons: string[]) => void;
   setTheme: (theme: ThemeId) => void;
+  updateCustomThemeConfig: (config: Partial<CustomThemeConfig>) => void;
   setShortcuts: (shortcuts: ShortcutsMap) => void;
   setCategoriesHidden: (hidden: boolean) => void;
   setCategoriesHiddenTransparent: (hidden: boolean) => void;
@@ -112,6 +121,8 @@ export interface AppSettings {
     setExternalPlayerArgs: (args: string) => void;
     externalPlayerReuse: boolean;
     setExternalPlayerReuse: (reuse: boolean) => void;
+    updateAppFont: (family: string, base64?: string, format?: string, name?: string) => Promise<void> | void;
+    setSavedCustomThemes: (themes: CustomThemeConfig[]) => void;
 }
 
 /**
@@ -168,6 +179,39 @@ export function useAppSettings(): AppSettings {
   // Theme state
   const [theme, setThemeState] = useState<ThemeId>('solid-monochrome');
 
+  // Custom theme state
+  const [customThemeConfig, setCustomThemeConfigState] = useState<CustomThemeConfig>({
+    backgroundType: 'solid',
+    backgroundColor: '#1a1a1a',
+    gradientStart: '#1a0b2e',
+    gradientMiddle: '#4a1a6b',
+    gradientEnd: '#2d1b4e',
+    gradientColor4: '#1a0b2e',
+    gradientColor5: '#2d1b4e',
+    accentColor: '#00d4ff',
+    textColor: '#ffffff',
+    textSecondaryColor: 'rgba(255,255,255,0.7)',
+    surfaceColor: '#282828',
+    surfaceOpacity: 0.85,
+    surfaceBorderColor: '#ffffff',
+    surfaceBorderOpacity: 0.1,
+    glassBlur: 20,
+    glassSaturation: 150,
+    customBlob1: '#00bbf5',
+    customBlob2: '#ff1493',
+    customBlob3: '#ffd700',
+    customBlob4: '#76ff03',
+    customBlob1Opacity: 0.55,
+    customBlob2Opacity: 0.45,
+    customBlob3Opacity: 0.35,
+    customBlob4Opacity: 0.3,
+    showGlassBlobs: true,
+    fontFamily: 'inter'
+  });
+
+  // Saved Custom Themes List
+  const [savedCustomThemes, setSavedCustomThemesState] = useState<CustomThemeConfig[]>([]);
+
   // Shortcuts state
   const [shortcuts, setShortcutsState] = useState<ShortcutsMap>({});
 
@@ -197,10 +241,98 @@ export function useAppSettings(): AppSettings {
   const [castEnabled, setCastEnabledState] = useState(false);
   const [castRewriteTs, setCastRewriteTsState] = useState(true);
 
+  // Global Font selection states
+  const [appFontFamily, setAppFontFamilyState] = useState<string>('inter');
+  const [appCustomFontBase64, setAppCustomFontBase64State] = useState<string>('');
+  const [appCustomFontFormat, setAppCustomFontFormatState] = useState<string>('');
+  const [appCustomFontName, setAppCustomFontNameState] = useState<string>('');
+
+  // Global Font apply effect
+  useEffect(() => {
+    const root = document.documentElement;
+    if (!root) return;
+
+    let fontValue = "'Inter', system-ui, sans-serif";
+    if (appFontFamily === 'switzer') {
+      fontValue = "'Switzer', sans-serif";
+    } else if (appFontFamily === 'sentient') {
+      fontValue = "'Sentient', serif";
+    } else if (appFontFamily === 'fraunces') {
+      fontValue = "'Fraunces', serif";
+    } else if (appFontFamily === 'cabinet-grotesk') {
+      fontValue = "'Cabinet Grotesk', sans-serif";
+    } else if (appFontFamily === 'custom' && appCustomFontBase64) {
+      fontValue = "'custom-uploaded-font', sans-serif";
+    }
+    
+    root.style.setProperty('--font-family', fontValue);
+
+    let styleEl = document.getElementById('custom-theme-font-face') as HTMLStyleElement;
+    if (appFontFamily === 'custom' && appCustomFontBase64) {
+      if (!styleEl) {
+        styleEl = document.createElement('style');
+        styleEl.id = 'custom-theme-font-face';
+        document.head.appendChild(styleEl);
+      }
+      let format = appCustomFontFormat || 'woff2';
+      styleEl.innerHTML = `
+        @font-face {
+          font-family: 'custom-uploaded-font';
+          src: url('${appCustomFontBase64}') format('${format}');
+          font-weight: 100 900;
+          font-style: normal;
+          font-display: swap;
+        }
+      `;
+    } else {
+      if (styleEl) {
+        styleEl.remove();
+      }
+    }
+  }, [appFontFamily, appCustomFontBase64, appCustomFontFormat]);
+
   // Apply theme effect
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
-  }, [theme]);
+    if (theme === 'custom' && customThemeConfig) {
+      applyCustomTheme(customThemeConfig);
+    } else {
+      const customKeys = [
+        '--bg-primary',
+        '--bg-secondary',
+        '--bg-tertiary',
+        '--surface-color',
+        '--surface-hover',
+        '--surface-active',
+        '--surface-border',
+        '--surface-glow',
+        '--text-primary',
+        '--text-secondary',
+        '--text-muted',
+        '--text-accent',
+        '--accent-primary',
+        '--accent-secondary',
+        '--accent-glow',
+        '--glass-blur',
+        '--glass-saturation',
+        '--glass-border',
+        '--glass-shadow',
+        '--bg-gradient-1',
+        '--bg-gradient-2',
+        '--bg-gradient-3',
+        '--bg-gradient-4',
+        '--bg-gradient-5',
+        '--custom-blob-1',
+        '--custom-blob-2',
+        '--custom-blob-3',
+        '--custom-blob-4',
+        '--glass-blob-display'
+      ];
+      customKeys.forEach(key => {
+        document.documentElement.style.removeProperty(key);
+      });
+    }
+  }, [theme, customThemeConfig]);
 
   // Load layout persistence settings on mount
   useEffect(() => {
@@ -321,6 +453,51 @@ export function useAppSettings(): AppSettings {
           const savedTheme = result.data.theme || localStorageTheme || 'solid-monochrome';
           setThemeState(savedTheme as ThemeId);
 
+          // Load global font settings
+          const fFamily = result.data.appFontFamily || 'inter';
+          const fBase64 = result.data.appCustomFontBase64 || '';
+          const fFormat = result.data.appCustomFontFormat || '';
+          const fName = result.data.appCustomFontName || '';
+          setAppFontFamilyState(fFamily);
+          setAppCustomFontBase64State(fBase64);
+          setAppCustomFontFormatState(fFormat);
+          setAppCustomFontNameState(fName);
+
+          // Load custom themes list
+          const savedThemesList = result.data.savedCustomThemes || [];
+          setSavedCustomThemesState(savedThemesList);
+
+          // Load active custom theme config
+          if (result.data.customThemeConfig) {
+            setCustomThemeConfigState(result.data.customThemeConfig);
+          } else {
+            try {
+              const existing = localStorage.getItem('app-settings');
+              if (existing) {
+                const parsed = JSON.parse(existing);
+                if (parsed.customThemeConfig) {
+                  setCustomThemeConfigState(parsed.customThemeConfig);
+                }
+              }
+            } catch (e) {}
+          }
+
+          // Propagate Tauri values to localStorage
+          try {
+            const existing = localStorage.getItem('app-settings');
+            const parsed = existing ? JSON.parse(existing) : {};
+            const updated = {
+              ...parsed,
+              customThemeConfig: result.data.customThemeConfig || parsed.customThemeConfig,
+              savedCustomThemes: savedThemesList,
+              appFontFamily: fFamily,
+              appCustomFontBase64: fBase64,
+              appCustomFontFormat: fFormat,
+              appCustomFontName: fName
+            };
+            localStorage.setItem('app-settings', JSON.stringify(updated));
+          } catch (e) {}
+
           // One-time migration: check if timeshiftMigrationCheck is not set
           if (result.data.timeshiftMigrationCheck !== true) {
             const hasTimeshift = result.data.timeshiftEnabled === true;
@@ -347,6 +524,21 @@ export function useAppSettings(): AppSettings {
           if (localStorageTheme) {
             setThemeState(localStorageTheme as ThemeId);
           }
+
+          try {
+            const existing = localStorage.getItem('app-settings');
+            if (existing) {
+              const parsed = JSON.parse(existing);
+              if (parsed.customThemeConfig) {
+                setCustomThemeConfigState(parsed.customThemeConfig);
+              }
+              if (parsed.savedCustomThemes) setSavedCustomThemesState(parsed.savedCustomThemes);
+              if (parsed.appFontFamily) setAppFontFamilyState(parsed.appFontFamily);
+              if (parsed.appCustomFontBase64) setAppCustomFontBase64State(parsed.appCustomFontBase64);
+              if (parsed.appCustomFontFormat) setAppCustomFontFormatState(parsed.appCustomFontFormat);
+              if (parsed.appCustomFontName) setAppCustomFontNameState(parsed.appCustomFontName);
+            }
+          } catch (e) {}
         }
       } catch (e) {
         console.error('[useAppSettings] Failed to load layout settings:', e);
@@ -354,6 +546,26 @@ export function useAppSettings(): AppSettings {
       setLayoutSettingsLoaded(true);
     };
     loadLayoutSettings();
+  }, []);
+
+  const updateCustomThemeConfig = useCallback(async (newConfig: Partial<CustomThemeConfig>) => {
+    setCustomThemeConfigState((prev) => {
+      const updated = { ...prev, ...newConfig };
+      // Persist to storage
+      if (window.storage) {
+        window.storage.updateSettings({ customThemeConfig: updated }).catch((e) => {
+          console.error('[useAppSettings] Failed to save custom theme:', e);
+        });
+      }
+      try {
+        const existing = localStorage.getItem('app-settings');
+        const parsed = existing ? JSON.parse(existing) : {};
+        localStorage.setItem('app-settings', JSON.stringify({ ...parsed, customThemeConfig: updated }));
+      } catch (e) {
+        console.warn('[useAppSettings] Failed to save custom theme to localStorage:', e);
+      }
+      return updated;
+    });
   }, []);
 
   const setTheme = useCallback(async (newTheme: ThemeId) => {
@@ -686,7 +898,58 @@ export function useAppSettings(): AppSettings {
     }
   }, []);
 
+  const updateAppFont = useCallback(async (family: string, base64 = '', format = '', name = '') => {
+    setAppFontFamilyState(family);
+    setAppCustomFontBase64State(base64);
+    setAppCustomFontFormatState(format);
+    setAppCustomFontNameState(name);
+
+    const updateObj = {
+      appFontFamily: family,
+      appCustomFontBase64: base64,
+      appCustomFontFormat: format,
+      appCustomFontName: name
+    };
+
+    if (window.storage) {
+      window.storage.updateSettings(updateObj).catch((e) => {
+        console.error('[useAppSettings] Failed to save app font settings to Tauri:', e);
+      });
+    }
+
+    try {
+      const existing = localStorage.getItem('app-settings');
+      const parsed = existing ? JSON.parse(existing) : {};
+      localStorage.setItem('app-settings', JSON.stringify({ ...parsed, ...updateObj }));
+    } catch (e) {
+      console.warn('[useAppSettings] Failed to save app font settings to localStorage:', e);
+    }
+  }, []);
+
+  const setSavedCustomThemes = useCallback(async (themes: CustomThemeConfig[]) => {
+    setSavedCustomThemesState(themes);
+    if (window.storage) {
+      window.storage.updateSettings({ savedCustomThemes: themes }).catch((e) => {
+        console.error('[useAppSettings] Failed to save savedCustomThemes:', e);
+      });
+    }
+    try {
+      const existing = localStorage.getItem('app-settings');
+      const parsed = existing ? JSON.parse(existing) : {};
+      localStorage.setItem('app-settings', JSON.stringify({ ...parsed, savedCustomThemes: themes }));
+    } catch (e) {
+      console.warn('[useAppSettings] Failed to save savedCustomThemes to localStorage:', e);
+    }
+  }, []);
+
   return {
+    savedCustomThemes,
+    setSavedCustomThemes,
+    appFontFamily,
+    appCustomFontBase64,
+    appCustomFontFormat,
+    appCustomFontName,
+    updateAppFont,
     rememberLastChannels,
     reopenLastOnStartup,
     savedLayoutState,
@@ -715,6 +978,7 @@ export function useAppSettings(): AppSettings {
     popoutMpvParamsEnabled,
     popoutMpvParams,
     theme,
+    customThemeConfig,
     shortcuts,
     categoriesHidden,
     categoriesHiddenTransparent,
@@ -728,6 +992,7 @@ export function useAppSettings(): AppSettings {
     setNavHiddenTabs,
     setEpgHiddenButtons,
     setTheme,
+    updateCustomThemeConfig,
     setShortcuts,
     setCategoriesHidden,
     setCategoriesHiddenTransparent,

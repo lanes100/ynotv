@@ -184,10 +184,12 @@ function App() {
     channelInfoOverlayBoxWidth,
     channelInfoOverlayOpacity,
     theme,
+    customThemeConfig,
     shortcuts,
     categoriesHidden,
     categoriesHiddenTransparent,
     setTheme,
+    updateCustomThemeConfig,
     setShortcuts,
     setCategoriesHidden,
     setCategoriesHiddenTransparent,
@@ -3819,7 +3821,7 @@ function App() {
         const hasPreviewRect = !!previewVideoRect;
         const shouldRenderGlassBg = liveTvDesign === 'v3' && (
           (isPreviewView && !guideTransparent && (!currentChannel || hasPreviewRect)) ||
-          ((activeView === 'movies' || activeView === 'series' || activeView === 'dvr' || activeView === 'stremio' || activeView === 'nuvio' || activeView === 'calendar') && !guideTransparent) ||
+          ((activeView === 'movies' || activeView === 'series' || activeView === 'dvr' || activeView === 'stremio' || activeView === 'nuvio' || activeView === 'calendar' || activeView === 'settings') && !guideTransparent) ||
           (activeView === 'none' && !currentChannel)
         );
 
@@ -4051,6 +4053,8 @@ function App() {
           onShortcutsChange={setShortcuts}
           theme={theme}
           onThemeChange={setTheme}
+          customThemeConfig={customThemeConfig}
+          onCustomThemeConfigChange={updateCustomThemeConfig}
           channelInfoOverlayEnabled={channelInfoOverlayEnabled}
           onChannelInfoOverlayChange={setChannelInfoOverlayEnabled}
           channelInfoOverlayFontSize={channelInfoOverlayFontSize}

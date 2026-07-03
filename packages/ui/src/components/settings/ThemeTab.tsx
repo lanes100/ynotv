@@ -1,8 +1,13 @@
-import type { ThemeId } from '../../types/app';
+import { useState } from 'react';
+import type { ThemeId, CustomThemeConfig } from '../../types/app';
+import { extractCurrentThemeVariables } from '../../utils/themeHelper';
+import { useAppSettings } from '../../hooks/useAppSettings';
 
 interface ThemeTabProps {
   theme: ThemeId;
   onThemeChange: (theme: ThemeId) => void;
+  customThemeConfig?: CustomThemeConfig;
+  onCustomThemeConfigChange?: (config: Partial<CustomThemeConfig>) => void;
 }
 
 const THEMES: { id: ThemeId; name: string; description: string; preview: string; gradient?: string }[] = [
@@ -91,13 +96,165 @@ const THEMES: { id: ThemeId; name: string; description: string; preview: string;
   { id: 'solid-blossom', name: 'Cherry Blossom', description: 'Pink to lavender to cream', preview: 'linear-gradient(135deg, #2d1a2d 0%, #4a2d3d 25%, #6b3d4a 50%, #8c5c6b 75%, #6b5c8c 100%)', gradient: 'linear-gradient(135deg, #2d1a2d 0%, #4a2d3d 25%, #6b3d4a 50%, #8c5c6b 75%, #6b5c8c 100%)' },
   { id: 'solid-northern', name: 'Northern Lights', description: 'Teal to green to purple shimmer', preview: 'linear-gradient(135deg, #0a1f28 0%, #1a3d4a 20%, #2d6b5c 40%, #4a8c6b 60%, #6b4a8c 80%, #3d1a5c 100%)', gradient: 'linear-gradient(135deg, #0a1f28 0%, #1a3d4a 20%, #2d6b5c 40%, #4a8c6b 60%, #6b4a8c 80%, #3d1a5c 100%)' },
   // Final Multicolored Themes
-  { id: 'solid-rainbow', name: 'Rainbow Prism', description: 'Full spectrum multicolor gradient', preview: 'linear-gradient(135deg, #2d1a3d 0%, #3d1a5c 15%, #5c2a6b 30%, #6b4a3d 45%, #5c6b2a 60%, #2a6b5c 75%, #1a3a5c 90%, #2d1a4a 100%)', gradient: 'linear-gradient(135deg, #2d1a3d 0%, #3d1a5c 15%, #5c2a6b 30%, #6b4a3d 45%, #5c6b2a 60%, #2a6b5c 75%, #1a3a5c 90%, #2d1a4a 100%)' },
+  { id: 'solid-rainbow', name: 'Rainbow Prism', description: 'Full spectrum multicolor gradient', preview: 'linear-gradient(135deg, #2d1a3d 0%, #3d1a5c 15%, #5c2a6b 30%, #6b4a3d 45%, #5c6b2a 60%, #2a6b5c 75%, #1a3a5c 90%, #2d1a4a 100%)', gradient: 'linear-gradient(135deg, #2d1a3d 0%, #3d1a5c 15%, #5c2a6b 30%, #6b4a3d 45%, #5c6b2a 60%, #2a6b5c 75%, #1a3a6b 90%, #2d1a4a 100%)' },
   { id: 'solid-copper', name: 'Copper Teal', description: 'Warm copper to teal gradient', preview: 'linear-gradient(135deg, #2d1810 0%, #4a2d1a 25%, #6b3d28 50%, #2a6b6b 75%, #1a4a4a 100%)', gradient: 'linear-gradient(135deg, #2d1810 0%, #4a2d1a 25%, #6b3d28 50%, #2a6b6b 75%, #1a4a4a 100%)' },
   { id: 'solid-midnightrose', name: 'Midnight Rose', description: 'Dark purple to burgundy to pink', preview: 'linear-gradient(135deg, #1a0a1f 0%, #2d1a3d 25%, #4a1a3d 50%, #6b2a4a 75%, #3d1a2d 100%)', gradient: 'linear-gradient(135deg, #1a0a1f 0%, #2d1a3d 25%, #4a1a3d 50%, #6b2a4a 75%, #3d1a2d 100%)' },
   { id: 'solid-enchanted', name: 'Enchanted Forest', description: 'Deep green to purple to blue', preview: 'linear-gradient(135deg, #0d1a0d 0%, #1a2d1a 25%, #2d1a3d 50%, #1a3a5c 75%, #0d2d4a 100%)', gradient: 'linear-gradient(135deg, #0d1a0d 0%, #1a2d1a 25%, #2d1a3d 50%, #1a3a5c 75%, #0d2d4a 100%)' },
 ];
 
-export function ThemeTab({ theme, onThemeChange }: ThemeTabProps) {
+function ColorInput({ label, value, onChange }: { label: string; value: string; onChange: (val: string) => void }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+      <label style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.6)', fontWeight: 500 }}>{label}</label>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div style={{
+          width: '32px',
+          height: '32px',
+          borderRadius: '50%',
+          background: value,
+          border: '2px solid rgba(255,255,255,0.2)',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+          cursor: 'pointer',
+          position: 'relative',
+          overflow: 'hidden',
+          transition: 'transform 0.15s ease'
+        }}
+        onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.08)'}
+        onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+        >
+          <input 
+            type="color" 
+            value={value} 
+            onChange={(e) => onChange(e.target.value)} 
+            style={{
+              position: 'absolute',
+              top: '-10px',
+              left: '-10px',
+              width: '60px',
+              height: '60px',
+              opacity: 0,
+              cursor: 'pointer'
+            }}
+          />
+        </div>
+        <span style={{ fontSize: '0.8rem', fontFamily: 'monospace', color: 'rgba(255,255,255,0.7)' }}>
+          {value.toUpperCase()}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function SliderInput({ 
+  label, 
+  min, 
+  max, 
+  step, 
+  value, 
+  displayValue,
+  onChange 
+}: { 
+  label: string; 
+  min: number; 
+  max: number; 
+  step: number; 
+  value: number; 
+  displayValue: string;
+  onChange: (val: number) => void;
+}) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', width: '100%' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <label style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.6)', fontWeight: 500 }}>{label}</label>
+        <span style={{ fontSize: '0.8rem', color: 'var(--accent-primary, #00d4ff)', fontWeight: 600 }}>{displayValue}</span>
+      </div>
+      <input 
+        type="range" 
+        min={min} 
+        max={max} 
+        step={step} 
+        value={value} 
+        onChange={(e) => onChange(parseFloat(e.target.value))} 
+        style={{
+          width: '100%',
+          height: '6px',
+          borderRadius: '3px',
+          background: 'rgba(255,255,255,0.1)',
+          outline: 'none',
+          cursor: 'pointer',
+          accentColor: 'var(--accent-primary, #00d4ff)'
+        }}
+      />
+    </div>
+  );
+}
+
+function ButtonGroupSelector<T extends string>({
+  label,
+  options,
+  value,
+  onChange
+}: {
+  label: string;
+  options: { id: T; name: string }[];
+  value: T;
+  onChange: (val: T) => void;
+}) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+      <label style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.6)', fontWeight: 500 }}>{label}</label>
+      <div style={{ display: 'flex', background: 'rgba(0,0,0,0.2)', padding: '4px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)' }}>
+        {options.map((opt) => (
+          <button
+            key={opt.id}
+            onClick={() => onChange(opt.id)}
+            style={{
+              flex: 1,
+              padding: '6px 12px',
+              background: value === opt.id ? 'var(--accent-primary, #00d4ff)' : 'transparent',
+              color: value === opt.id ? 'black' : 'white',
+              border: 'none',
+              borderRadius: '6px',
+              fontSize: '0.8rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+              transition: 'all 0.2s ease'
+            }}
+          >
+            {opt.name}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export function ThemeTab({ 
+  theme, 
+  onThemeChange, 
+  customThemeConfig, 
+  onCustomThemeConfigChange 
+}: ThemeTabProps) {
+  const {
+    appFontFamily,
+    appCustomFontBase64,
+    appCustomFontFormat,
+    appCustomFontName,
+    updateAppFont,
+    savedCustomThemes,
+    setSavedCustomThemes
+  } = useAppSettings();
+
+  const [activeSubTab, setActiveSubTab] = useState<'premade' | 'custom'>(() => {
+    return theme === 'custom' ? 'custom' : 'premade';
+  });
+
+  const [newThemeName, setNewThemeName] = useState('');
+  const [copiedThemeId, setCopiedThemeId] = useState<string | null>(null);
+  const [importText, setImportText] = useState('');
+  const [importError, setImportError] = useState('');
+  const [importSuccess, setImportSuccess] = useState('');
+
   const handleThemeChange = async (newTheme: ThemeId) => {
     onThemeChange(newTheme);
     if (window.storage) {
@@ -105,126 +262,1277 @@ export function ThemeTab({ theme, onThemeChange }: ThemeTabProps) {
     }
   };
 
+  const handleCustomizeCurrent = () => {
+    if (onCustomThemeConfigChange) {
+      const currentVars = extractCurrentThemeVariables();
+      onCustomThemeConfigChange(currentVars);
+    }
+    handleThemeChange('custom');
+    setActiveSubTab('custom');
+  };
+
+  const handleSaveTheme = () => {
+    if (!customThemeConfig) return;
+    const name = newThemeName.trim() || 'My Custom Theme';
+    const newId = `custom-${Date.now()}`;
+    const newTheme: CustomThemeConfig = {
+      ...customThemeConfig,
+      id: newId,
+      themeName: name
+    };
+    setSavedCustomThemes([...savedCustomThemes, newTheme]);
+    setNewThemeName('');
+  };
+
+  const handleLoadCustomTheme = (themeConfig: CustomThemeConfig) => {
+    if (onCustomThemeConfigChange) {
+      onCustomThemeConfigChange(themeConfig);
+    }
+  };
+
+  const handleDeleteCustomTheme = (id: string) => {
+    setSavedCustomThemes(savedCustomThemes.filter(t => t.id !== id));
+  };
+
+  const handleExportTheme = (themeConfig: CustomThemeConfig) => {
+    const jsonStr = JSON.stringify(themeConfig, null, 2);
+    navigator.clipboard.writeText(jsonStr).then(() => {
+      if (themeConfig.id) {
+        setCopiedThemeId(themeConfig.id);
+        setTimeout(() => setCopiedThemeId(null), 2000);
+      }
+    });
+  };
+
+  const handleDownloadTheme = (themeConfig: CustomThemeConfig) => {
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(themeConfig, null, 2));
+    const downloadAnchor = document.createElement('a');
+    downloadAnchor.setAttribute("href", dataStr);
+    downloadAnchor.setAttribute("download", `${themeConfig.themeName || 'custom-theme'}.json`);
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+  };
+
+  const handleImportTheme = () => {
+    try {
+      const parsed = JSON.parse(importText);
+      if (!parsed || typeof parsed !== 'object') {
+        throw new Error('Invalid theme config object');
+      }
+      if (!parsed.backgroundType) {
+        throw new Error('Not a valid theme configuration (missing backgroundType)');
+      }
+      const importedTheme: CustomThemeConfig = {
+        ...parsed,
+        id: parsed.id || `custom-${Date.now()}`,
+        themeName: parsed.themeName || `Imported Theme (${new Date().toLocaleDateString()})`
+      };
+      setSavedCustomThemes([...savedCustomThemes, importedTheme]);
+      if (onCustomThemeConfigChange) {
+        onCustomThemeConfigChange(importedTheme);
+      }
+      setImportText('');
+      setImportError('');
+      setImportSuccess('Theme imported successfully!');
+      setTimeout(() => setImportSuccess(''), 3000);
+    } catch (e: any) {
+      setImportError(e.message || 'Failed to parse JSON string');
+    }
+  };
+
+  const handleImportFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const text = event.target?.result as string;
+        const parsed = JSON.parse(text);
+        if (!parsed || typeof parsed !== 'object') {
+          throw new Error('Invalid theme config object');
+        }
+        if (!parsed.backgroundType) {
+          throw new Error('Not a valid theme configuration (missing backgroundType)');
+        }
+        const importedTheme: CustomThemeConfig = {
+          ...parsed,
+          id: parsed.id || `custom-${Date.now()}`,
+          themeName: parsed.themeName || file.name.replace('.json', '')
+        };
+        setSavedCustomThemes([...savedCustomThemes, importedTheme]);
+        if (onCustomThemeConfigChange) {
+          onCustomThemeConfigChange(importedTheme);
+        }
+        setImportSuccess('Theme file imported successfully!');
+        setTimeout(() => setImportSuccess(''), 3000);
+      } catch (err: any) {
+        alert(`Import failed: ${err.message}`);
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  const handleLoadPreset = (presetId: ThemeId) => {
+    const oldTheme = theme;
+    
+    // Clear inline custom theme variables temporarily so getComputedStyle reads the preset's actual values from themes.css
+    const customKeys = [
+      '--bg-primary',
+      '--bg-secondary',
+      '--bg-tertiary',
+      '--surface-color',
+      '--surface-hover',
+      '--surface-active',
+      '--surface-border',
+      '--surface-glow',
+      '--text-primary',
+      '--text-secondary',
+      '--text-muted',
+      '--text-accent',
+      '--accent-primary',
+      '--accent-secondary',
+      '--accent-glow',
+      '--glass-blur',
+      '--glass-saturation',
+      '--glass-border',
+      '--glass-shadow',
+      '--bg-gradient-1',
+      '--bg-gradient-2',
+      '--bg-gradient-3',
+      '--bg-gradient-4',
+      '--bg-gradient-5',
+      '--custom-blob-1',
+      '--custom-blob-2',
+      '--custom-blob-3',
+      '--custom-blob-4',
+      '--font-family'
+    ];
+    
+    const savedInlineStyles: Record<string, string> = {};
+    customKeys.forEach(key => {
+      const val = document.documentElement.style.getPropertyValue(key);
+      if (val) {
+        savedInlineStyles[key] = val;
+        document.documentElement.style.removeProperty(key);
+      }
+    });
+    const styleEl = document.getElementById('custom-theme-font-face');
+    if (styleEl) styleEl.remove();
+
+    // Temporarily apply theme to documentElement to extract computed properties
+    document.documentElement.setAttribute('data-theme', presetId);
+    const presetVars = extractCurrentThemeVariables();
+    
+    // Restore theme state
+    document.documentElement.setAttribute('data-theme', oldTheme);
+    
+    // Restore inline styles
+    Object.entries(savedInlineStyles).forEach(([key, val]) => {
+      document.documentElement.style.setProperty(key, val);
+    });
+
+    if (onCustomThemeConfigChange) {
+      onCustomThemeConfigChange(presetVars);
+    }
+    if (theme !== 'custom') {
+      handleThemeChange('custom');
+    }
+  };
+
+  const handleResetToDefaultCustom = () => {
+    if (onCustomThemeConfigChange) {
+      onCustomThemeConfigChange({
+        backgroundType: 'solid',
+        backgroundColor: '#1a1a1a',
+        gradientStart: '#1a0b2e',
+        gradientMiddle: '#4a1a6b',
+        gradientEnd: '#2d1b4e',
+        accentColor: '#00d4ff',
+        textColor: '#ffffff',
+        textSecondaryColor: 'rgba(255,255,255,0.7)',
+        surfaceColor: '#282828',
+        surfaceOpacity: 0.85,
+        surfaceBorderColor: '#ffffff',
+        surfaceBorderOpacity: 0.1,
+        glassBlur: 20,
+        glassSaturation: 150,
+        customBlob1: '#00bbf5',
+        customBlob2: '#ff1493',
+        customBlob3: '#ffd700',
+        customBlob4: '#76ff03',
+        customBlob1Opacity: 0.55,
+        customBlob2Opacity: 0.45,
+        customBlob3Opacity: 0.35,
+        customBlob4Opacity: 0.3,
+        showGlassBlobs: true
+      });
+    }
+  };
+
+  const activeThemeObj = THEMES.find(t => t.id === theme);
+
   return (
     <div className="settings-tab-content">
-      <div className="settings-section">
-        <div className="section-header">
-          <h3>Theme</h3>
-        </div>
+      {/* Sub Tab Navigation */}
+      <div style={{
+        display: 'flex',
+        gap: '12px',
+        borderBottom: '1px solid rgba(255,255,255,0.1)',
+        paddingBottom: '12px',
+        marginBottom: '20px'
+      }}>
+        <button
+          onClick={() => setActiveSubTab('premade')}
+          style={{
+            padding: '8px 16px',
+            background: activeSubTab === 'premade' ? 'rgba(255,255,255,0.15)' : 'transparent',
+            color: activeSubTab === 'premade' ? 'white' : 'rgba(255,255,255,0.6)',
+            border: 'none',
+            borderRadius: '20px',
+            fontSize: '0.85rem',
+            fontWeight: 600,
+            cursor: 'pointer',
+            transition: 'all 0.2s ease'
+          }}
+        >
+          🎨 Premade Themes
+        </button>
+        <button
+          onClick={() => setActiveSubTab('custom')}
+          style={{
+            padding: '8px 16px',
+            background: activeSubTab === 'custom' ? 'rgba(255,255,255,0.15)' : 'transparent',
+            color: activeSubTab === 'custom' ? 'white' : 'rgba(255,255,255,0.6)',
+            border: 'none',
+            borderRadius: '20px',
+            fontSize: '0.85rem',
+            fontWeight: 600,
+            cursor: 'pointer',
+            transition: 'all 0.2s ease'
+          }}
+        >
+          🛠️ Custom Customizer
+        </button>
+      </div>
 
-        <p className="section-description">
-          Choose a visual theme for the application. Glassmorphism themes feature translucent,
-          blurred backgrounds with vibrant color palettes.
-        </p>
-
-        <div className="theme-grid" style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
-          gap: '12px',
-          marginTop: '1.5rem'
-        }}>
-          {THEMES.map((t) => (
-            <button
-              key={t.id}
-              onClick={() => handleThemeChange(t.id)}
-              className={`theme-option ${theme === t.id ? 'active' : ''}`}
-              style={{
-                position: 'relative',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                padding: '16px 12px',
-                borderRadius: '12px',
-                border: theme === t.id
-                  ? '2px solid var(--accent-primary, #00d4ff)'
-                  : '1px solid rgba(255,255,255,0.2)',
-                background: theme === t.id
-                  ? 'rgba(0, 212, 255, 0.15)'
-                  : 'rgba(255,255,255,0.05)',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                boxShadow: theme === t.id
-                  ? '0 0 20px rgba(0, 212, 255, 0.3)'
-                  : 'none'
-              }}
-            >
-              {/* Color Preview */}
-              <div
-                className="theme-preview"
+      {activeSubTab === 'premade' && (
+        <div className="settings-section">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+            <div className="section-header" style={{ marginBottom: 0 }}>
+              <h3 style={{ margin: 0 }}>Theme Selection</h3>
+            </div>
+            {theme !== 'custom' && (
+              <button
+                onClick={handleCustomizeCurrent}
                 style={{
-                  width: '48px',
-                  height: '48px',
-                  borderRadius: '50%',
-                  background: t.gradient || t.preview,
-                  marginBottom: '10px',
-                  border: '2px solid rgba(255,255,255,0.3)',
-                  boxShadow: (t.id.includes('glass') || t.id.includes('solid'))
-                    ? '0 4px 15px rgba(0,0,0,0.3), inset 0 0 20px rgba(255,255,255,0.1)'
-                    : '0 2px 8px rgba(0,0,0,0.2)',
-                  position: 'relative',
-                  overflow: 'hidden'
-                }}
-              >
-                {(t.id.includes('glass') || t.id.includes('solid')) && (
-                  <div
-                    style={{
-                      position: 'absolute',
-                      top: '20%',
-                      left: '20%',
-                      right: '20%',
-                      bottom: '20%',
-                      background: 'rgba(255,255,255,0.2)',
-                      borderRadius: '50%',
-                      filter: 'blur(8px)'
-                    }}
-                  />
-                )}
-              </div>
-
-              {/* Theme Name */}
-              <span style={{
-                fontSize: '0.85rem',
-                fontWeight: 600,
-                color: 'white',
-                textAlign: 'center',
-                marginBottom: '4px'
-              }}>
-                {t.name}
-              </span>
-
-              {/* Theme Description */}
-              <span style={{
-                fontSize: '0.7rem',
-                color: 'rgba(255,255,255,0.6)',
-                textAlign: 'center',
-                lineHeight: 1.3
-              }}>
-                {t.description}
-              </span>
-
-              {/* Checkmark for active theme */}
-              {theme === t.id && (
-                <div style={{
-                  position: 'absolute',
-                  top: '8px',
-                  right: '8px',
-                  width: '20px',
-                  height: '20px',
-                  borderRadius: '50%',
-                  background: 'var(--accent-primary, #00d4ff)',
+                  background: 'rgba(255,255,255,0.1)',
+                  color: 'white',
+                  border: '1px solid rgba(255,255,255,0.2)',
+                  borderRadius: '20px',
+                  padding: '6px 14px',
+                  fontSize: '0.8rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '12px',
-                  color: 'white'
-                }}>
-                  ✓
+                  gap: '6px'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'var(--accent-primary, #00d4ff)';
+                  e.currentTarget.style.color = 'black';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
+                  e.currentTarget.style.color = 'white';
+                }}
+              >
+                🎨 Customize "{activeThemeObj?.name || theme}"
+              </button>
+            )}
+          </div>
+
+          <p className="section-description">
+            Choose a visual theme for the application. Glassmorphism themes feature translucent,
+            blurred backgrounds with vibrant color palettes.
+          </p>
+
+          <div className="theme-grid" style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
+            gap: '12px',
+            marginTop: '1.5rem'
+          }}>
+            {/* Show Custom Option in Grid too if it was configured */}
+            {customThemeConfig && (
+              <button
+                onClick={() => handleThemeChange('custom')}
+                className={`theme-option ${theme === 'custom' ? 'active' : ''}`}
+                style={{
+                  position: 'relative',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  padding: '16px 12px',
+                  borderRadius: '12px',
+                  border: theme === 'custom'
+                    ? '2px solid var(--accent-primary, #00d4ff)'
+                    : '1px solid rgba(255,255,255,0.2)',
+                  background: theme === 'custom'
+                    ? 'rgba(0, 212, 255, 0.15)'
+                    : 'rgba(255,255,255,0.05)',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  boxShadow: theme === 'custom'
+                    ? '0 0 20px rgba(0, 212, 255, 0.3)'
+                    : 'none'
+                }}
+              >
+                <div
+                  style={{
+                    width: '48px',
+                    height: '48px',
+                    borderRadius: '50%',
+                    background: customThemeConfig.backgroundType === 'gradient'
+                      ? `linear-gradient(135deg, ${customThemeConfig.gradientStart} 0%, ${customThemeConfig.gradientEnd} 100%)`
+                      : customThemeConfig.backgroundColor,
+                    marginBottom: '10px',
+                    border: '2px solid rgba(255,255,255,0.3)',
+                    boxShadow: '0 4px 15px rgba(0,0,0,0.3)',
+                    position: 'relative',
+                    overflow: 'hidden',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: 'white',
+                    fontSize: '18px'
+                  }}
+                >
+                  ⚙️
                 </div>
-              )}
-            </button>
-          ))}
+                <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'white', textAlign: 'center', marginBottom: '4px' }}>
+                  Custom Theme
+                </span>
+                <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.6)', textAlign: 'center', lineHeight: 1.3 }}>
+                  Your personalized theme settings
+                </span>
+                {theme === 'custom' && (
+                  <div style={{
+                    position: 'absolute',
+                    top: '8px',
+                    right: '8px',
+                    width: '20px',
+                    height: '20px',
+                    borderRadius: '50%',
+                    background: 'var(--accent-primary, #00d4ff)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '12px',
+                    color: 'white'
+                  }}>
+                    ✓
+                  </div>
+                )}
+              </button>
+            )}
+
+            {THEMES.map((t) => (
+              <button
+                key={t.id}
+                onClick={() => handleThemeChange(t.id)}
+                className={`theme-option ${theme === t.id ? 'active' : ''}`}
+                style={{
+                  position: 'relative',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  padding: '16px 12px',
+                  borderRadius: '12px',
+                  border: theme === t.id
+                    ? '2px solid var(--accent-primary, #00d4ff)'
+                    : '1px solid rgba(255,255,255,0.2)',
+                  background: theme === t.id
+                    ? 'rgba(0, 212, 255, 0.15)'
+                    : 'rgba(255,255,255,0.05)',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  boxShadow: theme === t.id
+                    ? '0 0 20px rgba(0, 212, 255, 0.3)'
+                    : 'none'
+                }}
+              >
+                {/* Color Preview */}
+                <div
+                  className="theme-preview"
+                  style={{
+                    width: '48px',
+                    height: '48px',
+                    borderRadius: '50%',
+                    background: t.gradient || t.preview,
+                    marginBottom: '10px',
+                    border: '2px solid rgba(255,255,255,0.3)',
+                    boxShadow: (t.id.includes('glass') || t.id.includes('solid'))
+                      ? '0 4px 15px rgba(0,0,0,0.3), inset 0 0 20px rgba(255,255,255,0.1)'
+                      : '0 2px 8px rgba(0,0,0,0.2)',
+                    position: 'relative',
+                    overflow: 'hidden'
+                  }}
+                >
+                  {(t.id.includes('glass') || t.id.includes('solid')) && (
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: '20%',
+                        left: '20%',
+                        right: '20%',
+                        bottom: '20%',
+                        background: 'rgba(255,255,255,0.2)',
+                        borderRadius: '50%',
+                        filter: 'blur(8px)'
+                      }}
+                    />
+                  )}
+                </div>
+
+                {/* Theme Name */}
+                <span style={{
+                  fontSize: '0.85rem',
+                  fontWeight: 600,
+                  color: 'white',
+                  textAlign: 'center',
+                  marginBottom: '4px'
+                }}>
+                  {t.name}
+                </span>
+
+                {/* Theme Description */}
+                <span style={{
+                  fontSize: '0.7rem',
+                  color: 'rgba(255,255,255,0.6)',
+                  textAlign: 'center',
+                  lineHeight: 1.3
+                }}>
+                  {t.description}
+                </span>
+
+                {/* Checkmark for active theme */}
+                {theme === t.id && (
+                  <div style={{
+                    position: 'absolute',
+                    top: '8px',
+                    right: '8px',
+                    width: '20px',
+                    height: '20px',
+                    borderRadius: '50%',
+                    background: 'var(--accent-primary, #00d4ff)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '12px',
+                    color: 'white'
+                  }}>
+                    ✓
+                  </div>
+                )}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
+
+      {activeSubTab === 'custom' && (
+        <div className="settings-section">
+          {/* Status Header */}
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            background: theme === 'custom' ? 'rgba(0,212,255,0.12)' : 'rgba(255,255,255,0.03)',
+            border: theme === 'custom' ? '1px solid rgba(0,212,255,0.25)' : '1px solid rgba(255,255,255,0.08)',
+            borderRadius: '12px',
+            padding: '16px',
+            marginBottom: '20px',
+            boxShadow: theme === 'custom' ? '0 4px 15px rgba(0, 212, 255, 0.1)' : 'none'
+          }}>
+            <div>
+              <span style={{ fontWeight: 600, color: 'white', display: 'block', fontSize: '0.95rem', marginBottom: '4px' }}>
+                🎨 Custom Theme Creator
+              </span>
+              <span style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.6)' }}>
+                {theme === 'custom' 
+                  ? 'Your custom theme is active. Any changes you make below will apply in real time!' 
+                  : 'Start customizing to design your own visual interface.'}
+              </span>
+            </div>
+            {theme !== 'custom' ? (
+              <button
+                onClick={handleCustomizeCurrent}
+                style={{
+                  background: 'var(--accent-primary, #00d4ff)',
+                  color: 'black',
+                  border: 'none',
+                  borderRadius: '8px',
+                  padding: '10px 20px',
+                  fontWeight: 600,
+                  fontSize: '0.85rem',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  boxShadow: '0 4px 12px rgba(0, 212, 255, 0.25)'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.filter = 'brightness(1.15)'}
+                onMouseLeave={(e) => e.currentTarget.style.filter = 'none'}
+              >
+                Start Customizing
+              </button>
+            ) : (
+              <span style={{
+                background: 'rgba(0, 212, 255, 0.2)',
+                color: '#00d4ff',
+                borderRadius: '20px',
+                padding: '4px 12px',
+                fontSize: '0.75rem',
+                fontWeight: 600,
+                border: '1px solid rgba(0, 212, 255, 0.3)'
+              }}>
+                ● Active
+              </span>
+            )}
+          </div>
+
+          {theme === 'custom' && customThemeConfig && onCustomThemeConfigChange && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              {/* Presets and Actions */}
+              <div style={{
+                display: 'flex',
+                gap: '16px',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                background: 'rgba(255,255,255,0.02)',
+                padding: '12px 16px',
+                borderRadius: '8px',
+                border: '1px solid rgba(255,255,255,0.05)'
+              }}>
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flex: 1, minWidth: '240px' }}>
+                  <span style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.6)', whiteSpace: 'nowrap' }}>Copy theme preset:</span>
+                  <select
+                    onChange={(e) => {
+                      if (e.target.value) {
+                        handleLoadPreset(e.target.value as ThemeId);
+                        e.target.value = '';
+                      }
+                    }}
+                    style={{
+                      background: 'rgba(0, 0, 0, 0.3)',
+                      color: 'white',
+                      border: '1px solid rgba(255,255,255,0.15)',
+                      borderRadius: '6px',
+                      padding: '6px 10px',
+                      fontSize: '0.8rem',
+                      outline: 'none',
+                      cursor: 'pointer',
+                      width: '100%',
+                      maxWidth: '220px'
+                    }}
+                  >
+                    <option value="">-- Select template --</option>
+                    {THEMES.filter(t => t.id !== 'custom').map(t => (
+                      <option key={t.id} value={t.id}>{t.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <button
+                  onClick={handleResetToDefaultCustom}
+                  style={{
+                    background: 'rgba(255,255,255,0.08)',
+                    color: 'rgba(255,255,255,0.8)',
+                    border: '1px solid rgba(255,255,255,0.15)',
+                    borderRadius: '6px',
+                    padding: '6px 12px',
+                    fontSize: '0.8rem',
+                    fontWeight: 500,
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.15)'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
+                >
+                  Reset Custom theme
+                </button>
+              </div>
+
+              {/* Saved Themes & Sharing Panel */}
+              <div style={{
+                background: 'rgba(255, 255, 255, 0.03)',
+                border: '1px solid rgba(255, 255, 255, 0.08)',
+                borderRadius: '12px',
+                padding: '20px',
+                marginBottom: '20px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '16px'
+              }}>
+                <h3 style={{ margin: 0, fontSize: '1.0rem', color: 'white', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '10px' }}>
+                  Saved Themes & Sharing
+                </h3>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
+                  {/* Left Column: Save & List */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <label style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.6)', fontWeight: 500 }}>
+                        Save Current Configuration
+                      </label>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <input
+                          type="text"
+                          placeholder="e.g. My Cool Neon, Ocean Blue..."
+                          value={newThemeName}
+                          onChange={(e) => setNewThemeName(e.target.value)}
+                          style={{
+                            flex: 1,
+                            background: 'rgba(0,0,0,0.3)',
+                            border: '1px solid rgba(255,255,255,0.15)',
+                            borderRadius: '6px',
+                            padding: '8px 12px',
+                            color: 'white',
+                            fontSize: '0.85rem',
+                            outline: 'none'
+                          }}
+                        />
+                        <button
+                          onClick={handleSaveTheme}
+                          disabled={!newThemeName.trim()}
+                          style={{
+                            background: 'var(--accent-primary, #00d4ff)',
+                            color: 'black',
+                            border: 'none',
+                            borderRadius: '6px',
+                            padding: '0 16px',
+                            fontSize: '0.85rem',
+                            fontWeight: 600,
+                            cursor: newThemeName.trim() ? 'pointer' : 'not-allowed',
+                            opacity: newThemeName.trim() ? 1 : 0.6,
+                            transition: 'all 0.2s ease',
+                            height: '36px'
+                          }}
+                        >
+                          Save
+                        </button>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '4px' }}>
+                      <span style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.6)', fontWeight: 500 }}>
+                        Your Saved Themes
+                      </span>
+                      {savedCustomThemes.length === 0 ? (
+                        <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.4)', fontStyle: 'italic', padding: '8px 0' }}>
+                          No custom themes saved yet. Use the input above to save your first!
+                        </div>
+                      ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '180px', overflowY: 'auto' }}>
+                          {savedCustomThemes.map((t) => (
+                            <div
+                              key={t.id}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                background: 'rgba(255,255,255,0.02)',
+                                border: '1px solid rgba(255,255,255,0.06)',
+                                borderRadius: '6px',
+                                padding: '8px 12px'
+                              }}
+                            >
+                              <span style={{ fontSize: '0.85rem', fontWeight: 500, color: 'white', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginRight: '8px' }}>
+                                {t.themeName || 'Unnamed Theme'}
+                              </span>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <button
+                                  onClick={() => handleLoadCustomTheme(t)}
+                                  style={{
+                                    background: 'rgba(255,255,255,0.08)',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '4px',
+                                    padding: '4px 8px',
+                                    fontSize: '0.75rem',
+                                    fontWeight: 500,
+                                    cursor: 'pointer',
+                                    transition: 'all 0.15s ease'
+                                  }}
+                                  onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.15)'}
+                                  onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
+                                >
+                                  Load
+                                </button>
+                                <button
+                                  onClick={() => handleExportTheme(t)}
+                                  style={{
+                                    background: copiedThemeId === t.id ? '#2e7d32' : 'rgba(255,255,255,0.08)',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '4px',
+                                    padding: '4px 8px',
+                                    fontSize: '0.75rem',
+                                    fontWeight: 500,
+                                    cursor: 'pointer',
+                                    transition: 'all 0.15s ease',
+                                    minWidth: '55px'
+                                  }}
+                                  onMouseEnter={(e) => { if (copiedThemeId !== t.id) e.currentTarget.style.background = 'rgba(255,255,255,0.15)'; }}
+                                  onMouseLeave={(e) => { if (copiedThemeId !== t.id) e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}
+                                >
+                                  {copiedThemeId === t.id ? 'Copied!' : 'Copy'}
+                                </button>
+                                <button
+                                  onClick={() => handleDownloadTheme(t)}
+                                  title="Download .json file"
+                                  style={{
+                                    background: 'rgba(255,255,255,0.08)',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '4px',
+                                    padding: '4px 6px',
+                                    fontSize: '0.75rem',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center'
+                                  }}
+                                  onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.15)'}
+                                  onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
+                                >
+                                  💾
+                                </button>
+                                <button
+                                  onClick={() => t.id && handleDeleteCustomTheme(t.id)}
+                                  style={{
+                                    background: 'rgba(211, 47, 47, 0.2)',
+                                    color: '#ff8a80',
+                                    border: 'none',
+                                    borderRadius: '4px',
+                                    padding: '4px 8px',
+                                    fontSize: '0.75rem',
+                                    fontWeight: 500,
+                                    cursor: 'pointer',
+                                    transition: 'all 0.15s ease'
+                                  }}
+                                  onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(211, 47, 47, 0.35)'}
+                                  onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(211, 47, 47, 0.2)'}
+                                >
+                                  Delete
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Right Column: Import Theme */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <label style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.6)', fontWeight: 500 }}>
+                        Import Theme Configuration
+                      </label>
+                      <textarea
+                        rows={2}
+                        placeholder="Paste exported theme JSON string here..."
+                        value={importText}
+                        onChange={(e) => setImportText(e.target.value)}
+                        style={{
+                          background: 'rgba(0,0,0,0.3)',
+                          border: '1px solid rgba(255,255,255,0.15)',
+                          borderRadius: '6px',
+                          padding: '8px 12px',
+                          color: 'white',
+                          fontSize: '0.8rem',
+                          outline: 'none',
+                          resize: 'vertical',
+                          fontFamily: 'monospace'
+                        }}
+                      />
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <button
+                          onClick={handleImportTheme}
+                          disabled={!importText.trim()}
+                          style={{
+                            background: 'rgba(255, 255, 255, 0.1)',
+                            border: '1px solid rgba(255, 255, 255, 0.15)',
+                            borderRadius: '6px',
+                            color: 'white',
+                            padding: '6px 12px',
+                            fontSize: '0.8rem',
+                            fontWeight: 500,
+                            cursor: importText.trim() ? 'pointer' : 'not-allowed',
+                            opacity: importText.trim() ? 1 : 0.6,
+                            transition: 'all 0.2s ease',
+                            height: '32px'
+                          }}
+                          onMouseEnter={(e) => { if (importText.trim()) e.currentTarget.style.background = 'rgba(255,255,255,0.18)'; }}
+                          onMouseLeave={(e) => { if (importText.trim()) e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'; }}
+                        >
+                          Import Clipboard Paste
+                        </button>
+
+                        <button
+                          onClick={() => document.getElementById('theme-file-uploader')?.click()}
+                          style={{
+                            background: 'rgba(255, 255, 255, 0.1)',
+                            border: '1px solid rgba(255, 255, 255, 0.15)',
+                            borderRadius: '6px',
+                            color: 'white',
+                            padding: '6px 12px',
+                            fontSize: '0.8rem',
+                            fontWeight: 500,
+                            cursor: 'pointer',
+                            transition: 'all 0.2s ease',
+                            height: '32px'
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.18)'}
+                          onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'}
+                        >
+                          Upload File
+                        </button>
+                        <input
+                          id="theme-file-uploader"
+                          type="file"
+                          accept=".json"
+                          style={{ display: 'none' }}
+                          onChange={handleImportFile}
+                        />
+                      </div>
+                      
+                      {importError && (
+                        <div style={{ fontSize: '0.75rem', color: '#ff8a80', marginTop: '2px' }}>
+                          ⚠️ {importError}
+                        </div>
+                      )}
+                      {importSuccess && (
+                        <div style={{ fontSize: '0.75rem', color: '#81c784', marginTop: '2px' }}>
+                          ✓ {importSuccess}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Editor Columns */}
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+                gap: '20px'
+              }}>
+                {/* Left Column: Background & Colors */}
+                <div style={{ marginBottom: '20px' }}>
+                  <div style={{
+                    background: 'rgba(255, 255, 255, 0.03)',
+                    border: '1px solid rgba(255, 255, 255, 0.08)',
+                    borderRadius: '12px',
+                    padding: '16px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '16px'
+                  }}>
+                    <h4 style={{ margin: '0 0 4px 0', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '8px', color: 'white', fontSize: '0.9rem' }}>
+                      Background & Accent
+                    </h4>
+
+                    {/* Background Type */}
+                    <ButtonGroupSelector
+                      label="Background Style"
+                      options={[
+                        { id: 'solid', name: 'Solid Color' },
+                        { id: 'gradient', name: '5-Color Gradient' }
+                      ]}
+                      value={customThemeConfig.backgroundType}
+                      onChange={(val) => onCustomThemeConfigChange({ backgroundType: val })}
+                    />
+
+                    {/* Colors depending on style */}
+                    {customThemeConfig.backgroundType === 'gradient' ? (
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '10px' }}>
+                        <ColorInput
+                          label="Stop 1 (Start)"
+                          value={customThemeConfig.gradientStart || '#1a0b2e'}
+                          onChange={(val) => onCustomThemeConfigChange({ gradientStart: val })}
+                        />
+                        <ColorInput
+                          label="Stop 2 (25%)"
+                          value={customThemeConfig.gradientColor4 || customThemeConfig.gradientStart || '#1a0b2e'}
+                          onChange={(val) => onCustomThemeConfigChange({ gradientColor4: val })}
+                        />
+                        <ColorInput
+                          label="Stop 3 (Middle)"
+                          value={customThemeConfig.gradientMiddle || '#4a1a6b'}
+                          onChange={(val) => onCustomThemeConfigChange({ gradientMiddle: val })}
+                        />
+                        <ColorInput
+                          label="Stop 4 (75%)"
+                          value={customThemeConfig.gradientColor5 || customThemeConfig.gradientEnd || '#2d1b4e'}
+                          onChange={(val) => onCustomThemeConfigChange({ gradientColor5: val })}
+                        />
+                        <ColorInput
+                          label="Stop 5 (End)"
+                          value={customThemeConfig.gradientEnd || '#2d1b4e'}
+                          onChange={(val) => onCustomThemeConfigChange({ gradientEnd: val })}
+                        />
+                      </div>
+                    ) : (
+                      <ColorInput
+                        label="Background Color"
+                        value={customThemeConfig.backgroundColor || '#1a1a1a'}
+                        onChange={(val) => onCustomThemeConfigChange({ backgroundColor: val })}
+                      />
+                    )}
+
+                    {/* Accent Color */}
+                    <ColorInput
+                      label="Primary Theme Accent Color"
+                      value={customThemeConfig.accentColor || '#00d4ff'}
+                      onChange={(val) => onCustomThemeConfigChange({ accentColor: val })}
+                    />
+
+                    {/* Text Colors */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '4px' }}>
+                      <ColorInput
+                        label="Primary Text"
+                        value={customThemeConfig.textColor || '#ffffff'}
+                        onChange={(val) => onCustomThemeConfigChange({ textColor: val })}
+                      />
+                      <ColorInput
+                        label="Secondary Text"
+                        value={customThemeConfig.textSecondaryColor || 'rgba(255,255,255,0.7)'}
+                        onChange={(val) => onCustomThemeConfigChange({ textSecondaryColor: val })}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Typography Settings Card */}
+                  <div style={{
+                    background: 'rgba(255, 255, 255, 0.03)',
+                    border: '1px solid rgba(255, 255, 255, 0.08)',
+                    borderRadius: '12px',
+                    padding: '16px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '16px',
+                    marginTop: '16px'
+                  }}>
+                    <h4 style={{ margin: '0 0 4px 0', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '8px', color: 'white', fontSize: '0.9rem' }}>
+                      Typography Settings
+                    </h4>
+
+                    {/* Font Family selector */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      <label style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.7)', fontWeight: 500 }}>
+                        App Font Family
+                      </label>
+                      <select
+                        value={appFontFamily}
+                        onChange={(e) => updateAppFont(e.target.value, appCustomFontBase64, appCustomFontFormat, appCustomFontName)}
+                        style={{
+                          background: 'rgba(255, 255, 255, 0.05)',
+                          border: '1px solid rgba(255, 255, 255, 0.1)',
+                          borderRadius: '6px',
+                          padding: '8px 12px',
+                          color: 'white',
+                          fontSize: '0.85rem',
+                          outline: 'none',
+                          cursor: 'pointer',
+                          width: '100%',
+                          height: '36px'
+                        }}
+                      >
+                        <option value="inter" style={{ background: '#1c1c1e', color: 'white' }}>Inter (Default)</option>
+                        <option value="switzer" style={{ background: '#1c1c1e', color: 'white' }}>Switzer (Sans-Serif)</option>
+                        <option value="cabinet-grotesk" style={{ background: '#1c1c1e', color: 'white' }}>Cabinet Grotesk (Display Sans)</option>
+                        <option value="fraunces" style={{ background: '#1c1c1e', color: 'white' }}>Fraunces (Serif)</option>
+                        <option value="sentient" style={{ background: '#1c1c1e', color: 'white' }}>Sentient (Serif)</option>
+                        <option value="custom" style={{ background: '#1c1c1e', color: 'white' }}>Custom Uploaded Font...</option>
+                      </select>
+                    </div>
+
+                    {/* Custom Font Upload UI */}
+                    {appFontFamily === 'custom' && (
+                      <div style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '12px',
+                        background: 'rgba(255,255,255,0.02)',
+                        border: '1px dashed rgba(255,255,255,0.15)',
+                        borderRadius: '8px',
+                        padding: '12px',
+                        marginTop: '4px'
+                      }}>
+                        <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.6)', lineHeight: '1.4' }}>
+                          Upload a TTF, OTF, WOFF, or WOFF2 font file. It will be loaded and persisted locally in your app settings.
+                        </div>
+                        
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <button
+                            onClick={() => document.getElementById('custom-font-uploader')?.click()}
+                            style={{
+                              background: 'rgba(255, 255, 255, 0.08)',
+                              border: '1px solid rgba(255, 255, 255, 0.15)',
+                              borderRadius: '6px',
+                              padding: '6px 12px',
+                              color: 'white',
+                              fontSize: '0.8rem',
+                              fontWeight: 500,
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              transition: 'all 0.2s ease',
+                              height: '32px'
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.15)'}
+                            onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
+                          >
+                            Choose Font File
+                          </button>
+                          <input
+                            id="custom-font-uploader"
+                            type="file"
+                            accept=".ttf,.otf,.woff,.woff2"
+                            style={{ display: 'none' }}
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                const reader = new FileReader();
+                                reader.onload = (event) => {
+                                  const base64 = event.target?.result as string;
+                                  let format = 'woff2';
+                                  if (file.name.endsWith('.ttf')) format = 'truetype';
+                                  else if (file.name.endsWith('.otf')) format = 'opentype';
+                                  else if (file.name.endsWith('.woff')) format = 'woff';
+                                  
+                                  updateAppFont('custom', base64, format, file.name);
+                                };
+                                reader.readAsDataURL(file);
+                              }
+                            }}
+                          />
+                          
+                          {appCustomFontName && (
+                            <span style={{ fontSize: '0.75rem', color: 'var(--accent-primary, #00d4ff)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '180px' }} title={appCustomFontName}>
+                              {appCustomFontName}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Right Column: Surfaces, Borders & Glass Effects */}
+                <div>
+                  <div style={{
+                    background: 'rgba(255, 255, 255, 0.03)',
+                    border: '1px solid rgba(255, 255, 255, 0.08)',
+                    borderRadius: '12px',
+                    padding: '16px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '16px'
+                  }}>
+                    <h4 style={{ margin: '0 0 4px 0', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '8px', color: 'white', fontSize: '0.9rem' }}>
+                      Glass Surfaces & Borders
+                    </h4>
+
+                    {/* Surface Color */}
+                    <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-end' }}>
+                      <div style={{ flex: '0 0 auto' }}>
+                        <ColorInput
+                          label="Surface Tint"
+                          value={customThemeConfig.surfaceColor || '#282828'}
+                          onChange={(val) => onCustomThemeConfigChange({ surfaceColor: val })}
+                        />
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <SliderInput
+                          label="Surface Opacity"
+                          min={0.1}
+                          max={1.0}
+                          step={0.05}
+                          value={customThemeConfig.surfaceOpacity ?? 0.85}
+                          displayValue={`${Math.round((customThemeConfig.surfaceOpacity ?? 0.85) * 100)}%`}
+                          onChange={(val) => onCustomThemeConfigChange({ surfaceOpacity: val })}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Border Color */}
+                    <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-end' }}>
+                      <div style={{ flex: '0 0 auto' }}>
+                        <ColorInput
+                          label="Border Color"
+                          value={customThemeConfig.surfaceBorderColor || '#ffffff'}
+                          onChange={(val) => onCustomThemeConfigChange({ surfaceBorderColor: val })}
+                        />
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <SliderInput
+                          label="Border Opacity"
+                          min={0.0}
+                          max={0.8}
+                          step={0.05}
+                          value={customThemeConfig.surfaceBorderOpacity ?? 0.1}
+                          displayValue={`${Math.round((customThemeConfig.surfaceBorderOpacity ?? 0.1) * 100)}%`}
+                          onChange={(val) => onCustomThemeConfigChange({ surfaceBorderOpacity: val })}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Glass Blur Slider */}
+                    <SliderInput
+                      label="Backdrop Blur Effect"
+                      min={0}
+                      max={40}
+                      step={1}
+                      value={customThemeConfig.glassBlur ?? 20}
+                      displayValue={`${customThemeConfig.glassBlur ?? 20}px`}
+                      onChange={(val) => onCustomThemeConfigChange({ glassBlur: val })}
+                    />
+
+                    {/* Glass Saturation Slider */}
+                    <SliderInput
+                      label="Backdrop Color Saturation"
+                      min={100}
+                      max={200}
+                      step={5}
+                      value={customThemeConfig.glassSaturation ?? 150}
+                      displayValue={`${customThemeConfig.glassSaturation ?? 150}%`}
+                      onChange={(val) => onCustomThemeConfigChange({ glassSaturation: val })}
+                    />
+                  </div>
+
+                  {/* V3 UI Bulb Glows card */}
+                  <div style={{
+                    background: 'rgba(255, 255, 255, 0.03)',
+                    border: '1px solid rgba(255, 255, 255, 0.08)',
+                    borderRadius: '12px',
+                    padding: '16px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '16px',
+                    marginTop: '16px'
+                  }}>
+                    <h4 style={{ margin: '0 0 4px 0', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '8px', color: 'white', fontSize: '0.9rem' }}>
+                      V3 Liquid Glass Bulbs
+                    </h4>
+                    
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '8px', borderBottom: '1px dashed rgba(255,255,255,0.08)' }}>
+                      <label style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.8)', fontWeight: 500, cursor: 'pointer' }} htmlFor="toggle-glass-blobs">
+                        Show Moving Background Bulbs
+                      </label>
+                      <input
+                        id="toggle-glass-blobs"
+                        type="checkbox"
+                        checked={customThemeConfig.showGlassBlobs ?? true}
+                        onChange={(e) => onCustomThemeConfigChange({ showGlassBlobs: e.target.checked })}
+                        style={{
+                          width: '18px',
+                          height: '18px',
+                          accentColor: 'var(--accent-primary, #00d4ff)',
+                          cursor: 'pointer'
+                        }}
+                      />
+                    </div>
+
+                    <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)', margin: 0, lineHeight: 1.3 }}>
+                      Customize the four glowing ambient bulbs moving in the background in the V3 UI.
+                    </p>
+
+                    {(customThemeConfig.showGlassBlobs ?? true) && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', borderBottom: '1px dashed rgba(255,255,255,0.06)', paddingBottom: '16px' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                            <ColorInput
+                              label="Bulb 1 (Top Left)"
+                              value={customThemeConfig.customBlob1 || '#00bbf5'}
+                              onChange={(val) => onCustomThemeConfigChange({ customBlob1: val })}
+                            />
+                            <SliderInput
+                              label="Bulb 1 Intensity"
+                              min={0}
+                              max={100}
+                              step={5}
+                              value={Math.round((customThemeConfig.customBlob1Opacity ?? 0.55) * 100)}
+                              displayValue={`${Math.round((customThemeConfig.customBlob1Opacity ?? 0.55) * 100)}%`}
+                              onChange={(val) => onCustomThemeConfigChange({ customBlob1Opacity: val / 100 })}
+                            />
+                          </div>
+
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                            <ColorInput
+                              label="Bulb 2 (Bottom Right)"
+                              value={customThemeConfig.customBlob2 || '#ff1493'}
+                              onChange={(val) => onCustomThemeConfigChange({ customBlob2: val })}
+                            />
+                            <SliderInput
+                              label="Bulb 2 Intensity"
+                              min={0}
+                              max={100}
+                              step={5}
+                              value={Math.round((customThemeConfig.customBlob2Opacity ?? 0.45) * 100)}
+                              displayValue={`${Math.round((customThemeConfig.customBlob2Opacity ?? 0.45) * 100)}%`}
+                              onChange={(val) => onCustomThemeConfigChange({ customBlob2Opacity: val / 100 })}
+                            />
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                            <ColorInput
+                              label="Bulb 3 (Top Right)"
+                              value={customThemeConfig.customBlob3 || '#ffd700'}
+                              onChange={(val) => onCustomThemeConfigChange({ customBlob3: val })}
+                            />
+                            <SliderInput
+                              label="Bulb 3 Intensity"
+                              min={0}
+                              max={100}
+                              step={5}
+                              value={Math.round((customThemeConfig.customBlob3Opacity ?? 0.35) * 100)}
+                              displayValue={`${Math.round((customThemeConfig.customBlob3Opacity ?? 0.35) * 100)}%`}
+                              onChange={(val) => onCustomThemeConfigChange({ customBlob3Opacity: val / 100 })}
+                            />
+                          </div>
+
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                            <ColorInput
+                              label="Bulb 4 (Bottom Left)"
+                              value={customThemeConfig.customBlob4 || '#76ff03'}
+                              onChange={(val) => onCustomThemeConfigChange({ customBlob4: val })}
+                            />
+                            <SliderInput
+                              label="Bulb 4 Intensity"
+                              min={0}
+                              max={100}
+                              step={5}
+                              value={Math.round((customThemeConfig.customBlob4Opacity ?? 0.3) * 100)}
+                              displayValue={`${Math.round((customThemeConfig.customBlob4Opacity ?? 0.3) * 100)}%`}
+                              onChange={(val) => onCustomThemeConfigChange({ customBlob4Opacity: val / 100 })}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

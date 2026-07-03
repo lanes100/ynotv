@@ -1,7 +1,12 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Fraunces:ital,opsz,wght@0,9..144,100..900;1,9..144,100..900&display=swap');
+@import url('https://api.fontshare.com/v2/css?f[]=switzer@300,400,500,600,700&f[]=cabinet-grotesk@300,400,500,600,700,800&f[]=sentient@300,400,500,600,700&display=swap');
+
+html, body, button, input, select, textarea {
+  font-family: var(--font-family, 'Inter', system-ui, sans-serif);
+}
 
 * {
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: var(--font-family, 'Inter', system-ui, sans-serif);
 }
 
 /* Modern Glass-Morphism UI Enhancement
@@ -4199,6 +4204,12 @@ html.modern-ui-v3[data-theme="light"] .spm-item-active-tag {
   -webkit-backdrop-filter: blur(10px) !important;
 }
 
+.modern-ui-v3 .settings-overlay.settings-overlay--no-blur {
+  background: rgba(0, 0, 0, 0.15) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
 .modern-ui-v3 .settings-panel {
   background: rgba(16, 12, 26, 0.82) !important;
   backdrop-filter: blur(35px) saturate(180%) !important;
@@ -7855,3 +7866,27 @@ html.modern-ui-v3 .title-bar .segmented-btn {
 html.modern-ui-v3 .title-bar .segmented-btn:hover {
   color: #ffffff !important;
 }
+
+/* Custom Theme - V3 Liquid Glass Background & Bulb Adaptations */
+html.modern-ui-v3[data-theme="custom"] .livetv-liquid-glass-bg {
+  background: var(--bg-primary) !important;
+}
+html.modern-ui-v3[data-theme="custom"] .livetv-liquid-glass-bg .glass-blob,
+html.modern-ui-v3[data-theme="custom"] .livetv-liquid-glass-bg::before,
+html.modern-ui-v3[data-theme="custom"] .livetv-liquid-glass-bg::after {
+  display: var(--glass-blob-display, block) !important;
+}
+html.modern-ui-v3[data-theme="custom"] .livetv-liquid-glass-bg .blob-1 {
+  background: radial-gradient(circle, var(--custom-blob-1, rgba(0, 191, 255, 0.55)) 0%, transparent 70%) !important;
+}
+html.modern-ui-v3[data-theme="custom"] .livetv-liquid-glass-bg .blob-2 {
+  background: radial-gradient(circle, var(--custom-blob-2, rgba(255, 20, 147, 0.45)) 0%, transparent 70%) !important;
+}
+html.modern-ui-v3[data-theme="custom"] .livetv-liquid-glass-bg .blob-3 {
+  background: radial-gradient(circle, var(--custom-blob-3, rgba(255, 215, 0, 0.35)) 0%, transparent 70%) !important;
+}
+html.modern-ui-v3[data-theme="custom"] .livetv-liquid-glass-bg .blob-4 {
+  background: radial-gradient(circle, var(--custom-blob-4, rgba(118, 255, 3, 0.3)) 0%, transparent 70%) !important;
+}
+
+

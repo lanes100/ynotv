@@ -23,7 +23,7 @@ import { NuvioTab } from './settings/NuvioTab';
 import { ProxyTab } from './settings/ProxyTab';
 import { useModal } from './Modal';
 import { TmdbTab } from './settings/TmdbTab';
-import type { ShortcutsMap, ThemeId } from '../types/app';
+import type { ShortcutsMap, ThemeId, CustomThemeConfig } from '../types/app';
 import type { StremioStreamPickerMode, BadgeSource, StreamAutoPlayMode, StreamAutoPlaySourceScope } from '../types/stremio';
 import { DEFAULT_BADGE_SOURCES, mergeDefaultBadgeSources } from '../utils/streamBadges';
 import './Settings.css';
@@ -33,6 +33,8 @@ interface SettingsProps {
   onShortcutsChange?: (shortcuts: ShortcutsMap) => void;
   theme?: ThemeId;
   onThemeChange?: (theme: ThemeId) => void;
+  customThemeConfig?: CustomThemeConfig;
+  onCustomThemeConfigChange?: (config: Partial<CustomThemeConfig>) => void;
   initialTab?: SettingsTabId;
   editSourceId?: string | null;
   pendingSubTabFromParent?: string | null;
@@ -100,6 +102,8 @@ export function Settings({
   onShortcutsChange,
   theme,
   onThemeChange,
+  customThemeConfig,
+  onCustomThemeConfigChange,
   initialTab = 'sources',
   editSourceId = null,
   pendingSubTabFromParent,
@@ -2090,6 +2094,8 @@ export function Settings({
           <ThemeTab
             theme={theme || 'solid-monochrome'}
             onThemeChange={onThemeChange || (() => { })}
+            customThemeConfig={customThemeConfig}
+            onCustomThemeConfigChange={onCustomThemeConfigChange || (() => { })}
           />
         );
       case 'startup':
@@ -2254,7 +2260,7 @@ export function Settings({
   }
 
   return (
-    <div className={`settings-overlay${isFullScreen ? ' settings-overlay--fullscreen' : ''}`}>
+    <div className={`settings-overlay${isFullScreen ? ' settings-overlay--fullscreen' : ''}${activeTab === 'theme' ? ' settings-overlay--no-blur' : ''}`}>
       <div className={`settings-panel settings-panel--sidebar${isFullScreen ? ' settings-panel--fullscreen' : ''}`}>
         <div className="settings-header">
           <h2>Settings</h2>

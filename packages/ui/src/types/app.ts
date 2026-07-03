@@ -1,4 +1,38 @@
-export type ThemeId = 'dark' | 'light' | 'midnight' | 'forest' | 'ocean' | 'sunset' | 'glass-ocean' | 'glass-neon' | 'glass-galaxy' | 'glass-autumn' | 'glass-berry' | 'glass-forest' | 'glass-sunset' | 'glass-rose' | 'glass-midnight' | 'glass-amber' | 'glass-mint' | 'glass-coral' | 'glass-lavender' | 'glass-slate' | 'glass-cherry' | 'glass-gold' | 'glass-miami' | 'glass-electric' | 'glass-hotpink' | 'glass-lime' | 'glass-orange' | 'glass-red' | 'glass-yellow' | 'glass-violet' | 'glass-coral-neon' | 'glass-turquoise' | 'glass-magenta' | 'glass-chartreuse' | 'glass-indigo' | 'solid-midnight' | 'solid-ocean' | 'solid-forest' | 'solid-sunset' | 'solid-berry' | 'solid-rose' | 'solid-amber' | 'solid-mint' | 'solid-coral' | 'solid-lavender' | 'solid-slate' | 'solid-cherry' | 'solid-gold' | 'solid-emerald' | 'solid-sapphire' | 'solid-ruby' | 'solid-amethyst' | 'solid-cosmic' | 'solid-tropical' | 'solid-aurora' | 'solid-tropicana' | 'solid-nebula' | 'solid-monochrome' | 'solid-neon' | 'solid-horizon' | 'solid-dragonfruit' | 'solid-arctic' | 'solid-volcano' | 'solid-zengarden' | 'solid-galaxy' | 'solid-miami' | 'solid-cyberpunk' | 'solid-deepocean' | 'solid-blossom' | 'solid-northern' | 'solid-rainbow' | 'solid-copper' | 'solid-midnightrose' | 'solid-enchanted' | 'dark-crimson' | 'dark-cyan' | 'dark-purple' | 'dark-emerald' | 'dark-orange' | 'dark-pink' | 'dark-blue' | 'dark-gold' | 'dark-lime' | 'dark-indigo' | 'dark-slate' | 'dark-warmgrey' | 'dark-steel';
+export type ThemeId = 'dark' | 'light' | 'midnight' | 'forest' | 'ocean' | 'sunset' | 'glass-ocean' | 'glass-neon' | 'glass-galaxy' | 'glass-autumn' | 'glass-berry' | 'glass-forest' | 'glass-sunset' | 'glass-rose' | 'glass-midnight' | 'glass-amber' | 'glass-mint' | 'glass-coral' | 'glass-lavender' | 'glass-slate' | 'glass-cherry' | 'glass-gold' | 'glass-miami' | 'glass-electric' | 'glass-hotpink' | 'glass-lime' | 'glass-orange' | 'glass-red' | 'glass-yellow' | 'glass-violet' | 'glass-coral-neon' | 'glass-turquoise' | 'glass-magenta' | 'glass-chartreuse' | 'glass-indigo' | 'solid-midnight' | 'solid-ocean' | 'solid-forest' | 'solid-sunset' | 'solid-berry' | 'solid-rose' | 'solid-amber' | 'solid-mint' | 'solid-coral' | 'solid-lavender' | 'solid-slate' | 'solid-cherry' | 'solid-gold' | 'solid-emerald' | 'solid-sapphire' | 'solid-ruby' | 'solid-amethyst' | 'solid-cosmic' | 'solid-tropical' | 'solid-aurora' | 'solid-tropicana' | 'solid-nebula' | 'solid-monochrome' | 'solid-neon' | 'solid-horizon' | 'solid-dragonfruit' | 'solid-arctic' | 'solid-volcano' | 'solid-zengarden' | 'solid-galaxy' | 'solid-miami' | 'solid-cyberpunk' | 'solid-deepocean' | 'solid-blossom' | 'solid-northern' | 'solid-rainbow' | 'solid-copper' | 'solid-midnightrose' | 'solid-enchanted' | 'dark-crimson' | 'dark-cyan' | 'dark-purple' | 'dark-emerald' | 'dark-orange' | 'dark-pink' | 'dark-blue' | 'dark-gold' | 'dark-lime' | 'dark-indigo' | 'dark-slate' | 'dark-warmgrey' | 'dark-steel' | 'custom';
+
+export interface CustomThemeConfig {
+    backgroundType: 'solid' | 'gradient';
+    backgroundColor: string;
+    gradientStart: string;
+    gradientMiddle: string;
+    gradientEnd: string;
+    gradientColor4?: string;
+    gradientColor5?: string;
+    accentColor: string;
+    textColor: string;
+    textSecondaryColor: string;
+    surfaceColor: string;
+    surfaceOpacity: number;
+    surfaceBorderColor: string;
+    surfaceBorderOpacity: number;
+    glassBlur: number;
+    glassSaturation: number;
+    customBlob1?: string;
+    customBlob2?: string;
+    customBlob3?: string;
+    customBlob4?: string;
+    customBlob1Opacity?: number;
+    customBlob2Opacity?: number;
+    customBlob3Opacity?: number;
+    customBlob4Opacity?: number;
+    showGlassBlobs?: boolean;
+    fontFamily?: string;
+    customFontBase64?: string;
+    customFontFormat?: string;
+    customFontName?: string;
+    id?: string;
+    themeName?: string;
+}
 
 export interface ShortcutsMap {
     [action: string]: string;
@@ -74,6 +108,12 @@ export interface GlobalEpgLink {
 
 export interface AppSettings {
     theme?: ThemeId;
+    customThemeConfig?: CustomThemeConfig;
+    savedCustomThemes?: CustomThemeConfig[];
+    appFontFamily?: string;
+    appCustomFontBase64?: string;
+    appCustomFontFormat?: string;
+    appCustomFontName?: string;
     language?: string;
     debug?: boolean;
     epgRefreshHours?: number;
