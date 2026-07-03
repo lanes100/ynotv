@@ -236,6 +236,7 @@ impl RecordingManager {
             .arg("-fflags").arg("+flush_packets")  // Flush packets immediately
             .arg("-y")                           // Overwrite if exists
             .arg(&output_path)
+            .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped());
 
@@ -436,14 +437,22 @@ impl RecordingManager {
         // Wrap in Option to handle timeout case
         let mut stderr_task_opt = Some(stderr_task);
 
-        // Wait for FFmpeg with timeout (duration + 5 minute buffer, min 10 minutes)
-        let timeout_secs = std::cmp::max(expected_duration + 300, 600);
-        let timeout = Duration::from_secs(timeout_secs as u64);
-        info!("Recording #{} waiting with timeout: {}s", recording_id, timeout_secs);
+        // Take stdin to send 'q' signal for graceful stopping
+        let stdin = child.stdin.take();
 
-        // Wait for completion, timeout, OR cancellation
+        // Calculate absolute end time, using DB schedule if possible
+        let mut actual_end_time = if let Ok(Some(s)) = self.db.get_schedule(schedule_id) {
+            s.actual_end()
+        } else {
+            chrono::Utc::now().timestamp() + expected_duration
+        };
+
+        info!("Recording #{} started, expected to end at timestamp: {} (duration: {}s)", 
+              recording_id, actual_end_time, expected_duration);
+
+        // Wait for completion, schedule end, OR cancellation
         let result = tokio::select! {
-            // Normal completion
+            // Normal completion (FFmpeg exited on its own)
             status = child.wait() => {
                 // Get stderr output
                 let stderr_task = stderr_task_opt.take()
@@ -469,22 +478,91 @@ impl RecordingManager {
 
             // Cancelled by user
             _ = cancel_rx.changed() => {
-                info!("Recording #{} cancelled by user", recording_id);
-                let _ = child.kill().await;
+                info!("Recording #{} cancelled by user, stopping FFmpeg gracefully...", recording_id);
+                let mut gracefully_stopped = false;
+                if let Some(mut stdin_pipe) = stdin {
+                    use tokio::io::AsyncWriteExt;
+                    if stdin_pipe.write_all(b"q\n").await.is_ok() && stdin_pipe.flush().await.is_ok() {
+                        match tokio::time::timeout(Duration::from_secs(5), child.wait()).await {
+                            Ok(Ok(status)) => {
+                                if status.success() {
+                                    info!("Recording #{} stopped gracefully via stdin 'q' on user cancellation", recording_id);
+                                } else {
+                                    warn!("Recording #{} FFmpeg exited with non-zero code {} after graceful cancel", recording_id, status.code().unwrap_or(-1));
+                                }
+                                gracefully_stopped = true;
+                            }
+                            _ => {}
+                        }
+                    }
+                }
+                if !gracefully_stopped {
+                    let _ = child.kill().await;
+                }
                 if let Some(task) = stderr_task_opt {
                     task.abort();
                 }
                 Err(anyhow::anyhow!("Recording cancelled by user"))
             }
 
-            // Timeout
-            _ = tokio::time::sleep(timeout) => {
-                warn!("Recording #{} timed out, killing FFmpeg", recording_id);
-                let _ = child.kill().await;
-                if let Some(task) = stderr_task_opt {
-                    task.abort();
+            // Target duration / end time reached
+            _ = async {
+                loop {
+                    let now = chrono::Utc::now().timestamp();
+                    if now >= actual_end_time {
+                        break;
+                    }
+
+                    // Sleep for up to 5 seconds
+                    let sleep_duration = std::cmp::max(1, std::cmp::min(5, actual_end_time - now));
+                    tokio::time::sleep(Duration::from_secs(sleep_duration as u64)).await;
+
+                    // Poll database to check if schedule end time / padding changed
+                    match self.db.get_schedule(schedule_id) {
+                        Ok(Some(updated_schedule)) => {
+                            let new_end = updated_schedule.actual_end();
+                            if new_end != actual_end_time {
+                                info!("Recording #{} scheduled end time updated dynamically: {} -> {}", 
+                                      recording_id, actual_end_time, new_end);
+                                actual_end_time = new_end;
+                            }
+                        }
+                        Ok(None) => {
+                            warn!("Recording #{} schedule record disappeared from database", recording_id);
+                        }
+                        Err(e) => {
+                            warn!("Recording #{} failed to query updated schedule: {}", recording_id, e);
+                        }
+                    }
                 }
-                Err(anyhow::anyhow!("Recording timed out"))
+            } => {
+                info!("Recording #{} reached scheduled end time ({}). Stopping FFmpeg gracefully...", 
+                      recording_id, actual_end_time);
+
+                let mut gracefully_stopped = false;
+                if let Some(mut stdin_pipe) = stdin {
+                    use tokio::io::AsyncWriteExt;
+                    if stdin_pipe.write_all(b"q\n").await.is_ok() && stdin_pipe.flush().await.is_ok() {
+                        match tokio::time::timeout(Duration::from_secs(5), child.wait()).await {
+                            Ok(Ok(status)) => {
+                                if status.success() {
+                                    info!("Recording #{} stopped gracefully via stdin 'q'", recording_id);
+                                } else {
+                                    warn!("Recording #{} FFmpeg exited with non-zero code {} after graceful stop", recording_id, status.code().unwrap_or(-1));
+                                }
+                                gracefully_stopped = true;
+                            }
+                            _ => {}
+                        }
+                    }
+                }
+
+                if !gracefully_stopped {
+                    warn!("Recording #{} could not be stopped gracefully, killing process", recording_id);
+                    let _ = child.kill().await;
+                }
+
+                Ok(())
             }
         };
 

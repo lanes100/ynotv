@@ -257,7 +257,7 @@ export function NowPlayingBar({
                     scheduled_start: startTime,
                     scheduled_end: startTime + (duration * 60),
                     start_padding_sec: 0,
-                    end_padding_sec: settings.default_end_padding_sec || 0,
+                    end_padding_sec: 0, // Quick recording has 0 padding
                     stream_url: undefined,
                   };
                   await scheduleRecording(schedule);
@@ -318,7 +318,7 @@ export function NowPlayingBar({
         scheduled_start: now,
         scheduled_end: now + (recordDuration * 60),
         start_padding_sec: 0,
-        end_padding_sec: settings.default_end_padding_sec || 0,
+        end_padding_sec: 0, // Quick recording has 0 padding
         series_match_title: undefined,
         recurrence: undefined,
         stream_url: isStalker ? undefined : channel.direct_url,
