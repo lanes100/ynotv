@@ -2510,7 +2510,7 @@ export function SourcesTab({
                 onChange={(e) => setEpgFormData({ ...epgFormData, saveEntireEpg: e.target.checked })}
                 style={{ cursor: 'pointer', width: '16px', height: '16px' }}
               />
-              <label htmlFor="saveEntireEpg" style={{ cursor: 'pointer', marginBottom: 0, fontWeight: 'normal', fontSize: '0.85rem', color: 'rgba(255,255,255,0.9)' }}>
+              <label htmlFor="saveEntireEpg" style={{ cursor: 'pointer', marginBottom: 0, fontWeight: 'normal', fontSize: '0.85rem', color: 'rgba(255,255,255,0.9)', textTransform: 'none' }}>
                 Cache entire Epg locally (enables manual search/matching in Epg editor)
               </label>
             </div>
