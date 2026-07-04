@@ -1773,6 +1773,12 @@ export function ChannelPanel({
       updateVideoPosition();
     }
 
+    // Listen for window resize events to keep the MPV window aligned when layout shifts
+    const handleWindowResize = () => {
+      requestAnimationFrame(updateVideoPosition);
+    };
+    window.addEventListener('resize', handleWindowResize);
+
     // Listen for window move events to keep the MPV window aligned during dragging
     let unlistenMove: (() => void) | null = null;
     let disposed = false;
@@ -1804,6 +1810,7 @@ export function ChannelPanel({
     return () => {
       disposed = true;
       observer.disconnect();
+      window.removeEventListener('resize', handleWindowResize);
       if (unlistenMove) unlistenMove();
       cancelAnimationFrame(animationFrameId);
       // NOTE: Do NOT call onPreviewVideoRectChange(null) here.

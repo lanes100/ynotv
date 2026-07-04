@@ -852,6 +852,7 @@ class YnotvDatabase extends SqliteDatabase {
     await db.execute(`CREATE INDEX IF NOT EXISTS idx_channels_source ON channels(source_id)`);
     // Index for fast name search (LIKE queries)
     await db.execute(`CREATE INDEX IF NOT EXISTS idx_channels_name ON channels(name COLLATE NOCASE)`);
+    await db.execute(`CREATE INDEX IF NOT EXISTS idx_channels_epg ON channels(epg_channel_id)`);
 
 
     // Categories

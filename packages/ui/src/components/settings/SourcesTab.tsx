@@ -230,6 +230,32 @@ export function SourcesTab({
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState<SourceFormData>(emptyForm);
+  const [discoveredEpgUrl, setDiscoveredEpgUrl] = useState<string>('');
+
+  useEffect(() => {
+    if (!editingId) {
+      setDiscoveredEpgUrl('');
+      return;
+    }
+    db.sourcesMeta.get(editingId).then(meta => {
+      setDiscoveredEpgUrl(meta?.epg_url || '');
+    }).catch(() => {
+      setDiscoveredEpgUrl('');
+    });
+  }, [editingId]);
+
+  const xtreamBuiltEpgUrl = useMemo(() => {
+    if (formData.type !== 'xtream') return '';
+    const url = (formData.url || '').trim();
+    const user = (formData.username || '').trim();
+    const pass = (formData.password || '').trim();
+    if (!url || !user || !pass) return '';
+    if (url.includes('xmltv.php')) return url;
+    const baseUrl = url.endsWith('/') ? url.slice(0, -1) : url;
+    return `${baseUrl}/xmltv.php?username=${encodeURIComponent(user)}&password=${encodeURIComponent(pass)}`;
+  }, [formData.type, formData.url, formData.username, formData.password]);
+
+  const displayedBuiltEpgUrl = discoveredEpgUrl || xtreamBuiltEpgUrl;
   const [error, setError] = useState<string | null>(null);
   const [syncError, setSyncError] = useState<string | null>(null);
   const [syncResults, setSyncResults] = useState<Map<string, SyncResult> | null>(null);
@@ -1955,6 +1981,53 @@ export function SourcesTab({
                   placeholder="http://example.com/epg.xml"
                 />
                 <span className="hint">XMLTV format EPG URL</span>
+              </div>
+            )}
+
+            {displayedBuiltEpgUrl && (
+              <div className="form-group" style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.03em', color: 'var(--text-muted, rgba(255, 255, 255, 0.5))' }}>
+                  <span style={{ textTransform: 'none' }}>Provider EPG URL</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(displayedBuiltEpgUrl);
+                    }}
+                    style={{
+                      background: 'rgba(0, 212, 255, 0.1)',
+                      border: '1px solid rgba(0, 212, 255, 0.3)',
+                      color: 'var(--accent-primary, #00d4ff)',
+                      padding: '2px 8px',
+                      borderRadius: '4px',
+                      fontSize: '0.7rem',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease',
+                      outline: 'none',
+                      textTransform: 'none',
+                    }}
+                  >
+                    📋 Copy URL
+                  </button>
+                </label>
+                <div style={{ display: 'flex', gap: '8px', marginTop: '6px' }}>
+                  <input
+                    type="text"
+                    readOnly
+                    value={displayedBuiltEpgUrl}
+                    style={{
+                      flex: 1,
+                      background: 'rgba(0, 0, 0, 0.25)',
+                      border: '1px solid rgba(255,255,255,0.08)',
+                      borderRadius: '6px',
+                      padding: '8px 12px',
+                      color: '#ccc',
+                      fontSize: '0.85rem',
+                      outline: 'none',
+                    }}
+                    onClick={(e) => (e.target as HTMLInputElement).select()}
+                  />
+                </div>
+                <span className="hint">Auto-detected or built EPG URL from your provider. Use this as an additional EPG URL in other sources.</span>
               </div>
             )}
 

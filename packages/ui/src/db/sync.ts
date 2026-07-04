@@ -2651,6 +2651,9 @@ async function _doSyncSourceImpl(source: Source, onProgress?: (msg: string) => v
     });
     debugLog('Source marked as synced after EPG step completed', 'sync');
 
+    // Automatically align/fill programs for manually overridden channels in this source
+    await alignOverriddenChannelPrograms(source.id);
+
     // Checkpoint WAL after sync completes to reclaim space
     // TRUNCATE mode = wait for all readers/writers, then checkpoint and truncate WAL to 0
     try {
@@ -3628,5 +3631,53 @@ export async function cleanupGlobalEpgCache(epgLinkId: string): Promise<void> {
     console.log(`[Global EPG] Cleaned up cache database for link ${epgLinkId}`);
   } catch (err) {
     console.warn(`[Global EPG] Failed to cleanup cache database ${epgLinkId}:`, err);
+  }
+}
+
+export async function alignOverriddenChannelPrograms(sourceId: string): Promise<void> {
+  try {
+    const dbInstance = await (db as any).dbPromise;
+    
+    // Check if there are any overrides for this source
+    const countResult = await dbInstance.select(
+      `SELECT COUNT(*) as count FROM epg_channel_overrides eco
+       JOIN channels c ON c.stream_id = eco.stream_id
+       WHERE c.source_id = $1`,
+      [sourceId]
+    ) as { count: number }[];
+    
+    if (countResult[0]?.count === 0) return;
+
+    const start = performance.now();
+    debugLog(`[Sync] Starting bulk EPG alignment for source: ${sourceId}...`, 'epg');
+
+    // One-shot SQL to align programs for all overridden channels in this source
+    await dbInstance.execute(
+      `WITH SourceChannels AS (
+         SELECT epg_channel_id, MIN(stream_id) AS src_stream_id
+         FROM channels
+         WHERE epg_channel_id IS NOT NULL AND epg_channel_id != ''
+         GROUP BY epg_channel_id
+       )
+       INSERT OR REPLACE INTO programs (id, stream_id, title, subtitle, description, start, end, source_id)
+       SELECT 
+         eco.stream_id || '_' || CAST(CAST(strftime('%s', p.start) AS INTEGER) * 1000 AS TEXT) AS id,
+         eco.stream_id AS stream_id,
+         p.title, p.subtitle, p.description, p.start, p.end, $1 AS source_id
+       FROM epg_channel_overrides eco
+       JOIN channels tc ON tc.stream_id = eco.stream_id
+       JOIN SourceChannels sc ON sc.epg_channel_id = eco.epg_channel_id AND sc.src_stream_id != eco.stream_id
+       JOIN programs p ON p.stream_id = sc.src_stream_id
+       WHERE tc.source_id = $1
+         AND p.end >= datetime('now', '-1 hour')`,
+      [sourceId]
+    );
+    
+    debugLog(`[Sync] Bulk EPG alignment complete in ${(performance.now() - start).toFixed(2)}ms`, 'epg');
+    const { dbEvents } = await import('./sqlite-adapter');
+    dbEvents.notify('programs', 'clear');
+    dbEvents.notify('programs', 'add');
+  } catch (err) {
+    console.error('[Sync] Failed to align overridden channel programs:', err);
   }
 }
