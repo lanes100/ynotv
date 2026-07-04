@@ -508,7 +508,7 @@ export async function searchEpgChannels(
       FROM channels
       WHERE (LOWER(name) LIKE LOWER($1) ESCAPE '\\' OR LOWER(epg_channel_id) LIKE LOWER($1) ESCAPE '\\')
         ${sourceId ? 'AND source_id = $2' : ''}
-      GROUP BY COALESCE(epg_channel_id, name)
+      GROUP BY COALESCE(epg_channel_id, name), source_id
       ORDER BY name COLLATE NOCASE
       LIMIT 300
     `;
@@ -607,7 +607,7 @@ export async function autoMatchChannelName(
         source_id
       FROM channels
       ${sourceId ? 'WHERE source_id = $1' : ''}
-      GROUP BY COALESCE(epg_channel_id, name)
+      GROUP BY COALESCE(epg_channel_id, name), source_id
     `;
     rows = await dbInstance.select(sql, sourceId ? [sourceId] : []);
   }

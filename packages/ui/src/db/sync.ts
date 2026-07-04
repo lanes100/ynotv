@@ -3634,15 +3634,72 @@ export async function cleanupGlobalEpgCache(epgLinkId: string): Promise<void> {
   }
 }
 
+async function executeWithRetry(
+  dbInstance: any,
+  sql: string,
+  args: any[] = [],
+  maxRetries = 15,
+  delayMs = 150
+): Promise<any> {
+  let attempt = 0;
+  while (true) {
+    try {
+      return await dbInstance.execute(sql, args);
+    } catch (err: any) {
+      attempt++;
+      const errMsg = err?.message || String(err);
+      if (attempt < maxRetries && (errMsg.includes('locked') || errMsg.includes('code: 5') || errMsg.includes('busy'))) {
+        console.warn(`[Sync DB Retry] Database locked (attempt ${attempt}/${maxRetries}). Retrying in ${delayMs}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delayMs));
+        continue;
+      }
+      throw err;
+    }
+  }
+}
+
+async function selectWithRetry(
+  dbInstance: any,
+  sql: string,
+  args: any[] = [],
+  maxRetries = 15,
+  delayMs = 150
+): Promise<any> {
+  let attempt = 0;
+  while (true) {
+    try {
+      return await dbInstance.select(sql, args);
+    } catch (err: any) {
+      attempt++;
+      const errMsg = err?.message || String(err);
+      if (attempt < maxRetries && (errMsg.includes('locked') || errMsg.includes('code: 5') || errMsg.includes('busy'))) {
+        console.warn(`[Sync DB Retry] Database locked during select (attempt ${attempt}/${maxRetries}). Retrying in ${delayMs}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delayMs));
+        continue;
+      }
+      throw err;
+    }
+  }
+}
+
 export async function alignOverriddenChannelPrograms(sourceId: string): Promise<void> {
   try {
     const dbInstance = await (db as any).dbPromise;
     
-    // Check if there are any overrides for this source
-    const countResult = await dbInstance.select(
-      `SELECT COUNT(*) as count FROM epg_channel_overrides eco
-       JOIN channels c ON c.stream_id = eco.stream_id
-       WHERE c.source_id = $1`,
+    // Check if there are any overrides that target or are sourced by this source ID (using index-friendly UNION)
+    const countResult = await selectWithRetry(
+      dbInstance,
+      `SELECT COUNT(*) as count FROM (
+         SELECT eco.stream_id FROM epg_channel_overrides eco
+         JOIN channels tc ON tc.stream_id = eco.stream_id
+         JOIN channels sc ON sc.epg_channel_id = eco.epg_channel_id AND sc.stream_id != eco.stream_id
+         WHERE tc.source_id = $1 OR sc.source_id = $1
+         UNION
+         SELECT eco.stream_id FROM epg_channel_overrides eco
+         JOIN channels tc ON tc.stream_id = eco.stream_id
+         JOIN channels sc ON sc.name = eco.epg_channel_id AND sc.stream_id != eco.stream_id
+         WHERE tc.source_id = $1 OR sc.source_id = $1
+       )`,
       [sourceId]
     ) as { count: number }[];
     
@@ -3651,25 +3708,64 @@ export async function alignOverriddenChannelPrograms(sourceId: string): Promise<
     const start = performance.now();
     debugLog(`[Sync] Starting bulk EPG alignment for source: ${sourceId}...`, 'epg');
 
-    // One-shot SQL to align programs for all overridden channels in this source
-    await dbInstance.execute(
-      `WITH SourceChannels AS (
-         SELECT epg_channel_id, MIN(stream_id) AS src_stream_id
-         FROM channels
-         WHERE epg_channel_id IS NOT NULL AND epg_channel_id != ''
-         GROUP BY epg_channel_id
-       )
-       INSERT OR REPLACE INTO programs (id, stream_id, title, subtitle, description, start, end, source_id)
+    // 1. Delete existing copied programs for target channels in this alignment to avoid stale overlaps (using index-friendly UNION subquery)
+    await executeWithRetry(
+      dbInstance,
+      `DELETE FROM programs
+       WHERE stream_id IN (
+         SELECT eco.stream_id FROM epg_channel_overrides eco
+         JOIN channels tc ON tc.stream_id = eco.stream_id
+         JOIN channels sc ON sc.epg_channel_id = eco.epg_channel_id AND sc.stream_id != eco.stream_id
+         WHERE tc.source_id = $1 OR sc.source_id = $1
+         UNION
+         SELECT eco.stream_id FROM epg_channel_overrides eco
+         JOIN channels tc ON tc.stream_id = eco.stream_id
+         JOIN channels sc ON sc.name = eco.epg_channel_id AND sc.stream_id != eco.stream_id
+         WHERE tc.source_id = $1 OR sc.source_id = $1
+       )`,
+      [sourceId]
+    );
+
+    // 2. Insert fresh programs from native provider channels to target channels
+    // We execute two separate, ultra-fast index-friendly insert statements to prevent unindexed OR joins from blocking the DB.
+    
+    // Step 2a: Match by epg_channel_id (uses idx_channels_epg index)
+    await executeWithRetry(
+      dbInstance,
+      `INSERT OR REPLACE INTO programs (id, stream_id, title, subtitle, description, start, end, source_id)
        SELECT 
          eco.stream_id || '_' || CAST(CAST(strftime('%s', p.start) AS INTEGER) * 1000 AS TEXT) AS id,
          eco.stream_id AS stream_id,
-         p.title, p.subtitle, p.description, p.start, p.end, $1 AS source_id
+         p.title, p.subtitle, p.description, p.start, p.end, tc.source_id AS source_id
        FROM epg_channel_overrides eco
        JOIN channels tc ON tc.stream_id = eco.stream_id
-       JOIN SourceChannels sc ON sc.epg_channel_id = eco.epg_channel_id AND sc.src_stream_id != eco.stream_id
-       JOIN programs p ON p.stream_id = sc.src_stream_id
-       WHERE tc.source_id = $1
-         AND p.end >= datetime('now', '-1 hour')`,
+       JOIN channels sc ON sc.epg_channel_id = eco.epg_channel_id
+                        AND sc.stream_id != eco.stream_id
+                        AND sc.stream_id NOT IN (SELECT stream_id FROM epg_channel_overrides)
+       JOIN programs p ON p.stream_id = sc.stream_id
+       WHERE (tc.source_id = $1 OR sc.source_id = $1)
+         AND p.end >= datetime('now', '-1 hour')
+       GROUP BY eco.stream_id, p.start`,
+      [sourceId]
+    );
+
+    // Step 2b: Match by name fallback (uses idx_channels_name index)
+    await executeWithRetry(
+      dbInstance,
+      `INSERT OR REPLACE INTO programs (id, stream_id, title, subtitle, description, start, end, source_id)
+       SELECT 
+         eco.stream_id || '_' || CAST(CAST(strftime('%s', p.start) AS INTEGER) * 1000 AS TEXT) AS id,
+         eco.stream_id AS stream_id,
+         p.title, p.subtitle, p.description, p.start, p.end, tc.source_id AS source_id
+       FROM epg_channel_overrides eco
+       JOIN channels tc ON tc.stream_id = eco.stream_id
+       JOIN channels sc ON sc.name = eco.epg_channel_id
+                        AND sc.stream_id != eco.stream_id
+                        AND sc.stream_id NOT IN (SELECT stream_id FROM epg_channel_overrides)
+       JOIN programs p ON p.stream_id = sc.stream_id
+       WHERE (tc.source_id = $1 OR sc.source_id = $1)
+         AND p.end >= datetime('now', '-1 hour')
+       GROUP BY eco.stream_id, p.start`,
       [sourceId]
     );
     
