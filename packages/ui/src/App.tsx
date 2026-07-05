@@ -725,8 +725,97 @@ function App() {
     }
   }, [popoutAlwaysOnTop, setPopoutAlwaysOnTop]);
 
+  const [showPopoutControls, setShowPopoutControls] = useState(true);
+  const popoutControlsHoveredRef = useRef(false);
+  const [popoutLastActivity, setPopoutLastActivity] = useState(Date.now());
+
+  // Auto-hide popout controls after inactivity (2 seconds)
+  useEffect(() => {
+    if (!popoutIsOpen) return;
+
+    const timer = setTimeout(() => {
+      if (!popoutControlsHoveredRef.current) {
+        setShowPopoutControls(false);
+      }
+    }, 2000);
+
+    return () => clearTimeout(timer);
+  }, [popoutLastActivity, popoutIsOpen]);
+
+  // Show controls when popout player is opened
+  useEffect(() => {
+    if (popoutIsOpen) {
+      setShowPopoutControls(true);
+      setPopoutLastActivity(Date.now());
+    }
+  }, [popoutIsOpen]);
+
+  const [popoutPosition, setPopoutPosition] = useState<{ x: number; y: number } | null>(null);
+  const isDraggingPopoutRef = useRef(false);
+  const dragStartOffsetRef = useRef({ x: 0, y: 0 });
+
+  // Reset popout control bar position when it closes
+  useEffect(() => {
+    if (!popoutIsOpen) {
+      setPopoutPosition(null);
+    }
+  }, [popoutIsOpen]);
+
+  const handlePopoutDragStart = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    if (e.button !== 0) return; // Only left click
+
+    // Don't drag if clicking interactive elements (buttons, inputs, sliders, svgs)
+    const target = e.target as HTMLElement;
+    if (target.closest('button') || target.closest('input') || target.closest('svg')) {
+      return;
+    }
+
+    e.preventDefault();
+    isDraggingPopoutRef.current = true;
+
+    const bar = e.currentTarget;
+    const rect = bar.getBoundingClientRect();
+
+    dragStartOffsetRef.current = {
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top,
+    };
+
+    const handleMouseMoveDrag = (moveEvent: MouseEvent) => {
+      if (!isDraggingPopoutRef.current) return;
+
+      let newX = moveEvent.clientX - dragStartOffsetRef.current.x;
+      let newY = moveEvent.clientY - dragStartOffsetRef.current.y;
+
+      const windowWidth = window.innerWidth;
+      const windowHeight = window.innerHeight;
+
+      // Clamp to screen bounds with a 10px margin
+      if (newX < 10) newX = 10;
+      if (newX > windowWidth - rect.width - 10) newX = windowWidth - rect.width - 10;
+
+      if (newY < 10) newY = 10;
+      if (newY > windowHeight - rect.height - 10) newY = windowHeight - rect.height - 10;
+
+      setPopoutPosition({ x: newX, y: newY });
+    };
+
+    const handleMouseUpDrag = () => {
+      isDraggingPopoutRef.current = false;
+      document.removeEventListener('mousemove', handleMouseMoveDrag);
+      document.removeEventListener('mouseup', handleMouseUpDrag);
+    };
+
+    document.addEventListener('mousemove', handleMouseMoveDrag);
+    document.addEventListener('mouseup', handleMouseUpDrag);
+  }, []);
+
   // Popout mode state: 'off' | 'popout' | 'external'
   const [popoutMode, setPopoutMode] = useState<'off' | 'popout' | 'external'>('off');
+  const popoutModeRef = useRef(popoutMode);
+  useEffect(() => {
+    popoutModeRef.current = popoutMode;
+  }, [popoutMode]);
   // Playback source view state to know where to go back when stopped
   const [playbackSourceView, setPlaybackSourceView] = useState<'movies' | 'series' | 'dvr' | 'stremio' | 'nuvio' | null>(null);
   const isPopoutModeLoadedRef = useRef(false);
@@ -1018,7 +1107,11 @@ function App() {
   const handleMouseMovePip = useCallback(() => {
     handleMouseMove();
     if (pipMode) showPipControls();
-  }, [handleMouseMove, pipMode, showPipControls]);
+    if (popoutIsOpen) {
+      setShowPopoutControls(true);
+      setPopoutLastActivity(Date.now());
+    }
+  }, [handleMouseMove, pipMode, showPipControls, popoutIsOpen]);
 
   const { showConfirm, ModalComponent } = useModal();
   const nuvioHasUnsavedHomeLayout = useUIStore((s) => s.nuvioHasUnsavedHomeLayout);
@@ -1834,22 +1927,23 @@ function App() {
 
   const handlePlayChannelWrapper = useCallback(async (channel: StoredChannel, autoSwitched?: boolean) => {
     setPlaybackSourceView(null);
-    if (popoutMode === 'external') {
+    const currentMode = popoutModeRef.current;
+    if (currentMode === 'external') {
       await handlePlayInExternal(channel);
-    } else if (popoutMode === 'popout') {
+    } else if (currentMode === 'popout') {
       popoutSwapChannel(channel);
     } else {
       handlePlayChannel(channel, autoSwitched);
     }
-  }, [popoutMode, handlePlayChannel, popoutSwapChannel, handlePlayInExternal]);
+  }, [handlePlayChannel, popoutSwapChannel, handlePlayInExternal]);
 
   const handlePlayVodWrapper = useCallback((info: import('./types/media').VodPlayInfo, onCloseView?: () => void) => {
-    if (popoutMode === 'popout') {
+    if (popoutModeRef.current === 'popout') {
       popoutSwapVod(info);
     } else {
       handlePlayVod(info, onCloseView);
     }
-  }, [popoutMode, handlePlayVod, popoutSwapVod]);
+  }, [handlePlayVod, popoutSwapVod]);
 
   // ==========================================================================
   // Handle Watchlist Switch (needs access to handlePlayChannel)
@@ -4261,10 +4355,20 @@ function App() {
       {/* Popout Player Control Bar */}
       {popoutIsOpen && (
         <div
+          onMouseEnter={() => {
+            popoutControlsHoveredRef.current = true;
+          }}
+          onMouseLeave={() => {
+            popoutControlsHoveredRef.current = false;
+            setPopoutLastActivity(Date.now());
+          }}
+          onMouseDown={handlePopoutDragStart}
           style={{
             position: 'fixed',
-            bottom: '20px',
-            right: '20px',
+            bottom: popoutPosition ? undefined : '20px',
+            right: popoutPosition ? undefined : '20px',
+            left: popoutPosition ? `${popoutPosition.x}px` : undefined,
+            top: popoutPosition ? `${popoutPosition.y}px` : undefined,
             zIndex: 9999,
             background: 'rgba(0,0,0,0.9)',
             backdropFilter: 'blur(12px)',
@@ -4277,9 +4381,13 @@ function App() {
             boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
             fontSize: '13px',
             color: '#fff',
-            cursor: 'default',
+            cursor: 'grab',
             userSelect: 'none',
             minWidth: '240px',
+            transition: 'opacity 0.2s ease, transform 0.2s ease, visibility 0.2s',
+            opacity: showPopoutControls ? 1 : 0,
+            transform: showPopoutControls ? 'translateY(0)' : 'translateY(10px)',
+            pointerEvents: showPopoutControls ? 'auto' : 'none',
           }}
         >
           {/* Title row */}
