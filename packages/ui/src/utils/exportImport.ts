@@ -74,6 +74,7 @@ export interface ExportData {
         id: string;
         streamId: string;
         title?: string;
+        subtitle?: string;
         description?: string;
         start?: string;
         end?: string;
@@ -298,6 +299,7 @@ export async function exportAllData(): Promise<{ success: boolean; filePath?: st
             id: o.id,
             streamId: o.stream_id,
             title: o.title,
+            subtitle: o.subtitle,
             description: o.description,
             start: o.start,
             end: o.end,
@@ -760,10 +762,10 @@ export async function importAllData(): Promise<{ success: boolean; error?: strin
             await restoreStep('EPG Channel Overrides', async () => {
                 if (data.epgChannelOverrides && data.epgChannelOverrides.length > 0) {
                     const overrides = data.epgChannelOverrides.map(o => ({
-                        stream_id: o.streamId,
-                        epg_channel_id: o.epgChannelId,
-                        stream_icon: o.streamIcon,
-                        timeshift_hours: o.timeshiftHours
+                        stream_id: o.streamId || (o as any).stream_id,
+                        epg_channel_id: o.epgChannelId !== undefined ? o.epgChannelId : (o as any).epg_channel_id,
+                        stream_icon: o.streamIcon !== undefined ? o.streamIcon : (o as any).stream_icon,
+                        timeshift_hours: o.timeshiftHours !== undefined ? o.timeshiftHours : (o as any).timeshift_hours
                     }));
                     await db.epgChannelOverrides.bulkAdd(overrides);
                 }
@@ -773,13 +775,14 @@ export async function importAllData(): Promise<{ success: boolean; error?: strin
                 if (data.epgProgramOverrides && data.epgProgramOverrides.length > 0) {
                     const overrides = data.epgProgramOverrides.map(o => ({
                         id: o.id,
-                        stream_id: o.streamId,
+                        stream_id: o.streamId || (o as any).stream_id,
                         title: o.title,
+                        subtitle: o.subtitle || (o as any).subtitle,
                         description: o.description,
                         start: o.start,
                         end: o.end,
-                        is_deleted: o.isDeleted,
-                        is_custom: o.isCustom
+                        is_deleted: o.isDeleted !== undefined ? o.isDeleted : (o as any).is_deleted,
+                        is_custom: o.isCustom !== undefined ? o.isCustom : (o as any).is_custom
                     }));
                     await db.epgProgramOverrides.bulkAdd(overrides);
                 }
