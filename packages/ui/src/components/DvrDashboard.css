@@ -1707,4 +1707,91 @@
   justify-content: flex-end;
   flex: 1;
   min-width: 200px;
+}
+
+/* Filter Bar */
+.dvr-filter-bar {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 8px;
+    background: rgba(255, 255, 255, 0.03);
+    padding: 6px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    width: fit-content;
+}
+
+.dvr-filter-btn {
+    padding: 6px 14px;
+    border: none;
+    background: transparent;
+    color: var(--text-secondary, rgba(255, 255, 255, 0.6));
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.dvr-filter-btn:hover {
+    color: var(--text-primary, #fff);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.dvr-filter-btn.active {
+    background: var(--accent-primary, #00d4ff);
+    color: #000;
+    font-weight: 600;
+    box-shadow: 0 2px 10px rgba(0, 212, 255, 0.3);
+}
+
+/* Recurrence display on cards */
+.dvr-card-recurrence {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 4px;
+    padding-top: 12px;
+    border-top: 1px dashed rgba(255, 255, 255, 0.1);
+}
+
+.recurrence-badge {
+    align-self: flex-start;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: rgba(155, 89, 182, 0.2);
+    color: #bb8fec;
+    border: 1px solid rgba(155, 89, 182, 0.3);
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.recurrence-occurrences {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    background: rgba(255, 255, 255, 0.02);
+    padding: 10px 14px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.occurrences-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary, rgba(255, 255, 255, 0.7));
+    margin-bottom: 2px;
+}
+
+.occurrence-date {
+    font-size: 11.5px;
+    color: var(--text-muted, rgba(255, 255, 255, 0.55));
+    display: flex;
+    align-items: center;
+    gap: 6px;
 }

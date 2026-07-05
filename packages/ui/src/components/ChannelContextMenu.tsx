@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { scheduleRecording, detectScheduleConflicts, type DvrSchedule, db, updateChannelAlias } from '../db';
+import { scheduleRecording, detectScheduleConflicts, type DvrSchedule, db, updateChannelAlias, getDvrSettings } from '../db';
 import type { StoredChannel } from '../db';
 import { StalkerClient } from '@ynotv/local-adapter';
 import { useModal } from './Modal';
@@ -208,7 +208,14 @@ export function ChannelContextMenu({
         }
     }
 
-    async function createRecording(startTimestamp: number, endTimestamp: number, title: string, recurrence?: string) {
+    async function createRecording(
+        startTimestamp: number,
+        endTimestamp: number,
+        title: string,
+        recurrence?: string,
+        startPadding?: number,
+        endPadding?: number
+    ) {
         let resolvedUrl: string | undefined;
 
         if (channel.direct_url?.startsWith('stalker_')) {
@@ -231,8 +238,8 @@ export function ChannelContextMenu({
             program_title: title,
             scheduled_start: startTimestamp,
             scheduled_end: endTimestamp,
-            start_padding_sec: 0,
-            end_padding_sec: 0,
+            start_padding_sec: startPadding ?? 0,
+            end_padding_sec: endPadding ?? 0,
             series_match_title: undefined,
             recurrence: recurrence,
             stream_url: resolvedUrl,
@@ -362,11 +369,17 @@ export function ChannelContextMenu({
             const startTimestamp = Math.floor(startDateTime.getTime() / 1000);
             const endTimestamp = Math.floor(endDateTime.getTime() / 1000);
             const finalRecurrence = recurrence === 'every' ? `every:${recurrenceDays}` : recurrence;
+
+            // Load default paddings from settings
+            const settings = await getDvrSettings();
+
             await createRecording(
                 startTimestamp,
                 endTimestamp,
                 `${channel.name} - Scheduled`,
-                finalRecurrence !== 'once' ? finalRecurrence : undefined
+                finalRecurrence !== 'once' ? finalRecurrence : undefined,
+                settings.default_start_padding_sec,
+                settings.default_end_padding_sec
             );
         } catch (error: any) {
             console.error('Failed to schedule recording:', error);

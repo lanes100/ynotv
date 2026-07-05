@@ -430,6 +430,8 @@ function ScheduledTab({
     formatElapsed,
     getRecordingProgress,
 }: ScheduledTabProps) {
+    const [filter, setFilter] = useState<'all' | 'single' | 'recurring'>('all');
+
     if (scheduled.length === 0) {
         return (
             <div className="dvr-empty-state">
@@ -450,70 +452,114 @@ function ScheduledTab({
     const active = scheduled.filter(s => s.status === 'recording');
     const upcoming = scheduled.filter(s => s.status === 'scheduled');
 
+    const filteredActive = active.filter(s => {
+        if (filter === 'all') return true;
+        const isRec = s.recurrence && s.recurrence !== 'once';
+        return filter === 'recurring' ? isRec : !isRec;
+    });
+
+    const filteredUpcoming = upcoming.filter(s => {
+        if (filter === 'all') return true;
+        const isRec = s.recurrence && s.recurrence !== 'once';
+        return filter === 'recurring' ? isRec : !isRec;
+    });
+
+    const hasNoItems = filteredActive.length === 0 && filteredUpcoming.length === 0;
+
     return (
         <div className="dvr-scheduled">
-            {active.length > 0 && (
-                <section className="dvr-section">
-                    <h2 className="dvr-section-title">
-                        <span className="dvr-status-dot recording" />
-                        Currently Recording
-                    </h2>
-                    <div className="dvr-card-grid">
-                        {active.map(item => {
-                            const progress = getRecordingProgress(item.id!);
-                            return (
-                                <RecordingCard
-                                    key={item.id}
-                                    item={item}
-                                    progress={progress}
-                                    onEdit={() => onEdit(item)}
-                                    onCancel={() => onCancel(item.id!)}
-                                    onPlay={onPlay ? () => {
-                                        if (progress?.file_path) {
-                                            onPlay({
-                                                id: progress.recording_id,
-                                                file_path: progress.file_path,
-                                                filename: '',
-                                                channel_name: item.channel_name,
-                                                program_title: item.program_title,
-                                                status: 'recording',
-                                                auto_delete_policy: 'space_needed',
-                                                created_at: item.created_at,
-                                                actual_start: item.scheduled_start,
-                                                scheduled_start: item.scheduled_start,
-                                                scheduled_end: item.scheduled_end,
-                                            });
-                                        }
-                                    } : undefined}
-                                    formatDateTime={formatDateTime}
-                                    formatDuration={formatDuration}
-                                    formatElapsed={formatElapsed}
-                                />
-                            );
-                        })}
-                    </div>
-                </section>
-            )}
+            <div className="dvr-filter-bar">
+                <button
+                    className={`dvr-filter-btn ${filter === 'all' ? 'active' : ''}`}
+                    onClick={() => setFilter('all')}
+                >
+                    All ({scheduled.length})
+                </button>
+                <button
+                    className={`dvr-filter-btn ${filter === 'single' ? 'active' : ''}`}
+                    onClick={() => setFilter('single')}
+                >
+                    One-time ({scheduled.filter(s => !s.recurrence || s.recurrence === 'once').length})
+                </button>
+                <button
+                    className={`dvr-filter-btn ${filter === 'recurring' ? 'active' : ''}`}
+                    onClick={() => setFilter('recurring')}
+                >
+                    Recurring ({scheduled.filter(s => s.recurrence && s.recurrence !== 'once').length})
+                </button>
+            </div>
 
-            {upcoming.length > 0 && (
-                <section className="dvr-section">
-                    <h2 className="dvr-section-title">
-                        <span className="dvr-status-dot scheduled" />
-                        Upcoming
-                    </h2>
-                    <div className="dvr-card-grid">
-                        {upcoming.map(item => (
-                            <ScheduledCard
-                                key={item.id}
-                                item={item}
-                                onEdit={() => onEdit(item)}
-                                onCancel={() => onCancel(item.id!)}
-                                formatDateTime={formatDateTime}
-                                formatDuration={formatDuration}
-                            />
-                        ))}
-                    </div>
-                </section>
+            {hasNoItems ? (
+                <div className="dvr-empty-state" style={{ padding: '40px 20px' }}>
+                    <h3>No {filter === 'recurring' ? 'Recurring' : 'One-time'} Recordings Scheduled</h3>
+                    <p>Change your filter or schedule new ones from the TV Guide</p>
+                </div>
+            ) : (
+                <>
+                    {filteredActive.length > 0 && (
+                        <section className="dvr-section">
+                            <h2 className="dvr-section-title">
+                                <span className="dvr-status-dot recording" />
+                                Currently Recording
+                            </h2>
+                            <div className="dvr-card-grid">
+                                {filteredActive.map(item => {
+                                    const progress = getRecordingProgress(item.id!);
+                                    return (
+                                        <RecordingCard
+                                            key={item.id}
+                                            item={item}
+                                            progress={progress}
+                                            onEdit={() => onEdit(item)}
+                                            onCancel={() => onCancel(item.id!)}
+                                            onPlay={onPlay ? () => {
+                                                if (progress?.file_path) {
+                                                    onPlay({
+                                                        id: progress.recording_id,
+                                                        file_path: progress.file_path,
+                                                        filename: '',
+                                                        channel_name: item.channel_name,
+                                                        program_title: item.program_title,
+                                                        status: 'recording',
+                                                        auto_delete_policy: 'space_needed',
+                                                        created_at: item.created_at,
+                                                        actual_start: item.scheduled_start,
+                                                        scheduled_start: item.scheduled_start,
+                                                        scheduled_end: item.scheduled_end,
+                                                    });
+                                                }
+                                            } : undefined}
+                                            formatDateTime={formatDateTime}
+                                            formatDuration={formatDuration}
+                                            formatElapsed={formatElapsed}
+                                        />
+                                    );
+                                })}
+                            </div>
+                        </section>
+                    )}
+
+                    {filteredUpcoming.length > 0 && (
+                        <section className="dvr-section">
+                            <h2 className="dvr-section-title">
+                                <span className="dvr-status-dot scheduled" />
+                                Upcoming
+                            </h2>
+                            <div className="dvr-card-grid">
+                                {filteredUpcoming.map(item => (
+                                    <ScheduledCard
+                                        key={item.id}
+                                        item={item}
+                                        onEdit={() => onEdit(item)}
+                                        onCancel={() => onCancel(item.id!)}
+                                        formatDateTime={formatDateTime}
+                                        formatDuration={formatDuration}
+                                    />
+                                ))}
+                            </div>
+                        </section>
+                    )}
+                </>
             )}
         </div>
     );
@@ -754,6 +800,49 @@ function RecordedTab({ recorded, onPlay, onDelete, formatDateTime }: RecordedTab
 }
 
 // Recording Card (for active recordings)
+function formatRecurrence(value?: string): string {
+    if (!value || value === 'once') return 'Once';
+    if (value === 'daily') return 'Daily';
+    if (value === 'weekly') return 'Weekly';
+    if (value.startsWith('every:')) {
+        const days = value.split(':')[1];
+        return `Every ${days} days`;
+    }
+    return value;
+}
+
+function getNextOccurrences(schedule: DvrSchedule, count = 3): number[] {
+    if (!schedule.recurrence || schedule.recurrence === 'once') return [];
+    
+    let intervalDays = 0;
+    if (schedule.recurrence === 'daily') {
+        intervalDays = 1;
+    } else if (schedule.recurrence === 'weekly') {
+        intervalDays = 7;
+    } else if (schedule.recurrence.startsWith('every:')) {
+        intervalDays = parseInt(schedule.recurrence.split(':')[1]) || 0;
+    }
+    
+    if (intervalDays <= 0) return [];
+    
+    const intervalSeconds = intervalDays * 24 * 3600;
+    const occurrences: number[] = [];
+    
+    let nextStart = schedule.scheduled_start;
+    const now = Math.floor(Date.now() / 1000);
+    
+    // Start showing future occurrences relative to now (unless active)
+    while (nextStart < now && schedule.status !== 'recording' && schedule.status !== 'scheduled') {
+        nextStart += intervalSeconds;
+    }
+    
+    for (let i = 0; i < count; i++) {
+        occurrences.push(nextStart + i * intervalSeconds);
+    }
+    
+    return occurrences;
+}
+
 interface RecordingCardProps {
     item: DvrSchedule;
     progress?: RecordingProgress;
@@ -832,6 +921,21 @@ function RecordingCard({ item, progress, onEdit, onCancel, onPlay, formatDateTim
                         </div>
                     </div>
                 )}
+                {item.recurrence && item.recurrence !== 'once' && (
+                    <div className="dvr-card-recurrence">
+                        <span className="recurrence-badge">
+                            🔄 {formatRecurrence(item.recurrence)}
+                        </span>
+                        <div className="recurrence-occurrences">
+                            <div className="occurrences-title">Next 3 Runs:</div>
+                            {getNextOccurrences(item, 3).map((timestamp, index) => (
+                                <div key={index} className="occurrence-date">
+                                    📅 {formatDateTime(timestamp)}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );
@@ -896,6 +1000,21 @@ function ScheduledCard({ item, onEdit, onCancel, formatDateTime, formatDuration 
                     <div className="dvr-card-padding">
                         <span className="dvr-padding-label">Padding:</span>
                         <span className="dvr-padding-value">+{item.start_padding_sec}s start, +{item.end_padding_sec}s end</span>
+                    </div>
+                )}
+                {item.recurrence && item.recurrence !== 'once' && (
+                    <div className="dvr-card-recurrence">
+                        <span className="recurrence-badge">
+                            🔄 {formatRecurrence(item.recurrence)}
+                        </span>
+                        <div className="recurrence-occurrences">
+                            <div className="occurrences-title">Next 3 Runs:</div>
+                            {getNextOccurrences(item, 3).map((timestamp, index) => (
+                                <div key={index} className="occurrence-date">
+                                    📅 {formatDateTime(timestamp)}
+                                </div>
+                            ))}
+                        </div>
                     </div>
                 )}
             </div>

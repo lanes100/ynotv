@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { scheduleRecording, detectScheduleConflicts, addToWatchlist, db, type DvrSchedule } from '../db';
+import { scheduleRecording, detectScheduleConflicts, addToWatchlist, db, type DvrSchedule, getDvrSettings } from '../db';
 import type { StoredProgram, WatchlistOptions } from '../db';
 import { StalkerClient } from '@ynotv/local-adapter';
 import { useModal } from './Modal';
@@ -36,7 +36,22 @@ export function ProgramContextMenu({
     const [channelForWatchlist, setChannelForWatchlist] = useState<import('../db').StoredChannel | null>(null);
     const [adjustedPosition, setAdjustedPosition] = useState(position);
     const [menuHidden, setMenuHidden] = useState(false);
+    const [defaultStartPadding, setDefaultStartPadding] = useState(60);
+    const [defaultEndPadding, setDefaultEndPadding] = useState(300);
     const { showSuccess, showError, showInfo, showConfirm, showModal, ModalComponent } = useModal();
+
+    useEffect(() => {
+        async function loadDefaults() {
+            try {
+                const settings = await getDvrSettings();
+                setDefaultStartPadding(settings.default_start_padding_sec);
+                setDefaultEndPadding(settings.default_end_padding_sec);
+            } catch (e) {
+                console.error('Failed to load DVR settings:', e);
+            }
+        }
+        loadDefaults();
+    }, []);
 
     useLayoutEffect(() => {
         if (menuRef.current) {
@@ -374,8 +389,8 @@ export function ProgramContextMenu({
                 programTitle={program.title}
                 channelName={channelName}
                 timeString={`${new Date(program.start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - ${new Date(program.end).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`}
-                defaultStartPadding={60}
-                defaultEndPadding={300}
+                defaultStartPadding={defaultStartPadding}
+                defaultEndPadding={defaultEndPadding}
                 onConfirm={handleConfirmSchedule}
                 onCancel={() => {
                     setShowOptionsModal(false);
