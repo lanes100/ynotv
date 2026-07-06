@@ -22,6 +22,8 @@ export interface AppSettings {
 
   // Category display
   categorySortOrder: 'default' | 'alphabetical';
+  includeAllChannelsToPlaylist: boolean;
+  setIncludeAllChannelsToPlaylist: (enabled: boolean) => void;
 
   // Advanced Search
   advancedSearchScope: 'channels' | 'epg' | 'both';
@@ -166,6 +168,7 @@ export function useAppSettings(): AppSettings {
 
   // Category display settings
   const [categorySortOrder, setCategorySortOrder] = useState<'default' | 'alphabetical'>('default');
+  const [includeAllChannelsToPlaylist, setIncludeAllChannelsToPlaylist] = useState(false);
 
   // Advanced search settings
   const [advancedSearchScope, setAdvancedSearchScope] = useState<'channels' | 'epg' | 'both'>('both');
@@ -440,6 +443,7 @@ export function useAppSettings(): AppSettings {
           setMaxSearchResults(result.data.maxSearchResults ?? 200);
           setSearchResultsOrder(result.data.searchResultsOrder ?? 'default');
           setCategorySortOrder(result.data.categorySortOrder ?? 'default');
+          setIncludeAllChannelsToPlaylist(result.data.includeAllChannelsToPlaylist ?? false);
           setAdvancedSearchScope(result.data.advancedSearchScope ?? 'both');
           setAdvancedSearchSourceIds(result.data.advancedSearchSourceIds ?? []);
           setAdvancedSearchCategoryIds(result.data.advancedSearchCategoryIds ?? []);
@@ -797,6 +801,17 @@ export function useAppSettings(): AppSettings {
     }
   }, []);
 
+  const setIncludeAllChannelsToPlaylistSetting = useCallback(async (enabled: boolean) => {
+    setIncludeAllChannelsToPlaylist(enabled);
+    if (window.storage) {
+      try {
+        await window.storage.updateSettings({ includeAllChannelsToPlaylist: enabled });
+      } catch (e) {
+        console.error('[useAppSettings] Failed to save includeAllChannelsToPlaylist:', e);
+      }
+    }
+  }, []);
+
   const setPopoutStopMain = useCallback(async (stop: boolean) => {
     setPopoutStopMainState(stop);
     if (window.storage) {
@@ -1128,6 +1143,7 @@ export function useAppSettings(): AppSettings {
     maxSearchResults,
     searchResultsOrder,
     categorySortOrder,
+    includeAllChannelsToPlaylist,
     advancedSearchScope,
     advancedSearchSourceIds,
     advancedSearchCategoryIds,
@@ -1176,6 +1192,7 @@ export function useAppSettings(): AppSettings {
     setChannelInfoOverlayHideDescription,
     setTransparentGuideOnZap,
     setCategorySortOrder: setCategorySortOrderSetting,
+    setIncludeAllChannelsToPlaylist: setIncludeAllChannelsToPlaylistSetting,
     setPopoutStopMain,
     setPopoutAlwaysOnTop,
     setPopoutMpvParamsEnabled,

@@ -55,7 +55,8 @@ import {
   useSetCategorySortOrder,
   useEpgView,
   useSetEpgView,
-  useSetEpgVisibleHours
+  useSetEpgVisibleHours,
+  useSetIncludeAllChannelsToPlaylist
 } from './stores/uiStore';
 import { getAdjacentEpisode, recordVodWatch, recordEpisodeWatch, getEpisodeProgress } from './db';
 import type { StoredChannel } from './db';
@@ -1776,6 +1777,7 @@ function App() {
   const setEpgView = useSetEpgView();
   const epgView = useEpgView();
   const setEpgVisibleHours = useSetEpgVisibleHours();
+  const setIncludeAllChannelsToPlaylist = useSetIncludeAllChannelsToPlaylist();
 
   const handleToggleEpgView = useCallback(() => {
     const nextView = epgView === 'traditional' ? 'alternate' : 'traditional';
@@ -2883,6 +2885,9 @@ function App() {
           if (settingsResult.data.epgVisibleHours) {
             const rawHours = settingsResult.data.epgVisibleHours;
             setEpgVisibleHours(rawHours === 'auto' ? 'auto' : Number(rawHours));
+          }
+          if (settingsResult.data.includeAllChannelsToPlaylist !== undefined) {
+            setIncludeAllChannelsToPlaylist(settingsResult.data.includeAllChannelsToPlaylist);
           }
           // Apply modern UI setting (default to v3 if never set or migrating to v3 default)
           let modernUiVal = settingsResult.data.modernUiEnabled;
