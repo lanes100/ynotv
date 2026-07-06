@@ -3104,7 +3104,7 @@ function App() {
   // Render
   // ==========================================================================
   return (
-    <div className={`app${showControls ? '' : ' controls-hidden'}${pipMode ? ' pip-mode' : ''}${!pipMode && sportsOverlayWidget === 'autohide' ? ' has-live-sports-autohide' : ''}${!pipMode && sportsOverlayWidget === 'persistent' ? ' has-live-sports-persistent' : ''}${!pipMode && recentOverlayWidget !== null ? ' has-recent-widget' : ''}${!pipMode && favoritesOverlayWidget ? ' has-favorites-widget' : ''}${currentChannel ? ' stream-active' : ''}`} onMouseMove={handleMouseMovePip}>
+    <div className={`app${showControls ? '' : ' controls-hidden'}${pipMode ? ' pip-mode' : ''}${!pipMode && sportsOverlayWidget === 'autohide' ? ' has-live-sports-autohide' : ''}${!pipMode && sportsOverlayWidget === 'persistent' ? ' has-live-sports-persistent' : ''}${!pipMode && recentOverlayWidget !== null ? ' has-recent-widget' : ''}${!pipMode && favoritesOverlayWidget ? ' has-favorites-widget' : ''} active-view-${activeView}${guideTransparent ? ' guide-transparent' : ''}`} onMouseMove={handleMouseMovePip}>
       <BackButtonOverlay
         visible={showControls && activeView === 'none' && !pipMode}
         sourceView={playbackSourceView}

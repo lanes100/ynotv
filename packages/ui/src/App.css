@@ -1126,10 +1126,10 @@ html:not(.modern-ui-v3) .view-transition-container {
   height: 100% !important;
 }
 
-/* V2/V1 UI Design: Prevent transparent/see-through desktop bleed-through in LiveTV Guide under glass themes when playing a stream */
-html:not(.modern-ui-v3) .app.stream-active .category-strip,
-html:not(.modern-ui-v3) .app.stream-active .guide-grid-section,
-html:not(.modern-ui-v3) .app.stream-active .guide-info-pane {
+/* V2/V1 UI Design: Prevent transparent/see-through desktop bleed-through in LiveTV Guide under glass themes */
+html:not(.modern-ui-v3) .app.active-view-guide:not(.guide-transparent) .category-strip,
+html:not(.modern-ui-v3) .app.active-view-guide:not(.guide-transparent) .guide-grid-section,
+html:not(.modern-ui-v3) .app.active-view-guide:not(.guide-transparent) .guide-info-pane {
   background: var(--bg-primary, #050505) !important;
 }
 
