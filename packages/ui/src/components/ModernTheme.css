@@ -2402,6 +2402,21 @@ html.modern-ui-v3 .guide-channel-row.currently-playing .program-block.current:ho
   color: var(--text-primary, #fff) !important;
 }
 
+.modern-ui-v3 .category-source-content .category-item.nested.is-pinned {
+  position: sticky !important;
+  z-index: 99 !important;
+  background: rgba(12, 14, 24, 0.98) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+  margin: 0 !important;
+  height: 38px !important;
+  box-sizing: border-box !important;
+  padding: 10px 16px !important;
+}
+
+.modern-ui-v3 .category-source-content .category-item.nested.is-pinned.selected {
+  background: color-mix(in srgb, var(--accent-primary, #e50914) 15%, rgb(12, 14, 24)) !important;
+}
+
 /* 8c. LiveTV source headers match VOD sidebar source header styling in V3 */
 .modern-ui-v3 .category-strip .category-source-group {
   margin: 0 !important;
@@ -2420,6 +2435,7 @@ html.modern-ui-v3 .guide-channel-row.currently-playing .program-block.current:ho
   margin: 0 !important;
   width: 100% !important;
   box-sizing: border-box !important;
+  height: 40px !important;
   background: transparent !important;
   border-left: none !important;
   border-right: none !important;

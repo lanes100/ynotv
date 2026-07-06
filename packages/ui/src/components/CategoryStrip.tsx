@@ -234,12 +234,18 @@ function PlaylistCategoryLinkItem({
   onSelectCategory,
   displayName,
   channelCount,
+  onContextMenu,
+  isPinned,
+  style,
 }: {
   link: PlaylistCategoryLink;
   selectedCategoryId: string | null;
   onSelectCategory: (id: string | null) => void;
   displayName?: string;
   channelCount?: number;
+  onContextMenu?: (e: React.MouseEvent) => void;
+  isPinned?: boolean;
+  style?: React.CSSProperties;
 }) {
   const virtualId = `__plcat_${link.id}`;
   
@@ -280,10 +286,21 @@ function PlaylistCategoryLinkItem({
 
   return (
     <button
-      className={`category-item nested playlist-cat-item ${selectedCategoryId === virtualId ? 'selected' : ''}`}
+      className={`category-item nested playlist-cat-item ${selectedCategoryId === virtualId ? 'selected' : ''} ${isPinned ? 'is-pinned' : ''}`}
       onClick={() => onSelectCategory(virtualId)}
+      onContextMenu={onContextMenu}
+      style={style}
     >
-      <ScrollingText className="category-name">{finalName}</ScrollingText>
+      <div className="nested-category-wrapper">
+        {isPinned && (
+          <span className="category-pin-icon">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" style={{ transform: 'rotate(45deg)' }}>
+              <path d="M16 12V4H17V2H7V4H8V12L6 14V16H11.2V22H12.8V16H18V14L16 12Z" />
+            </svg>
+          </span>
+        )}
+        <ScrollingText className="category-name">{finalName}</ScrollingText>
+      </div>
       <span className="category-count">{finalCount}</span>
     </button>
   );
@@ -296,6 +313,34 @@ export function CategoryStrip({ selectedCategoryId, onSelectCategory, visible, o
   const categorySortOrder = useCategorySortOrder();
   const includeAllChannelsToPlaylist = useIncludeAllChannelsToPlaylist();
   const [sortOverridesVersion, setSortOverridesVersion] = useState(0);
+
+  const [pinnedCategories, setPinnedCategories] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('ynotv:pinnedCategories');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const handlePinCategory = (sourceId: string, categoryId: string) => {
+    const key = `${sourceId}:${categoryId}`;
+    setPinnedCategories(prev => {
+      if (prev.includes(key)) return prev;
+      const next = [...prev, key];
+      localStorage.setItem('ynotv:pinnedCategories', JSON.stringify(next));
+      return next;
+    });
+  };
+
+  const handleUnpinCategory = (sourceId: string, categoryId: string) => {
+    const key = `${sourceId}:${categoryId}`;
+    setPinnedCategories(prev => {
+      const next = prev.filter(k => k !== key);
+      localStorage.setItem('ynotv:pinnedCategories', JSON.stringify(next));
+      return next;
+    });
+  };
 
   useEffect(() => {
     const handleOverridesChange = () => {
@@ -1136,9 +1181,23 @@ export function CategoryStrip({ selectedCategoryId, onSelectCategory, visible, o
                       // Sort
                       const isAlphabetical = categorySortOrder === 'alphabetical' && !isCategorySortCustomized(group.sourceId);
                       if (isAlphabetical) {
-                        list.sort((a, b) => a.name.localeCompare(b.name));
+                        list.sort((a, b) => {
+                          const aKey = `${group.sourceId}:${a.id}`;
+                          const bKey = `${group.sourceId}:${b.id}`;
+                          const aPinned = pinnedCategories.includes(aKey);
+                          const bPinned = pinnedCategories.includes(bKey);
+                          if (aPinned && !bPinned) return -1;
+                          if (!aPinned && bPinned) return 1;
+                          return a.name.localeCompare(b.name);
+                        });
                       } else {
                         list.sort((a, b) => {
+                          const aKey = `${group.sourceId}:${a.id}`;
+                          const bKey = `${group.sourceId}:${b.id}`;
+                          const aPinned = pinnedCategories.includes(aKey);
+                          const bPinned = pinnedCategories.includes(bKey);
+                          if (aPinned && !bPinned) return -1;
+                          if (!aPinned && bPinned) return 1;
                           if (a.displayOrder !== b.displayOrder) return a.displayOrder - b.displayOrder;
                           return a.name.localeCompare(b.name);
                         });
@@ -1158,34 +1217,55 @@ export function CategoryStrip({ selectedCategoryId, onSelectCategory, visible, o
                               <span className="category-count">{item.count}</span>
                             </button>
                           )}
-                          {list.map(catItem => {
-                            if (catItem.type === 'native' && catItem.nativeCat) {
-                              const category = catItem.nativeCat;
-                              return (
-                                <button
-                                  key={category.category_id}
-                                  className={`category-item nested ${selectedCategoryId === category.category_id ? 'selected' : ''}`}
-                                  onClick={() => onSelectCategory(category.category_id)}
-                                  onContextMenu={(e) => handleCategoryContextMenu(e, category.category_id, category.alias || category.category_name, group.sourceId, sources[group.sourceId] || 'Source')}
-                                >
-                                  <ScrollingText className="category-name">{category.alias || category.category_name}</ScrollingText>
-                                  <span className="category-count">{catItem.count}</span>
-                                </button>
-                              );
-                            } else if (catItem.type === 'link' && catItem.customLink) {
-                              return (
-                                <PlaylistCategoryLinkItem
-                                  key={catItem.id}
-                                  link={catItem.customLink}
-                                  selectedCategoryId={selectedCategoryId}
-                                  onSelectCategory={onSelectCategory}
-                                  displayName={catItem.name}
-                                  channelCount={catItem.count}
-                                />
-                              );
-                            }
-                            return null;
-                          })}
+                          {(() => {
+                            let pinnedCount = 0;
+                            return list.map(catItem => {
+                              if (catItem.type === 'native' && catItem.nativeCat) {
+                                const category = catItem.nativeCat;
+                                const isPinned = pinnedCategories.includes(`${group.sourceId}:${category.category_id}`);
+                                const itemStyle = isPinned ? { position: 'sticky', top: `${40 + (pinnedCount++) * 38}px` } as React.CSSProperties : undefined;
+                                return (
+                                  <button
+                                    key={category.category_id}
+                                    className={`category-item nested ${selectedCategoryId === category.category_id ? 'selected' : ''} ${isPinned ? 'is-pinned' : ''}`}
+                                    onClick={() => onSelectCategory(category.category_id)}
+                                    onContextMenu={(e) => handleCategoryContextMenu(e, category.category_id, category.alias || category.category_name, group.sourceId, sources[group.sourceId] || 'Source')}
+                                    style={itemStyle}
+                                  >
+                                    <div className="nested-category-wrapper">
+                                      {isPinned && (
+                                        <span className="category-pin-icon">
+                                          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" style={{ transform: 'rotate(45deg)' }}>
+                                            <path d="M16 12V4H17V2H7V4H8V12L6 14V16H11.2V22H12.8V16H18V14L16 12Z" />
+                                          </svg>
+                                        </span>
+                                      )}
+                                      <ScrollingText className="category-name">{category.alias || category.category_name}</ScrollingText>
+                                    </div>
+                                    <span className="category-count">{catItem.count}</span>
+                                  </button>
+                                );
+                              } else if (catItem.type === 'link' && catItem.customLink) {
+                                const link = catItem.customLink;
+                                const isPinned = pinnedCategories.includes(`${group.sourceId}:link:${link.id}`);
+                                const itemStyle = isPinned ? { position: 'sticky', top: `${40 + (pinnedCount++) * 38}px` } as React.CSSProperties : undefined;
+                                return (
+                                  <PlaylistCategoryLinkItem
+                                    key={catItem.id}
+                                    link={link}
+                                    selectedCategoryId={selectedCategoryId}
+                                    onSelectCategory={onSelectCategory}
+                                    displayName={catItem.name}
+                                    channelCount={catItem.count}
+                                    isPinned={isPinned}
+                                    onContextMenu={(e) => handleCategoryContextMenu(e, `link:${link.id}`, catItem.name, group.sourceId, sources[group.sourceId] || 'Source')}
+                                    style={itemStyle}
+                                  />
+                                );
+                              }
+                              return null;
+                            });
+                          })()}
                           
                           {individualCount > 0 && (
                             <button
@@ -1459,9 +1539,12 @@ export function CategoryStrip({ selectedCategoryId, onSelectCategory, visible, o
           sourceName={categoryContextMenu.sourceName}
           position={{ x: categoryContextMenu.x, y: categoryContextMenu.y }}
           onClose={() => setCategoryContextMenu(null)}
-          onManageCategories={(id, name) => setManagingCategorySource({ id, name })}
-          onHideCategory={handleHideCategory}
-          onRenameCategory={handleRenameCategory}
+          onManageCategories={categoryContextMenu.categoryId.startsWith('link:') ? undefined : (id, name) => setManagingCategorySource({ id, name })}
+          onHideCategory={categoryContextMenu.categoryId.startsWith('link:') ? undefined : handleHideCategory}
+          onRenameCategory={categoryContextMenu.categoryId.startsWith('link:') ? undefined : handleRenameCategory}
+          isPinned={pinnedCategories.includes(`${categoryContextMenu.sourceId}:${categoryContextMenu.categoryId}`)}
+          onPin={() => handlePinCategory(categoryContextMenu.sourceId, categoryContextMenu.categoryId)}
+          onUnpin={() => handleUnpinCategory(categoryContextMenu.sourceId, categoryContextMenu.categoryId)}
         />
       )}
 
