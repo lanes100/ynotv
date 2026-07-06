@@ -3104,7 +3104,7 @@ function App() {
   // Render
   // ==========================================================================
   return (
-    <div className={`app${showControls ? '' : ' controls-hidden'}${pipMode ? ' pip-mode' : ''}${!pipMode && sportsOverlayWidget === 'autohide' ? ' has-live-sports-autohide' : ''}${!pipMode && sportsOverlayWidget === 'persistent' ? ' has-live-sports-persistent' : ''}${!pipMode && recentOverlayWidget !== null ? ' has-recent-widget' : ''}${!pipMode && favoritesOverlayWidget ? ' has-favorites-widget' : ''}`} onMouseMove={handleMouseMovePip}>
+    <div className={`app${showControls ? '' : ' controls-hidden'}${pipMode ? ' pip-mode' : ''}${!pipMode && sportsOverlayWidget === 'autohide' ? ' has-live-sports-autohide' : ''}${!pipMode && sportsOverlayWidget === 'persistent' ? ' has-live-sports-persistent' : ''}${!pipMode && recentOverlayWidget !== null ? ' has-recent-widget' : ''}${!pipMode && favoritesOverlayWidget ? ' has-favorites-widget' : ''}${currentChannel ? ' stream-active' : ''}`} onMouseMove={handleMouseMovePip}>
       <BackButtonOverlay
         visible={showControls && activeView === 'none' && !pipMode}
         sourceView={playbackSourceView}
@@ -3146,7 +3146,7 @@ function App() {
         </div>
       )}
       {/* Custom title bar for frameless window */}
-      <div className={`title-bar${showControls ? ' visible' : ''}${pipMode ? ' pip-mode' : ''}${currentChannel ? ' video-active' : ''}`} data-tauri-drag-region>
+      <div className={`title-bar${showControls ? ' visible' : ''}${pipMode ? ' pip-mode' : ''}${(currentChannel && activeView === 'none') ? ' video-active' : ''} active-view-${activeView}`} data-tauri-drag-region>
         <div className="title-bar-left-group" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
         </div>
 

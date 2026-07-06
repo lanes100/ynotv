@@ -1091,3 +1091,73 @@
   zoom: var(--app-zoom, 1);
 }
 
+/* V2/V1 UI Design: Extend page backgrounds to top of the window to cover the titlebar area */
+html:not(.modern-ui-v3) .vod-page,
+html:not(.modern-ui-v3) .dvr-dashboard,
+html:not(.modern-ui-v3) .tvcp-page,
+html:not(.modern-ui-v3) .sports-hub,
+html:not(.modern-ui-v3) .stremio-page,
+html:not(.modern-ui-v3) .nuvio-page,
+html:not(.modern-ui-v3) .category-strip,
+html:not(.modern-ui-v3) .guide-panel {
+  top: 0 !important;
+  padding-top: 32px !important;
+  box-sizing: border-box !important;
+}
+
+html:not(.modern-ui-v3) .stremio-page,
+html:not(.modern-ui-v3) .nuvio-page {
+  height: 100% !important;
+}
+
+/* V2/V1 UI Design: Prevent see-through/desktop bleed-through on the titlebar when not on the hero page */
+html:not(.modern-ui-v3) .title-bar:not(.active-view-none) {
+  background: var(--bg-primary, #0d0d0d) !important;
+}
+
+/* V2/V1 UI Design: Prevent transparent/see-through topbar navigation in Sports Hub */
+html:not(.modern-ui-v3) .sports-topbar {
+  background: var(--bg-primary, #0f0f0f) !important;
+}
+
+/* V2/V1 UI Design: Stretch the view transition container to top of window to let child page backgrounds cover the titlebar */
+html:not(.modern-ui-v3) .view-transition-container {
+  top: 0 !important;
+  height: 100% !important;
+}
+
+/* V2/V1 UI Design: Prevent transparent/see-through desktop bleed-through in LiveTV Guide under glass themes when playing a stream */
+html:not(.modern-ui-v3) .app.stream-active .category-strip,
+html:not(.modern-ui-v3) .app.stream-active .guide-grid-section,
+html:not(.modern-ui-v3) .app.stream-active .guide-info-pane {
+  background: var(--bg-primary, #050505) !important;
+}
+
+/* V2/V1 UI Design: Apply dark glassmorphic styling and blur to titlebar navigation for readability */
+html:not(.modern-ui-v3) .title-bar-unified {
+  background: rgba(0, 0, 0, 0.45) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  border-color: rgba(255, 255, 255, 0.16) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 2px 12px rgba(0, 0, 0, 0.6) !important;
+}
+
+html:not(.modern-ui-v3) .title-bar-unified .segmented-btn {
+  color: rgba(255, 255, 255, 0.8) !important;
+}
+
+html:not(.modern-ui-v3) .title-bar-unified .segmented-btn:hover {
+  color: #ffffff !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+}
+
+html:not(.modern-ui-v3) .title-bar-unified .segmented-btn.active {
+  background: rgba(255, 255, 255, 0.16) !important;
+  color: #ffffff !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    0 2px 8px rgba(0, 0, 0, 0.4) !important;
+}
+
