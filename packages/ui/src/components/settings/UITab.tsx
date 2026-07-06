@@ -11,6 +11,7 @@ interface UITabProps {
     modernUiEnabled?: boolean | string;
     collapseSourceCategoriesOnStartup?: boolean;
     overlayAutohideTimer?: number;
+    overlayOnClickOnly?: boolean;
     uiScale?: number;
   };
   onSettingsChange: (settings: {
@@ -20,6 +21,7 @@ interface UITabProps {
     modernUiEnabled?: boolean | string;
     collapseSourceCategoriesOnStartup?: boolean;
     overlayAutohideTimer?: number;
+    overlayOnClickOnly?: boolean;
     uiScale?: number;
   }) => void;
 }
@@ -245,6 +247,29 @@ export function UITab({ settings, onSettingsChange }: UITabProps) {
               className="query-input"
               style={{ width: '80px', textAlign: 'center' }}
             />
+          </div>
+
+          {/* Overlay on Click Only */}
+          <div className="timeshift-toggle-row">
+            <div className="timeshift-toggle-info">
+              <span className="timeshift-toggle-label" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                Overlay on Click Only
+                <div className="epg-tooltip">
+                  <span className="epg-tooltip-icon">?</span>
+                  <div className="epg-tooltip-content">
+                    When enabled, the overlay will not hide automatically or show on mouse movement in full screen. It will only toggle when you left click the background.
+                  </div>
+                </div>
+              </span>
+            </div>
+            <label className="toggle-switch">
+              <input
+                type="checkbox"
+                checked={settings.overlayOnClickOnly ?? false}
+                onChange={(e) => onSettingsChange({ ...settings, overlayOnClickOnly: e.target.checked })}
+              />
+              <span className="toggle-slider" />
+            </label>
           </div>
 
           {/* Application UI Scale */}

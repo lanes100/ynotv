@@ -55,10 +55,11 @@ interface UseNavigationOptions {
   multiviewExitTabMode: () => void;
   setCategoryId: (catId: string | null) => void;
   overlayAutohideTimer: number;
+  overlayOnClickOnly: boolean;
 }
 
 export function useNavigation(options: UseNavigationOptions): NavigationState {
-  const { playing, multiviewLayout, multiviewExitTabMode, setCategoryId, overlayAutohideTimer } = options;
+  const { playing, multiviewLayout, multiviewExitTabMode, setCategoryId, overlayAutohideTimer, overlayOnClickOnly } = options;
 
   // View state
   const [activeView, setActiveView] = useState<View>('none');
@@ -150,6 +151,7 @@ export function useNavigation(options: UseNavigationOptions): NavigationState {
 
   // Auto-hide controls after inactivity
   useEffect(() => {
+    if (overlayOnClickOnly) return;
     if (!playing || activeView !== 'none' || categoriesOpen) return;
 
     const timer = setTimeout(() => {
@@ -159,13 +161,16 @@ export function useNavigation(options: UseNavigationOptions): NavigationState {
     }, (overlayAutohideTimer ?? 3) * 1000);
 
     return () => clearTimeout(timer);
-  }, [lastActivity, playing, activeView, categoriesOpen, overlayAutohideTimer]);
+  }, [lastActivity, playing, activeView, categoriesOpen, overlayAutohideTimer, overlayOnClickOnly]);
 
   // Show controls on mouse move and reset hide timer
   const handleMouseMove = useCallback(() => {
+    if (overlayOnClickOnly && playing && activeView === 'none') {
+      return;
+    }
     setShowControls(true);
     setLastActivity(Date.now());
-  }, []);
+  }, [overlayOnClickOnly, playing, activeView]);
 
   // Handle category selection - opens guide if closed
   const handleSelectCategory = useCallback((catId: string | null) => {

@@ -71,6 +71,7 @@ export interface AppSettings {
   categoriesHidden: boolean;
   categoriesHiddenTransparent: boolean;
   overlayAutohideTimer: number;
+  overlayOnClickOnly: boolean;
 
   // Widget scale
   widgetScale: number;
@@ -101,6 +102,7 @@ export interface AppSettings {
   setCategoriesHidden: (hidden: boolean) => void;
   setCategoriesHiddenTransparent: (hidden: boolean) => void;
   setOverlayAutohideTimer: (seconds: number) => void;
+  setOverlayOnClickOnly: (enabled: boolean) => void;
   setAdvancedSearchScope: (scope: 'channels' | 'epg' | 'both') => void;
   setAdvancedSearchSourceIds: (ids: string[]) => void;
   setAdvancedSearchCategoryIds: (ids: string[]) => void;
@@ -246,6 +248,7 @@ export function useAppSettings(): AppSettings {
   const [categoriesHidden, setCategoriesHiddenState] = useState(false);
   const [categoriesHiddenTransparent, setCategoriesHiddenTransparentState] = useState(false);
   const [overlayAutohideTimer, setOverlayAutohideTimerState] = useState(3);
+  const [overlayOnClickOnly, setOverlayOnClickOnlyState] = useState(false);
 
   // Widget scale (1 = 100%)
   const [widgetScale, setWidgetScaleState] = useState(1);
@@ -459,6 +462,7 @@ export function useAppSettings(): AppSettings {
           setCategoriesHiddenState(result.data.categoriesHidden ?? false);
           setCategoriesHiddenTransparentState(result.data.categoriesHiddenTransparent ?? false);
           setOverlayAutohideTimerState(result.data.overlayAutohideTimer ?? 3);
+          setOverlayOnClickOnlyState(result.data.overlayOnClickOnly ?? false);
           setPopoutStopMainState(result.data.popoutStopMain ?? true);
           setPopoutAlwaysOnTopState(result.data.popoutAlwaysOnTop ?? false);
           setPopoutMpvParamsEnabledState(result.data.popoutMpvParamsEnabled ?? false);
@@ -705,6 +709,17 @@ export function useAppSettings(): AppSettings {
         window.storage.debouncedUpdateSettings({ overlayAutohideTimer: seconds });
       } catch (e) {
         console.error('[useAppSettings] Failed to save overlayAutohideTimer:', e);
+      }
+    }
+  }, []);
+
+  const setOverlayOnClickOnly = useCallback(async (enabled: boolean) => {
+    setOverlayOnClickOnlyState(enabled);
+    if (window.storage) {
+      try {
+        await window.storage.updateSettings({ overlayOnClickOnly: enabled });
+      } catch (e) {
+        console.error('[useAppSettings] Failed to save overlayOnClickOnly:', e);
       }
     }
   }, []);
@@ -1168,6 +1183,7 @@ export function useAppSettings(): AppSettings {
     navHiddenTabs,
     epgHiddenButtons,
     overlayAutohideTimer,
+    overlayOnClickOnly,
     widgetScale,
     widgetBgOpacity,
     sportsScale,
@@ -1180,6 +1196,7 @@ export function useAppSettings(): AppSettings {
     setCategoriesHidden,
     setCategoriesHiddenTransparent,
     setOverlayAutohideTimer,
+    setOverlayOnClickOnly,
     setAdvancedSearchScope,
     setAdvancedSearchSourceIds,
     setAdvancedSearchCategoryIds,

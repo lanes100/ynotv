@@ -209,6 +209,8 @@ function App() {
     setTransparentGuideOnZap,
     overlayAutohideTimer,
     setOverlayAutohideTimer,
+    overlayOnClickOnly,
+    setOverlayOnClickOnly,
     popoutStopMain,
     popoutAlwaysOnTop,
     setPopoutAlwaysOnTop,
@@ -1044,6 +1046,7 @@ function App() {
     multiviewExitTabMode: exitTabMode,
     setCategoryId,
     overlayAutohideTimer,
+    overlayOnClickOnly,
   });
 
   const {
@@ -3550,6 +3553,11 @@ function App() {
       {activeView === 'none' && multiviewLayout === 'main' && (
         <div
           className="video-doubleclick-overlay"
+          onClick={(e) => {
+            if (e.button === 0 && overlayOnClickOnly && playing) {
+              setShowControls((prev) => !prev);
+            }
+          }}
           onDoubleClick={() => {
             handleToggleFullscreen();
           }}
@@ -4191,6 +4199,8 @@ function App() {
           onTransparentGuideOnZapChange={setTransparentGuideOnZap}
           overlayAutohideTimer={overlayAutohideTimer}
           onOverlayAutohideTimerChange={setOverlayAutohideTimer}
+          overlayOnClickOnly={overlayOnClickOnly}
+          onOverlayOnClickOnlyChange={setOverlayOnClickOnly}
           liveTvDesign={liveTvDesign}
           onLiveTvDesignChange={setLiveTvDesign}
         />

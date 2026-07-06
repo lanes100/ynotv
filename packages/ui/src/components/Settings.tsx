@@ -54,6 +54,8 @@ interface SettingsProps {
   onChannelInfoOverlayHideDescriptionChange?: (hide: boolean) => void;
   overlayAutohideTimer?: number;
   onOverlayAutohideTimerChange?: (seconds: number) => void;
+  overlayOnClickOnly?: boolean;
+  onOverlayOnClickOnlyChange?: (enabled: boolean) => void;
   transparentGuideOnZap?: boolean;
   onTransparentGuideOnZapChange?: (enabled: boolean) => void;
   castEnabled?: boolean;
@@ -123,6 +125,8 @@ export function Settings({
   onChannelInfoOverlayHideDescriptionChange,
   overlayAutohideTimer: overlayAutohideTimerProp,
   onOverlayAutohideTimerChange,
+  overlayOnClickOnly: overlayOnClickOnlyProp,
+  onOverlayOnClickOnlyChange,
   transparentGuideOnZap: transparentGuideOnZapProp,
   onTransparentGuideOnZapChange,
   castEnabled: castEnabledProp,
@@ -296,11 +300,13 @@ export function Settings({
     modernUiEnabled?: boolean | string;
     collapseSourceCategoriesOnStartup?: boolean;
     overlayAutohideTimer?: number;
+    overlayOnClickOnly?: boolean;
     uiScale?: number;
   }>({
     modernUiEnabled: 'v3',
     collapseSourceCategoriesOnStartup: false,
     overlayAutohideTimer: 3,
+    overlayOnClickOnly: false,
     uiScale: 100,
   });
 
@@ -529,6 +535,12 @@ export function Settings({
     }
   }, [overlayAutohideTimerProp]);
 
+  useEffect(() => { 
+    if (overlayOnClickOnlyProp !== undefined && overlayOnClickOnlyProp !== uiSettings.overlayOnClickOnly) {
+      setUiSettings(prev => ({ ...prev, overlayOnClickOnly: overlayOnClickOnlyProp }));
+    }
+  }, [overlayOnClickOnlyProp]);
+
   // Subtitle settings state
   const [subtitleSettings, setSubtitleSettings] = useState<SubtitleSettings>({
     subsourceApiKey: '',
@@ -677,6 +689,7 @@ export function Settings({
         modernUiEnabled?: boolean | string;
         v3DefaultMigrated?: boolean;
         overlayAutohideTimer?: number;
+        overlayOnClickOnly?: boolean;
         uiScale?: number;
         epgVisibleHours?: 'auto' | number;
         epgTitleFontSize?: number;
@@ -825,6 +838,7 @@ export function Settings({
         modernUiEnabled: loadedModernUi,
         collapseSourceCategoriesOnStartup: settings.collapseSourceCategoriesOnStartup ?? false,
         overlayAutohideTimer: settings.overlayAutohideTimer ?? 3,
+        overlayOnClickOnly: settings.overlayOnClickOnly ?? false,
         uiScale: settings.uiScale ?? 100,
       };
       setUiSettings(loadedUiSettings);
@@ -1797,6 +1811,7 @@ export function Settings({
     modernUiEnabled?: boolean | string;
     collapseSourceCategoriesOnStartup?: boolean;
     overlayAutohideTimer?: number;
+    overlayOnClickOnly?: boolean;
     uiScale?: number;
   }) => {
     const updated = { ...uiSettings, ...newSettings };
@@ -1825,6 +1840,10 @@ export function Settings({
 
     if (newSettings.overlayAutohideTimer !== undefined && onOverlayAutohideTimerChange) {
       onOverlayAutohideTimerChange(newSettings.overlayAutohideTimer);
+    }
+
+    if (newSettings.overlayOnClickOnly !== undefined && onOverlayOnClickOnlyChange) {
+      onOverlayOnClickOnlyChange(newSettings.overlayOnClickOnly);
     }
 
     if (window.storage) {
