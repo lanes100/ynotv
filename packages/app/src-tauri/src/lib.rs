@@ -574,6 +574,8 @@ async fn init_mpv<R: Runtime>(app: AppHandle<R>, args: Vec<String>) -> Result<()
 
 #[tauri::command]
 async fn mpv_load<R: Runtime>(app: AppHandle<R>, url: String) -> Result<(), String> {
+    // Reset audio delay to 0.0 before loading the new file
+    let _ = mpv_set_property(app.clone(), "audio-delay".to_string(), serde_json::json!(0.0)).await;
     #[cfg(target_os = "macos")]
     {
         mpv_macos::load_file(&app, url).await

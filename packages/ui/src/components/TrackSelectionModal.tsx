@@ -30,12 +30,16 @@ export function TrackSelectionModal({ isOpen, type, onClose }: TrackSelectionMod
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [selectedCcId, setSelectedCcId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
+  const [audioDelay, setAudioDelay] = useState<number>(0.0);
 
   useEffect(() => {
     if (isOpen) {
       loadTracks();
+      if (type === 'audio') {
+        loadAudioDelay();
+      }
     }
-  }, [isOpen]);
+  }, [isOpen, type]);
 
   const loadTracks = async () => {
     setLoading(true);
@@ -84,6 +88,39 @@ export function TrackSelectionModal({ isOpen, type, onClose }: TrackSelectionMod
       console.error('Failed to load tracks:', e);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const parseMpvNumber = (value: any): number => {
+    const data = value && typeof value === 'object' && 'data' in value ? value.data : value;
+    return typeof data === 'number' && Number.isFinite(data) ? data : 0.0;
+  };
+
+  const loadAudioDelay = async () => {
+    try {
+      const delayVal = await Bridge.getProperty('audio-delay');
+      setAudioDelay(parseMpvNumber(delayVal));
+    } catch (e) {
+      console.error('Failed to load audio delay:', e);
+    }
+  };
+
+  const handleAudioDelayChange = async (delta: number) => {
+    const newDelay = Math.round((audioDelay + delta) * 10) / 10;
+    try {
+      await Bridge.setProperty('audio-delay', newDelay);
+      setAudioDelay(newDelay);
+    } catch (e) {
+      console.error('Failed to set audio delay:', e);
+    }
+  };
+
+  const handleResetAudioDelay = async () => {
+    try {
+      await Bridge.setProperty('audio-delay', 0.0);
+      setAudioDelay(0.0);
+    } catch (e) {
+      console.error('Failed to reset audio delay:', e);
     }
   };
 
@@ -160,66 +197,116 @@ export function TrackSelectionModal({ isOpen, type, onClose }: TrackSelectionMod
         <div className="track-modal-content">
           {loading ? (
             <div className="track-modal-loading">Loading...</div>
-          ) : type === 'subtitle' && tracks.length === 0 && ccTracks.length === 0 ? (
-            <div className="track-modal-empty">No {type} tracks available</div>
-          ) : type === 'audio' && tracks.length === 0 ? (
-            <div className="track-modal-empty">No {type} tracks available</div>
           ) : (
             <>
-              {/* Regular Subtitle/Audio Tracks */}
-              {(tracks.length > 0 || (type === 'subtitle' && ccTracks.length > 0)) && (
-                <>
-                  <div className="track-section-title">
-                    {type === 'subtitle' ? 'Subtitles' : 'Audio Tracks'}
-                  </div>
-                  <ul className="track-list">
-                    {/* Disable option for subtitles */}
-                    {type === 'subtitle' && (
-                      <li
-                        className={`track-item ${selectedId === 0 && !selectedCcId ? 'selected' : ''}`}
-                        onClick={handleDisable}
+              {type === 'audio' && (
+                <div className="audio-sync-container">
+                  <span className="audio-sync-label">Audio Delay / Sync</span>
+                  <div className="audio-sync-controls">
+                    <button 
+                      className="audio-sync-btn audio-sync-btn-large" 
+                      onClick={() => handleAudioDelayChange(-1.0)}
+                      title="Decrease delay by 1s (audio earlier)"
+                    >
+                      -1s
+                    </button>
+                    <button 
+                      className="audio-sync-btn" 
+                      onClick={() => handleAudioDelayChange(-0.1)}
+                      title="Decrease delay by 0.1s"
+                    >
+                      -0.1s
+                    </button>
+                    <span className="audio-sync-value">
+                      {audioDelay > 0 ? `+${audioDelay.toFixed(1)}s` : `${audioDelay.toFixed(1)}s`}
+                    </span>
+                    <button 
+                      className="audio-sync-btn" 
+                      onClick={() => handleAudioDelayChange(0.1)}
+                      title="Increase delay by 0.1s"
+                    >
+                      +0.1s
+                    </button>
+                    <button 
+                      className="audio-sync-btn audio-sync-btn-large" 
+                      onClick={() => handleAudioDelayChange(1.0)}
+                      title="Increase delay by 1s (audio later)"
+                    >
+                      +1s
+                    </button>
+                    {audioDelay !== 0 && (
+                      <button 
+                        className="audio-sync-reset" 
+                        onClick={handleResetAudioDelay}
                       >
-                        <span className="track-name">Disabled</span>
-                      </li>
+                        Reset
+                      </button>
                     )}
-                    {tracks.map((track) => (
-                      <li
-                        key={track.id}
-                        className={`track-item ${selectedId === track.id && !selectedCcId ? 'selected' : ''}`}
-                        onClick={() => handleSelect(track.id)}
-                      >
-                        <span className="track-name">
-                          {track.title || `${type === 'audio' ? 'Audio' : 'Subtitle'} ${track.id}`}
-                          {track.default && <span className="track-badge">Default</span>}
-                        </span>
-                        <span className="track-info">
-                          {track.lang && <span className="track-lang">{track.lang.toUpperCase()}</span>}
-                          {track.codec && <span className="track-codec">{track.codec.toUpperCase()}</span>}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                </>
+                  </div>
+                </div>
               )}
 
-              {/* Closed Captioning Section (Subtitle only) */}
-              {type === 'subtitle' && ccTracks.length > 0 && (
+              {type === 'subtitle' && tracks.length === 0 && ccTracks.length === 0 ? (
+                <div className="track-modal-empty">No subtitle tracks available</div>
+              ) : type === 'audio' && tracks.length === 0 ? (
+                <div className="track-modal-empty">No audio tracks available</div>
+              ) : (
                 <>
-                  <div className="track-section-title track-section-cc">Closed Captioning</div>
-                  <ul className="track-list">
-                    {ccTracks.map((cc) => (
-                      <li
-                        key={cc.id}
-                        className={`track-item ${selectedCcId === cc.id ? 'selected' : ''}`}
-                        onClick={() => handleSelectCc(cc.id)}
-                      >
-                        <span className="track-name">
-                          CC{cc.channel} - Closed Captions
-                          <span className="track-badge cc-badge">CC</span>
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
+                  {/* Regular Subtitle/Audio Tracks */}
+                  {(tracks.length > 0 || (type === 'subtitle' && ccTracks.length > 0)) && (
+                    <>
+                      <div className="track-section-title">
+                        {type === 'subtitle' ? 'Subtitles' : 'Audio Tracks'}
+                      </div>
+                      <ul className="track-list">
+                        {type === 'subtitle' && (
+                          <li
+                            className={`track-item ${selectedId === 0 && !selectedCcId ? 'selected' : ''}`}
+                            onClick={handleDisable}
+                          >
+                            <span className="track-name">Disabled</span>
+                          </li>
+                        )}
+                        {tracks.map((track) => (
+                          <li
+                            key={track.id}
+                            className={`track-item ${selectedId === track.id && !selectedCcId ? 'selected' : ''}`}
+                            onClick={() => handleSelect(track.id)}
+                          >
+                            <span className="track-name">
+                              {track.title || `${type === 'audio' ? 'Audio' : 'Subtitle'} ${track.id}`}
+                              {track.default && <span className="track-badge">Default</span>}
+                            </span>
+                            <span className="track-info">
+                              {track.lang && <span className="track-lang">{track.lang.toUpperCase()}</span>}
+                              {track.codec && <span className="track-codec">{track.codec.toUpperCase()}</span>}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    </>
+                  )}
+
+                  {/* Closed Captioning Section (Subtitle only) */}
+                  {type === 'subtitle' && ccTracks.length > 0 && (
+                    <>
+                      <div className="track-section-title track-section-cc">Closed Captioning</div>
+                      <ul className="track-list">
+                        {ccTracks.map((cc) => (
+                          <li
+                            key={cc.id}
+                            className={`track-item ${selectedCcId === cc.id ? 'selected' : ''}`}
+                            onClick={() => handleSelectCc(cc.id)}
+                          >
+                            <span className="track-name">
+                              CC{cc.channel} - Closed Captions
+                              <span className="track-badge cc-badge">CC</span>
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    </>
+                  )}
                 </>
               )}
             </>
