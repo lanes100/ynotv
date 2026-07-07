@@ -71,6 +71,7 @@ interface NowPlayingBarProps {
   compiledNuvioBadgeRules?: { pattern: RegExp; badge: StremioStreamBadge }[];
   onTogglePip?: () => void;
   pipMode?: boolean;
+  hasAudioDelay?: boolean;
 }
 
 // Format seconds to "H:MM:SS" or "M:SS"
@@ -131,6 +132,7 @@ export function NowPlayingBar({
   compiledNuvioBadgeRules,
   onTogglePip,
   pipMode,
+  hasAudioDelay,
 }: NowPlayingBarProps) {
   // scrubMode: 'timeshift' | 'epgcatchup' — local toggle when channel supports both
   const [scrubMode, setScrubMode] = useState<'timeshift' | 'epgcatchup'>('timeshift');
@@ -873,7 +875,7 @@ export function NowPlayingBar({
                 <SubtitleIcon />
               </button>
               <button
-                className="npb-btn"
+                className={`npb-btn${hasAudioDelay ? ' has-badge' : ''}`}
                 onClick={onShowAudioModal}
                 disabled={!canControl}
                 title="Select Audio Track (A)"

@@ -1884,6 +1884,21 @@ function App() {
   // ==========================================================================
   const [showSubtitleModal, setShowSubtitleModal] = useState(false);
   const [showAudioModal, setShowAudioModal] = useState(false);
+  const [hasAudioDelay, setHasAudioDelay] = useState(false);
+
+  useEffect(() => {
+    if (currentChannel && window.storage) {
+      window.storage.getSettings().then((result: any) => {
+        const delays = result.data?.channelAudioDelays || {};
+        const key = `${currentChannel.source_id}_${currentChannel.stream_id}`;
+        setHasAudioDelay(Boolean(delays[key]));
+      }).catch(() => {
+        setHasAudioDelay(false);
+      });
+    } else {
+      setHasAudioDelay(false);
+    }
+  }, [currentChannel]);
 
   const handleShowSubtitleModal = useCallback(() => {
     controlsHoveredRef.current = false;
@@ -3749,6 +3764,7 @@ function App() {
         playing={playing}
         muted={muted}
         volume={volume}
+        hasAudioDelay={hasAudioDelay}
         mpvReady={mpvReady}
         position={position}
         duration={duration}
@@ -3897,6 +3913,8 @@ function App() {
       <TrackSelectionModal
         isOpen={showAudioModal}
         type="audio"
+        channel={currentChannel}
+        onAudioDelayChanged={setHasAudioDelay}
         onClose={() => {
           controlsHoveredRef.current = false;
           setShowAudioModal(false);

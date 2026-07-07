@@ -919,6 +919,28 @@ export function usePlayback(options: UsePlaybackOptions): PlaybackState {
         if (!Bridge.getIsCasting?.()) {
           Bridge.play().catch(e => console.warn('[usePlayback] play() after load failed:', e));
         }
+        
+        // Restore saved audio delay if it exists
+        if (window.storage) {
+          try {
+            window.storage.getSettings().then((settingsResult: any) => {
+              const delays = settingsResult.data?.channelAudioDelays || {};
+              const key = `${channel.source_id}_${channel.stream_id}`;
+              const delayToApply = delays[key] ?? 0.0;
+              if (delayToApply !== 0.0) {
+                logInfo(`[Playback] Restoring saved audio delay of ${delayToApply}s for channel ${key}`);
+                Bridge.setProperty('audio-delay', delayToApply).catch((e: any) => {
+                  logWarn('Failed to restore audio-delay property:', e);
+                });
+              }
+            }).catch((settingsErr: any) => {
+              logWarn('Failed to fetch settings for audio-delay restoration:', settingsErr);
+            });
+          } catch (e) {
+            console.warn('[Playback] Failed to load channel audio delay:', e);
+          }
+        }
+
         applySubtitleSettings();
         notifyMainLoaded?.(channel.name, result.url, resolved.sourceName ?? null);
 
