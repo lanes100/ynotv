@@ -1231,19 +1231,19 @@ export function useSeriesEpisodeProgress(seriesId: string | null) {
   }, [seriesId]);
 
   // Initial load and reactive updates
-  const watched = useLiveQuery(async () => {
-    if (!seriesId) return 0;
+  const watchedSignature = useLiveQuery(async () => {
+    if (!seriesId) return '0-0';
     const dbInstance = await (db as any).dbPromise;
     const result = await dbInstance.select(
-      'SELECT MAX(watched_at) as latest FROM episode_history WHERE series_id = ?',
+      'SELECT COUNT(*) as count, MAX(watched_at) as latest FROM episode_history WHERE series_id = ?',
       [seriesId]
     );
-    return result?.[0]?.latest || 0;
+    return `${result?.[0]?.count || 0}-${result?.[0]?.latest || 0}`;
   }, [seriesId]);
 
   useEffect(() => {
     refresh();
-  }, [refresh, watched]);
+  }, [refresh, watchedSignature]);
 
   return {
     episodeProgress,

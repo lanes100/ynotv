@@ -16,7 +16,7 @@ import { useSeriesDetails, useSeriesEpisodeProgress } from '../../hooks/useVod';
 import { useRpdbSettings } from '../../hooks/useRpdbSettings';
 import { getRpdbPosterUrl } from '../../services/rpdb';
 import type { StoredSeries, StoredEpisode } from '../../db';
-import { recordVodWatch, recordEpisodeWatch } from '../../db';
+import { recordVodWatch, recordEpisodeWatch, setVodEpisodeWatchedState } from '../../db';
 import type { VodPlayInfo } from '../../types/media';
 import { resolvePlayUrl } from '../../services/stream-resolver';
 import { useDownloadStore } from '../../stores/downloadStore';
@@ -300,6 +300,28 @@ export function SeriesDetail({ series, onClose, onPlayEpisode, apiKey, initialSe
     },
     [series, onPlayEpisode, lazyPlot, episodeProgress, episodeExtras, backdropUrl, logoUrl]
   );
+
+  const handleToggleWatched = useCallback(async (episode: StoredEpisode, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const progress = episodeProgress.get(episode.id);
+    const isCompleted = progress?.completed || false;
+    
+    try {
+      await setVodEpisodeWatchedState(
+        series.series_id,
+        episode.id,
+        series.source_id,
+        episode.season_num,
+        episode.episode_num,
+        episode.title || `Episode ${episode.episode_num}`,
+        series.title || series.name || 'Unknown',
+        series.cover || (series as any).stream_icon,
+        !isCompleted
+      );
+    } catch (err) {
+      console.error('[SeriesDetail] Failed to toggle watched state:', err);
+    }
+  }, [series, episodeProgress]);
 
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const handleCopy = useCallback((episode: StoredEpisode, e: React.MouseEvent) => {
@@ -619,6 +641,17 @@ export function SeriesDetail({ series, onClose, onPlayEpisode, apiKey, initialSe
                           </svg>
                         </button>
                       )}
+
+                      {/* Watched Toggle button */}
+                      <button
+                        className={`series-detail__episode-card-watched-toggle ${isCompleted ? 'completed' : ''}`}
+                        onClick={(e) => handleToggleWatched(episode, e)}
+                        title={isCompleted ? "Mark as Unwatched" : "Mark as Watched"}
+                      >
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={isCompleted ? "3" : "2"}>
+                          <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                      </button>
                     </div>
                   );
                 })}

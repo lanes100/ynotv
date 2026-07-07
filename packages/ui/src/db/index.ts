@@ -3029,3 +3029,97 @@ export async function getAdjacentEpisode(
   }
 }
 
+/**
+ * Mark a VOD episode as watched or unwatched, and update the series' overall Continue Watching state
+ */
+export async function setVodEpisodeWatchedState(
+  seriesId: string,
+  episodeId: string,
+  sourceId: string,
+  seasonNum: number,
+  episodeNum: number,
+  episodeTitle: string,
+  seriesTitle: string,
+  seriesPoster: string | undefined,
+  watched: boolean
+): Promise<void> {
+  try {
+    if (watched) {
+      // 1. Mark episode as watched (completed = 1, progress/duration = 1)
+      await recordEpisodeWatch(
+        episodeId,
+        seriesId,
+        sourceId,
+        seasonNum,
+        episodeNum,
+        episodeTitle,
+        1, // progressSeconds
+        1  // totalDuration (progress/total = 100% -> completed)
+      );
+
+      // 2. Update series-level watch history
+      await recordVodWatch(
+        seriesId,
+        'series',
+        sourceId,
+        seriesTitle,
+        seriesPoster,
+        seasonNum,
+        episodeNum,
+        episodeTitle
+      );
+      
+      // Update watch progress of series to 100% so it shows completed / full progress bar on home page
+      await updateVodWatchProgress(
+        seriesId,
+        'series',
+        1,
+        1
+      );
+    } else {
+      // 1. Delete episode watch history
+      await deleteEpisodeHistory(episodeId);
+
+      // 2. Query remaining episode progress for this series to find the next most recently watched
+      const remainingProgress = await getSeriesEpisodeProgress(seriesId);
+      
+      if (remainingProgress && remainingProgress.length > 0) {
+        // Find the one with the maximum watched_at timestamp
+        let latestEp = remainingProgress[0];
+        for (const ep of remainingProgress) {
+          if (ep.watched_at > latestEp.watched_at) {
+            latestEp = ep;
+          }
+        }
+        
+        // Update series-level watch history to point to the latest remaining episode
+        await recordVodWatch(
+          seriesId,
+          'series',
+          sourceId,
+          seriesTitle,
+          seriesPoster,
+          latestEp.season_num,
+          latestEp.episode_num,
+          latestEp.title || `Episode ${latestEp.episode_num}`
+        );
+        
+        // Update series progress to match the latest remaining episode
+        await updateVodWatchProgress(
+          seriesId,
+          'series',
+          latestEp.progress_seconds || 0,
+          latestEp.total_duration || 0
+        );
+      } else {
+        // No remaining episodes watched, so remove series from vod_history completely
+        await clearVodWatchHistory(seriesId, 'series');
+      }
+    }
+  } catch (error) {
+    console.error('[VOD History] Failed to set episode watched state:', error);
+    throw error;
+  }
+}
+
+
