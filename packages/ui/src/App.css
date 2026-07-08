@@ -101,6 +101,7 @@
   display: flex;
   align-items: center;
   -webkit-app-region: no-drag;
+  z-index: 15;
 }
 
 /* Unified Navigation Bar - Segmented Control + Search as one unit */
@@ -322,12 +323,21 @@
   color: rgba(255, 255, 255, 0.7);
 }
 
+/* Title Bar Right Indicators Container */
+.title-bar-right-indicators {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  z-index: 10;
+  -webkit-app-region: no-drag;
+}
+
+.title-bar-right-indicators > *:last-child {
+  margin-right: 8px;
+}
+
 /* Title Bar Recording Indicator */
 .title-bar-recording-indicator {
-  position: absolute;
-  right: 8px;
-  top: 50%;
-  transform: translateY(-50%);
   display: flex;
   align-items: center;
   animation: fadeIn 0.3s ease-out;

@@ -2362,7 +2362,7 @@ html.modern-ui-v3 .guide-channel-row.currently-playing .program-block.current:ho
   background: transparent !important;
   color: var(--text-secondary, #888) !important;
   padding: 10px 16px !important;
-  font-size: 13px !important;
+  font-size: var(--category-font-size, 13px) !important;
 }
 
 .modern-ui-v3 .category-source-content .category-item.nested:hover {
@@ -2630,7 +2630,7 @@ html.modern-ui-v3 .guide-channel-row.currently-playing .program-block.current:ho
   white-space: nowrap !important;
   overflow: hidden !important;
   text-overflow: ellipsis !important;
-  font-size: 14px !important;
+  font-size: var(--category-font-size, 14px) !important;
   font-weight: 500 !important;
 }
 
@@ -5643,7 +5643,7 @@ html.modern-ui-v3:not([data-theme="light"]) .guide-channel-playlist-name {
 .modern-ui-v3 .category-strip button.category-source-header,
 .modern-ui-v3 .category-strip button.category-source-header .source-name {
   font-weight: 600 !important;
-  font-size: 0.76rem !important;
+  font-size: var(--source-font-size, 0.76rem) !important;
   letter-spacing: 0.06em !important;
   text-transform: uppercase !important;
 }
@@ -5652,13 +5652,13 @@ html.modern-ui-v3:not([data-theme="light"]) .guide-channel-playlist-name {
 .modern-ui-v3 .category-item .category-name,
 .modern-ui-v3 .category-list-bar .category-name {
   font-weight: 500 !important;
-  font-size: 0.82rem !important;
+  font-size: var(--category-font-size, 0.82rem) !important;
 }
 
 /* Channel names in EPG left column */
 .modern-ui-v3 .guide-channel-name {
   font-weight: 600 !important;
-  font-size: 0.78rem !important;
+  font-size: var(--channel-font-size, 0.78rem) !important;
 }
 
 /* EPG program titles */

@@ -2925,12 +2925,13 @@ function App() {
         
         if (!isPeriodic && settingsResult.data) {
           // Apply font sizes (only on initial sync)
-          if (settingsResult.data.channelFontSize) {
-            document.documentElement.style.setProperty('--channel-font-size', `${settingsResult.data.channelFontSize}px`);
-          }
-          if (settingsResult.data.categoryFontSize) {
-            document.documentElement.style.setProperty('--category-font-size', `${settingsResult.data.categoryFontSize}px`);
-          }
+          const loadedModernUi = settingsResult.data.modernUiEnabled ?? 'v3';
+          const chSize = settingsResult.data.channelFontSize ?? (loadedModernUi === 'v3' ? 12 : 14);
+          const catSize = settingsResult.data.categoryFontSize ?? 13;
+          const srcSize = settingsResult.data.sourceFontSize ?? 12;
+          document.documentElement.style.setProperty('--channel-font-size', `${chSize}px`);
+          document.documentElement.style.setProperty('--category-font-size', `${catSize}px`);
+          document.documentElement.style.setProperty('--source-font-size', `${srcSize}px`);
           if (settingsResult.data.epgTitleFontSize) {
             document.documentElement.style.setProperty('--epg-title-font-size', `${settingsResult.data.epgTitleFontSize}px`);
           }
@@ -3496,7 +3497,7 @@ function App() {
           </div>
         </div>
 
-        <div className="title-bar-spacer" style={{ position: 'relative', display: 'flex', gap: '8px', alignItems: 'center', justifyContent: 'flex-end' }}>
+        <div className="title-bar-right-indicators" style={{ display: 'flex', gap: '8px', alignItems: 'center', justifyContent: 'flex-end' }}>
           {hasActiveRecording && (
             <div className="title-bar-recording-indicator">
               <RecordingIndicator size="small" variant="recording" />

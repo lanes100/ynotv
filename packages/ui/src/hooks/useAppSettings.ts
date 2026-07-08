@@ -20,6 +20,7 @@ export interface AppSettings {
   includeSourceInVodSearch: boolean;
   maxSearchResults: number;
   searchResultsOrder: 'default' | 'alphabetical';
+  sourceFontSize: number;
 
   // Category display
   categorySortOrder: 'default' | 'alphabetical';
@@ -169,6 +170,7 @@ export function useAppSettings(): AppSettings {
   const [includeSourceInVodSearch, setIncludeSourceInVodSearch] = useState(false);
   const [maxSearchResults, setMaxSearchResults] = useState(200);
   const [searchResultsOrder, setSearchResultsOrder] = useState<'default' | 'alphabetical'>('default');
+  const [sourceFontSize, setSourceFontSize] = useState(12);
 
   // Category display settings
   const [categorySortOrder, setCategorySortOrder] = useState<'default' | 'alphabetical'>('default');
@@ -448,6 +450,7 @@ export function useAppSettings(): AppSettings {
           setIncludeSourceInVodSearch(result.data.includeSourceInVodSearch ?? false);
           setMaxSearchResults(result.data.maxSearchResults ?? 200);
           setSearchResultsOrder(result.data.searchResultsOrder ?? 'default');
+          setSourceFontSize(result.data.sourceFontSize ?? 12);
           setCategorySortOrder(result.data.categorySortOrder ?? 'default');
           setIncludeAllChannelsToPlaylist(result.data.includeAllChannelsToPlaylist ?? false);
           setAdvancedSearchScope(result.data.advancedSearchScope ?? 'both');
@@ -1161,6 +1164,7 @@ export function useAppSettings(): AppSettings {
     includeSourceInVodSearch,
     maxSearchResults,
     searchResultsOrder,
+    sourceFontSize,
     categorySortOrder,
     includeAllChannelsToPlaylist,
     advancedSearchScope,

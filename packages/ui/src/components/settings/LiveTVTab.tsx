@@ -32,6 +32,8 @@ interface LiveTVTabProps {
   onChannelFontSizeChange: (size: number) => void;
   categoryFontSize: number;
   onCategoryFontSizeChange: (size: number) => void;
+  sourceFontSize: number;
+  onSourceFontSizeChange: (size: number) => void;
   // Sort Order props (from ChannelsTab)
   channelSortOrder: 'alphabetical' | 'number' | 'provider';
   onChannelSortOrderChange: (order: 'alphabetical' | 'number' | 'provider') => void;
@@ -107,6 +109,8 @@ export function LiveTVTab({
   onChannelFontSizeChange,
   categoryFontSize,
   onCategoryFontSizeChange,
+  sourceFontSize,
+  onSourceFontSizeChange,
   channelSortOrder,
   onChannelSortOrderChange,
   categorySortOrder,
@@ -662,13 +666,42 @@ export function LiveTVTab({
               </p>
             </div>
 
+            {/* Source Font Size */}
+            {modernUiEnabled === 'v3' && (
+              <div className="form-group" style={{ marginBottom: '12px' }}>
+                <label style={{ display: 'block', marginBottom: '0.5rem', color: 'rgba(255,255,255,0.9)' }}>Source Font Size</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                  <input
+                    type="range"
+                    min="10"
+                    max="24"
+                    value={sourceFontSize}
+                    onChange={(e) => onSourceFontSizeChange(parseInt(e.target.value))}
+                    style={{ flex: 1 }}
+                  />
+                  <span style={{ minWidth: '3rem', textAlign: 'right', color: 'rgba(255,255,255,0.8)' }}>
+                    {sourceFontSize}px
+                  </span>
+                </div>
+                <p className="form-hint" style={{ marginTop: '0.5rem' }}>
+                  Preview: <span style={{ fontSize: `${sourceFontSize}px`, color: '#00d4ff', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Source Name Example</span>
+                </p>
+              </div>
+            )}
+
             {/* Reset Button */}
             <div style={{ marginTop: '16px' }}>
               <button
                 className="sync-btn"
                 onClick={() => {
-                  onChannelFontSizeChange(14);
-                  onCategoryFontSizeChange(14);
+                  if (modernUiEnabled === 'v3') {
+                    onChannelFontSizeChange(12);
+                    onCategoryFontSizeChange(13);
+                    onSourceFontSizeChange(12);
+                  } else {
+                    onChannelFontSizeChange(14);
+                    onCategoryFontSizeChange(14);
+                  }
                 }}
                 style={{ maxWidth: '200px' }}
               >

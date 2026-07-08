@@ -2281,7 +2281,22 @@ export function ChannelPanel({
                         onClick={isCustomGroup ? () => setManagingCustomGroup({ id: categoryId!, name: customGroupName }) : handleManageChannels}
                         title={isCustomGroup ? "Manage custom group" : "Manage channels in this category"}
                       >
-                        {isCustomGroup ? '📂 Manage Custom Group' : '📺 Manage Channels'}
+                        {isCustomGroup ? (
+                          <>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+                            </svg>
+                            <span>Manage Custom Group</span>
+                          </>
+                        ) : (
+                          <>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                              <rect x="2" y="7" width="20" height="15" rx="2" ry="2" />
+                              <polyline points="17 2 12 7 7 2" />
+                            </svg>
+                            <span>Manage Channels</span>
+                          </>
+                        )}
                       </button>
                     )}
                     {!isCustomGroup && (

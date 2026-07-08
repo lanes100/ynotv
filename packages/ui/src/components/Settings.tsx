@@ -314,6 +314,7 @@ export function Settings({
   // Font size state (moved to LiveTV tab)
   const [channelFontSize, setChannelFontSize] = useState(14);
   const [categoryFontSize, setCategoryFontSize] = useState(13);
+  const [sourceFontSize, setSourceFontSize] = useState(12);
 
   // Startup settings state
   const [rememberLastChannels, setRememberLastChannels] = useState(false);
@@ -664,6 +665,7 @@ export function Settings({
         shortcuts?: ShortcutsMap;
         channelFontSize?: number;
         categoryFontSize?: number;
+        sourceFontSize?: number;
         startupWidth?: number;
         startupHeight?: number;
         dontSaveWindowSizeOnClose?: boolean;
@@ -847,12 +849,15 @@ export function Settings({
       setUiSettings(loadedUiSettings);
 
       // Load font size settings (moved to LiveTV tab)
-      const loadedChannelFontSize = settings.channelFontSize ?? 14;
+      const loadedChannelFontSize = settings.channelFontSize ?? (loadedModernUi === 'v3' ? 12 : 14);
       const loadedCategoryFontSize = settings.categoryFontSize ?? 13;
+      const loadedSourceFontSize = settings.sourceFontSize ?? 12;
       setChannelFontSize(loadedChannelFontSize);
       setCategoryFontSize(loadedCategoryFontSize);
+      setSourceFontSize(loadedSourceFontSize);
       document.documentElement.style.setProperty('--channel-font-size', `${loadedChannelFontSize}px`);
       document.documentElement.style.setProperty('--category-font-size', `${loadedCategoryFontSize}px`);
+      document.documentElement.style.setProperty('--source-font-size', `${loadedSourceFontSize}px`);
 
       // Apply modern UI class on load
       const design = loadedModernUi === 'v3' ? 'v3' : (loadedModernUi === false || loadedModernUi === 'v1' ? 'v1' : 'v2');
@@ -1880,6 +1885,14 @@ export function Settings({
     }
   };
 
+  const handleSourceFontSizeChange = (size: number) => {
+    setSourceFontSize(size);
+    document.documentElement.style.setProperty('--source-font-size', `${size}px`);
+    if (window.storage) {
+      window.storage.debouncedUpdateSettings({ sourceFontSize: size });
+    }
+  };
+
   const handleRememberLastChannelsChange = async (value: boolean) => {
     setRememberLastChannels(value);
 
@@ -2259,6 +2272,8 @@ export function Settings({
             onChannelFontSizeChange={handleChannelFontSizeChange}
             categoryFontSize={categoryFontSize}
             onCategoryFontSizeChange={handleCategoryFontSizeChange}
+            sourceFontSize={sourceFontSize}
+            onSourceFontSizeChange={handleSourceFontSizeChange}
             channelSortOrder={channelSortOrder}
             onChannelSortOrderChange={setChannelSortOrder}
             categorySortOrder={categorySortOrder}
