@@ -1,5 +1,40 @@
 # Changelog
 
+## v2.2.0
+
+### Added
+
+- **Global EPG local cache** - The Global EPG can now be cached locally, enabling use of the EPG Editor to search from the Global EPG that weren't matched and allowing searches across its full program data. Enable via the Edit Global EPG menu, can also view and search the full EPG.
+- **Per-channel EPG source override** - Using the EPG Editor, a channel's EPG can be overridden to pull data from a different LiveTV source. The override will persist across every subsequent sync.
+- **Optimization tab** - Performance optimization options are now available under `Settings → Optimization` for users experiencing reduced smoothness on lower-end hardware.
+- **Customize your own themes** - Create entirely new themes or modify existing ones to suit your preference. Custom themes can be saved, imported, and exported.
+- **Custom font** - The application font can be changed to any of the available options or replaced with your own by uploading it under `Settings → UI`.
+- **DVR repeat scheduling** - When scheduling a Live TV recording, a repeat interval can now be set: `Daily`, `Weekly`, or `Every X Days`.
+- **Audio delay adjustment** - Audio delay can be adjusted via the Audio Selector (default hotkey: `A`). The value is saved per channel, and an indicator will appear when a saved audio delay is detected for the active channel.
+- **Pin category to top** - Right-click any category to pin it to the top of its source list. Pinned categories remain fixed at the top under the Source while scrolling for quick access. Right-click again to unpin and restore the original position.
+- **View Global EPG matched channels** - A new button on the Global EPG source card displays all channels that were matched using the Global EPG, along with their associated program data.
+- **EPG logo preference** - An option has been added in the EPG Editor to use the EPG-provided logo in place of the provider logo for individual channels. A global preference to always favour the EPG logo can be enabled under `Settings → Live TV → EPG`.
+- **Reworked Live TV EPG preview** - Enables smoother resizing and correct centering of all sources regardless of app/source resolution.
+- **Draggable Popout Player media controls** - The media controls overlay for the Popout Player can now be repositioned by dragging. The controls will also auto-hide in sync with the UI overlay.
+- **Click-only overlay toggle** - The player overlay can be configured to show and hide on left-click only, rather than on mouse movement. Enable under `Settings → UI → Overlay on Click Only`.
+- **Series episode watched toggle** - Episodes in Live TV VOD series can be manually marked as watched or unwatched. Changes are reflected in the Continue Watching catalog.
+- **Mouse back button support** - The mouse back button can now be used to navigate back in any view that supports back navigation.
+- **Source name badge in VOD search** - A source name badge is now displayed on posters in VOD search results to identify which source each title belongs to. Enable under `Settings → Live TV → Search`.
+- **Global user agent** - A global user agent can be configured under `Settings → Sources → Global User Agent`, applying to all sources that do not have a dedicated user agent set.
+
+### Fixed
+
+- **DVR quick recordings not stopping on time** - Quick Recordings will now end at the correct scheduled time.
+- **Sync errors for certain providers** - Resolved an issue that prevented some sources from syncing correctly.
+- **Check for Update window appearing behind Settings** - The update check dialog will now appear correctly.
+- **Transparent title bar in v1/v2 UI designs** - The title bar in v1 and v2 UI designs will no longer be transparent or show the desktop behind it.
+- **All Channels per source not populating on restart** - The All Channels category for individual sources now populates correctly after a restart.
+- **EPG Editor not showing EPGs with duplicate channel names or TVG-IDs** - Resolved a bug that caused certain EPG entries to be hidden in EPG Editor search results when they shared a channel name and TVG-ID with another entry.
+- **Naviation bar clickable area shifting during download** - Download badge will no longer cause navigation bar clickable area to shift.
+- **Font Size settings not reflecting in v3 UI** - Editing font size should reflect correctly now for v3 design instead of using hardcoded values. Reset to Default in `Settings → LiveTV → Font Size` 
+
+
+
 ## v2.1.5
 
 ### Added
