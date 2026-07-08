@@ -39,6 +39,8 @@ interface LiveTVTabProps {
   onCategorySortOrderChange: (order: 'default' | 'alphabetical') => void;
   includeSourceInSearch: boolean;
   onIncludeSourceInSearchChange: (enabled: boolean) => void;
+  includeSourceInVodSearch: boolean;
+  onIncludeSourceInVodSearchChange: (enabled: boolean) => void;
   maxSearchResults: number;
   onMaxSearchResultsChange: (limit: number) => void;
   searchResultsOrder: 'default' | 'alphabetical';
@@ -111,6 +113,8 @@ export function LiveTVTab({
   onCategorySortOrderChange,
   includeSourceInSearch,
   onIncludeSourceInSearchChange,
+  includeSourceInVodSearch,
+  onIncludeSourceInVodSearchChange,
   maxSearchResults,
   onMaxSearchResultsChange,
   searchResultsOrder,
@@ -682,6 +686,8 @@ export function LiveTVTab({
             onCategorySortOrderChange={onCategorySortOrderChange}
             includeSourceInSearch={includeSourceInSearch}
             onIncludeSourceInSearchChange={onIncludeSourceInSearchChange}
+            includeSourceInVodSearch={includeSourceInVodSearch}
+            onIncludeSourceInVodSearchChange={onIncludeSourceInVodSearchChange}
             maxSearchResults={maxSearchResults}
             onMaxSearchResultsChange={onMaxSearchResultsChange}
             searchResultsOrder={searchResultsOrder}

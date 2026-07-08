@@ -18,6 +18,8 @@ import {
   useLazyStalkerLoader,
 } from '../../hooks/useVod';
 import { useVodFavoritesStore } from '../../stores/vodFavoritesStore';
+import { useSourceNameMap } from '../../hooks/useChannels';
+import { useAppSettings } from '../../hooks/useAppSettings';
 import './VodBrowse.css';
 
 // Poster size presets (card width in pixels)
@@ -196,6 +198,9 @@ export function VodBrowse({
   // Poster size preference
   const [posterSize, setPosterSize] = usePosterSizePreference();
 
+  const { includeSourceInVodSearch } = useAppSettings();
+  const sourceNameMap = useSourceNameMap();
+
   // Debounce search to avoid expensive filtering on every keystroke
   const debouncedSearch = useDebouncedValue(search, 300);
 
@@ -322,6 +327,10 @@ export function VodBrowse({
         '--marquee-visible-width': `${cardDimensions.cardWidth}px`,
       } as React.CSSProperties;
 
+      const sourceName = (includeSourceInVodSearch && search && search.trim() && sourceNameMap)
+        ? sourceNameMap.get(item.source_id)
+        : undefined;
+
       return (
         <MediaCard
           item={item}
@@ -330,6 +339,7 @@ export function VodBrowse({
           size={sizeLabel}
           style={cardStyle}
           isFavorited={isFav}
+          sourceName={sourceName}
           onToggleFavorite={(clickedItem) => {
             const clickedId = type === 'movies'
               ? (clickedItem as StoredMovie).stream_id
@@ -351,7 +361,7 @@ export function VodBrowse({
         />
       );
     },
-    [type, onItemClick, posterSize, cardDimensions, favoritedIds, addFavorite, removeFavorite]
+    [type, onItemClick, posterSize, cardDimensions, favoritedIds, addFavorite, removeFavorite, includeSourceInVodSearch, search, sourceNameMap]
   );
 
   // CSS custom properties for dynamic sizing - MUST be before any early returns

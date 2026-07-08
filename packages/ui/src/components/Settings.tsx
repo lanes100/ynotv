@@ -286,6 +286,7 @@ export function Settings({
   const [channelSortOrder, setChannelSortOrder] = useState<'alphabetical' | 'number' | 'provider'>('provider');
   const [categorySortOrder, setCategorySortOrder] = useState<'default' | 'alphabetical'>('default');
   const [includeSourceInSearch, setIncludeSourceInSearch] = useState(false);
+  const [includeSourceInVodSearch, setIncludeSourceInVodSearch] = useState(false);
   const [maxSearchResults, setMaxSearchResults] = useState(200);
   const [searchResultsOrder, setSearchResultsOrder] = useState<'default' | 'alphabetical'>('default');
 
@@ -657,6 +658,7 @@ export function Settings({
         channelSortOrder?: 'alphabetical' | 'number' | 'provider';
         categorySortOrder?: 'default' | 'alphabetical';
         includeSourceInSearch?: boolean;
+        includeSourceInVodSearch?: boolean;
         maxSearchResults?: number;
         searchResultsOrder?: 'default' | 'alphabetical';
         shortcuts?: ShortcutsMap;
@@ -814,6 +816,7 @@ export function Settings({
       setChannelSortOrder(settings.channelSortOrder ?? 'provider');
       setCategorySortOrder(settings.categorySortOrder ?? 'default');
       setIncludeSourceInSearch(settings.includeSourceInSearch ?? false);
+      setIncludeSourceInVodSearch(settings.includeSourceInVodSearch ?? false);
       setMaxSearchResults(settings.maxSearchResults ?? 200);
       setSearchResultsOrder(settings.searchResultsOrder ?? 'default');
 
@@ -1926,6 +1929,13 @@ export function Settings({
       await window.storage.updateSettings({ includeSourceInSearch: value });
     }
   };
+  
+  const handleIncludeSourceInVodSearchChange = async (value: boolean) => {
+    setIncludeSourceInVodSearch(value);
+    if (window.storage) {
+      await window.storage.updateSettings({ includeSourceInVodSearch: value });
+    }
+  };
 
   const handleMaxSearchResultsChange = async (value: number) => {
     setMaxSearchResults(value);
@@ -2257,6 +2267,8 @@ export function Settings({
             onIncludeAllChannelsToPlaylistChange={handleIncludeAllChannelsToPlaylistChange}
             includeSourceInSearch={includeSourceInSearch}
             onIncludeSourceInSearchChange={handleIncludeSourceInSearchChange}
+            includeSourceInVodSearch={includeSourceInVodSearch}
+            onIncludeSourceInVodSearchChange={handleIncludeSourceInVodSearchChange}
             maxSearchResults={maxSearchResults}
             onMaxSearchResultsChange={handleMaxSearchResultsChange}
             searchResultsOrder={searchResultsOrder}

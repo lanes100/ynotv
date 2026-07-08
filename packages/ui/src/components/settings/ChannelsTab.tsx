@@ -8,6 +8,8 @@ interface ChannelsTabProps {
   onCategorySortOrderChange: (order: 'default' | 'alphabetical') => void;
   includeSourceInSearch: boolean;
   onIncludeSourceInSearchChange: (enabled: boolean) => void;
+  includeSourceInVodSearch: boolean;
+  onIncludeSourceInVodSearchChange: (enabled: boolean) => void;
   maxSearchResults: number;
   onMaxSearchResultsChange: (limit: number) => void;
   searchResultsOrder: 'default' | 'alphabetical';
@@ -20,6 +22,11 @@ interface ChannelsTabProps {
 async function saveIncludeSourceInSearch(enabled: boolean) {
   if (!window.storage) return;
   await window.storage.updateSettings({ includeSourceInSearch: enabled });
+}
+
+async function saveIncludeSourceInVodSearch(enabled: boolean) {
+  if (!window.storage) return;
+  await window.storage.updateSettings({ includeSourceInVodSearch: enabled });
 }
 
 async function saveMaxSearchResults(limit: number) {
@@ -44,6 +51,8 @@ export function ChannelsTab({
   onCategorySortOrderChange,
   includeSourceInSearch,
   onIncludeSourceInSearchChange,
+  includeSourceInVodSearch,
+  onIncludeSourceInVodSearchChange,
   maxSearchResults,
   onMaxSearchResultsChange,
   searchResultsOrder,
@@ -192,6 +201,29 @@ export function ChannelsTab({
                   onIncludeSourceInSearchChange(e.target.checked);
                   saveIncludeSourceInSearch(e.target.checked);
                 }}
+                />
+                <span className="toggle-slider" />
+              </label>
+            </div>
+          </div>
+
+          <div className="timeshift-settings" style={{ marginTop: '16px' }}>
+            <div className="timeshift-toggle-row">
+              <div className="timeshift-toggle-info">
+                <span className="timeshift-toggle-label">Include Source name in VOD Search</span>
+                <span className="timeshift-toggle-sub">
+                  When enabled, the source name will be displayed for the search results when searching VOD Movies and Series.
+                  This helps distinguish between VOD content with the same name from different sources.
+                </span>
+              </div>
+              <label className="toggle-switch">
+                <input
+                  type="checkbox"
+                  checked={includeSourceInVodSearch}
+                  onChange={(e) => {
+                    onIncludeSourceInVodSearchChange(e.target.checked);
+                    saveIncludeSourceInVodSearch(e.target.checked);
+                  }}
                 />
                 <span className="toggle-slider" />
               </label>

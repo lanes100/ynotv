@@ -33,7 +33,7 @@ let cachedSourceNameMap: Map<string, string> | null = null;
 let cachedSourceVersion = -1;
 
 // Hook to get source name map - cached to avoid repeated Tauri calls
-function useSourceNameMap(): Map<string, string> | null {
+export function useSourceNameMap(): Map<string, string> | null {
   const { version } = useSourceVersion();
   const [sourceMap, setSourceMap] = useState<Map<string, string> | null>(cachedSourceNameMap);
 

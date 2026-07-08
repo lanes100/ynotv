@@ -17,6 +17,7 @@ export interface AppSettings {
 
   // Search
   includeSourceInSearch: boolean;
+  includeSourceInVodSearch: boolean;
   maxSearchResults: number;
   searchResultsOrder: 'default' | 'alphabetical';
 
@@ -165,6 +166,7 @@ export function useAppSettings(): AppSettings {
 
   // Search settings
   const [includeSourceInSearch, setIncludeSourceInSearch] = useState(false);
+  const [includeSourceInVodSearch, setIncludeSourceInVodSearch] = useState(false);
   const [maxSearchResults, setMaxSearchResults] = useState(200);
   const [searchResultsOrder, setSearchResultsOrder] = useState<'default' | 'alphabetical'>('default');
 
@@ -443,6 +445,7 @@ export function useAppSettings(): AppSettings {
           setTimeshiftCacheBytes(result.data.timeshiftCacheBytes ?? 268_435_456);
           setLiveBufferOffset(result.data.liveBufferOffset ?? 0);
           setIncludeSourceInSearch(result.data.includeSourceInSearch ?? false);
+          setIncludeSourceInVodSearch(result.data.includeSourceInVodSearch ?? false);
           setMaxSearchResults(result.data.maxSearchResults ?? 200);
           setSearchResultsOrder(result.data.searchResultsOrder ?? 'default');
           setCategorySortOrder(result.data.categorySortOrder ?? 'default');
@@ -1155,6 +1158,7 @@ export function useAppSettings(): AppSettings {
     timeshiftCacheBytes,
     liveBufferOffset,
     includeSourceInSearch,
+    includeSourceInVodSearch,
     maxSearchResults,
     searchResultsOrder,
     categorySortOrder,

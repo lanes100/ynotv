@@ -1078,8 +1078,6 @@ function App() {
     handleMouseMove,
   } = nav;
 
-
-
   // ==========================================================================
   // PiP (Picture-in-Picture) Mode
   // ==========================================================================
@@ -1346,6 +1344,76 @@ function App() {
       setActiveView('nuvio');
     }
   }, [vodInfo, handleStopRaw, setActiveView, playbackSourceView]);
+
+  // Global mouse back/forward button navigation listener
+  useEffect(() => {
+    const handleMouseNavigation = (e: MouseEvent) => {
+      // button 3 is back, button 4 is forward
+      if (e.button === 3 || e.button === 4) {
+        // Prevent default browser/webview history back/forward navigation
+        e.preventDefault();
+
+        if (e.button === 3) {
+          // Don't intercept back button when typing in inputs/textareas
+          if (
+            e.target instanceof HTMLInputElement ||
+            e.target instanceof HTMLTextAreaElement
+          ) {
+            return;
+          }
+
+          // Let sub-pages handle their internal back navigation
+          if (
+            activeView === 'movies' ||
+            activeView === 'series' ||
+            activeView === 'stremio' ||
+            activeView === 'nuvio'
+          ) {
+            return;
+          }
+
+          // 1. If settings popup or settings view is active, close it
+          if (showSettingsPopup) {
+            setShowSettingsPopup(false);
+            return;
+          }
+
+          // 2. If a video is playing, stop it and return
+          if (activeView === 'none' && playbackSourceView) {
+            handleStop();
+            return;
+          }
+
+          // 3. Handle other active views that have onClose / exit logic
+          if (
+            activeView === 'settings' ||
+            activeView === 'dvr' ||
+            activeView === 'sports' ||
+            activeView === 'calendar'
+          ) {
+            setActiveView('none');
+            return;
+          }
+        }
+      }
+    };
+
+    const preventDefaultMouseNav = (e: MouseEvent) => {
+      if (e.button === 3 || e.button === 4) {
+        e.preventDefault();
+      }
+    };
+
+    window.addEventListener('mousedown', handleMouseNavigation);
+    window.addEventListener('mouseup', preventDefaultMouseNav);
+    window.addEventListener('click', preventDefaultMouseNav);
+
+    return () => {
+      window.removeEventListener('mousedown', handleMouseNavigation);
+      window.removeEventListener('mouseup', preventDefaultMouseNav);
+      window.removeEventListener('click', preventDefaultMouseNav);
+    };
+  }, [activeView, playbackSourceView, showSettingsPopup, handleStop, setShowSettingsPopup, setActiveView]);
 
   // ==========================================================================
   // Aspect Ratio — tracked separately for the hero screen

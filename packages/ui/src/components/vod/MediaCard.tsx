@@ -22,9 +22,10 @@ export interface MediaCardProps {
   onToggleFavorite?: (item: StoredMovie | StoredSeries) => void;
   // Optional style for dynamic sizing (e.g., marquee animation)
   style?: React.CSSProperties;
+  sourceName?: string;
 }
 
-export const MediaCard = memo(function MediaCard({ item, type, onClick, onRemove, size = 'medium', progressPercent, isRecentlyWatched, seasonNum, episodeNum, episodeTitle, isFavorited, onToggleFavorite, style }: MediaCardProps) {
+export const MediaCard = memo(function MediaCard({ item, type, onClick, onRemove, size = 'medium', progressPercent, isRecentlyWatched, seasonNum, episodeNum, episodeTitle, isFavorited, onToggleFavorite, style, sourceName }: MediaCardProps) {
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
   const [titleOverflows, setTitleOverflows] = useState(false);
@@ -125,6 +126,13 @@ export const MediaCard = memo(function MediaCard({ item, type, onClick, onRemove
         {type === 'series' && seasonNum !== undefined && episodeNum !== undefined && (
           <div className="media-card__episode-badge">
             S{seasonNum} E{episodeNum}
+          </div>
+        )}
+
+        {/* Source name badge */}
+        {sourceName && (
+          <div className="media-card__source-badge" title={sourceName}>
+            {sourceName}
           </div>
         )}
 

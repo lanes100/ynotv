@@ -587,15 +587,41 @@ export function VodPage({ type, onPlay, onClose }: VodPageProps) {
   // Handle mouse back button and browser back - close detail view
   useEffect(() => {
     const handleMouseBack = (e: MouseEvent) => {
-      if (e.button === 3 && selectedItem) {
-        e.preventDefault();
-        setSelectedItem(null);
+      if (e.button === 3) {
+        if (activePersonId) {
+          e.preventDefault();
+          e.stopPropagation();
+          setActivePersonId(null);
+        } else if (selectedItem) {
+          e.preventDefault();
+          e.stopPropagation();
+          setSelectedItem(null);
+        } else if (selectedService) {
+          e.preventDefault();
+          e.stopPropagation();
+          setSelectedService(null);
+        } else if (searchQuery.trim() && prevViewState) {
+          e.preventDefault();
+          e.stopPropagation();
+          setSearchQuery('');
+          setSelectedCategoryId(prevViewState.categoryId);
+          setSelectedService(prevViewState.service);
+          setPrevViewState(null);
+        } else if (onClose) {
+          e.preventDefault();
+          e.stopPropagation();
+          onClose();
+        }
       }
     };
 
     const handlePopState = () => {
-      if (selectedItem) {
+      if (activePersonId) {
+        setActivePersonId(null);
+      } else if (selectedItem) {
         setSelectedItem(null);
+      } else if (selectedService) {
+        setSelectedService(null);
       }
     };
 
@@ -603,7 +629,7 @@ export function VodPage({ type, onPlay, onClose }: VodPageProps) {
     window.addEventListener('popstate', handlePopState);
 
     // Push state when opening detail so back button works
-    if (selectedItem) {
+    if (selectedItem || activePersonId || selectedService) {
       window.history.pushState({ vodDetail: true }, '');
     }
 
@@ -611,7 +637,19 @@ export function VodPage({ type, onPlay, onClose }: VodPageProps) {
       window.removeEventListener('mousedown', handleMouseBack);
       window.removeEventListener('popstate', handlePopState);
     };
-  }, [selectedItem]);
+  }, [
+    selectedItem,
+    activePersonId,
+    selectedService,
+    searchQuery,
+    prevViewState,
+    onClose,
+    setSelectedItem,
+    setSelectedService,
+    setSearchQuery,
+    setSelectedCategoryId,
+    setPrevViewState,
+  ]);
 
   // Labels
   const typeLabel = type === 'movie' ? 'Movies' : 'Series';

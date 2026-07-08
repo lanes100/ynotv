@@ -808,6 +808,49 @@ function NuvioPageContent({
     }
   }, [nuvioView, nuvioActiveMeta, token, profile?.profile_index, libraryLoaded]);
 
+  useEffect(() => {
+    const handleMouseBack = (e: MouseEvent) => {
+      if (e.button === 3) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (pinPromptProfile) {
+          setPinPromptProfile(null);
+        } else if (nuvioActivePersonId) {
+          nuvioGoBack();
+        } else if (nuvioActiveMeta) {
+          nuvioGoBack();
+        } else if (selectedFolder) {
+          handleBackFromFolder();
+        } else if (selectedService) {
+          setSelectedService(null);
+        } else if (nuvioHistory.length > 1) {
+          nuvioGoBack();
+        } else if (nuvioView !== 'home') {
+          setNuvioView('home');
+        } else {
+          onClose();
+        }
+      }
+    };
+
+    window.addEventListener('mousedown', handleMouseBack);
+    return () => {
+      window.removeEventListener('mousedown', handleMouseBack);
+    };
+  }, [
+    pinPromptProfile,
+    nuvioActivePersonId,
+    nuvioActiveMeta,
+    selectedFolder,
+    selectedService,
+    nuvioHistory,
+    nuvioView,
+    onClose,
+    nuvioGoBack,
+    setNuvioView,
+  ]);
+
 
 
   // Click outside listener for profile menu

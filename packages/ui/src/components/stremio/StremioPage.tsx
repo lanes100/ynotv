@@ -111,6 +111,28 @@ export function StremioPage({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [showAddonManager, showAccountModal, onClose, stremioGoBack, stremioView, setStremioView]);
 
+  useEffect(() => {
+    const handleMouseBack = (e: MouseEvent) => {
+      if (e.button === 3) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (showAccountModal) {
+          setShowAccountModal(false);
+        } else if (showAddonManager) {
+          setShowAddonManager(false);
+        } else if (useUIStore.getState().stremioHistory.length > 1) {
+          stremioGoBack();
+        } else if (stremioView === 'search' || stremioView === 'settings') {
+          setStremioView('home');
+        } else {
+          onClose();
+        }
+      }
+    };
+    window.addEventListener('mousedown', handleMouseBack);
+    return () => window.removeEventListener('mousedown', handleMouseBack);
+  }, [showAddonManager, showAccountModal, onClose, stremioGoBack, stremioView, setStremioView]);
+
   const handleItemClick = useCallback((meta: StremioMeta) => {
     if (mainRef.current) {
       setHomeScrollTop(mainRef.current.scrollTop);
