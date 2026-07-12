@@ -221,6 +221,32 @@ async fn test_proxy_connection<R: Runtime>(app: AppHandle<R>) -> Result<String, 
     Ok(ip.to_string())
 }
 
+fn parse_mpv_custom_params(params_str: &str) -> Vec<String> {
+    params_str
+        .lines()
+        .map(|line| {
+            let trimmed = line.trim();
+            let pos_space = trimmed.find(" #");
+            let pos_tab = trimmed.find("\t#");
+            let first_comment_marker = match (pos_space, pos_tab) {
+                (Some(s), Some(t)) => Some(std::cmp::min(s, t)),
+                (Some(s), None) => Some(s),
+                (None, Some(t)) => Some(t),
+                (None, None) => None,
+            };
+            if trimmed.starts_with('#') {
+                ""
+            } else if let Some(pos) = first_comment_marker {
+                trimmed[..pos].trim()
+            } else {
+                trimmed
+            }
+        })
+        .filter(|line| !line.is_empty())
+        .map(|s| s.to_string())
+        .collect()
+}
+
 /// Get custom MPV parameters from settings store.
 /// Supports both nested `settings` object (frontend format) and root-level keys (legacy).
 async fn get_mpv_params_from_store<R: Runtime>(app: &AppHandle<R>) -> Vec<String> {
@@ -252,12 +278,7 @@ async fn get_mpv_params_from_store<R: Runtime>(app: &AppHandle<R>) -> Vec<String
             // Load user-defined MPV params
             if let Some(params) = get_value("mpvParams") {
                 if let Some(params_str) = params.as_str() {
-                    let custom_args: Vec<String> = params_str
-                        .lines()
-                        .map(|line| line.trim())
-                        .filter(|line| !line.is_empty() && !line.starts_with('#'))
-                        .map(|s| s.to_string())
-                        .collect();
+                    let custom_args = parse_mpv_custom_params(params_str);
                     debug!("[MPV] Loaded {} custom parameters from settings", custom_args.len());
                     for (i, arg) in custom_args.iter().enumerate() {
                         debug!("[MPV]   Custom arg[{}]: {}", i, arg);
@@ -1048,12 +1069,7 @@ async fn popout_open<R: Runtime>(
     custom_params: String,
 ) -> Result<(), String> {
     // Parse custom params string into lines
-    let raw_params: Vec<String> = custom_params
-        .lines()
-        .map(|line| line.trim())
-        .filter(|line| !line.is_empty() && !line.starts_with('#'))
-        .map(|s| s.to_string())
-        .collect();
+    let raw_params = parse_mpv_custom_params(&custom_params);
 
     // Check whitelist disable setting (reuse main MPV setting)
     let disable_whitelist = read_store_setting(&app, "mpvDisableWhitelist")
@@ -1148,12 +1164,7 @@ async fn popout_get_params_debug<R: Runtime>(app: AppHandle<R>) -> Result<serde_
         .and_then(|v| v.as_str())
         .unwrap_or("");
 
-    let raw_params: Vec<String> = raw_str
-        .lines()
-        .map(|line| line.trim())
-        .filter(|line| !line.is_empty() && !line.starts_with('#'))
-        .map(|s| s.to_string())
-        .collect();
+    let raw_params = parse_mpv_custom_params(raw_str);
 
     let disable_whitelist = read_store_setting(&app, "mpvDisableWhitelist")
         .and_then(|v| v.as_bool())
@@ -3255,4 +3266,28 @@ pub fn run() {
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_mpv_custom_params() {
+        let input = "
+            --hwdec=auto
+            --vo=gpu # High-performance GPU rendering
+            --sub-color=#FF0000
+            --sub-color=#FF0000 # Make it red
+               # This is a full comment line
+            --user-agent=\"Mozilla/5.0\" # Avoid blocks
+        ";
+        let parsed = parse_mpv_custom_params(input);
+        assert_eq!(parsed.len(), 5);
+        assert_eq!(parsed[0], "--hwdec=auto");
+        assert_eq!(parsed[1], "--vo=gpu");
+        assert_eq!(parsed[2], "--sub-color=#FF0000");
+        assert_eq!(parsed[3], "--sub-color=#FF0000");
+        assert_eq!(parsed[4], "--user-agent=\"Mozilla/5.0\"");
+    }
 }

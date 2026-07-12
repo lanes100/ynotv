@@ -469,6 +469,11 @@ export function ChannelPanel({
     return saved === 'true';
   });
 
+  const [showWatchlistPlaylistName, setShowWatchlistPlaylistName] = useState(() => {
+    const saved = localStorage.getItem('showWatchlistPlaylistName');
+    return saved === 'true';
+  });
+
   const [sourceNames, setSourceNames] = useState<Map<string, string>>(new Map());
   const [shortEpgSourceIds, setShortEpgSourceIds] = useState<Set<string>>(() => new Set());
 
@@ -2221,6 +2226,17 @@ export function ChannelPanel({
                 <span className="guide-channel-count">
                   {watchlistItems?.length || 0} programs
                 </span>
+                <button
+                  className={`guide-manage-channels-btn ${showWatchlistPlaylistName ? 'active-toggle' : ''}`}
+                  onClick={() => {
+                    const newVal = !showWatchlistPlaylistName;
+                    setShowWatchlistPlaylistName(newVal);
+                    localStorage.setItem('showWatchlistPlaylistName', String(newVal));
+                  }}
+                  title="Show playlist name for each channel"
+                >
+                  {showWatchlistPlaylistName ? '📋' : '📄'} Toggle Playlist Name
+                </button>
               </>
             ) : isSearchMode ? (
               <>
@@ -2508,6 +2524,8 @@ export function ChannelPanel({
                                 setWatchlistRefreshTrigger(v => v + 1);
                                 onWatchlistRefresh?.();
                               }}
+                              showPlaylistName={showWatchlistPlaylistName}
+                              sourceNames={sourceNames}
                             />
                           ))}
                         </div>
@@ -2534,6 +2552,8 @@ export function ChannelPanel({
                                 setWatchlistRefreshTrigger(v => v + 1);
                                 onWatchlistRefresh?.();
                               }}
+                              showPlaylistName={showWatchlistPlaylistName}
+                              sourceNames={sourceNames}
                             />
                           ))}
                         </div>

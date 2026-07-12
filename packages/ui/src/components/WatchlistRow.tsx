@@ -17,6 +17,8 @@ interface WatchlistRowProps {
   visibleHours: number;
   onPlay: () => void;
   onRefresh: () => void;
+  showPlaylistName?: boolean;
+  sourceNames?: Map<string, string>;
 }
 
 export function WatchlistRow({
@@ -25,6 +27,8 @@ export function WatchlistRow({
   programs,
   onPlay,
   onRefresh,
+  showPlaylistName,
+  sourceNames,
 }: WatchlistRowProps) {
   const [showEditModal, setShowEditModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -122,10 +126,10 @@ export function WatchlistRow({
 
   return (
     <>
-      <div className="guide-channel-row search-result-row" ref={rowRef}>
+      <div className={`guide-channel-row search-result-row ${showPlaylistName ? 'has-playlist-name' : ''}`} ref={rowRef}>
         {/* Channel info column */}
         <div
-          className="guide-channel-info"
+          className={`guide-channel-info ${showPlaylistName ? 'has-playlist-name' : ''}`}
           style={{
             width: 'var(--epg-channel-column-width, 264px)',
             minWidth: 'var(--epg-channel-column-width, 264px)',
@@ -160,6 +164,11 @@ export function WatchlistRow({
                 <span style={{ color: '#e5a00d', marginLeft: '4px', fontSize: '1.1em', verticalAlign: 'middle' }}>↺</span>
               )}
             </span>
+            {showPlaylistName && (
+              <span className="guide-channel-playlist-name" title={sourceNames?.get(channel.source_id) || channel.source_id}>
+                {sourceNames?.get(channel.source_id) || channel.source_id}
+              </span>
+            )}
             {channel.channel_num && (
               <span className="guide-channel-number">Ch. {channel.channel_num}</span>
             )}

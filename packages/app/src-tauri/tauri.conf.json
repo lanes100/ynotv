@@ -19,7 +19,8 @@
         "height": 1080,
         "decorations": false,
         "transparent": true,
-        "acceptFirstMouse": true
+        "acceptFirstMouse": true,
+        "additionalBrowserArgs": "--disable-features=CalculateNativeWinOcclusion,msWebOOUI,msPdfOOUI,msSmartScreenProtection --disable-background-timer-throttling --disable-renderer-backgrounding --disable-backgrounding-occluded-windows"
       }
     ],
     "security": {
