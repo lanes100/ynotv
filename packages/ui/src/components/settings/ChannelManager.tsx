@@ -337,6 +337,61 @@ export function ChannelManager({ categoryId, categoryName, sourceId, onClose, on
         return filtered;
     }, [channels, hideDisabled, searchQuery]);
 
+    // Move channel to top
+    const moveToTop = useCallback((visibleIndex: number) => {
+        if (visibleIndex === 0) return;
+        setChannels(chs => {
+            const ch = visibleChannels[visibleIndex];
+            if (!ch) return chs;
+            const actualIndex = chs.findIndex(c => c.stream_id === ch.stream_id);
+            if (actualIndex === -1 || actualIndex === 0) return chs;
+            
+            const next = [...chs];
+            const [moved] = next.splice(actualIndex, 1);
+            next.unshift(moved);
+            return next.map((c, idx) => ({ ...c, display_order: idx }));
+        });
+        setIsDirty(true);
+    }, [visibleChannels]);
+
+    // Move channel up
+    const moveUp = useCallback((visibleIndex: number) => {
+        if (visibleIndex === 0) return;
+        setChannels(chs => {
+            const ch = visibleChannels[visibleIndex];
+            const prevCh = visibleChannels[visibleIndex - 1];
+            if (!ch || !prevCh) return chs;
+            
+            const indexA = chs.findIndex(c => c.stream_id === ch.stream_id);
+            const indexB = chs.findIndex(c => c.stream_id === prevCh.stream_id);
+            if (indexA === -1 || indexB === -1) return chs;
+            
+            const next = [...chs];
+            [next[indexA], next[indexB]] = [next[indexB], next[indexA]];
+            return next.map((c, idx) => ({ ...c, display_order: idx }));
+        });
+        setIsDirty(true);
+    }, [visibleChannels]);
+
+    // Move channel down
+    const moveDown = useCallback((visibleIndex: number) => {
+        if (visibleIndex === visibleChannels.length - 1) return;
+        setChannels(chs => {
+            const ch = visibleChannels[visibleIndex];
+            const nextCh = visibleChannels[visibleIndex + 1];
+            if (!ch || !nextCh) return chs;
+            
+            const indexA = chs.findIndex(c => c.stream_id === ch.stream_id);
+            const indexB = chs.findIndex(c => c.stream_id === nextCh.stream_id);
+            if (indexA === -1 || indexB === -1) return chs;
+            
+            const next = [...chs];
+            [next[indexA], next[indexB]] = [next[indexB], next[indexA]];
+            return next.map((c, idx) => ({ ...c, display_order: idx }));
+        });
+        setIsDirty(true);
+    }, [visibleChannels]);
+
     const enabledCount = channels.filter(c => c.enabled !== false).length;
     const totalCount = channels.length;
 
@@ -457,7 +512,32 @@ export function ChannelManager({ categoryId, categoryName, sourceId, onClose, on
                                             )}
                                         </span>
                                     </label>
-
+                                    <div className="channel-reorder">
+                                        <button
+                                            className="order-btn"
+                                            onClick={() => moveToTop(visibleIndex)}
+                                            disabled={visibleIndex === 0}
+                                            title="Move to top"
+                                        >
+                                            ↑↑
+                                        </button>
+                                        <button
+                                            className="order-btn"
+                                            onClick={() => moveUp(visibleIndex)}
+                                            disabled={visibleIndex === 0}
+                                            title="Move up"
+                                        >
+                                            ↑
+                                        </button>
+                                        <button
+                                            className="order-btn"
+                                            onClick={() => moveDown(visibleIndex)}
+                                            disabled={visibleIndex === visibleChannels.length - 1}
+                                            title="Move down"
+                                        >
+                                            ↓
+                                        </button>
+                                    </div>
                                 </div>
                             );
                         })
