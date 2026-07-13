@@ -1081,7 +1081,13 @@ function App() {
   // ==========================================================================
   // PiP (Picture-in-Picture) Mode
   // ==========================================================================
-  const pip = usePipMode();
+  const [pipAspectRatio, setPipAspectRatio] = useState<AspectRatioMode>(() => {
+    try {
+      const v = localStorage.getItem('ynotv_pip_aspect_ratio');
+      return (v as AspectRatioMode) || 'fit';
+    } catch { return 'fit'; }
+  });
+  const pip = usePipMode(pipAspectRatio);
   const { pipMode, pipControlsVisible, togglePip, showPipControls } = pip;
   const pipFromPreviewRef = useRef<{ categoriesOpen: boolean } | null>(null);
 
@@ -1447,13 +1453,6 @@ function App() {
   // ==========================================================================
   // PiP Aspect Ratio (independent from main / hero aspect ratio)
   // ==========================================================================
-  const [pipAspectRatio, setPipAspectRatio] = useState<AspectRatioMode>(() => {
-    try {
-      const v = localStorage.getItem('ynotv_pip_aspect_ratio');
-      return (v as AspectRatioMode) || 'fit';
-    } catch { return 'fit'; }
-  });
-
   // Persist & apply PiP aspect ratio
   const handleSetPipAspectRatio = useCallback(async (mode: AspectRatioMode) => {
     setPipAspectRatio(mode);

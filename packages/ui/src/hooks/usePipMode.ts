@@ -1,5 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { getCurrentWindow, currentMonitor, LogicalSize, LogicalPosition } from '@tauri-apps/api/window';
+import { invoke } from '@tauri-apps/api/core';
+import { Bridge, type AspectRatioMode } from '../services/tauri-bridge';
 
 interface WindowSnapshot {
   width: number;
@@ -42,7 +44,19 @@ function savePipState(s: PipSavedState) {
   } catch {}
 }
 
-export function usePipMode() {
+async function resolvePipRatio(mode: AspectRatioMode): Promise<number | null> {
+  if (mode === '16:9') return 16 / 9;
+  if (mode === '4:3') return 4 / 3;
+  if (mode === 'fit') {
+    try {
+      const aspect = Number(await Bridge.getProperty('video-params/aspect'));
+      if (Number.isFinite(aspect) && aspect > 0) return aspect;
+    } catch {}
+  }
+  return null;
+}
+
+export function usePipMode(aspectMode: AspectRatioMode) {
   const [pipMode, setPipMode] = useState(false);
   const [pipControlsVisible, setPipControlsVisible] = useState(false);
   const snap = useRef<WindowSnapshot | null>(null);
@@ -116,16 +130,21 @@ export function usePipMode() {
       await w.setSize(new LogicalSize(pipW, pipH));
       await w.setPosition(new LogicalPosition(tx, ty));
       await w.setAlwaysOnTop(true);
+      await invoke('set_pip_aspect_lock', { ratio: await resolvePipRatio(aspectMode) });
       setPipMode(true);
       setPipControlsVisible(true);
     } catch (e) {
       console.error('[PiP] enter failed:', e);
     }
-  }, []);
+  }, [aspectMode]);
 
   const exitPip = useCallback(async () => {
     try {
       const w = getCurrentWindow();
+
+      await invoke('set_pip_aspect_lock', { ratio: null }).catch(e => {
+        console.error('[PiP] aspect lock disable failed:', e);
+      });
 
       const [innerSize, pos, sf] = await Promise.all([
         w.innerSize(),
@@ -164,6 +183,17 @@ export function usePipMode() {
       console.error('[PiP] exit failed:', e);
     }
   }, []);
+
+  useEffect(() => {
+    if (!pipMode) return;
+    let cancelled = false;
+    resolvePipRatio(aspectMode)
+      .then(ratio => {
+        if (!cancelled) return invoke('set_pip_aspect_lock', { ratio });
+      })
+      .catch(e => console.error('[PiP] aspect lock update failed:', e));
+    return () => { cancelled = true; };
+  }, [pipMode, aspectMode]);
 
   const togglePip = useCallback(async () => {
     if (pipMode) await exitPip();
