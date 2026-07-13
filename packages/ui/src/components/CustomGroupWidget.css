@@ -40,6 +40,7 @@
   /* Fixed height = 5 items to match Recent/Favorites */
   height: 172px;
   overflow-y: scroll;
+  pointer-events: auto;
 }
 
 .group-channel-item {

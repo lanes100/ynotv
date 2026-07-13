@@ -556,6 +556,7 @@ export function Settings({
     subOutlineColor: '#000000',
     subDelay: 0,
     subVerticalOffset: 0,
+    audioDevice: 'auto',
   });
 
   // Loading state for settings

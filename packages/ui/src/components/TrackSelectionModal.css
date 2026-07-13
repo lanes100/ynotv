@@ -293,3 +293,36 @@
   border-color: rgba(59, 130, 246, 0.4);
 }
 
+/* Audio Device / Track Selector Tabs */
+.track-modal-tabs {
+  display: flex;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.15);
+  padding: 0 16px;
+}
+
+.track-modal-tab {
+  flex: 1;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-secondary, #aaa);
+  padding: 12px 8px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: center;
+}
+
+.track-modal-tab:hover {
+  color: var(--text-primary, #fff);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.track-modal-tab.active {
+  color: #3b82f6;
+  border-bottom-color: #3b82f6;
+  font-weight: 600;
+}
+

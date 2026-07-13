@@ -36,6 +36,7 @@
   /* Fixed height = 5 items × 32px + 4 gaps × 1px + 4px top + 4px bottom padding */
   height: 172px;
   overflow-y: scroll;
+  pointer-events: auto;
 }
 
 .recent-channel-item {
