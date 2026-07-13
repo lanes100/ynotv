@@ -71,7 +71,7 @@ import { syncSource, syncVodForSource, isEpgStale, isVodStale, syncAllStaleGloba
 import { bulkOps } from './services/bulk-ops';
 import { Bridge, type AspectRatioMode, applyAspectRatio, rewriteTsToM3u8 } from './services/tauri-bridge';
 import { resolvePlayUrl } from './services/stream-resolver';
-import { getCurrentWindow, LogicalSize } from '@tauri-apps/api/window';
+import { currentMonitor, getCurrentWindow, LogicalSize } from '@tauri-apps/api/window';
 import { addToRecentChannels } from './utils/recentChannels';
 import { WatchlistNotificationContainer } from './components/WatchlistNotification';
 import { ToastContainer } from './components/Toast';
@@ -3122,11 +3122,27 @@ function App() {
         if (!window.storage) return;
         const result = await window.storage.getSettings();
         const settings = result.data || {};
-        const width = settings.startupWidth || 1920;
-        const height = settings.startupHeight || 1080;
+        const requestedWidth = settings.startupWidth || 1920;
+        const requestedHeight = settings.startupHeight || 1080;
 
         const appWindow = getCurrentWindow();
-        const isMaximized = await appWindow.isMaximized();
+        const [isMaximized, monitor, scaleFactor] = await Promise.all([
+          appWindow.isMaximized(),
+          currentMonitor(),
+          appWindow.scaleFactor(),
+        ]);
+
+        let width = requestedWidth;
+        let height = requestedHeight;
+
+        if (monitor) {
+          const maxWidth = monitor.size.width / scaleFactor;
+          const maxHeight = monitor.size.height / scaleFactor;
+          const fitScale = Math.min(maxWidth / requestedWidth, maxHeight / requestedHeight, 1);
+          width = Math.min(maxWidth, Math.max(960, Math.floor(requestedWidth * fitScale)));
+          height = Math.min(maxHeight, Math.max(600, Math.floor(requestedHeight * fitScale)));
+        }
+
         if (isMaximized) {
           await appWindow.unmaximize();
         }
