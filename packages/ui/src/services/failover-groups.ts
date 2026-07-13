@@ -231,9 +231,12 @@ export async function reorderFailoverGroupChannels(
   }
 }
 
-/** Delete an entire failover group (members cascade-deleted by FK) */
+/** Delete an entire failover group and all its member mappings */
 export async function deleteFailoverGroup(groupId: string): Promise<void> {
-  await db.failoverGroups.delete(groupId);
+  await db.transaction('rw', [db.failoverGroups, db.failoverGroupMembers], async () => {
+    await db.failoverGroupMembers.where('group_id').equals(groupId).delete();
+    await db.failoverGroups.delete(groupId);
+  });
 }
 
 /** Rename a failover group */
