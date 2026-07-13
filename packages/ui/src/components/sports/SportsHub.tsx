@@ -181,6 +181,9 @@ export function SportsHub({
   // Handle Video Resizing for Preview Mode via ResizeObserver explicitly when component mounts
   useEffect(() => {
     let isSyncing = false;
+    let queuedUpdate = false;
+    let rafId: number | null = null;
+    let lastGeometry = '';
     const isReady = visible === undefined ? true : (visible && transitionCompleted);
 
     const updateVideoPosition = async () => {
@@ -227,6 +230,14 @@ export function SportsHub({
       const sy = Math.round(rect.top * d);
       const sw = Math.round(rect.width * d);
       const sh = Math.round(rect.height * d);
+      const nextGeometry = `${sx}:${sy}:${sw}:${sh}`;
+
+      if (nextGeometry === lastGeometry) {
+        isSyncing = false;
+        return;
+      }
+
+      lastGeometry = nextGeometry;
 
       invoke('mpv_set_geometry', { x: sx, y: sy, width: sw, height: sh })
         .catch((e) => {
@@ -234,11 +245,27 @@ export function SportsHub({
         })
         .finally(() => {
           isSyncing = false;
+          if (queuedUpdate) {
+            queuedUpdate = false;
+            updateVideoPosition();
+          }
         });
     };
 
+    const scheduleVideoPositionUpdate = () => {
+      if (isSyncing) {
+        queuedUpdate = true;
+        return;
+      }
+      if (rafId !== null) return;
+      rafId = requestAnimationFrame(() => {
+        rafId = null;
+        updateVideoPosition();
+      });
+    };
+
     const observer = new ResizeObserver(() => {
-      requestAnimationFrame(updateVideoPosition);
+      scheduleVideoPositionUpdate();
     });
 
     if (previewRef.current) {
@@ -248,7 +275,7 @@ export function SportsHub({
 
     // Listen for window resize events to keep the MPV window aligned when layout shifts
     const handleWindowResize = () => {
-      requestAnimationFrame(updateVideoPosition);
+      scheduleVideoPositionUpdate();
     };
     window.addEventListener('resize', handleWindowResize);
 
@@ -259,7 +286,7 @@ export function SportsHub({
     import('@tauri-apps/api/window').then(({ getCurrentWindow }) => {
       const appWindow = getCurrentWindow();
       appWindow.onMoved(() => {
-        updateVideoPosition();
+        scheduleVideoPositionUpdate();
       }).then((unlisten) => {
         if (disposed) unlisten();
         else unlistenMove = unlisten;
@@ -286,6 +313,7 @@ export function SportsHub({
       observer.disconnect();
       window.removeEventListener('resize', handleWindowResize);
       if (unlistenMove) unlistenMove();
+      if (rafId !== null) cancelAnimationFrame(rafId);
       cancelAnimationFrame(animationFrameId);
       onPreviewVideoRectChange?.(null);
     };

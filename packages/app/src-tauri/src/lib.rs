@@ -3228,6 +3228,12 @@ pub fn run() {
             #[cfg(target_os = "windows")]
             app.manage(SecondaryMpvState::new());
 
+            #[cfg(target_os = "windows")]
+            if let Some(window) = app.get_webview_window("main") {
+                let hwnd = window.hwnd().map_err(|e| e.to_string())?;
+                resize_coalescing::install(windows::Win32::Foundation::HWND(hwnd.0))?;
+            }
+
             // Configure macOS window for proper dragging with transparent titlebar
             #[cfg(target_os = "macos")]
             {

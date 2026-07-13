@@ -1671,6 +1671,9 @@ export function ChannelPanel({
   useEffect(() => {
     if (!visible) return;
     // if (!window.mpv) return; // Bridge handles this
+    let rafId: number | null = null;
+    let lastMainGeometry = '';
+    const lastSecondaryGeometries = new Map<2 | 3 | 4, string>();
 
     const updateVideoPosition = () => {
       // Use last known channel ID if current selection is null but we have one cached
@@ -1718,8 +1721,12 @@ export function ChannelPanel({
       const sy = Math.round(rect.top * d);
       const sw = Math.round(rect.width * d);
       const sh = Math.round(rect.height * d);
+      const nextMainGeometry = `${sx}:${sy}:${sw}:${sh}`;
 
-      invoke('mpv_set_geometry', { x: sx, y: sy, width: sw, height: sh }).catch(() => {});
+      if (nextMainGeometry !== lastMainGeometry) {
+        lastMainGeometry = nextMainGeometry;
+        invoke('mpv_set_geometry', { x: sx, y: sy, width: sw, height: sh }).catch(() => {});
+      }
 
       // Reposition secondary MPV slots inside EPG preview container cells (only if engineMode is 'mpv')
       if (multiviewEngineMode === 'mpv') {
@@ -1727,15 +1734,17 @@ export function ChannelPanel({
         const shouldHideSecondaries = isEpgModalOpen || showSettingsPopup;
 
         const secondaryIds: (2 | 3 | 4)[] = [2, 3, 4];
-        secondaryIds.forEach(async (slotId) => {
+        secondaryIds.forEach((slotId) => {
           const slot = multiviewSlots.find((s) => s.id === slotId);
           const active = slot?.active ?? false;
-          
-          const { invoke } = await import('@tauri-apps/api/core');
 
           // If a slot is not active, or if we want to hide them (because a modal/settings is open):
           if (!active || shouldHideSecondaries) {
-            invoke('multiview_reposition_slot', { slotId, x: -10000, y: -10000, width: 1, height: 1 }).catch(() => {});
+            const hiddenGeometry = '-10000:-10000:1:1';
+            if (lastSecondaryGeometries.get(slotId) !== hiddenGeometry) {
+              lastSecondaryGeometries.set(slotId, hiddenGeometry);
+              invoke('multiview_reposition_slot', { slotId, x: -10000, y: -10000, width: 1, height: 1 }).catch(() => {});
+            }
             return;
           }
 
@@ -1743,13 +1752,21 @@ export function ChannelPanel({
           const id = `epg-slot-container-${slotId}`;
           const el = document.getElementById(id);
           if (!el) {
-            invoke('multiview_reposition_slot', { slotId, x: -10000, y: -10000, width: 1, height: 1 }).catch(() => {});
+            const hiddenGeometry = '-10000:-10000:1:1';
+            if (lastSecondaryGeometries.get(slotId) !== hiddenGeometry) {
+              lastSecondaryGeometries.set(slotId, hiddenGeometry);
+              invoke('multiview_reposition_slot', { slotId, x: -10000, y: -10000, width: 1, height: 1 }).catch(() => {});
+            }
             return;
           }
 
           const cellRect = el.getBoundingClientRect();
           if (cellRect.width === 0 || cellRect.height === 0) {
-            invoke('multiview_reposition_slot', { slotId, x: -10000, y: -10000, width: 1, height: 1 }).catch(() => {});
+            const hiddenGeometry = '-10000:-10000:1:1';
+            if (lastSecondaryGeometries.get(slotId) !== hiddenGeometry) {
+              lastSecondaryGeometries.set(slotId, hiddenGeometry);
+              invoke('multiview_reposition_slot', { slotId, x: -10000, y: -10000, width: 1, height: 1 }).catch(() => {});
+            }
             return;
           }
 
@@ -1758,14 +1775,26 @@ export function ChannelPanel({
           const sy = Math.round(cellRect.top * d);
           const sw = Math.round(cellRect.width * d);
           const sh = Math.round(cellRect.height * d);
+          const nextSlotGeometry = `${sx}:${sy}:${sw}:${sh}`;
 
-          invoke('multiview_reposition_slot', { slotId, x: sx, y: sy, width: sw, height: sh }).catch(() => {});
+          if (lastSecondaryGeometries.get(slotId) !== nextSlotGeometry) {
+            lastSecondaryGeometries.set(slotId, nextSlotGeometry);
+            invoke('multiview_reposition_slot', { slotId, x: sx, y: sy, width: sw, height: sh }).catch(() => {});
+          }
         });
       }
     };
 
+    const scheduleVideoPositionUpdate = () => {
+      if (rafId !== null) return;
+      rafId = requestAnimationFrame(() => {
+        rafId = null;
+        updateVideoPosition();
+      });
+    };
+
     const observer = new ResizeObserver(() => {
-      requestAnimationFrame(updateVideoPosition);
+      scheduleVideoPositionUpdate();
     });
 
     if (previewRef.current) {
@@ -1775,7 +1804,7 @@ export function ChannelPanel({
 
     // Listen for window resize events to keep the MPV window aligned when layout shifts
     const handleWindowResize = () => {
-      requestAnimationFrame(updateVideoPosition);
+      scheduleVideoPositionUpdate();
     };
     window.addEventListener('resize', handleWindowResize);
 
@@ -1786,7 +1815,7 @@ export function ChannelPanel({
     import('@tauri-apps/api/window').then(({ getCurrentWindow }) => {
       const appWindow = getCurrentWindow();
       appWindow.onMoved(() => {
-        updateVideoPosition();
+        scheduleVideoPositionUpdate();
       }).then((unlisten) => {
         if (disposed) unlisten();
         else unlistenMove = unlisten;
@@ -1812,6 +1841,7 @@ export function ChannelPanel({
       observer.disconnect();
       window.removeEventListener('resize', handleWindowResize);
       if (unlistenMove) unlistenMove();
+      if (rafId !== null) cancelAnimationFrame(rafId);
       cancelAnimationFrame(animationFrameId);
       // NOTE: Do NOT call onPreviewVideoRectChange(null) here.
       // This cleanup runs on every dependency change (e.g. currentLayout/showMultiviewGrid),
@@ -1822,8 +1852,7 @@ export function ChannelPanel({
 
       if (multiviewEngineMode === 'mpv') {
         const secondaryIds: (2 | 3 | 4)[] = [2, 3, 4];
-        secondaryIds.forEach(async (slotId) => {
-          const { invoke } = await import('@tauri-apps/api/core');
+        secondaryIds.forEach((slotId) => {
           invoke('multiview_reposition_slot', { slotId, x: -10000, y: -10000, width: 1, height: 1 }).catch(() => {});
         });
       }
