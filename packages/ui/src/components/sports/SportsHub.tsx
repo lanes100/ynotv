@@ -184,6 +184,7 @@ export function SportsHub({
     let queuedUpdate = false;
     let rafId: number | null = null;
     let lastGeometry = '';
+    let forceNextUpdate = false;
     const isReady = visible === undefined ? true : (visible && transitionCompleted);
 
     const updateVideoPosition = async () => {
@@ -224,6 +225,9 @@ export function SportsHub({
       if (fillerTopRef.current) fillerTopRef.current.style.height = '0px';
       if (fillerBottomRef.current) fillerBottomRef.current.style.height = '0px';
 
+      const force = forceNextUpdate;
+      forceNextUpdate = false;
+
       // Physically resize the main MPV window to match the preview container's screen coordinates
       const d = window.devicePixelRatio || 1;
       const sx = Math.round(rect.left * d);
@@ -232,7 +236,7 @@ export function SportsHub({
       const sh = Math.round(rect.height * d);
       const nextGeometry = `${sx}:${sy}:${sw}:${sh}`;
 
-      if (nextGeometry === lastGeometry) {
+      if (force || nextGeometry === lastGeometry) {
         isSyncing = false;
         return;
       }
@@ -286,6 +290,7 @@ export function SportsHub({
     import('@tauri-apps/api/window').then(({ getCurrentWindow }) => {
       const appWindow = getCurrentWindow();
       appWindow.onMoved(() => {
+        forceNextUpdate = true;
         scheduleVideoPositionUpdate();
       }).then((unlisten) => {
         if (disposed) unlisten();
