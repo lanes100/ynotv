@@ -412,6 +412,8 @@
 .guide-minibar-btn-primary:active {
   transform: scale(0.92);
 }
+
+.guide-minibar-btn {
   padding: 8px;
   display: flex;
   align-items: center;
