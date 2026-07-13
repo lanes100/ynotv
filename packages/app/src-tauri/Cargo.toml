@@ -84,6 +84,3 @@ windows = { version = "0.58", features = [
 # Local patch adds: set_read_timeout(), receive_nonblocking(), connect_with_timeout()
 rust_cast = { path = "vendor/rust_cast" }
 
-[dev-dependencies]
-tempfile = "3"
-
