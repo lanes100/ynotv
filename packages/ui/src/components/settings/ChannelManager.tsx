@@ -159,7 +159,13 @@ export function ChannelManager({ categoryId, categoryName, sourceId, onClose, on
                 if (b.display_order != null) return 1;
                 
                 // Fall back to preferred sortOrder
-                if (sortOrder === 'number') {
+                if (sortOrder === 'provider') {
+                    const aOrder = a.provider_order;
+                    const bOrder = b.provider_order;
+                    if (aOrder !== undefined && bOrder !== undefined) return aOrder - bOrder;
+                    if (aOrder !== undefined) return -1;
+                    if (bOrder !== undefined) return 1;
+                } else if (sortOrder === 'number') {
                     const numA = a.channel_num;
                     const numB = b.channel_num;
                     if (numA !== undefined && numB !== undefined) return numA - numB;
@@ -167,7 +173,7 @@ export function ChannelManager({ categoryId, categoryName, sourceId, onClose, on
                     if (numB !== undefined) return 1;
                 }
 
-                return a.name.localeCompare(b.name);
+                return (a.alias || a.name).localeCompare(b.alias || b.name);
             });
 
             const combined = [...orderedManual, ...remainingDynamic].map(ch => ({
@@ -484,7 +490,8 @@ export function ChannelManager({ categoryId, categoryName, sourceId, onClose, on
                         </div>
                     ) : (
                         visibleChannels.map((ch, visibleIndex) => {
-                            const filteredName = applyFilterWords(ch.name);
+                            const displayName = ch.alias || ch.name;
+                            const filteredName = applyFilterWords(displayName);
                             const isDragging = dragFromIdx.current === visibleIndex;
                             const isDragOver = dragOverIdx === visibleIndex && dragFromIdx.current !== null && dragFromIdx.current !== visibleIndex;
                             return (
@@ -505,7 +512,12 @@ export function ChannelManager({ categoryId, categoryName, sourceId, onClose, on
                                         />
                                         <span className="channel-name">
                                             <span className="channel-display-name">{filteredName}</span>
-                                            {filteredName !== ch.name && (
+                                            {ch.alias && (
+                                                <span className="channel-original-name" title={ch.name}>
+                                                    ({ch.name})
+                                                </span>
+                                            )}
+                                            {!ch.alias && filteredName !== ch.name && (
                                                 <span className="channel-original-name" title={ch.name}>
                                                     ({ch.name})
                                                 </span>
