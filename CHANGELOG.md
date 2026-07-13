@@ -1,5 +1,48 @@
 # Changelog
 
+## v2.2.1
+
+### Added
+
+- **Lock window aspect ratio for PiP** - The PiP window aspect ratio can be locked to `16:9`, `4:3`, or video-match to prevent black bars when resizing. `Fill` and `Stretch` modes remain freely resizable. *(Contributed by @lanes100 in #113)*
+- **State-aware Windows title bar controls** - The Minimize, Maximize, and Close buttons now use proper Windows-style icons and update correctly — for example, showing the Restore Down icon when the window is maximised. *(Contributed by @lanes100 in #113)*
+- **Audio device selector** - The active audio output device can be selected via the Audio Selector menu (default hotkey: `A`) or under `Settings → Subtitles & Audio`.
+- **VOD Favourites included in Import/Export** - VOD Favourites are now included when importing or exporting app data.
+- **Source name toggle in Watchlist and VOD Favourites** - A toggle button allows the source playlist name to be displayed for each entry in the Watchlist and VOD Favourites views.
+- **Manage Channels Move to Top / Up / Down buttons** - The same positional controls available in Manage Categories are now available in Manage Channels for faster channel reordering.
+
+### Fixed
+
+- **Lag when resizing the app window** - Window resizing now tracks the cursor much more closely and stops promptly on release, especially noticeable on lower-end systems. *(Contributed by @lanes100 in #113)*
+- **Fullscreen exit not restoring window state correctly on Windows** - Exiting fullscreen from a maximised state will now correctly restore the window's previous position and state. *(Contributed by @lanes100 in #113)*
+- **Startup window exceeding current monitor bounds** - If you use multiple monitors with different scaling or resolutions, the app window will no longer open off-screen or in an unrecoverable position. *(Contributed by @lanes100 in #113)*
+- **Manage Channels displaying incorrect sort order** - The channel list in Manage Channels now reflects the correct active sort order.
+- **VOD Watched indicator appearing twice** - The watched indicator for VOD titles will now only appear once.
+- **Failover group overlay extending off screen** - A maximum height limit has been applied to the Failover group overlay to keep it within the visible screen area.
+- **Deleted Failover group channels blocking reuse** - A cleanup routine has been added to fully remove deleted Failover group channel entries, allowing those channels to be assigned to a new group.
+
+
+## v2.2.1
+
+### Added
+
+- **VOD Favorites to Import/Export** - Favorites added for VOD will now Import/Export.
+- **Toggle in Watchlist & VOD Favorite to show source** - View what source the Watchlist/VOD Favorite came from by using the toggle button.
+- **Audio Device Selector** - Select audio device either through the Audio Selector Menu (default hotkey: `A`) or Settings → Subtitles & Audio.
+- **Lock window aspect ratio for PiP ** - Lock the window's aspect ratio on for supported Picture-in-Picture modes (16:9, 4:3, or video-match) to prevent black bars when resizing. (Contributed by @lanes100)
+- **State-aware Windows window controls** - Custom-drawn, state-aware Minimize, Maximize, and Close title bar buttons for Windows platforms to match native designs. (Contributed by @lanes100)
+- Manage channel Move to Top/Up/Down buttons - Same as the manage category buttons for faster customization
+
+### Fixed
+
+- **Lag when resizing app window** - Coalesces resize event messages and caches video geometries to dramatically improve window resizing performance and smoothness. (Contributed by @lanes100)
+- **Consistent fullscreen exit behavior (Windows)** - Correctly restores window state and position on Windows when exiting fullscreen mode from a maximized state. (Contributed by @lanes100)
+- **Fit saved startup size to current monitor** - Automatically scales down saved window startup dimensions if they exceed the resolution of the current monitor, avoiding off-screen window bugs. (Contributed by @lanes100)
+- Manage channels Sort order - Fixed the manage channels not displaying the correct sort order
+- **VOD Marked as Watched appearing twice** - Indicator will only appear once now.
+- **No height limit for Failover group overlay** - Failover group overlay now has a max height limit so it won't go off screen.
+- **Deleted failover group channels not able to be used for new failover group** - Added a cleanup script to completely remove old deleted failover group channels.
+
 ## v2.2.0
 
 ### Added
