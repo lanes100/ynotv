@@ -1628,7 +1628,7 @@ function App() {
   // ==========================================================================
   // Window Manager (from useWindowManager)
   // ==========================================================================
-  const { handleMinimize, handleMaximize, handleClose } = useWindowManager();
+  const { handleMinimize, handleMaximize, handleClose, isMaximized } = useWindowManager();
 
   // ==========================================================================
   // Update Modal State
@@ -3581,9 +3581,31 @@ function App() {
         </button>
 
         <div className="window-controls">
-          <button onClick={handleMinimize} title="Minimize">─</button>
-          <button onClick={handleMaximize} title="Maximize">□</button>
-          <button onClick={handleClose} className="close" title="Close">✕</button>
+          <button onClick={handleMinimize} title="Minimize" aria-label="Minimize">
+            <svg className="window-control-icon" viewBox="0 0 12 12" aria-hidden="true">
+              <path d="M1 6.5h10" />
+            </svg>
+          </button>
+          <button
+            onClick={handleMaximize}
+            title={isMaximized ? 'Restore Down' : 'Maximize'}
+            aria-label={isMaximized ? 'Restore Down' : 'Maximize'}
+          >
+            {isMaximized ? (
+              <svg className="window-control-icon" viewBox="0 0 12 12" aria-hidden="true">
+                <path d="M3.5 3.5h7v7h-7zM1.5 8.5v-7h7" />
+              </svg>
+            ) : (
+              <svg className="window-control-icon" viewBox="0 0 12 12" aria-hidden="true">
+                <rect x="1.5" y="1.5" width="9" height="9" />
+              </svg>
+            )}
+          </button>
+          <button onClick={handleClose} className="close" title="Close" aria-label="Close">
+            <svg className="window-control-icon" viewBox="0 0 12 12" aria-hidden="true">
+              <path d="m1.5 1.5 9 9m0-9-9 9" />
+            </svg>
+          </button>
         </div>
       </div>
 
