@@ -71,7 +71,7 @@ import { syncSource, syncVodForSource, isEpgStale, isVodStale, syncAllStaleGloba
 import { bulkOps } from './services/bulk-ops';
 import { Bridge, type AspectRatioMode, applyAspectRatio, rewriteTsToM3u8 } from './services/tauri-bridge';
 import { resolvePlayUrl } from './services/stream-resolver';
-import { getCurrentWindow, LogicalSize } from '@tauri-apps/api/window';
+import { currentMonitor, getCurrentWindow, LogicalSize } from '@tauri-apps/api/window';
 import { addToRecentChannels } from './utils/recentChannels';
 import { WatchlistNotificationContainer } from './components/WatchlistNotification';
 import { ToastContainer } from './components/Toast';
@@ -1081,7 +1081,13 @@ function App() {
   // ==========================================================================
   // PiP (Picture-in-Picture) Mode
   // ==========================================================================
-  const pip = usePipMode();
+  const [pipAspectRatio, setPipAspectRatio] = useState<AspectRatioMode>(() => {
+    try {
+      const v = localStorage.getItem('ynotv_pip_aspect_ratio');
+      return (v as AspectRatioMode) || 'fit';
+    } catch { return 'fit'; }
+  });
+  const pip = usePipMode(pipAspectRatio);
   const { pipMode, pipControlsVisible, togglePip, showPipControls } = pip;
   const pipFromPreviewRef = useRef<{ categoriesOpen: boolean } | null>(null);
 
@@ -1447,13 +1453,6 @@ function App() {
   // ==========================================================================
   // PiP Aspect Ratio (independent from main / hero aspect ratio)
   // ==========================================================================
-  const [pipAspectRatio, setPipAspectRatio] = useState<AspectRatioMode>(() => {
-    try {
-      const v = localStorage.getItem('ynotv_pip_aspect_ratio');
-      return (v as AspectRatioMode) || 'fit';
-    } catch { return 'fit'; }
-  });
-
   // Persist & apply PiP aspect ratio
   const handleSetPipAspectRatio = useCallback(async (mode: AspectRatioMode) => {
     setPipAspectRatio(mode);
@@ -1629,7 +1628,7 @@ function App() {
   // ==========================================================================
   // Window Manager (from useWindowManager)
   // ==========================================================================
-  const { handleMinimize, handleMaximize, handleClose } = useWindowManager();
+  const { handleMinimize, handleMaximize, handleClose, isMaximized } = useWindowManager();
 
   // ==========================================================================
   // Update Modal State
@@ -3123,11 +3122,27 @@ function App() {
         if (!window.storage) return;
         const result = await window.storage.getSettings();
         const settings = result.data || {};
-        const width = settings.startupWidth || 1920;
-        const height = settings.startupHeight || 1080;
+        const requestedWidth = settings.startupWidth || 1920;
+        const requestedHeight = settings.startupHeight || 1080;
 
         const appWindow = getCurrentWindow();
-        const isMaximized = await appWindow.isMaximized();
+        const [isMaximized, monitor, scaleFactor] = await Promise.all([
+          appWindow.isMaximized(),
+          currentMonitor(),
+          appWindow.scaleFactor(),
+        ]);
+
+        let width = requestedWidth;
+        let height = requestedHeight;
+
+        if (monitor) {
+          const maxWidth = monitor.size.width / scaleFactor;
+          const maxHeight = monitor.size.height / scaleFactor;
+          const fitScale = Math.min(maxWidth / requestedWidth, maxHeight / requestedHeight, 1);
+          width = Math.min(maxWidth, Math.max(960, Math.floor(requestedWidth * fitScale)));
+          height = Math.min(maxHeight, Math.max(600, Math.floor(requestedHeight * fitScale)));
+        }
+
         if (isMaximized) {
           await appWindow.unmaximize();
         }
@@ -3566,9 +3581,31 @@ function App() {
         </button>
 
         <div className="window-controls">
-          <button onClick={handleMinimize} title="Minimize">─</button>
-          <button onClick={handleMaximize} title="Maximize">□</button>
-          <button onClick={handleClose} className="close" title="Close">✕</button>
+          <button onClick={handleMinimize} title="Minimize" aria-label="Minimize">
+            <svg className="window-control-icon" viewBox="0 0 12 12" aria-hidden="true">
+              <path d="M1 6.5h10" />
+            </svg>
+          </button>
+          <button
+            onClick={handleMaximize}
+            title={isMaximized ? 'Restore Down' : 'Maximize'}
+            aria-label={isMaximized ? 'Restore Down' : 'Maximize'}
+          >
+            {isMaximized ? (
+              <svg className="window-control-icon" viewBox="0 0 12 12" aria-hidden="true">
+                <path d="M3.5 3.5h7v7h-7zM1.5 8.5v-7h7" />
+              </svg>
+            ) : (
+              <svg className="window-control-icon" viewBox="0 0 12 12" aria-hidden="true">
+                <rect x="1.5" y="1.5" width="9" height="9" />
+              </svg>
+            )}
+          </button>
+          <button onClick={handleClose} className="close" title="Close" aria-label="Close">
+            <svg className="window-control-icon" viewBox="0 0 12 12" aria-hidden="true">
+              <path d="m1.5 1.5 9 9m0-9-9 9" />
+            </svg>
+          </button>
         </div>
       </div>
 

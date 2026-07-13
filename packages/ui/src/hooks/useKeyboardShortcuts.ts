@@ -15,6 +15,7 @@ import { DEFAULT_SHORTCUTS } from '../constants/shortcuts';
 import type { StoredChannel } from '../db';
 import type { LayoutMode } from './useMultiview';
 import type { View } from './useNavigation';
+import { Bridge } from '../services/tauri-bridge';
 
 export interface UseKeyboardShortcutsOptions {
     // --- Current state values (accessed via latest ref pattern) ---
@@ -69,7 +70,7 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions): void
     latestRefs.current = options;
 
     useEffect(() => {
-        const handleKeyDown = (e: KeyboardEvent) => {
+        const handleKeyDown = async (e: KeyboardEvent) => {
             // Don't handle shortcuts when typing in inputs
             if (
                 e.target instanceof HTMLInputElement ||
@@ -219,6 +220,16 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions): void
                     titleBarSearchRef.current.focus();
                 }
             } else if (matches('close', e.key)) {
+                e.preventDefault();
+                try {
+                    if (await Bridge.isFullscreen()) {
+                        await Bridge.toggleFullscreen();
+                        return;
+                    }
+                } catch (err) {
+                    console.error('[KeyboardShortcuts] Failed to exit fullscreen on Escape:', err);
+                }
+
                 // Close settings popup first if open
                 if (showSettingsPopup) {
                     setShowSettingsPopup(false);

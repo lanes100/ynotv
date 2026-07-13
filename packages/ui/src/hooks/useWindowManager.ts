@@ -1,19 +1,59 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { getCurrentWindow } from '@tauri-apps/api/window';
 import { Bridge } from '../services/tauri-bridge';
 
 export interface WindowManagerState {
   handleMinimize: () => void;
   handleMaximize: () => void;
   handleClose: () => void;
+  isMaximized: boolean;
 }
 
 export function useWindowManager(): WindowManagerState {
+  const [isMaximized, setIsMaximized] = useState(false);
+
+  useEffect(() => {
+    const appWindow = getCurrentWindow();
+    let disposed = false;
+    let updateTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const updateMaximizedState = async () => {
+      const maximized = await appWindow.isMaximized();
+      if (!disposed) setIsMaximized(maximized);
+    };
+
+    updateMaximizedState().catch(() => {});
+    const unlistenPromise = appWindow.onResized(() => {
+      if (updateTimer) clearTimeout(updateTimer);
+      updateTimer = setTimeout(() => {
+        updateTimer = null;
+        updateMaximizedState().catch(() => {});
+      }, 50);
+    });
+
+    return () => {
+      disposed = true;
+      if (updateTimer) clearTimeout(updateTimer);
+      unlistenPromise.then(unlisten => unlisten()).catch(() => {});
+    };
+  }, []);
+
   const handleMinimize = useCallback(() => {
     Bridge.minimize();
   }, []);
 
-  const handleMaximize = useCallback(() => {
-    Bridge.toggleMaximize();
+  const handleMaximize = useCallback(async () => {
+    try {
+      if (await Bridge.isFullscreen()) {
+        await Bridge.setFullscreen(false, { restoreMaximized: false });
+        setIsMaximized(false);
+        return;
+      }
+      await Bridge.toggleMaximize();
+      setIsMaximized(await Bridge.isMaximized());
+    } catch (err) {
+      console.error('[WindowManager] maximize failed:', err);
+    }
   }, []);
 
   const handleClose = useCallback(() => {
@@ -24,5 +64,6 @@ export function useWindowManager(): WindowManagerState {
     handleMinimize,
     handleMaximize,
     handleClose,
+    isMaximized,
   };
 }

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo, useLayoutEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useRef, useCallback, useMemo, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useLiveQuery } from '../hooks/useSqliteLiveQuery';
 import { useCategoriesBySource, type CategoryWithCount, type SourceWithCategories } from '../hooks/useChannels';
@@ -35,14 +35,21 @@ function parseCategoryIds(raw: string | string[] | number[] | undefined): string
   return [String(raw)];
 }
 
+const CategoryStripVisibilityContext = createContext(true);
+
 // Component that detects text overflow and only scrolls when necessary
 function ScrollingText({ children, className }: { children: React.ReactNode; className?: string }) {
   const textRef = useRef<HTMLSpanElement>(null);
   const [isOverflowing, setIsOverflowing] = useState(false);
+  const resizeActive = useContext(CategoryStripVisibilityContext);
 
   useEffect(() => {
     const element = textRef.current;
     if (!element) return;
+    if (!resizeActive) {
+      setIsOverflowing(false);
+      return;
+    }
 
     const checkOverflow = () => {
       // Check if text overflows its container
@@ -70,7 +77,7 @@ function ScrollingText({ children, className }: { children: React.ReactNode; cla
       timeouts.forEach(clearTimeout);
       window.removeEventListener('resize', handleResize);
     };
-  }, [children]);
+  }, [children, resizeActive]);
 
   return (
     <span 
@@ -980,6 +987,7 @@ export function CategoryStrip({ selectedCategoryId, onSelectCategory, visible, o
   );
 
   return (
+    <CategoryStripVisibilityContext.Provider value={visible}>
     <>
       <div className={`category-strip ${visible ? 'visible' : 'hidden'}`}>
         {/* Resizer Handle */}
@@ -1659,6 +1667,7 @@ export function CategoryStrip({ selectedCategoryId, onSelectCategory, visible, o
         </button>
       )}
     </>
+    </CategoryStripVisibilityContext.Provider>
   );
 }
 

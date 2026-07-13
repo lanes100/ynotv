@@ -1,9 +1,238 @@
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Emitter, Runtime, Manager};
 use log::{debug, info, warn, error};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::collections::HashMap;
 
+#[cfg(target_os = "windows")]
+mod pip_aspect_lock {
+    use std::sync::Mutex;
+    use windows::Win32::{
+        Foundation::{HWND, LPARAM, LRESULT, RECT, WPARAM},
+        UI::{
+            Shell::{DefSubclassProc, RemoveWindowSubclass, SetWindowSubclass},
+            WindowsAndMessaging::{GetWindowRect, WM_ENTERSIZEMOVE, WM_EXITSIZEMOVE, WM_SIZING,
+                WMSZ_BOTTOM, WMSZ_BOTTOMLEFT, WMSZ_BOTTOMRIGHT,
+                WMSZ_LEFT, WMSZ_RIGHT, WMSZ_TOP, WMSZ_TOPLEFT, WMSZ_TOPRIGHT},
+        },
+    };
+
+    const SUBCLASS_ID: usize = 0x594E_4F54;
+
+    #[derive(Clone, Copy)]
+    struct Size {
+        width: i32,
+        height: i32,
+    }
+
+    #[derive(Clone, Copy)]
+    enum Driver {
+        Width,
+        Height,
+    }
+
+    struct State {
+        ratio: Option<f64>,
+        start_size: Option<Size>,
+        corner_driver: Option<Driver>,
+    }
+
+    static STATE: Mutex<State> = Mutex::new(State {
+        ratio: None,
+        start_size: None,
+        corner_driver: None,
+    });
+
+    unsafe extern "system" fn window_proc(
+        hwnd: HWND,
+        message: u32,
+        wparam: WPARAM,
+        lparam: LPARAM,
+        _id: usize,
+        _data: usize,
+    ) -> LRESULT {
+        let sizing_result = if message == WM_SIZING {
+            Some(DefSubclassProc(hwnd, message, wparam, lparam))
+        } else {
+            None
+        };
+
+        if message == WM_ENTERSIZEMOVE {
+            if let Ok(mut state) = STATE.lock() {
+                let mut rect = RECT::default();
+                if GetWindowRect(hwnd, &mut rect).is_ok() {
+                    state.start_size = Some(Size {
+                        width: rect.right - rect.left,
+                        height: rect.bottom - rect.top,
+                    });
+                }
+                state.corner_driver = None;
+            }
+        } else if message == WM_EXITSIZEMOVE {
+            if let Ok(mut state) = STATE.lock() {
+                state.start_size = None;
+                state.corner_driver = None;
+            }
+        } else if message == WM_SIZING {
+            if let Ok(mut state) = STATE.lock() {
+                if let Some(ratio) = state.ratio {
+                let rect = &mut *(lparam.0 as *mut RECT);
+                let width = rect.right - rect.left;
+                let height = rect.bottom - rect.top;
+                let edge = wparam.0 as u32;
+
+                if matches!(edge, WMSZ_LEFT | WMSZ_RIGHT) {
+                    let target_height = (width as f64 / ratio).round() as i32;
+                    rect.bottom = rect.top + target_height;
+                } else if matches!(edge, WMSZ_TOP | WMSZ_BOTTOM) {
+                    let target_width = (height as f64 * ratio).round() as i32;
+                    rect.right = rect.left + target_width;
+                } else if matches!(edge, WMSZ_TOPLEFT | WMSZ_TOPRIGHT | WMSZ_BOTTOMLEFT | WMSZ_BOTTOMRIGHT) {
+                    if state.corner_driver.is_none() {
+                        let start = state.start_size.unwrap_or(Size { width, height });
+                        let width_change = (width - start.width).abs() as f64 / ratio;
+                        let height_change = (height - start.height).abs() as f64;
+                        state.corner_driver = Some(if height_change > width_change {
+                            Driver::Height
+                        } else {
+                            Driver::Width
+                        });
+                    }
+                    let driver = state.corner_driver.unwrap();
+
+                    if matches!(driver, Driver::Height) {
+                        let target_width = (height as f64 * ratio).round() as i32;
+                        if edge == WMSZ_TOPLEFT || edge == WMSZ_BOTTOMLEFT {
+                            rect.left = rect.right - target_width;
+                        } else {
+                            rect.right = rect.left + target_width;
+                        }
+                    } else {
+                        let target_height = (width as f64 / ratio).round() as i32;
+                        if edge == WMSZ_TOPLEFT || edge == WMSZ_TOPRIGHT {
+                            rect.top = rect.bottom - target_height;
+                        } else {
+                            rect.bottom = rect.top + target_height;
+                        }
+                    }
+                }
+                return LRESULT(1);
+                }
+            }
+        }
+        sizing_result.unwrap_or_else(|| DefSubclassProc(hwnd, message, wparam, lparam))
+    }
+
+    pub fn set(hwnd: HWND, ratio: Option<f64>) -> Result<(), String> {
+        {
+            let mut state = STATE.lock().map_err(|e| e.to_string())?;
+            state.ratio = ratio;
+            state.start_size = None;
+            state.corner_driver = None;
+        }
+        unsafe {
+            if ratio.is_some() {
+                if !SetWindowSubclass(hwnd, Some(window_proc), SUBCLASS_ID, 0).as_bool() {
+                    return Err("failed to install PiP window subclass".into());
+                }
+            } else {
+                let _ = RemoveWindowSubclass(hwnd, Some(window_proc), SUBCLASS_ID);
+            }
+        }
+        Ok(())
+    }
+}
+
+#[tauri::command]
+fn set_pip_aspect_lock(window: tauri::WebviewWindow, ratio: Option<f64>) -> Result<(), String> {
+    #[cfg(target_os = "windows")]
+    {
+        let hwnd = window.hwnd().map_err(|e| e.to_string())?;
+        return pip_aspect_lock::set(
+            windows::Win32::Foundation::HWND(hwnd.0),
+            ratio.filter(|value| value.is_finite() && *value > 0.0),
+        );
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        let _ = (window, ratio);
+        Ok(())
+    }
+}
+
+#[cfg(target_os = "windows")]
+mod resize_coalescing {
+    use windows::Win32::{
+        Foundation::{HWND, LPARAM, LRESULT, POINT, WPARAM},
+        UI::{
+            Shell::{DefSubclassProc, SetWindowSubclass},
+            WindowsAndMessaging::{
+                GetCursorPos, PeekMessageW, MSG, PM_REMOVE, WM_MOUSEMOVE, WM_SIZING,
+                WMSZ_BOTTOM, WMSZ_BOTTOMLEFT, WMSZ_BOTTOMRIGHT, WMSZ_LEFT, WMSZ_RIGHT,
+                WMSZ_TOP, WMSZ_TOPLEFT, WMSZ_TOPRIGHT,
+            },
+        },
+    };
+
+    const SUBCLASS_ID: usize = 0x594E_4F55;
+
+    unsafe extern "system" fn window_proc(
+        hwnd: HWND,
+        message: u32,
+        wparam: WPARAM,
+        lparam: LPARAM,
+        _id: usize,
+        _data: usize,
+    ) -> LRESULT {
+        if message == WM_SIZING {
+            let mut latest = None;
+            loop {
+                let mut pending = MSG::default();
+                if !PeekMessageW(
+                    &mut pending,
+                    HWND::default(),
+                    WM_MOUSEMOVE,
+                    WM_MOUSEMOVE,
+                    PM_REMOVE,
+                ).as_bool() {
+                    break;
+                }
+                latest = Some(pending);
+            }
+
+            if latest.is_some() {
+                let mut cursor = POINT::default();
+                if GetCursorPos(&mut cursor).is_ok() {
+                    let rect = &mut *(lparam.0 as *mut windows::Win32::Foundation::RECT);
+                    let edge = wparam.0 as u32;
+                    if matches!(edge, WMSZ_LEFT | WMSZ_TOPLEFT | WMSZ_BOTTOMLEFT) {
+                        rect.left = cursor.x;
+                    }
+                    if matches!(edge, WMSZ_RIGHT | WMSZ_TOPRIGHT | WMSZ_BOTTOMRIGHT) {
+                        rect.right = cursor.x;
+                    }
+                    if matches!(edge, WMSZ_TOP | WMSZ_TOPLEFT | WMSZ_TOPRIGHT) {
+                        rect.top = cursor.y;
+                    }
+                    if matches!(edge, WMSZ_BOTTOM | WMSZ_BOTTOMLEFT | WMSZ_BOTTOMRIGHT) {
+                        rect.bottom = cursor.y;
+                    }
+                }
+            }
+        }
+
+        DefSubclassProc(hwnd, message, wparam, lparam)
+    }
+
+    pub fn install(hwnd: HWND) -> Result<(), String> {
+        unsafe {
+            if !SetWindowSubclass(hwnd, Some(window_proc), SUBCLASS_ID, 0).as_bool() {
+                return Err("failed to install resize coalescing handler".into());
+            }
+        }
+        Ok(())
+    }
+}
 
 // macOS-specific imports for window configuration
 #[cfg(target_os = "macos")]
@@ -899,23 +1128,35 @@ async fn mpv_get_params_debug<R: Runtime>(app: AppHandle<R>) -> Result<serde_jso
 }
 
 #[tauri::command]
-async fn mpv_toggle_fullscreen<R: Runtime>(app: AppHandle<R>) -> Result<(), String> {
+async fn mpv_toggle_fullscreen<R: Runtime>(
+    app: AppHandle<R>,
+    restore_to_maximized: Option<bool>,
+) -> Result<(), String> {
     if let Some(window) = app.get_webview_window("main") {
         let is_fullscreen = window.is_fullscreen().map_err(|e| e.to_string())?;
-        
-        // On Windows, if window is maximized and we're going fullscreen,
-        // we need to unmaximize first to ensure proper fullscreen transition
+        let should_restore_maximized = is_fullscreen && restore_to_maximized.unwrap_or(false);
+
         #[cfg(target_os = "windows")]
         if !is_fullscreen {
             let is_maximized = window.is_maximized().map_err(|e| e.to_string())?;
             if is_maximized {
                 window.unmaximize().map_err(|e| e.to_string())?;
-                // Small delay to let the window state settle before going fullscreen
                 tokio::time::sleep(std::time::Duration::from_millis(50)).await;
             }
         }
-        
+
+        #[cfg(target_os = "windows")]
+        if should_restore_maximized {
+            let _ = window.hide();
+            tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+        }
+
         window.set_fullscreen(!is_fullscreen).map_err(|e| e.to_string())?;
+
+        #[cfg(target_os = "windows")]
+        if should_restore_maximized {
+            window.maximize().map_err(|e| e.to_string())?;
+        }
         
         // On Windows, trigger a geometry refresh after entering fullscreen
         // to ensure MPV fills the entire screen
@@ -923,6 +1164,10 @@ async fn mpv_toggle_fullscreen<R: Runtime>(app: AppHandle<R>) -> Result<(), Stri
         {
             tokio::time::sleep(std::time::Duration::from_millis(100)).await;
             let _ = mpv_windows::mpv_set_geometry(&app, 0, 0, 0, 0).await;
+            if should_restore_maximized {
+                let _ = window.show();
+                tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+            }
         }
         
         // On macOS, we need to sync the window after fullscreen change
@@ -2959,8 +3204,6 @@ fn restore_window_position(app: &tauri::AppHandle) {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 // ─── External Player State (for reuse / single-instance mode) ────────────────
 
-use std::sync::Mutex;
-
 pub struct ExternalPlayerState {
     pub pid: Mutex<Option<u32>>,
 }
@@ -3011,6 +3254,12 @@ pub fn run() {
             // Register secondary MPV state (Windows only)
             #[cfg(target_os = "windows")]
             app.manage(SecondaryMpvState::new());
+
+            #[cfg(target_os = "windows")]
+            if let Some(window) = app.get_webview_window("main") {
+                let hwnd = window.hwnd().map_err(|e| e.to_string())?;
+                resize_coalescing::install(windows::Win32::Foundation::HWND(hwnd.0))?;
+            }
 
             // Configure macOS window for proper dragging with transparent titlebar
             #[cfg(target_os = "macos")]
@@ -3154,6 +3403,7 @@ pub fn run() {
             mpv_set_property,
             mpv_set_properties,
             mpv_get_property,
+            set_pip_aspect_lock,
             mpv_sync_window,
             mpv_set_geometry,
             mpv_kill,

@@ -87,6 +87,17 @@
   background: #e81123;
 }
 
+.window-control-icon {
+  display: block;
+  width: 12px;
+  height: 12px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1;
+  stroke-linecap: square;
+  shape-rendering: geometricPrecision;
+}
+
 /* Title Bar Layout - Using spacer pattern for centering */
 .title-bar-spacer {
   flex: 1;

@@ -22,6 +22,11 @@ type UnlistenFn = () => void;
 let windowSyncListeners: { move?: UnlistenFn; resize?: UnlistenFn; focus?: UnlistenFn; close?: UnlistenFn } = {};
 let syncDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 let focusSyncTimer: ReturnType<typeof setTimeout> | null = null;
+let fullscreenRestoreMaximized: boolean | null = null;
+
+function delay(ms: number) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
 
 // Callback for app close event
 let onAppCloseCallback: (() => void) | null = null;
@@ -462,7 +467,63 @@ export const Bridge = {
     },
 
     async toggleFullscreen() {
-        return invoke('mpv_toggle_fullscreen');
+        const appWindow = getCurrentWindow();
+        const isFullscreen = await appWindow.isFullscreen();
+
+        if (!isFullscreen) {
+            fullscreenRestoreMaximized = await appWindow.isMaximized();
+            await invoke('mpv_toggle_fullscreen', { restoreToMaximized: false });
+            return;
+        }
+
+        if (fullscreenRestoreMaximized) {
+            await invoke('mpv_toggle_fullscreen', { restoreToMaximized: true });
+            fullscreenRestoreMaximized = null;
+            return;
+        }
+        await invoke('mpv_toggle_fullscreen', { restoreToMaximized: false });
+        fullscreenRestoreMaximized = null;
+    },
+
+    async isFullscreen() {
+        const appWindow = getCurrentWindow();
+        return appWindow.isFullscreen();
+    },
+
+    async setFullscreen(fullscreen: boolean, options?: { restoreMaximized?: boolean }) {
+        const appWindow = getCurrentWindow();
+        const isFullscreen = await appWindow.isFullscreen();
+        if (isFullscreen === fullscreen) {
+            return;
+        }
+
+        if (fullscreen) {
+            fullscreenRestoreMaximized = await appWindow.isMaximized();
+            await invoke('mpv_toggle_fullscreen', { restoreToMaximized: false });
+            return;
+        }
+
+        const shouldRestoreMaximized = options?.restoreMaximized ?? fullscreenRestoreMaximized === true;
+        fullscreenRestoreMaximized = null;
+
+        if (shouldRestoreMaximized) {
+            await invoke('mpv_toggle_fullscreen', { restoreToMaximized: shouldRestoreMaximized });
+            return;
+        }
+
+        await invoke('mpv_toggle_fullscreen', { restoreToMaximized: shouldRestoreMaximized });
+
+        if (!fullscreen) {
+            await delay(50);
+            if (await appWindow.isMaximized()) {
+                await appWindow.unmaximize();
+            }
+        }
+    },
+
+    async isMaximized() {
+        const appWindow = getCurrentWindow();
+        return appWindow.isMaximized();
     },
 
     async getTrackList(): Promise<any[]> {
