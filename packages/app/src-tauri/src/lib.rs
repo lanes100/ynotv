@@ -450,6 +450,7 @@ async fn test_proxy_connection<R: Runtime>(app: AppHandle<R>) -> Result<String, 
     Ok(ip.to_string())
 }
 
+
 /// Get custom MPV parameters from settings store.
 /// Supports both nested `settings` object (frontend format) and root-level keys (legacy).
 async fn get_mpv_params_from_store<R: Runtime>(app: &AppHandle<R>) -> Vec<String> {

@@ -561,14 +561,16 @@ export function SeriesDetail({ series, onClose, onPlayEpisode, apiKey, initialSe
                             />
                           </div>
                         )}
-                        {/* Completed checkmark */}
-                        {isCompleted && (
-                          <div className="series-detail__episode-completed-badge">
-                            <svg viewBox="0 0 24 24" fill="currentColor">
-                              <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
-                            </svg>
-                          </div>
-                        )}
+                        {/* Watched toggle badge */}
+                        <button
+                          className={`series-detail__episode-completed-badge ${isCompleted ? 'completed' : ''}`}
+                          onClick={(e) => handleToggleWatched(episode, e)}
+                          title={isCompleted ? "Mark as Unwatched" : "Mark as Watched"}
+                        >
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={isCompleted ? "3.5" : "2"}>
+                            <polyline points="20 6 9 17 4 12" />
+                          </svg>
+                        </button>
                       </div>
 
                       {/* Episode Info */}
@@ -642,16 +644,7 @@ export function SeriesDetail({ series, onClose, onPlayEpisode, apiKey, initialSe
                         </button>
                       )}
 
-                      {/* Watched Toggle button */}
-                      <button
-                        className={`series-detail__episode-card-watched-toggle ${isCompleted ? 'completed' : ''}`}
-                        onClick={(e) => handleToggleWatched(episode, e)}
-                        title={isCompleted ? "Mark as Unwatched" : "Mark as Watched"}
-                      >
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={isCompleted ? "3" : "2"}>
-                          <polyline points="20 6 9 17 4 12" />
-                        </svg>
-                      </button>
+
                     </div>
                   );
                 })}

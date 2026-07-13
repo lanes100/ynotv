@@ -159,7 +159,13 @@ export function ChannelManager({ categoryId, categoryName, sourceId, onClose, on
                 if (b.display_order != null) return 1;
                 
                 // Fall back to preferred sortOrder
-                if (sortOrder === 'number') {
+                if (sortOrder === 'provider') {
+                    const aOrder = a.provider_order;
+                    const bOrder = b.provider_order;
+                    if (aOrder !== undefined && bOrder !== undefined) return aOrder - bOrder;
+                    if (aOrder !== undefined) return -1;
+                    if (bOrder !== undefined) return 1;
+                } else if (sortOrder === 'number') {
                     const numA = a.channel_num;
                     const numB = b.channel_num;
                     if (numA !== undefined && numB !== undefined) return numA - numB;
@@ -167,7 +173,7 @@ export function ChannelManager({ categoryId, categoryName, sourceId, onClose, on
                     if (numB !== undefined) return 1;
                 }
 
-                return a.name.localeCompare(b.name);
+                return (a.alias || a.name).localeCompare(b.alias || b.name);
             });
 
             const combined = [...orderedManual, ...remainingDynamic].map(ch => ({
@@ -337,6 +343,61 @@ export function ChannelManager({ categoryId, categoryName, sourceId, onClose, on
         return filtered;
     }, [channels, hideDisabled, searchQuery]);
 
+    // Move channel to top
+    const moveToTop = useCallback((visibleIndex: number) => {
+        if (visibleIndex === 0) return;
+        setChannels(chs => {
+            const ch = visibleChannels[visibleIndex];
+            if (!ch) return chs;
+            const actualIndex = chs.findIndex(c => c.stream_id === ch.stream_id);
+            if (actualIndex === -1 || actualIndex === 0) return chs;
+            
+            const next = [...chs];
+            const [moved] = next.splice(actualIndex, 1);
+            next.unshift(moved);
+            return next.map((c, idx) => ({ ...c, display_order: idx }));
+        });
+        setIsDirty(true);
+    }, [visibleChannels]);
+
+    // Move channel up
+    const moveUp = useCallback((visibleIndex: number) => {
+        if (visibleIndex === 0) return;
+        setChannels(chs => {
+            const ch = visibleChannels[visibleIndex];
+            const prevCh = visibleChannels[visibleIndex - 1];
+            if (!ch || !prevCh) return chs;
+            
+            const indexA = chs.findIndex(c => c.stream_id === ch.stream_id);
+            const indexB = chs.findIndex(c => c.stream_id === prevCh.stream_id);
+            if (indexA === -1 || indexB === -1) return chs;
+            
+            const next = [...chs];
+            [next[indexA], next[indexB]] = [next[indexB], next[indexA]];
+            return next.map((c, idx) => ({ ...c, display_order: idx }));
+        });
+        setIsDirty(true);
+    }, [visibleChannels]);
+
+    // Move channel down
+    const moveDown = useCallback((visibleIndex: number) => {
+        if (visibleIndex === visibleChannels.length - 1) return;
+        setChannels(chs => {
+            const ch = visibleChannels[visibleIndex];
+            const nextCh = visibleChannels[visibleIndex + 1];
+            if (!ch || !nextCh) return chs;
+            
+            const indexA = chs.findIndex(c => c.stream_id === ch.stream_id);
+            const indexB = chs.findIndex(c => c.stream_id === nextCh.stream_id);
+            if (indexA === -1 || indexB === -1) return chs;
+            
+            const next = [...chs];
+            [next[indexA], next[indexB]] = [next[indexB], next[indexA]];
+            return next.map((c, idx) => ({ ...c, display_order: idx }));
+        });
+        setIsDirty(true);
+    }, [visibleChannels]);
+
     const enabledCount = channels.filter(c => c.enabled !== false).length;
     const totalCount = channels.length;
 
@@ -429,7 +490,8 @@ export function ChannelManager({ categoryId, categoryName, sourceId, onClose, on
                         </div>
                     ) : (
                         visibleChannels.map((ch, visibleIndex) => {
-                            const filteredName = applyFilterWords(ch.name);
+                            const displayName = ch.alias || ch.name;
+                            const filteredName = applyFilterWords(displayName);
                             const isDragging = dragFromIdx.current === visibleIndex;
                             const isDragOver = dragOverIdx === visibleIndex && dragFromIdx.current !== null && dragFromIdx.current !== visibleIndex;
                             return (
@@ -450,14 +512,44 @@ export function ChannelManager({ categoryId, categoryName, sourceId, onClose, on
                                         />
                                         <span className="channel-name">
                                             <span className="channel-display-name">{filteredName}</span>
-                                            {filteredName !== ch.name && (
+                                            {ch.alias && (
+                                                <span className="channel-original-name" title={ch.name}>
+                                                    ({ch.name})
+                                                </span>
+                                            )}
+                                            {!ch.alias && filteredName !== ch.name && (
                                                 <span className="channel-original-name" title={ch.name}>
                                                     ({ch.name})
                                                 </span>
                                             )}
                                         </span>
                                     </label>
-
+                                    <div className="channel-reorder">
+                                        <button
+                                            className="order-btn"
+                                            onClick={() => moveToTop(visibleIndex)}
+                                            disabled={visibleIndex === 0}
+                                            title="Move to top"
+                                        >
+                                            ↑↑
+                                        </button>
+                                        <button
+                                            className="order-btn"
+                                            onClick={() => moveUp(visibleIndex)}
+                                            disabled={visibleIndex === 0}
+                                            title="Move up"
+                                        >
+                                            ↑
+                                        </button>
+                                        <button
+                                            className="order-btn"
+                                            onClick={() => moveDown(visibleIndex)}
+                                            disabled={visibleIndex === visibleChannels.length - 1}
+                                            title="Move down"
+                                        >
+                                            ↓
+                                        </button>
+                                    </div>
                                 </div>
                             );
                         })

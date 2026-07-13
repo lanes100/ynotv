@@ -469,6 +469,11 @@ export function ChannelPanel({
     return saved === 'true';
   });
 
+  const [showWatchlistPlaylistName, setShowWatchlistPlaylistName] = useState(() => {
+    const saved = localStorage.getItem('showWatchlistPlaylistName');
+    return saved === 'true';
+  });
+
   const [sourceNames, setSourceNames] = useState<Map<string, string>>(new Map());
   const [shortEpgSourceIds, setShortEpgSourceIds] = useState<Set<string>>(() => new Set());
 
@@ -1673,6 +1678,7 @@ export function ChannelPanel({
     // if (!window.mpv) return; // Bridge handles this
     let rafId: number | null = null;
     let lastMainGeometry = '';
+    let forceNextUpdate = false;
     const lastSecondaryGeometries = new Map<2 | 3 | 4, string>();
 
     const updateVideoPosition = () => {
@@ -1715,6 +1721,9 @@ export function ChannelPanel({
         });
       }
 
+      const force = forceNextUpdate;
+      forceNextUpdate = false;
+
       // Physically resize the main MPV window to match the preview container's screen coordinates
       const d = window.devicePixelRatio || 1;
       const sx = Math.round(rect.left * d);
@@ -1723,7 +1732,7 @@ export function ChannelPanel({
       const sh = Math.round(rect.height * d);
       const nextMainGeometry = `${sx}:${sy}:${sw}:${sh}`;
 
-      if (nextMainGeometry !== lastMainGeometry) {
+      if (force || nextMainGeometry !== lastMainGeometry) {
         lastMainGeometry = nextMainGeometry;
         invoke('mpv_set_geometry', { x: sx, y: sy, width: sw, height: sh }).catch(() => {});
       }
@@ -1741,7 +1750,7 @@ export function ChannelPanel({
           // If a slot is not active, or if we want to hide them (because a modal/settings is open):
           if (!active || shouldHideSecondaries) {
             const hiddenGeometry = '-10000:-10000:1:1';
-            if (lastSecondaryGeometries.get(slotId) !== hiddenGeometry) {
+            if (force || lastSecondaryGeometries.get(slotId) !== hiddenGeometry) {
               lastSecondaryGeometries.set(slotId, hiddenGeometry);
               invoke('multiview_reposition_slot', { slotId, x: -10000, y: -10000, width: 1, height: 1 }).catch(() => {});
             }
@@ -1753,7 +1762,7 @@ export function ChannelPanel({
           const el = document.getElementById(id);
           if (!el) {
             const hiddenGeometry = '-10000:-10000:1:1';
-            if (lastSecondaryGeometries.get(slotId) !== hiddenGeometry) {
+            if (force || lastSecondaryGeometries.get(slotId) !== hiddenGeometry) {
               lastSecondaryGeometries.set(slotId, hiddenGeometry);
               invoke('multiview_reposition_slot', { slotId, x: -10000, y: -10000, width: 1, height: 1 }).catch(() => {});
             }
@@ -1763,7 +1772,7 @@ export function ChannelPanel({
           const cellRect = el.getBoundingClientRect();
           if (cellRect.width === 0 || cellRect.height === 0) {
             const hiddenGeometry = '-10000:-10000:1:1';
-            if (lastSecondaryGeometries.get(slotId) !== hiddenGeometry) {
+            if (force || lastSecondaryGeometries.get(slotId) !== hiddenGeometry) {
               lastSecondaryGeometries.set(slotId, hiddenGeometry);
               invoke('multiview_reposition_slot', { slotId, x: -10000, y: -10000, width: 1, height: 1 }).catch(() => {});
             }
@@ -1777,7 +1786,7 @@ export function ChannelPanel({
           const sh = Math.round(cellRect.height * d);
           const nextSlotGeometry = `${sx}:${sy}:${sw}:${sh}`;
 
-          if (lastSecondaryGeometries.get(slotId) !== nextSlotGeometry) {
+          if (force || lastSecondaryGeometries.get(slotId) !== nextSlotGeometry) {
             lastSecondaryGeometries.set(slotId, nextSlotGeometry);
             invoke('multiview_reposition_slot', { slotId, x: sx, y: sy, width: sw, height: sh }).catch(() => {});
           }
@@ -1815,6 +1824,7 @@ export function ChannelPanel({
     import('@tauri-apps/api/window').then(({ getCurrentWindow }) => {
       const appWindow = getCurrentWindow();
       appWindow.onMoved(() => {
+        forceNextUpdate = true;
         scheduleVideoPositionUpdate();
       }).then((unlisten) => {
         if (disposed) unlisten();
@@ -2250,6 +2260,17 @@ export function ChannelPanel({
                 <span className="guide-channel-count">
                   {watchlistItems?.length || 0} programs
                 </span>
+                <button
+                  className={`guide-manage-channels-btn ${showWatchlistPlaylistName ? 'active-toggle' : ''}`}
+                  onClick={() => {
+                    const newVal = !showWatchlistPlaylistName;
+                    setShowWatchlistPlaylistName(newVal);
+                    localStorage.setItem('showWatchlistPlaylistName', String(newVal));
+                  }}
+                  title="Show playlist name for each channel"
+                >
+                  {showWatchlistPlaylistName ? '📋' : '📄'} Toggle Playlist Name
+                </button>
               </>
             ) : isSearchMode ? (
               <>
@@ -2537,6 +2558,8 @@ export function ChannelPanel({
                                 setWatchlistRefreshTrigger(v => v + 1);
                                 onWatchlistRefresh?.();
                               }}
+                              showPlaylistName={showWatchlistPlaylistName}
+                              sourceNames={sourceNames}
                             />
                           ))}
                         </div>
@@ -2563,6 +2586,8 @@ export function ChannelPanel({
                                 setWatchlistRefreshTrigger(v => v + 1);
                                 onWatchlistRefresh?.();
                               }}
+                              showPlaylistName={showWatchlistPlaylistName}
+                              sourceNames={sourceNames}
                             />
                           ))}
                         </div>

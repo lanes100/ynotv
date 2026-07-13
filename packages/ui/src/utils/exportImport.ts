@@ -12,6 +12,7 @@ import type { Source } from '@ynotv/core';
 import type { AppSettings } from '../types/app';
 import { Bridge } from '../services/tauri-bridge';
 import { normalizeBoolean } from './db-helpers';
+import type { FavoriteItem } from '../stores/vodFavoritesStore';
 
 export interface ExportData {
     version: number;
@@ -165,9 +166,11 @@ export interface ExportData {
     customPlaylists?: CustomPlaylist[];
     playlistCategoryLinks?: PlaylistCategoryLink[];
     playlistIndividualChannels?: PlaylistIndividualChannel[];
+    // v7 additions (VOD Favorites)
+    vodFavorites?: FavoriteItem[];
 }
 
-const EXPORT_VERSION = 6;
+const EXPORT_VERSION = 7;
 
 /**
  * Export all application data to a JSON file
@@ -427,6 +430,20 @@ export async function exportAllData(): Promise<{ success: boolean; filePath?: st
         const playlistCategoryLinks = await db.playlistCategoryLinks.toArray();
         const playlistIndividualChannels = await db.playlistIndividualChannels.toArray();
 
+        // 14. Get VOD Favorites from localStorage
+        let vodFavorites: FavoriteItem[] | undefined = undefined;
+        try {
+            const favoritesRaw = localStorage.getItem('vod-favorites');
+            if (favoritesRaw) {
+                const parsed = JSON.parse(favoritesRaw);
+                if (parsed && parsed.state && Array.isArray(parsed.state.favorites)) {
+                    vodFavorites = parsed.state.favorites;
+                }
+            }
+        } catch (e) {
+            console.warn('[Export] Failed to parse vod-favorites from localStorage:', e);
+        }
+
         const exportData: ExportData = {
             version: EXPORT_VERSION,
             timestamp: new Date().toISOString(),
@@ -451,7 +468,8 @@ export async function exportAllData(): Promise<{ success: boolean; filePath?: st
             stremioWatchHistory,
             customPlaylists,
             playlistCategoryLinks,
-            playlistIndividualChannels
+            playlistIndividualChannels,
+            vodFavorites
         };
 
         const fileName = `ynotv-backup-${new Date().toISOString().split('T')[0]}.json`;
@@ -508,6 +526,23 @@ export async function importAllData(): Promise<{ success: boolean; error?: strin
             localStorage.setItem('stremio-watch-history', JSON.stringify(data.stremioWatchHistory));
         } else {
             localStorage.removeItem('stremio-watch-history');
+        }
+
+        // Restore VOD Favorites
+        if (data.vodFavorites) {
+            try {
+                const wrapper = {
+                    state: {
+                        favorites: data.vodFavorites
+                    },
+                    version: 0
+                };
+                localStorage.setItem('vod-favorites', JSON.stringify(wrapper));
+            } catch (e) {
+                console.warn('[Import] Failed to restore vod-favorites to localStorage:', e);
+            }
+        } else {
+            localStorage.removeItem('vod-favorites');
         }
 
         // 3. Restore Sources
@@ -872,7 +907,7 @@ export async function importAllData(): Promise<{ success: boolean; error?: strin
                     const history = data.vodHistory.map(h => ({
                         id: h.id,
                         media_id: h.mediaId,
-                        media_type: h.mediaType,
+                        media_type: h.mediaType || ((h.seasonNum !== undefined && h.seasonNum !== null) || (h.episodeNum !== undefined && h.episodeNum !== null) ? 'series' : 'movie'),
                         source_id: h.sourceId,
                         title: h.title,
                         watched_at: h.watchedAt,

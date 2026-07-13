@@ -1389,6 +1389,29 @@ class YnotvDatabase extends SqliteDatabase {
       }
     }
 
+    // Self-healing: Clean up orphaned failover group members and custom group channels
+    try {
+      await db.execute(`
+        DELETE FROM failover_group_members 
+        WHERE group_id NOT IN (SELECT group_id FROM failover_groups)
+           OR stream_id NOT IN (SELECT stream_id FROM channels)
+      `);
+      console.log('[DB] Cleaned up orphaned/invalid failover group members');
+    } catch (e) {
+      console.warn('[DB] Failed to clean up orphaned failover group members:', e);
+    }
+
+    try {
+      await db.execute(`
+        DELETE FROM custom_group_channels 
+        WHERE group_id NOT IN (SELECT group_id FROM custom_groups)
+           OR stream_id NOT IN (SELECT stream_id FROM channels)
+      `);
+      console.log('[DB] Cleaned up orphaned/invalid custom group channels');
+    } catch (e) {
+      console.warn('[DB] Failed to clean up orphaned custom group channels:', e);
+    }
+
     console.log('[DB] Schema initialization complete');
   }
 }

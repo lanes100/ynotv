@@ -394,3 +394,51 @@
   background: var(--primary, #007bff);
   transition: width 0.3s ease;
 }
+
+/* Favorites toggle source badge button */
+.vod-favorites-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  backdrop-filter: blur(4px);
+}
+
+.vod-favorites-toggle-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+.vod-favorites-toggle-btn:active {
+  transform: translateY(0);
+}
+
+.vod-favorites-toggle-btn.active {
+  background: var(--accent-primary-transparent, rgba(229, 9, 20, 0.2));
+  border-color: var(--accent-primary, #e50914);
+  color: var(--accent-primary, #e50914);
+  box-shadow: 0 0 12px var(--accent-primary-transparent, rgba(229, 9, 20, 0.2));
+}
+
+.vod-favorites-toggle-btn svg {
+  transition: transform 0.25s ease;
+}
+
+.vod-favorites-toggle-btn:hover svg {
+  transform: rotate(-10deg) scale(1.1);
+}
+
+.vod-favorites-toggle-btn.active svg {
+  stroke: var(--accent-primary, #e50914);
+  transform: scale(1.05);
+}

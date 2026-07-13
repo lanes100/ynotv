@@ -34,12 +34,17 @@ export function TrackSelectionModal({ isOpen, type, onClose, channel, onAudioDel
   const [selectedCcId, setSelectedCcId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [audioDelay, setAudioDelay] = useState<number>(0.0);
+  const [activeTab, setActiveTab] = useState<'tracks' | 'devices'>('tracks');
+  const [devices, setDevices] = useState<{ name: string; description: string }[]>([]);
+  const [currentDevice, setCurrentDevice] = useState<string>('auto');
 
   useEffect(() => {
     if (isOpen) {
+      setActiveTab('tracks');
       loadTracks();
       if (type === 'audio') {
         loadAudioDelay();
+        loadAudioDevices();
       }
     }
   }, [isOpen, type]);
@@ -219,9 +224,56 @@ export function TrackSelectionModal({ isOpen, type, onClose, channel, onAudioDel
     }
   };
 
+  const loadAudioDevices = async () => {
+    try {
+      const list = await Bridge.getProperty('audio-device-list');
+      const data = list && typeof list === 'object' && 'data' in list ? list.data : list;
+      let parsed = Array.isArray(data) ? data : [];
+      parsed = parsed.filter((d: any) => d && d.name && d.name !== 'auto');
+      const deviceList = [
+        { name: 'auto', description: 'Default (Autoselect)' },
+        ...parsed
+      ];
+      setDevices(deviceList);
+
+      let selectedDev = 'auto';
+      if (window.storage) {
+        const settingsResult = await window.storage.getSettings();
+        if (settingsResult.data?.subtitleSettings?.audioDevice) {
+          selectedDev = settingsResult.data.subtitleSettings.audioDevice;
+        }
+      }
+      setCurrentDevice(selectedDev);
+    } catch (e) {
+      console.error('Failed to load audio devices:', e);
+    }
+  };
+
+  const handleSelectDevice = async (deviceName: string) => {
+    try {
+      await Bridge.setProperty('audio-device', deviceName);
+      setCurrentDevice(deviceName);
+
+      if (window.storage) {
+        const settingsResult = await window.storage.getSettings();
+        const ss = settingsResult.data?.subtitleSettings || {};
+        await window.storage.updateSettings({
+          subtitleSettings: {
+            ...ss,
+            audioDevice: deviceName
+          }
+        });
+      }
+    } catch (e) {
+      console.error('Failed to set audio device:', e);
+    }
+  };
+
   if (!isOpen) return null;
 
-  const title = type === 'audio' ? 'Audio Tracks' : 'Subtitle Tracks';
+  const title = type === 'subtitle' 
+    ? 'Subtitle Tracks' 
+    : (activeTab === 'tracks' ? 'Audio Tracks' : 'Audio Devices');
 
   return (
     <div className="track-modal-overlay" onClick={onClose}>
@@ -231,12 +283,29 @@ export function TrackSelectionModal({ isOpen, type, onClose, channel, onAudioDel
           <button className="track-modal-close" onClick={onClose}>×</button>
         </div>
 
+        {type === 'audio' && (
+          <div className="track-modal-tabs">
+            <button 
+              className={`track-modal-tab ${activeTab === 'tracks' ? 'active' : ''}`}
+              onClick={() => setActiveTab('tracks')}
+            >
+              Audio Tracks
+            </button>
+            <button 
+              className={`track-modal-tab ${activeTab === 'devices' ? 'active' : ''}`}
+              onClick={() => setActiveTab('devices')}
+            >
+              Audio Devices
+            </button>
+          </div>
+        )}
+
         <div className="track-modal-content">
           {loading ? (
             <div className="track-modal-loading">Loading...</div>
           ) : (
             <>
-              {type === 'audio' && (
+              {type === 'audio' && activeTab === 'tracks' && (
                 <div className="audio-sync-container">
                   <span className="audio-sync-label">Audio Delay / Sync</span>
                   <div className="audio-sync-controls">
@@ -283,7 +352,25 @@ export function TrackSelectionModal({ isOpen, type, onClose, channel, onAudioDel
                 </div>
               )}
 
-              {type === 'subtitle' && tracks.length === 0 && ccTracks.length === 0 ? (
+              {type === 'audio' && activeTab === 'devices' ? (
+                <ul className="track-list">
+                  {devices.map((device) => {
+                    const isSelected = currentDevice === device.name;
+                    return (
+                      <li
+                        key={device.name}
+                        className={`track-item ${isSelected ? 'selected' : ''}`}
+                        onClick={() => handleSelectDevice(device.name)}
+                      >
+                        <span className="track-name">
+                          {device.description || device.name}
+                          {device.name === 'auto' && <span className="track-badge">Default</span>}
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              ) : type === 'subtitle' && tracks.length === 0 && ccTracks.length === 0 ? (
                 <div className="track-modal-empty">No subtitle tracks available</div>
               ) : type === 'audio' && tracks.length === 0 ? (
                 <div className="track-modal-empty">No audio tracks available</div>

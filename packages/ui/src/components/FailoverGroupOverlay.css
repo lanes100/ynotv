@@ -56,6 +56,28 @@
   display: flex;
   flex-direction: column;
   gap: 3px;
+  max-height: 350px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+/* Scrollbar styling for failover list */
+.fgo-list::-webkit-scrollbar {
+  width: 4px;
+}
+
+.fgo-list::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 2px;
+}
+
+.fgo-list::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 2px;
+}
+
+.fgo-list::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.4);
 }
 
 .fgo-item {

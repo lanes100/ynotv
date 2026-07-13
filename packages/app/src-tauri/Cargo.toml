@@ -1,6 +1,6 @@
 [package]
 name = "ynotv"
-version = "2.2.0"
+version = "2.2.1"
 description = "A Tauri App"
 authors = ["tbeezy"]
 edition = "2021"
@@ -83,3 +83,4 @@ windows = { version = "0.58", features = [
 [patch.crates-io]
 # Local patch adds: set_read_timeout(), receive_nonblocking(), connect_with_timeout()
 rust_cast = { path = "vendor/rust_cast" }
+

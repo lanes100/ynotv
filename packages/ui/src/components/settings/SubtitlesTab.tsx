@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { validateSubSourceApiKey } from '../../services/subsource';
+import { Bridge } from '../../services/tauri-bridge';
 import './PlaybackTab.css'; // Reuse existing tab styles
 
 export type SubtitlesSubTabId = 'subtitles' | 'audio';
@@ -16,6 +17,7 @@ export interface SubtitleSettings {
   subOutlineColor: string;
   subDelay: number;
   subVerticalOffset: number;
+  audioDevice?: string;
 }
 
 const DEFAULT_SETTINGS: SubtitleSettings = {
@@ -30,6 +32,7 @@ const DEFAULT_SETTINGS: SubtitleSettings = {
   subOutlineColor: '#000000',
   subDelay: 0,
   subVerticalOffset: 0,
+  audioDevice: 'auto',
 };
 
 const LANGUAGE_OPTIONS = [
@@ -117,12 +120,37 @@ export function SubtitlesTab({ initialSubTab, settings, onSettingsChange }: Subt
   );
 
   const [activeSubTab, setActiveSubTab] = useState<'subtitles' | 'audio'>('subtitles');
+  const [devices, setDevices] = useState<{ name: string; description: string }[]>([]);
 
   useEffect(() => {
     if (initialSubTab) {
       setActiveSubTab(initialSubTab);
     }
   }, [initialSubTab]);
+
+  useEffect(() => {
+    const fetchDevices = async () => {
+      try {
+        const list = await Bridge.getProperty('audio-device-list');
+        const data = list && typeof list === 'object' && 'data' in list ? list.data : list;
+        const parsed = Array.isArray(data) ? data : [];
+        const filtered = parsed.filter((d: any) => d && d.name && d.name !== 'auto');
+        setDevices(filtered);
+      } catch (e) {
+        console.warn('[SubtitlesTab] Failed to fetch audio devices:', e);
+      }
+    };
+    fetchDevices();
+  }, []);
+
+  const handleAudioDeviceChange = async (deviceName: string) => {
+    update({ audioDevice: deviceName });
+    try {
+      await Bridge.setProperty('audio-device', deviceName);
+    } catch (e) {
+      console.error('Failed to set audio device on player:', e);
+    }
+  };
 
   return (
     <div className="playback-tab-content" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
@@ -423,6 +451,36 @@ export function SubtitlesTab({ initialSubTab, settings, onSettingsChange }: Subt
                   {LANGUAGE_OPTIONS.map((lang) => (
                     <option key={lang.code} value={lang.code}>
                       {lang.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* Audio Output Device */}
+          <div className="settings-section" style={{ marginTop: '2rem' }}>
+            <div className="section-header">
+              <h3>Audio Output Device</h3>
+            </div>
+            <p className="section-description">
+              Select the audio output device for playback.
+            </p>
+
+            <div className="timeshift-settings">
+              <div className="timeshift-toggle-row">
+                <div className="timeshift-toggle-info">
+                  <span className="timeshift-toggle-label">Audio Device</span>
+                  <span className="timeshift-toggle-sub">Select the device to route audio playback.</span>
+                </div>
+                <select
+                  value={merged.audioDevice || 'auto'}
+                  onChange={(e) => handleAudioDeviceChange(e.target.value)}
+                >
+                  <option value="auto">Default (Autoselect)</option>
+                  {devices.map((dev) => (
+                    <option key={dev.name} value={dev.name}>
+                      {dev.description || dev.name}
                     </option>
                   ))}
                 </select>

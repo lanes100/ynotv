@@ -51,6 +51,9 @@ async function applySubtitleSettings() {
       const pos = Math.max(0, Math.min(100, 100 - ss.subVerticalOffset));
       await Bridge.setSubtitlePos(pos).catch(() => {});
     }
+    if (ss.audioDevice) {
+      await Bridge.setProperty('audio-device', ss.audioDevice).catch(() => {});
+    }
   } catch (e) {
     console.warn('[Playback] Failed to apply subtitle settings:', e);
   }
