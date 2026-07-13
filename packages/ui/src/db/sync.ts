@@ -131,7 +131,6 @@ function endTmdbMatching() {
 }
 
 // Safety limits for EPG fetching
-// Large files (>50MB) cause UI freezing due to IPC overhead - TODO: implement streaming
 // Valid columns based on db/index.ts schema
 const VOD_MOVIE_FIELDS = [
   'stream_id', 'source_id', 'category_ids', 'name', 'tmdb_id', 'added',
