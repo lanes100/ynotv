@@ -3,6 +3,7 @@ import type { WatchlistItem } from '../db';
 import { db, getWatchlist } from '../db';
 import type { WatchlistNotificationItem } from '../components/WatchlistNotification';
 import type { StoredChannel } from '../db';
+import { useServiceProvider } from '../contexts/ServiceProviderContext';
 
 export interface WatchlistState {
   // Watchlist state
@@ -28,6 +29,7 @@ export function useWatchlist(options: UseWatchlistOptions = {}): WatchlistState 
   const [watchlistItems, setWatchlistItems] = useState<WatchlistItem[]>([]);
   const [watchlistRefreshTrigger, setWatchlistRefreshTrigger] = useState(0);
   const [watchlistNotifications, setWatchlistNotifications] = useState<WatchlistNotificationItem[]>([]);
+  const { channels: channelService } = useServiceProvider();
 
   // Fetch watchlist when refresh is triggered
   useEffect(() => {
@@ -93,9 +95,9 @@ export function useWatchlist(options: UseWatchlistOptions = {}): WatchlistState 
           // Actually perform the autoswitch if callback is provided
           if (onAutoswitch) {
             try {
-              const channel = await db.channels.get(item.channel_id);
+              const channel = await channelService.getChannelById(item.channel_id);
               if (channel) {
-                onAutoswitch(channel, item);
+                onAutoswitch(channel as StoredChannel, item);
               }
             } catch (error) {
               console.error('[useWatchlist] Auto-switch failed:', error);
@@ -121,7 +123,7 @@ export function useWatchlist(options: UseWatchlistOptions = {}): WatchlistState 
     checkWatchlist();
     const interval = setInterval(checkWatchlist, 10000);
     return () => clearInterval(interval);
-  }, []);
+  }, [onAutoswitch, channelService]);
 
   const refreshWatchlist = useCallback(() => {
     setWatchlistRefreshTrigger(v => v + 1);
@@ -129,14 +131,14 @@ export function useWatchlist(options: UseWatchlistOptions = {}): WatchlistState 
 
   const handleWatchlistSwitch = useCallback(async (notification: WatchlistNotificationItem, handlePlayChannel: (channel: StoredChannel) => void) => {
     try {
-      const channel = await db.channels.get(notification.channelId);
+      const channel = await channelService.getChannelById(notification.channelId);
       if (channel) {
-        handlePlayChannel(channel);
+        handlePlayChannel(channel as StoredChannel);
       }
     } catch (error) {
       console.error('Failed to switch to watchlist channel:', error);
     }
-  }, []);
+  }, [channelService]);
 
   const handleWatchlistDismiss = useCallback((id: number) => {
     setWatchlistNotifications(prev => prev.filter(n => n.id !== id));

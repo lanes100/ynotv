@@ -5,6 +5,7 @@ import { decompressEpgDescription } from '../utils/compression';
 import { getRecentChannels, onRecentChannelsUpdate } from '../utils/recentChannels';
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useSourceVersion } from '../contexts/SourceVersionContext';
+import { useServiceProvider } from '../contexts/ServiceProviderContext';
 import { applyFilterWords } from './useFilterWords';
 import { useCategorySortOrder } from '../stores/uiStore';
 import { useAppSettings } from './useAppSettings';
@@ -14,13 +15,12 @@ import type { Source } from '@ynotv/core';
 // Returns null during loading to avoid hiding all data
 export function useEnabledSources(): Set<string> | null {
   const { version } = useSourceVersion(); // Track source changes
+  const { channels: channelService } = useServiceProvider();
 
   const sources = useLiveQuery(async () => {
-    if (!window.storage) return null;
-    const result = await window.storage.getSources();
-    if (!result.data) return null;
-    return result.data.filter(s => s.enabled !== false);
-  }, [version]); // Re-run when version changes
+    const result = await channelService.getSources();
+    return result.filter(s => s.enabled !== false);
+  }, [version, channelService]); // Re-run when version changes
 
   // Return null if still loading sources
   if (sources === undefined || sources === null) return null;
@@ -35,6 +35,7 @@ let cachedSourceVersion = -1;
 // Hook to get source name map - cached to avoid repeated Tauri calls
 export function useSourceNameMap(): Map<string, string> | null {
   const { version } = useSourceVersion();
+  const { channels: channelService } = useServiceProvider();
   const [sourceMap, setSourceMap] = useState<Map<string, string> | null>(cachedSourceNameMap);
 
   useEffect(() => {
@@ -45,11 +46,10 @@ export function useSourceNameMap(): Map<string, string> | null {
     }
 
     async function fetchSources() {
-      if (!window.storage) return;
-      const result = await window.storage.getSources();
-      if (result.data) {
+      const data = await channelService.getSources();
+      if (data) {
         const map = new Map<string, string>();
-        for (const source of result.data) {
+        for (const source of data) {
           map.set(source.id, source.name);
         }
         cachedSourceNameMap = map;
@@ -59,7 +59,7 @@ export function useSourceNameMap(): Map<string, string> | null {
     }
 
     fetchSources();
-  }, [version]);
+  }, [version, channelService]);
 
   return sourceMap;
 }
@@ -71,6 +71,7 @@ let cachedCategoryVersion = -1;
 // Hook to get category name map - cached to avoid repeated DB calls
 function useCategoryNameMap(): Map<string, string> | null {
   const { version } = useSourceVersion();
+  const { channels: channelService } = useServiceProvider();
   const [categoryMap, setCategoryMap] = useState<Map<string, string> | null>(cachedCategoryNameMap);
 
   useEffect(() => {
@@ -81,7 +82,7 @@ function useCategoryNameMap(): Map<string, string> | null {
     }
 
     async function fetchCategories() {
-      const allCategories = await db.categories.toArray();
+      const allCategories = await channelService.getCategories();
       const map = new Map<string, string>();
       for (const cat of allCategories) {
         map.set(cat.category_id, cat.category_name);
@@ -92,7 +93,7 @@ function useCategoryNameMap(): Map<string, string> | null {
     }
 
     fetchCategories();
-  }, [version]);
+  }, [version, channelService]);
 
   return categoryMap;
 }
@@ -116,15 +117,20 @@ export function useCategories() {
     [enabledSourceIds]
   );
 
+  const { channels: channelService } = useServiceProvider();
+
   const categories = useLiveQuery(
     async () => {
       // Don't filter if sources haven't loaded yet
-      if (!enabledSourceIds) return db.categories.orderBy('category_name').toArray();
+      if (!enabledSourceIds) {
+        const cats = await channelService.getCategories();
+        return cats.sort((a, b) => a.category_name.localeCompare(b.category_name));
+      }
 
       // Parallel loading: categories, custom groups, and favorite count all at once
       const [allCategoriesResult, customGroupsResult, favoriteCountResult, recentChannelsResult] = await Promise.all([
         // Load categories and filter by enabled sources
-        db.categories.filter(cat => enabledSourceIds.has(cat.source_id)).sortBy('category_name').catch(err => {
+        channelService.getCategories(Array.from(enabledSourceIds)).then(cats => cats.sort((a, b) => a.category_name.localeCompare(b.category_name))).catch(err => {
           console.error('[useCategories] Failed to load categories:', err);
           return [];
         }),
@@ -148,7 +154,7 @@ export function useCategories() {
       const recentChannels = recentChannelsResult;
 
       // Filter out disabled categories (enabled defaults to true if not set)
-      const enabledCategories = allCategories.filter(cat => cat.enabled !== false);
+      const enabledCategories = (allCategories as StoredCategory[]).filter(cat => cat.enabled !== false);
 
       const virtualCategories: StoredCategory[] = [];
 
@@ -251,6 +257,7 @@ export function useCategoriesForSource(sourceId: string | null) {
 export function useChannels(categoryId: string | null, sortOrder: 'alphabetical' | 'number' | 'provider' = 'alphabetical', options?: { skip?: boolean }) {
   const enabledSourceIds = useEnabledSources();
   const { epgPreferEpgLogos } = useAppSettings();
+  const { channels: channelService, settings: settingsService } = useServiceProvider();
   const enabledSourceKey = useMemo(
     () => (enabledSourceIds ? Array.from(enabledSourceIds).sort().join(',') : 'loading'),
     [enabledSourceIds]
@@ -283,8 +290,8 @@ export function useChannels(categoryId: string | null, sortOrder: 'alphabetical'
           results = [];
         } else {
           // Optimized: Fetch only the channels we need using anyOf
-          const channels = await db.channels.where('stream_id').anyOf(recentIds).toArray();
-          const channelMap = new Map(channels.map(ch => [ch.stream_id, ch]));
+          const channels = await channelService.getChannels({ streamIds: recentIds });
+          const channelMap = new Map(channels.map(ch => [ch.stream_id, ch as any]));
 
           // Maintain order from recent list
           results = recentEntries
@@ -294,7 +301,9 @@ export function useChannels(categoryId: string | null, sortOrder: 'alphabetical'
         }
       } else if (categoryId === '__favorites__') {
         // Use SQL WHERE for better performance
-        results = await db.channels.whereRaw('(is_favorite = 1 OR is_favorite = true)').toArray();
+        const settings = await settingsService.getSettings();
+        const favIds = settings.favorites.channels;
+        results = await channelService.getChannels({ streamIds: favIds }) as StoredChannel[];
         // Sort by fav_order (nulls last, then by name for items without order)
         results.sort((a, b) => {
           if (a.fav_order != null && b.fav_order != null) return a.fav_order - b.fav_order;
@@ -312,10 +321,11 @@ export function useChannels(categoryId: string | null, sortOrder: 'alphabetical'
           if (!link) {
             results = [];
           } else {
-            results = await db.channels.whereRaw(
-              `source_id = ? AND EXISTS (SELECT 1 FROM json_each(category_ids) WHERE value = ?) AND (enabled IS NULL OR enabled NOT IN (0, '0', 'false'))`,
-              [link.source_id, link.category_id]
-            ).toArray();
+            const chans = await channelService.getChannels({
+              sourceIds: [link.source_id],
+              categoryIds: [link.category_id]
+            });
+            results = chans.filter(ch => (ch as any).enabled !== false) as StoredChannel[];
 
             // Fetch manually added individual channels for this category link
             let manualMappings = await db.playlistIndividualChannels
@@ -329,8 +339,8 @@ export function useChannels(categoryId: string | null, sortOrder: 'alphabetical'
             }
             if (manualMappings.length > 0) {
               const streamIds = manualMappings.map(m => m.stream_id);
-              const manualChannels = await db.channels.where('stream_id').anyOf(streamIds).toArray();
-              const manualMap = new Map(manualChannels.map(ch => [ch.stream_id, ch]));
+              const manualChannels = await channelService.getChannels({ streamIds });
+              const manualMap = new Map(manualChannels.map(ch => [ch.stream_id, ch as any]));
               const orderedManual = manualMappings
                 .sort((a, b) => a.display_order - b.display_order)
                 .map(m => manualMap.get(m.stream_id))
@@ -353,8 +363,8 @@ export function useChannels(categoryId: string | null, sortOrder: 'alphabetical'
         if (streamIds.length === 0) {
           results = [];
         } else {
-          const channels = await db.channels.where('stream_id').anyOf(streamIds).toArray();
-          const channelMap = new Map(channels.map(ch => [ch.stream_id, ch]));
+          const channels = await channelService.getChannels({ streamIds });
+          const channelMap = new Map(channels.map(ch => [ch.stream_id, ch as any]));
           results = mappings
             .map(m => channelMap.get(m.stream_id))
             .filter((ch): ch is StoredChannel => ch !== undefined);
@@ -371,10 +381,11 @@ export function useChannels(categoryId: string | null, sortOrder: 'alphabetical'
           const allResults: StoredChannel[] = [];
           const seenStreamIds = new Set<string>();
           for (const link of links) {
-            const linkChannels = await db.channels.whereRaw(
-              `source_id = ? AND EXISTS (SELECT 1 FROM json_each(category_ids) WHERE value = ?) AND (enabled IS NULL OR enabled NOT IN (0, '0', 'false'))`,
-              [link.source_id, link.category_id]
-            ).toArray();
+            const chans = await channelService.getChannels({
+              sourceIds: [link.source_id],
+              categoryIds: [link.category_id]
+            });
+            const linkChannels = chans.filter(ch => (ch as any).enabled !== false) as StoredChannel[];
             for (const ch of linkChannels) {
               if (!seenStreamIds.has(ch.stream_id)) {
                 seenStreamIds.add(ch.stream_id);
@@ -388,8 +399,8 @@ export function useChannels(categoryId: string | null, sortOrder: 'alphabetical'
             .sortBy('display_order');
           if (individualMappings.length > 0) {
             const streamIds = individualMappings.map(m => m.stream_id);
-            const indivChannels = await db.channels.where('stream_id').anyOf(streamIds).toArray();
-            const indivMap = new Map(indivChannels.map(ch => [ch.stream_id, ch]));
+            const indivChannels = await channelService.getChannels({ streamIds });
+            const indivMap = new Map(indivChannels.map(ch => [ch.stream_id, ch as any]));
             for (const m of individualMappings) {
               const ch = indivMap.get(m.stream_id);
               if (ch && !seenStreamIds.has(ch.stream_id)) {
@@ -403,23 +414,16 @@ export function useChannels(categoryId: string | null, sortOrder: 'alphabetical'
       } else if (categoryId && categoryId.startsWith('__allsrc_')) {
         // All Channels for a single source
         const sourceId = categoryId.replace('__allsrc_', '');
-        results = await db.channels.whereRaw(
-          `source_id = ? AND (enabled IS NULL OR enabled NOT IN (0, '0', 'false'))`,
-          [sourceId]
-        ).toArray();
+        const chans = await channelService.getChannels({ sourceIds: [sourceId] });
+        results = chans.filter(ch => (ch as any).enabled !== false) as StoredChannel[];
       } else if (!categoryId) {
         // All Channels view
         if (enabledSourceIds) {
-          // Optimized: Filter source IDs in SQL IN clause
           const idsList = Array.from(enabledSourceIds);
           if (idsList.length === 0) return [];
-          // Chunk the IN clause if too many sources (unlikely < 100, but safe)
-          const placeholders = idsList.map(() => '?').join(',');
-          results = await db.channels.whereRaw(`source_id IN (${placeholders})`, idsList).toArray();
+          results = await channelService.getChannels({ sourceIds: idsList }) as StoredChannel[];
         } else {
-          // Sources loading or explicit all - might be slow if 40k+ channels, but unavoidable for "All"
-          // We could consider LIMIT 1000? But user expects all.
-          results = await db.channels.toArray();
+          results = await channelService.getChannels() as StoredChannel[];
         }
       } else {
         // Check if it is a Custom Group
@@ -433,8 +437,8 @@ export function useChannels(categoryId: string | null, sortOrder: 'alphabetical'
           if (streamIds.length === 0) {
             results = [];
           } else {
-            const channels = await db.channels.where('stream_id').anyOf(streamIds).toArray();
-            const channelMap = new Map(channels.map(ch => [ch.stream_id, ch]));
+            const channels = await channelService.getChannels({ streamIds });
+            const channelMap = new Map(channels.map(ch => [ch.stream_id, ch as any]));
             results = mappings
               .map(m => channelMap.get(m.stream_id))
               .filter((ch): ch is StoredChannel => ch !== undefined);
@@ -444,7 +448,7 @@ export function useChannels(categoryId: string | null, sortOrder: 'alphabetical'
           // Channels in this category - uses index
           const category = await db.categories.get(categoryId);
           if (category) {
-            results = await db.channels.where('category_ids').equals(categoryId).toArray();
+            results = await channelService.getChannels({ categoryIds: [categoryId] }) as StoredChannel[];
             if (enabledSourceIds) {
               results = results.filter(ch => enabledSourceIds.has(ch.source_id));
             }
@@ -455,8 +459,8 @@ export function useChannels(categoryId: string | null, sortOrder: 'alphabetical'
               .toArray();
             if (manualMappings.length > 0) {
               const streamIds = manualMappings.map(m => m.stream_id);
-              const manualChannels = await db.channels.where('stream_id').anyOf(streamIds).toArray();
-              const manualMap = new Map(manualChannels.map(ch => [ch.stream_id, ch]));
+              const manualChannels = await channelService.getChannels({ streamIds });
+              const manualMap = new Map(manualChannels.map(ch => [ch.stream_id, ch as any]));
               const orderedManual = manualMappings
                 .sort((a, b) => a.display_order - b.display_order)
                 .map(m => manualMap.get(m.stream_id))
@@ -653,13 +657,15 @@ export function useChannels(categoryId: string | null, sortOrder: 'alphabetical'
 
 // Hook to get total channel count
 export function useChannelCount() {
-  const count = useLiveQuery(() => db.channels.count());
+  const { channels: channelService } = useServiceProvider();
+  const count = useLiveQuery(() => channelService.getChannelCount(), [channelService]);
   return count ?? 0;
 }
 
 // Hook to get channel count for a category
 export function useCategoryChannelCount(categoryId: string) {
-  const count = useLiveQuery(() => db.channels.where('category_ids').equals(categoryId).count(), [categoryId]);
+  const { channels: channelService } = useServiceProvider();
+  const count = useLiveQuery(() => channelService.getChannelCount([categoryId]), [categoryId, channelService]);
   return count ?? 0;
 }
 

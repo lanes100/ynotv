@@ -37,6 +37,7 @@ export interface IChannelService {
   getChannels(options?: {
     categoryIds?: string[];
     sourceIds?: string[];
+    streamIds?: string[];
     search?: string;
     limit?: number;
     offset?: number;
